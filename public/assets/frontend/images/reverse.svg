@@ -1,0 +1,18 @@
+<svg width="928" height="300" viewBox="0 0 928 300" fill="none" xmlns="http://www.w3.org/2000/svg">
+<g id="Frame 5" clip-path="url(#clip0_778_47)">
+<g id="Group 14">
+<path id="Rectangle 8" d="M651.31 52.5481C688.121 11.3763 751.339 7.84145 792.511 44.6527L830.424 78.5504C877.007 120.2 881.006 191.726 839.357 238.309V238.309C783.824 300.42 688.456 305.752 626.345 250.22L601.638 228.129C568.701 198.68 565.873 148.106 595.322 115.168L651.31 52.5481Z" fill="url(#paint0_linear_778_47)"/>
+<circle id="Ellipse 16" cx="585.5" cy="128.5" r="24" stroke="#4775BA" stroke-opacity="0.73" stroke-width="11"/>
+<circle id="Ellipse 17" cx="631" cy="277" r="11" stroke="#4775BA" stroke-opacity="0.73" stroke-width="4"/>
+</g>
+</g>
+<defs>
+<linearGradient id="paint0_linear_778_47" x1="826.788" y1="252.367" x2="629.981" y2="76.4034" gradientUnits="userSpaceOnUse">
+<stop stop-color="#4C88E3" stop-opacity="0.75"/>
+<stop offset="0.973908" stop-color="#E6EDEC" stop-opacity="0.65"/>
+</linearGradient>
+<clipPath id="clip0_778_47">
+<rect width="928" height="300" fill="white"/>
+</clipPath>
+</defs>
+</svg>

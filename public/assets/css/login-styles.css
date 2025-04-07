@@ -1,0 +1,153 @@
+@font-face {
+    font-family: 'PoppinsBold';
+    src: url('../fonts/Poppins-Bold.ttf');
+}
+
+@font-face {
+    font-family: 'PoppinsLight';
+    src: url('../fonts/Poppins-Light.ttf');
+}
+
+@font-face {
+    font-family: 'PoppinsMedium';
+    src: url('../fonts/Poppins-Medium.ttf');
+}
+
+@font-face {
+    font-family: 'PoppinsRegular';
+    src: url('../fonts/Poppins-Regular.ttf');
+}
+
+@font-face {
+    font-family: 'PoppinsThin';
+    src: url('../fonts/Poppins-Thin.ttf');
+}
+
+body {
+    font-family: 'PoppinsRegular';
+    font-size: 15px;
+    text-transform: uppercase;
+}
+
+img {
+    max-width: 100%;
+    margin: 0 auto;
+    height: auto;
+    display: block;
+}
+
+a {
+    outline: none;
+    color: #008100;
+}
+
+a:hover {
+    color: #0b4423;
+}
+
+label:not(.form-check-label):not(.custom-file-label),
+.form-control-file,
+.form-control-range,
+.form-control,
+select,
+textarea,
+input[type="password"],
+input[type="url"],
+input[type="week"],
+input[type="time"],
+input[type="email"],
+input[type="search"],
+input[type="number"],
+input[type="tel"],
+input[type="text"] {
+    font-family: 'PoppinsRegular';
+}
+
+label:not(.form-check-label):not(.custom-file-label) {
+    font-weight: 400;
+}
+
+.login-box,
+.register-box {
+    width: 100%;
+    max-width: 500px;
+}
+
+.login-holder {
+    padding: 30px 20px;
+    border-radius: 10px;
+    background: url(../img/background.jpg) no-repeat;
+    background-size: cover;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.login-box-msg {
+    padding: 10px 0 25px;
+    font-size: 30px;
+    line-height: 1.1;
+    color: #008100;
+    font-family: 'PoppinsMedium';
+}
+
+.login-box .card {
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+    border-radius: 10px;
+    background-color: #fff;
+    border: 0;
+    max-width: 400px;
+    margin-inline: auto;
+}
+
+.login-box .login-card-body {
+    background-color: transparent;
+    color: #000;
+}
+
+.login-logo {
+    max-width: 170px;
+    margin: 0 auto 25px;
+}
+
+.btn-primary {
+    color: #fff;
+    background-color: #008100;
+    border-color: #008100;
+    box-shadow: none;
+    text-transform: uppercase;
+    border-radius: 10px;
+    font-size: 20px;
+    padding-block: 10px;
+    font-family: 'PoppinsMedium';
+    letter-spacing: 1px;
+}
+
+.btn-primary:hover,
+.btn-primary:not(:disabled):not(.disabled).active,
+.btn-primary:not(:disabled):not(.disabled):active,
+.show>.btn-primary.dropdown-toggle {
+    color: #fff;
+    background-color: #0b4423;
+    border-color: #0b4423;
+}
+
+.btn-primary:not(:disabled):not(.disabled).active:focus,
+.btn-primary:not(:disabled):not(.disabled):active:focus,
+.show>.btn-primary.dropdown-toggle:focus {
+    box-shadow: none;
+}
+
+.form-control {
+    height: 45px;
+    border-radius: 10px;
+}
+
+.login-card-body .input-group .input-group-text,
+.register-card-body .input-group .input-group-text {
+    border-bottom-right-radius: 10px;
+    border-top-right-radius: 10px;
+    color: #000;
+}
+
+.forget-password {
+    font-size: 13px;
+}
