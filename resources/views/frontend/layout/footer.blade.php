@@ -157,4 +157,4 @@
 <!-- ClipBoard -->
 <script src="{{ asset('assets/plugins/clipboard/clipboard.min.js') }}"></script>
 <!-- Custom JS -->
-<script src="{{ asset('assets/frontend/js/main.js') }}">
+<script src="{{ asset('assets/frontend/js/main.js') }}"></script>

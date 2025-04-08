@@ -16,11 +16,16 @@
                                 unique needs. With personalized support and powerful tools, we're here to help you succeed
                                 effortlessly.
                             </p>
-                            <button class="btn banner-btn btn-colored"><a href="{{ route('frontend.showRegister') }}">Start
-                                    14-day Free
-                                    Trial</a></button>
-                            <button class="btn banner-btn btn-transparent"><i class='bx bxs-right-arrow'></i>Watch
-                                Demo</button>
+                            <a href="{{ route('frontend.showRegister') }}">
+                                <button class="btn banner-btn btn-colored">
+                                    Start 14-day Free Trial
+
+                                </button>
+                            </a>
+                            <button class="btn banner-btn btn-transparent">
+                                <i class='bx bxs-right-arrow'></i>
+                                Watch Demo
+                            </button>
                             <ul class="banner-cc m-0 p-0">
                                 <li>
                                     No CC required
@@ -361,8 +366,10 @@
                                 {{ env('APP_NAME', 'Engagyo') }}
                             </a>
                             <p>
-                                Post directly to Threads and access insightful analytics with Publer. Learn how to create
-                                engaging content, leverage Publer features, and track what resonates
+                                Post directly to Threads and access insightful analytics with
+                                {{ env('APP_NAME', 'Engagyo') }}. Learn how to create
+                                engaging content, leverage {{ env('APP_NAME', 'Engagyo') }} features, and track what
+                                resonates
                             </p>
                         </div>
                         <span>July 20, 2023</span>
@@ -393,10 +400,12 @@
                                 <img src="{{ asset('assets/frontend/images/blog5.jpg') }}" alt="">
                             </div>
                             <a href="#">
-                                Post Directly to Threads and Get Insights with Publer – New API Update
+                                Post Directly to Threads and Get Insights with {{ env('APP_NAME', 'Engagyo') }} – New API
+                                Update
                             </a>
                             <p>
-                                Struggling to find fresh content &amp; stay on top of industry news? Discover Publer's
+                                Struggling to find fresh content &amp; stay on top of industry news? Discover
+                                {{ env('APP_NAME', 'Engagyo') }}'s
                                 all-new Explore Tab! It streamlines content discovery, curates trending
                             </p>
                         </div>

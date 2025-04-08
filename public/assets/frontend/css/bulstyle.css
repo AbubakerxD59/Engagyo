@@ -134,6 +134,10 @@
     margin: 0 1.03rem;
 }
 
+.navbar-brand>img {
+    width: 60px !important;
+}
+
 .mini-navbar {
     position: sticky;
     top: 80px;
@@ -1432,9 +1436,7 @@
 }
 
 .faq-content {
-    max-height: 0;
-    overflow: hidden;
-    opacity: 0;
+    display: none;
     transform: scaleY(1);
     transform-origin: top;
     transition: max-height 0.4s ease, opacity 0.4s ease, transform 0.4s ease;
@@ -1966,6 +1968,10 @@
     color: #000;
 }
 
+#aboutus img {
+    width: 150px !important;
+}
+
 /* Signup Page Area */
 .dotlottie {
     position: sticky;
@@ -1979,6 +1985,10 @@
 .signup__logo {
     margin-top: 1.33rem;
     padding-block-start: 1.33rem;
+}
+
+.signup__logo img {
+    width: 100px !important;
 }
 
 .overflow-xx-hidden {

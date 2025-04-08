@@ -76,7 +76,6 @@ Route::middleware(['auth'])->prefix("admin/")->name("admin.")->group(function ()
 
 // Strip routes
 Route::name('frontend.')->group(function () {
-    Route::get('home', [HomeController::class, 'index'])->name('home');
     Route::get('buy-membership/{id?}', [HomeController::class, 'buyMembership'])->name('buy_memebership');
     Route::post('checkout', [HomeController::class, 'checkout'])->name('checkout');
     Route::get('success', [HomeController::class, 'success'])->name('checkout_success');

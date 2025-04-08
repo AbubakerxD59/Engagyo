@@ -1,4 +1,5 @@
 @extends('frontend.auth.layout.main')
+@section('title', 'Signin')
 @section('authBody')
     <div class="container-fluid m-0 p-0">
         <div class="row m-0 p-0 align-items-center">

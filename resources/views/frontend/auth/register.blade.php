@@ -1,4 +1,5 @@
 @extends('frontend..auth.layout.main')
+@section('title', 'Signup')
 @section('authBody')
     <div class="container-fluid p-0 m-0 overflow-xx-hidden">
         <div class="row">

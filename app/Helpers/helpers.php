@@ -157,7 +157,7 @@ if (!function_exists('parseDateTimeFormat')) {
 
 function site_logo()
 {
-    $logo = asset('assets/frontend/images/logo.svg');
+    $logo = asset('assets/frontend/images/logo.png');
     return $logo;
 }
 

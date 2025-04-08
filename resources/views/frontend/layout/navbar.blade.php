@@ -1,7 +1,7 @@
 <!-- Navbar -->
 <nav class="navbar navbar-expand-lg fixed-top bg-lighter-light container-fluid">
     <div class="container">
-        <a class="navbar-brand" href="index.html">
+        <a class="navbar-brand" href="{{ route('frontend.home') }}">
             <img src="{{ site_logo() }}" alt="Logo">
         </a>
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
@@ -17,7 +17,7 @@
                     </a>
                     <ul class="nav-show-hide collapse dropdown-menu row" id="featuresDropdown">
                         <li class="col-12 col-lg-4">
-                            <a href="pages/features/calender-view.html" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.calendarView') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bx-customize'></i>
                                 </div>
@@ -30,7 +30,7 @@
                             </a>
                         </li>
                         <li class="col-12 col-lg-4">
-                            <a href="pages/features/analytics.html" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.analytics') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bxs-bar-chart-alt-2'></i>
                                 </div>
@@ -43,7 +43,7 @@
                             </a>
                         </li>
                         <li class="col-12 col-lg-4">
-                            <a href="pages/features/rss-feed.html" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.rssFeeds') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bx-link'></i>
                                 </div>
@@ -56,7 +56,7 @@
                             </a>
                         </li>
                         <li class="col-12 col-lg-4">
-                            <a href="pages/features/bulk-schedule.html" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.bulkScheduling') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bxs-layer'></i>
                                 </div>
@@ -69,7 +69,7 @@
                             </a>
                         </li>
                         <li class="col-12 col-lg-4">
-                            <a href="pages/features/recycle.html" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.recycling') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bx-link'></i>
                                 </div>
@@ -82,7 +82,7 @@
                             </a>
                         </li>
                         <li class="col-12 col-lg-4">
-                            <a href="pages/features/curate-posts.html" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.curatePost') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bx-list-ul'></i>
                                 </div>
@@ -133,16 +133,16 @@
                         </a>
                     </button>
                 @else
-                    <button class="btn nav-btn btn-transparent align-items-center" href="#features" type="button">
-                        <a href="{{ route('frontend.showLogin') }}">
+                    <a href="{{ route('frontend.showLogin') }}">
+                        <button class="btn nav-btn btn-transparent align-items-center" href="#features" type="button">
                             <i class='bx bx-log-in-circle'></i> Login
-                        </a>
-                    </button>
-                    <button class="btn nav-btn btn-colored" type="button">
-                        <a href="{{ route('frontend.showRegister') }}">
+                        </button>
+                    </a>
+                    <a href="{{ route('frontend.showRegister') }}">
+                        <button class="btn nav-btn btn-colored" type="button">
                             Sign up
-                        </a>
-                    </button>
+                        </button>
+                    </a>
                 @endif
             </div>
         </div>

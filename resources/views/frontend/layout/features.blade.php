@@ -12,7 +12,6 @@
     <meta name="author" content="admin">
     <!-- SEO META TAGS -->
     <title>{{ env('APP_NAME', 'Engagyo') }}</title>
-    <link rel="icon" type="image/x-icon" href="{{ site_logo() }}">
     <meta name="facebook-domain-verification" content="6mnak5vj94u9re6sam9banbb85hu64" />
     <meta name="tiktok-developers-site-verification" content="p1EA7Z2Ju0dgJ4c3KYB1xes9XqIP0I60" />
     <link
@@ -33,18 +32,13 @@
     {{-- Font Awesome --}}
     <link rel="stylesheet" href="{{ asset('assets/plugins/fontawesome-free/css/all.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/frontend/css/bulstyle.css') }}">
-    <style>
-        .bg-img-holder {
-            background-position: bottom;
-            background-size: cover;
-        }
-    </style>
     @stack('styles')
 </head>
 
 <body>
     @include('frontend.layout.navbar')
     @yield('body')
+    @include('frontend.layout.faq')
     @include('frontend.layout.newsletter')
     @include('frontend.layout.about_us')
     @include('frontend.layout.footer')

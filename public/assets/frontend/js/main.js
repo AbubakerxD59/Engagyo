@@ -59,39 +59,6 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     });
 
-    // FAQ's Show Hide Functionality
-    document.querySelectorAll('.faq-link').forEach(link => {
-        link.addEventListener('click', function () {
-            const faqItem = this.parentElement;
-            const faqContent = faqItem.querySelector('.faq-content');
-            const icon = this.querySelector('i');
-
-            // Close any other open FAQ items
-            document.querySelectorAll('.faq-item').forEach(item => {
-                if (item !== faqItem) {
-                    item.classList.remove('active');
-                    const content = item.querySelector('.faq-content');
-                    const otherIcon = item.querySelector('i');
-                    content.style.maxHeight = null;
-                    content.style.padding = '0';
-                    otherIcon.classList.replace('bx-minus', 'bx-plus');
-                }
-            });
-
-            // Toggle the clicked FAQ item
-            faqItem.classList.toggle('active');
-            if (faqItem.classList.contains('active')) {
-                faqContent.style.maxHeight = faqContent.scrollHeight + 'px';
-                faqContent.style.padding = '10px 0';
-                icon.classList.replace('bx-plus', 'bx-minus');
-            } else {
-                faqContent.style.maxHeight = null;
-                faqContent.style.padding = '0';
-                icon.classList.replace('bx-minus', 'bx-plus');
-            }
-        });
-    });
-
     // Plan's Show Hide Functionality
     document.querySelectorAll('.plan-smd-link').forEach(link => {
         link.addEventListener('click', function () {
@@ -253,5 +220,12 @@ document.addEventListener('DOMContentLoaded', function () {
     toggleButton.addEventListener('click', toggleColor);
     toggleButton.addEventListener('mouseenter', displayUTM);
     toggleButton.addEventListener('mouseleave', hideUTM);
-
 });
+
+// FAQ's Show Hide Functionality
+$(document).ready(function () {
+    $('.faq-link').on('click', function () {
+        console.log('as');
+        $(this).siblings('.faq-content').slideToggle();
+    });
+})
