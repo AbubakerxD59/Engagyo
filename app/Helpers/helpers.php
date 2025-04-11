@@ -9,155 +9,15 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Exceptions\InvalidFormatException;
 
-/**
- * Get company name
- *
- * @return response()
- */
-if (!function_exists('getCompanyName')) {
-    function getCompanyName()
-    {
-        return setting('company_name', config('app.name'));
-    }
-}
-/**
- * Get company email from settings
- *
- * @return response()
- */
-if (!function_exists('getCompanyEmail')) {
-    function getCompanyEmail()
-    {
-        return setting('company_email');
-    }
-}
-/**
- * Get company phone number from settings
- *
- * @return response()
- */
-if (!function_exists('getCompanyPhoneNumber')) {
-    function getCompanyPhoneNumber()
-    {
-        return setting('company_phone_number');
-    }
-}
-/**
- * Get company logo url from settings
- *
- * @return response()
- */
-if (!function_exists('getCompanyLogoUrl')) {
-    function getCompanyLogoUrl()
-    {
-        return asset(setting('company_logo', 'assets/img/site_logo.jpg'));
-    }
-}
-/**
- * Get number of items per page
- *
- * @return response()
- */
-if (!function_exists('getNumberOfItemsPerPage')) {
-    function getNumberOfItemsPerPage()
-    {
-        return setting('item_per_page', '50');
-    }
-}
-/**
- * Get date format
- *
- * @return response()
- */
-if (!function_exists('getDateFormat')) {
-    function getDateFormat()
-    {
-        return setting('date_format', 'jS M, Y');
-    }
-}
-/**
- * Get time format
- *
- * @return response()
- */
-if (!function_exists('getTimeFormat')) {
-    function getTimeFormat()
-    {
-        return setting('time_format', 'h:m a');
-    }
-}
-/**
- * Get date time format
- *
- * @return response()
- */
-if (!function_exists('getDateTimeFormat')) {
-    function getDateTimeFormat()
-    {
-        return setting('date_time_format', 'jS M, Y  h:m a');
-    }
-}
-/**
- * parse into date format
- *
- * @return response()
- */
-if (!function_exists('parseDateFormat')) {
-    function parseDateFormat($date)
-    {
-        if (!empty($date)) {
-            try {
-                return Carbon::parse($date)->format(getDateFormat());
-            } catch (InvalidFormatException $e) {
-                return '';
-            }
-        } else {
-            return '';
-        }
-    }
-}
-/**
- * parse into time format
- *
- * @return response()
- */
-if (!function_exists('parseTimeFormat')) {
-    function parseTimeFormat($time)
-    {
-        if (!empty($time)) {
-            try {
-                return Carbon::parse($time)->format(getTimeFormat());
-            } catch (InvalidFormatException $e) {
-                return '';
-            }
-        } else {
-            return '';
-        }
-    }
-}
-/**
- * parse into date time format
- *
- * @return response()
- */
-if (!function_exists('parseDateTimeFormat')) {
-    function parseDateTimeFormat($date_time)
-    {
-        if (!empty($date_time)) {
-            try {
-                return Carbon::parse($date_time)->format(getDateTimeFormat());
-            } catch (InvalidFormatException $e) {
-                return '';
-            }
-        } else {
-            return '';
-        }
-    }
-}
-
 function site_logo()
 {
     $logo = asset('assets/frontend/images/logo.png');
+    return $logo;
+}
+
+function panel_logo()
+{
+    $logo = asset('assets/frontend/images/panel_logo.png');
     return $logo;
 }
 
@@ -393,4 +253,15 @@ function check_features($features, $package_id)
     } else {
         return $features;
     }
+}
+
+
+function social_logo($type = null)
+{
+    if ($type == 'facebook') {
+        $logo = asset("assets/frontend/images/icons/facebook-circle.svg");
+    } elseif ($type == 'instagram') {
+        $logo = asset("assets/frontend/images/icons/instagram.png");
+    }
+    return $logo;
 }

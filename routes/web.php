@@ -82,7 +82,7 @@ Route::name('frontend.')->group(function () {
 });
 
 // Strip webhook route
-Route::stripeWebhooks('stripe-webhook');
+// Route::stripeWebhooks('stripe-webhook');
 
 // Frontend routes
 require __DIR__ . '/frontend.php';

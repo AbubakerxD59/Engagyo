@@ -9,15 +9,14 @@ return new class extends Migration
     /**
      * Run the migrations.
      */
-    public function up()
+    public function up(): void
     {
-        Schema::create('webhook_calls', function (Blueprint $table) {
+        Schema::create('accounts', function (Blueprint $table) {
             $table->id();
-            $table->string('name');
-            $table->string('url');
-            $table->json('headers')->nullable();
-            $table->json('payload')->nullable();
-            $table->text('exception')->nullable();
+            $table->intger('user_id');
+            $table->integer('acc_id');
+            $table->string('type');
+            $table->integer('status')->default(0);
             $table->timestamps();
         });
     }
@@ -27,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('webhook_calls');
+        Schema::dropIfExists('accounts');
     }
 };

@@ -6,6 +6,9 @@ use Illuminate\Support\Facades\Schema;
 
 class CreateSettingsTable extends Migration
 {
+    private $table;
+    private $key;
+    private $value;
     /**
      * Set up the options.
      */

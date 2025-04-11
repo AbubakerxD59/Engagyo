@@ -14,15 +14,35 @@
                         <h1>
                             Welcome
                         </h1>
-                        <form action="" class="signup__input__form">
+                        <form action="{{ route('frontend.login') }}" method="POST" class="signup__input__form">
+                            @csrf
                             <div class="field">
-                                <label for="text">Email</label>
-                                <input type="text" class="signup__input" placeholder="Enter your email address">
+                                <label for="email">Email</label>
+                                <input type="email" id="email" name="email" class="signup__input"
+                                    placeholder="Enter your email address" value="{{ old('email') }}" required>
+                                @error('email')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="field">
-                                <label for="text">Password</label>
-                                <input type="password" class="signup__input" placeholder="Atleast 8 characters"
-                                    autocomplete="off">
+                                <label for="password">Password</label>
+                                <input type="password" id="password" name="password" class="signup__input"
+                                    autocomplete="off" required>
+                                @error('password')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
+                            </div>
+                            <div class="checkarea">
+                                <input type="checkbox" name="remember_me" id="remember_me" class="w-auto agree-checkbox"
+                                    {{ old('remember_me') == 'on' ? 'checked' : '' }}>
+                                <label for="remember_me">
+                                    <p>
+                                        Remember me
+                                    </p>
+                                </label>
+                                @error('remember_me')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
                             </div>
                             <button class="btn signup__btn">Sign Up</button>
                         </form>

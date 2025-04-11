@@ -19,6 +19,8 @@ class RouteServiceProvider extends ServiceProvider
      */
     public const HOME = '/dashboard';
     public const INV_CRED = '/login';
+    public const FRONTEND_INV_CRED = 'users/sign_in';
+    public const FRONTEND_AUTH_HOME = '/';
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.

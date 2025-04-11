@@ -42,13 +42,6 @@ class AuthController extends Controller
 
     public function logout()
     {
-        $role_name = isset(Auth::user()->roles->pluck('name')[0]) ? Auth::user()->roles->pluck('name')[0] : '';
-        if ($role_name == 'Super Admin') {
-            Cache::forget('super_admin_assigned_permissions');
-        } else {
-            $role_id = isset(Auth::user()->roles->pluck('id')[0]) ? Auth::user()->roles->pluck('id')[0] : '';
-            Cache::forget('assigned_permissions_to_role_' . $role_id);
-        }
         Auth::logout();
         session()->flash('success', 'auth.logout_success');
         return redirect()->route('login');

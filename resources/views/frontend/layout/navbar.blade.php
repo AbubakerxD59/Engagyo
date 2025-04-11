@@ -127,11 +127,11 @@
 
             <div class="d-block d-lg-flex">
                 @if (Auth::check())
-                    <button class="btn nav-btn btn-colored" type="button">
-                        <a href="pages/users/signup.html">
+                    <a href="{{ route('panel.accounts') }}">
+                        <button class="btn nav-btn btn-colored" type="button">
                             DASHBOARD
-                        </a>
-                    </button>
+                        </button>
+                    </a>
                 @else
                     <a href="{{ route('frontend.showLogin') }}">
                         <button class="btn nav-btn btn-transparent align-items-center" href="#features" type="button">

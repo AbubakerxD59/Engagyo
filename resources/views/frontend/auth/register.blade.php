@@ -14,31 +14,57 @@
                         <h1>
                             Get Started
                         </h1>
-                        <form action="" class="signup__input__form">
+                        <form action="{{ route('frontend.register') }}" method="POST" class="signup__input__form">
+                            @csrf
                             <div class="signup__input__group">
                                 <div class="field input__group">
-                                    <label for="">First Name</label>
-                                    <input type="text" class="w-100" placeholder="First Name">
+                                    <label for="first_name">First Name</label>
+                                    <input type="text" class="w-100" id="first_name" name="first_name"
+                                        value="{{ old('first_name') }}" placeholder="Enter your first name" required>
+                                    @error('first_name')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
                                 </div>
                                 <div class="field input__group input__group__right">
-                                    <label for="">Last Name</label>
-                                    <input type="text" class="w-100" placeholder="Last Name">
+                                    <label for="last_name">Last Name</label>
+                                    <input type="text" class="w-100" id="last_name" name="last_name"
+                                        value="{{ old('last_name') }}" placeholder="Enter your last name" required>
+                                    @error('last_name')
+                                        <div class="invalid-feedback d-block">{{ $message }}</div>
+                                    @enderror
                                 </div>
                             </div>
                             <div class="field">
-                                <label for="text">Email</label>
-                                <input type="text" class="signup__input" placeholder="Enter your email address">
+                                <label for="email">Email</label>
+                                <input type="email" class="signup__input" id="email" name="email"
+                                    value="{{ old('email') }}" placeholder="Enter your email address" autocomplete="off"
+                                    required>
+                                @error('email')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="field">
-                                <label for="text">Password</label>
-                                <input type="password" class="signup__input" placeholder="Atleast 8 characters">
+                                <label for="password">Password</label>
+                                <input type="password" id="password" name="password" class="signup__input"
+                                    placeholder="Atleast 8 characters" required>
+                                @error('password')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
                             </div>
                             <div class="checkarea">
-                                <input type="checkbox" name="agreement" class="w-auto agree-checkbox" required>
-                                <p>
-                                    By continuing you agree to our <a href="/terms" target="_blank">Terms</a> and <a
-                                        href="/privacy" target="_blank">Privacy</a>
-                                </p>
+                                <input type="checkbox" name="agreement" id="agreement" class="w-auto agree-checkbox"
+                                    {{ old('agreement') == 'on' ? 'checked' : '' }} required>
+                                <label for="agreement">
+                                    <p>
+                                        By continuing you agree to our
+                                        <a href="/terms" target="_blank">Terms</a>
+                                        and
+                                        <a href="/privacy" target="_blank">Privacy</a>
+                                    </p>
+                                </label>
+                                @error('agreement')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
                             </div>
                             <button class="btn signup__btn">Sign Up</button>
                         </form>

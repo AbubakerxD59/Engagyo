@@ -6,10 +6,10 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="{{ csrf_token() }}" name="csrf-token">
     <title>
-        @yield('page_title') {{ ' - ' . getCompanyName() }}
+        {{ env('APP_NAME', 'Engagyo') . ' | ' }}@yield('title')
     </title>
     <!--favicon-->
-    <link class="rounded-pill" rel="icon" href="{{ getCompanyLogoUrl() }}" type="image/png" />
+    <link class="rounded-pill" rel="icon" href="{{ site_logo() }}" type="image/png" />
     <!-- Google Font: Source Sans Pro -->
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
@@ -43,22 +43,22 @@
     <div class="wrapper">
         <!-- Preloader -->
         <div class="preloader flex-column justify-content-center align-items-center">
-            <img class="animation__shake rounded-pill" src="{{ getCompanyLogoUrl() }}"
+            <img class="animation__shake rounded-pill" src="{{ site_logo() }}"
                 alt="{{ env('APP_NAME', 'Engagyo') }}" width="100px">
         </div>
 
         <!--sidebar wrapper -->
-        @include('admin.layouts.partials.leftmenu')
+        @include('user.layout.leftmenu')
         <!--end sidebar wrapper -->
         <!--start header -->
-        @include('admin.layouts.partials.header')
+        @include('user.layout.header')
         <!--end header -->
         <!--start page wrapper -->
         <div class="content-wrapper">
             @yield('page_content')
         </div>
         <!--end page wrapper -->
-        @include('admin.layouts.partials.footer')
+        @include('user.layout.footer')
     </div>
     <!-- jQuery -->
     <script src="{{ asset('assets/plugins/jquery/jquery.min.js') }}"></script>
@@ -120,7 +120,6 @@
         $(document).ready(function() {
             $('.sign-out').on('click', function() {
                 if (confirm('Do you wish to Signout?')) {
-                    console.log('here');
                     $('#signout_form').submit();
                 }
             });

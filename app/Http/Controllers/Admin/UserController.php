@@ -174,7 +174,6 @@ class UserController extends Controller
 
         $users = $users->get();
         foreach ($users as $k => $val) {
-            $role = (count($val->roles->pluck('name')) > 0) ? $val->roles->pluck('name')[0] : '-';
             $rand = rand(1, 5);
             $path = $rand > 0 ? 'avatar' . $rand : 'avatar';
             $path .= '.png';
@@ -185,7 +184,7 @@ class UserController extends Controller
             $users[$k]['name_link'] = !empty($val->full_name) ? '<a href=' . route('users.edit', $val->id) . '>' . $val->full_name . '</a>' : '-';
             $users[$k]['email_username'] = $email_username;
             $users[$k]['created'] = date('Y-m-d', strtotime($val->created_at));
-            $users[$k]['role'] = $role;
+            $users[$k]['role'] = $val->getRole();
             $users[$k]['status_span'] = $val->status ? "<span class='badge badge-success'>Active</span>" : "<span class='badge badge-danger'>Inactive</span>";
             $users[$k]['action'] = view('admin.users.action')->with('user', $val)->with('role', $role)->render();
             $users[$k] = $val;

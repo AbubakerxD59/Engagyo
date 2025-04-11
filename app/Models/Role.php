@@ -15,6 +15,11 @@ class Role extends SpatieRole
         'name', 'guard_name', 'created_by',
     ];
 
+    static public $roles_array = [
+        'Super Admin',
+        'User'
+    ];
+
     public function scopeSearch($query, $value)
     {
         $query->where('name', 'like', "%{$value}%");

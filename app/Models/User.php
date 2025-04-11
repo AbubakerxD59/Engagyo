@@ -20,7 +20,8 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
-        'full_name',
+        'first_name',
+        'last_name',
         'email',
         'password',
         'whatsapp_number',
@@ -28,7 +29,6 @@ class User extends Authenticatable
         'city',
         'country',
         'address',
-        'membership_id',
         'status',
     ];
 
@@ -53,9 +53,22 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
     ];
 
+    protected $appends = ['full_name'];
+
+    static public $status_array = [
+        "0" => "Inactive",
+        "1" => "Active",
+        "2" => "Pending"
+    ];
+
     public function scopeSearch($query, $value)
     {
-        $query->where('full_name', 'like', "%{$value}%")->orWhere('email', 'like', "%{$value}%");
+        $query->where('first_name', 'like', "%{$value}%")->where('last_name', 'like', "%{$value}%")->orWhere('email', 'like', "%{$value}%");
+    }
+
+    public function scopeEmail($query, $value)
+    {
+        $query->where('email', 'like', "%{$value}%");
     }
 
     protected function Password(): Attribute
@@ -65,10 +78,29 @@ class User extends Authenticatable
         );
     }
 
-    protected function profilePic(): Attribute
+    protected function status(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => ($value != '' && $value != null) ? url(getImage('users', $value)) : '',
+            get: function ($value) {
+                $status = in_array($value, self::$status_array) ? self::$status_array[$value] : "Inactive";
+                return $status;
+            }
         );
+    }
+
+    protected function fullName(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                $full_name = $this->first_name.' '.$this->last_name;
+                return $full_name;
+            }
+        );
+    }
+
+    public function getRole()
+    {
+        $role = $this->roles()->first();
+        return $role ? $role->name : '';
     }
 }
