@@ -1,7 +1,7 @@
 <?php
 
-use app\Http\Controllers\FrontEnd\AuthController;
-use app\Http\Controllers\FrontEnd\FrontendController;
+use App\Http\Controllers\FrontEnd\AuthController;
+use App\Http\Controllers\FrontEnd\FrontendController;
 use App\Http\Controllers\User\AccountsController;
 use Illuminate\Support\Facades\Route;
 
@@ -19,7 +19,7 @@ Route::name("frontend.")->controller(FrontendController::class)->group(function 
     // Landing Page
     Route::get("/", "home")->name("home");
     // Features
-    Route::name("features.")->group(function(){
+    Route::name("features.")->group(function () {
         Route::get("calendar-view", "calendarView")->name("calendarView");
         Route::get("bulk-scheduling", "bulkScheduling")->name("bulkScheduling");
         Route::get("analytics", "analytics")->name("analytics");
@@ -28,7 +28,7 @@ Route::name("frontend.")->controller(FrontendController::class)->group(function 
         Route::get("curate-post", "curatePost")->name("curatePost");
     });
     // Free Tools
-    Route::name("freeTools.")->group(function(){
+    Route::name("freeTools.")->group(function () {
         Route::get("link-shortener", "linkShortener")->name("linkShortener");
     });
     // Pricing

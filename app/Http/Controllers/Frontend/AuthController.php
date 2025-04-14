@@ -1,6 +1,6 @@
 <?php
 
-namespace app\Http\Controllers\Frontend;
+namespace App\Http\Controllers\FrontEnd;
 
 use App\Models\User;
 use Illuminate\Support\Str;

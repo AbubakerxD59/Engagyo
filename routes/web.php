@@ -7,7 +7,6 @@ use App\Http\Controllers\Admin\PromoCodeController;
 use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\FeatureController;
-use App\Http\Controllers\Frontend\HomeController;
 use App\Http\Controllers\PackageController;
 use Illuminate\Support\Facades\Route;
 
@@ -73,16 +72,6 @@ Route::middleware(['auth'])->prefix("admin/")->name("admin.")->group(function ()
         Route::get('dataTable', 'dataTable')->name('dataTable');
     });
 });
-
-// Strip routes
-Route::name('frontend.')->group(function () {
-    Route::get('buy-membership/{id?}', [HomeController::class, 'buyMembership'])->name('buy_memebership');
-    Route::post('checkout', [HomeController::class, 'checkout'])->name('checkout');
-    Route::get('success', [HomeController::class, 'success'])->name('checkout_success');
-});
-
-// Strip webhook route
-// Route::stripeWebhooks('stripe-webhook');
 
 // Frontend routes
 require __DIR__ . '/frontend.php';
