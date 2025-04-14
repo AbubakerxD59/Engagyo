@@ -17,7 +17,7 @@
                     </a>
                     <ul class="nav-show-hide collapse dropdown-menu row" id="featuresDropdown">
                         <li class="col-12 col-lg-4">
-                            <a href="{{ route('frontend.calendarView') }}" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.features.calendarView') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bx-customize'></i>
                                 </div>
@@ -30,7 +30,7 @@
                             </a>
                         </li>
                         <li class="col-12 col-lg-4">
-                            <a href="{{ route('frontend.analytics') }}" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.features.analytics') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bxs-bar-chart-alt-2'></i>
                                 </div>
@@ -43,7 +43,7 @@
                             </a>
                         </li>
                         <li class="col-12 col-lg-4">
-                            <a href="{{ route('frontend.rssFeeds') }}" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.features.rssFeeds') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bx-link'></i>
                                 </div>
@@ -56,7 +56,7 @@
                             </a>
                         </li>
                         <li class="col-12 col-lg-4">
-                            <a href="{{ route('frontend.bulkScheduling') }}" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.features.bulkScheduling') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bxs-layer'></i>
                                 </div>
@@ -69,7 +69,7 @@
                             </a>
                         </li>
                         <li class="col-12 col-lg-4">
-                            <a href="{{ route('frontend.recycling') }}" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.features.recycling') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bx-link'></i>
                                 </div>
@@ -82,7 +82,7 @@
                             </a>
                         </li>
                         <li class="col-12 col-lg-4">
-                            <a href="{{ route('frontend.curatePost') }}" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.features.curatePost') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bx-list-ul'></i>
                                 </div>
@@ -103,7 +103,7 @@
                     </a>
                     <ul class="nav-show-hide small collapse dropdown-menu row" id="toolsdropdown">
                         <li class="col-12">
-                            <a href="pages/tools/urlshortner.html" class="nav-link nav-inner-link">
+                            <a href="{{ route('frontend.freeTools.linkShortener') }}" class="nav-link nav-inner-link">
                                 <div class="inner-link-icon d-none d-lg-block">
                                     <i class='bx bx-customize'></i>
                                 </div>
@@ -118,10 +118,10 @@
                     </ul>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="plans.html">Pricing</a>
+                    <a class="nav-link" href="{{route("frontend.pricing")}}">Pricing</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="pages/blog/blog.html">Blog</a>
+                    <a class="nav-link" href="{{route("frontend.blogs")}}">Blog</a>
                 </li>
             </ul>
 
@@ -134,7 +134,7 @@
                     </a>
                 @else
                     <a href="{{ route('frontend.showLogin') }}">
-                        <button class="btn nav-btn btn-transparent align-items-center" href="#features" type="button">
+                        <button class="btn nav-btn btn-transparent align-items-center" type="button">
                             <i class='bx bx-log-in-circle'></i> Login
                         </button>
                     </a>

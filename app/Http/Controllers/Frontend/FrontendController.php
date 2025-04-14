@@ -42,6 +42,18 @@ class FrontendController extends Controller
         return view("frontend.curate-post");
     }
 
+    public function linkShortener(){
+        return view("frontend.linkShortener");
+    }
+
+    public function pricing(){
+        return view("frontend.pricing");
+    }
+
+    public function blogs(){
+        return view("frontend.blogs");
+    }
+
     public function terms()
     {
         return view("frontend.terms");

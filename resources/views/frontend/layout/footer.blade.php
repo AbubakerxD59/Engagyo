@@ -125,11 +125,11 @@
             </div>
             <div class="footer-lower d-md-flex text-center justify-content-between align-center border-top py-4">
                 <p class="foot-content">
-                    © 2024 {{ env('APP_NAME', 'Engagyo') }} Limited | All Rights Reserved.
+                    {{ '©. ' . date('Y') . ' ' . env('APP_NAME', 'Engagyo') }} Limited | All Rights Reserved.
                 </p>
                 <div class="foot-end-links">
-                    <a href="{{route("frontend.terms")}}">Terms of Services</a>
-                    <a href="{{route("frontend.privacy")}}">Privacy Policy</a>
+                    <a href="{{ route('frontend.terms') }}">Terms of Services</a>
+                    <a href="{{ route('frontend.privacy') }}">Privacy Policy</a>
                 </div>
             </div>
         </div>
