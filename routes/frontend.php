@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\FrontEnd\AuthController;
-use App\Http\Controllers\FrontEnd\FrontendController;
+use App\Http\Controllers\Frontend\AuthController;
+use App\Http\Controllers\Frontend\FrontendController;
 use App\Http\Controllers\User\AccountsController;
 use Illuminate\Support\Facades\Route;
 
@@ -23,6 +23,8 @@ Route::name("frontend.")->controller(FrontendController::class)->group(function 
     Route::get("recycling", "recycling")->name("recycling");
     Route::get("rss-feeds", "rssFeeds")->name("rssFeeds");
     Route::get("curate-post", "curatePost")->name("curatePost");
+    Route::get("terms", "terms")->name("terms");
+    Route::get("privacy", "privacy")->name("privacy");
 });
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(function () {
     Route::controller(AccountsController::class)->group(function () {

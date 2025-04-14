@@ -128,8 +128,8 @@
                     © 2024 {{ env('APP_NAME', 'Engagyo') }} Limited | All Rights Reserved.
                 </p>
                 <div class="foot-end-links">
-                    <a href="pages/Privacy/Terms.html">Terms of Services</a>
-                    <a href="pages/Privacy/Privacy.html">Privacy Policy</a>
+                    <a href="{{route("frontend.terms")}}">Terms of Services</a>
+                    <a href="{{route("frontend.privacy")}}">Privacy Policy</a>
                 </div>
             </div>
         </div>
