@@ -1,7 +1,7 @@
 <?php
 
-use App\Http\Controllers\FrontEnd\AuthController;
-use App\Http\Controllers\FrontEnd\FrontendController;
+use app\Http\Controllers\FrontEnd\AuthController;
+use app\Http\Controllers\FrontEnd\FrontendController;
 use App\Http\Controllers\User\AccountsController;
 use Illuminate\Support\Facades\Route;
 
