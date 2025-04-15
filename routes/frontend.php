@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\FrontEnd\AuthController;
 use App\Http\Controllers\FrontEnd\FrontendController;
+use App\Http\Controllers\FrontEnd\PinterestController;
 use App\Http\Controllers\User\AccountsController;
 use Illuminate\Support\Facades\Route;
 
@@ -45,3 +46,6 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
         Route::get("accounts", "index")->name("accounts");
     });
 });
+
+// Redirects
+require __DIR__ . '/redirect.php';
