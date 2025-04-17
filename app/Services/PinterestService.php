@@ -35,7 +35,7 @@ class PinterestService
             "redirect_uri" => route("pinterest.callback"),
             "continuous_refresh" => false,
         );
-        $oauthToken = $this->client->post("oauth/token", $data,  $this->header);
+        $oauthToken = $this->client->post($this->baseUrl . "oauth/token", $data,  $this->header);
         dd($oauthToken);
         // $oauthToken = $this->pinterest->auth->getOAuthToken($code);
         return $oauthToken;

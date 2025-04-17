@@ -26,10 +26,7 @@ class HttpService
     public function __construct($baseUrl)
     {
         $this->baseUrl = $baseUrl;
-        $this->client = new Client([
-            "base_url" => $this->baseUrl,
-            "timeout" => 60,
-        ]);
+        $this->client = new Client();
     }
 
     /**
