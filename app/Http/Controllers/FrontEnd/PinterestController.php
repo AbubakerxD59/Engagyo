@@ -18,10 +18,8 @@ class PinterestController extends Controller
     {
         if ($request->has('code') && $request->has('state')) {
             $token = $this->pinterestService->getOauthToken($request->code);
-            if (isset($token->access_token)) {
-                $this->pinterestService->setOAuthToken($token->access_token);
-                $me = $this->pinterestService->me();
-                dd($me);
+            if (isset($token["access_token"])) {
+                $me = $this->pinterestService->me($token["access_token"]);
             } else {
                 $response = [
                     "success" => "error",

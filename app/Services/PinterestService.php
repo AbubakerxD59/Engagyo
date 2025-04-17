@@ -33,27 +33,16 @@ class PinterestService
             "grant_type" => "authorization_code",
             "code" => (string) $code,
             "redirect_uri" => route("pinterest.callback"),
-            "continuous_refresh" => false,
+            "continuous_refresh" => true,
         );
-        $oauthToken = $this->client->post($this->baseUrl . "oauth/token", $data,  $this->header);
-        dd($oauthToken);
-        // $oauthToken = $this->pinterest->auth->getOAuthToken($code);
-        return $oauthToken;
+        $token = $this->client->post($this->baseUrl . "oauth/token", $data,  $this->header);
+        return $token;
     }
 
-    public function setOAuthToken($access_token = null)
+    public function me($access_token)
     {
-        if ($access_token) {
-            $this->pinterest->auth->setOAuthToken($access_token);
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    public function me()
-    {
-        $me = $this->pinterest->users->me();
+        $me = $this->client->get("user_account", [], $this->header);
+        dd($me);
         return $me;
     }
 }

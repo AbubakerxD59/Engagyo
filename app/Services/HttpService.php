@@ -51,10 +51,9 @@ class HttpService
     {
         try {
             $response = $this->client->get($endpoint, [
-                'query' => $queryParameters,
                 'headers' => $headers,
+                'query' => $queryParameters,
             ]);
-
             return $this->handleResponse($response);
         } catch (GuzzleException $e) {
             $this->handleException($e);
