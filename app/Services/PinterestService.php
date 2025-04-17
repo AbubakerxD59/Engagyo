@@ -8,7 +8,7 @@ class PinterestService
 {
     private $pinterest;
     private $client;
-    private $baseUrl = "https://api.pinterest.com/v5";
+    private $baseUrl = "https://api.pinterest.com/v5/";
     public function __construct()
     {
         $this->pinterest = new Pinterest(env("PINTEREST_KEY"), env("PINTEREST_SECRET"));
@@ -32,7 +32,7 @@ class PinterestService
         $header = array(
             "Content-Type" => "application/x-www-form-urlencoded"
         );
-        $oauthToken = $this->client->post("/oauth/token", $data, $header);
+        $oauthToken = $this->client->post("oauth/token", $data, $header);
         dd($oauthToken);
         // $oauthToken = $this->pinterest->auth->getOAuthToken($code);
         return $oauthToken;
