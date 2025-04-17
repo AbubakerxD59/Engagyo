@@ -53,7 +53,7 @@ class HttpService
             'headers' => $headers,
             'query' => $queryParameters,
         ]);
-        dd($response);
+        dd($response, $headers);
         try {
             return $this->handleResponse($response);
         } catch (GuzzleException $e) {
