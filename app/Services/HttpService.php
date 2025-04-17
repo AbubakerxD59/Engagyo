@@ -52,6 +52,7 @@ class HttpService
             "timeout" => 60,
         ];
         array_merge($headers, $header);
+        dd($headers);
         $this->client = new Client($headers);
         return $this;
     }
