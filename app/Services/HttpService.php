@@ -47,7 +47,12 @@ class HttpService
      */
     public function withHeader(array $header): self
     {
-        $this->client = new Client($header);
+        $headers = [
+            'base_uri' => $this->baseUrl,
+            "timeout" => 60,
+        ];
+        array_merge($headers, $header);
+        $this->client = new Client($headers);
         return $this;
     }
 
