@@ -25,9 +25,9 @@ class PinterestService
     {
         $data = array(
             "grant_type" => "authorization_code",
-            "code" => $code,
+            "code" => (string) $code,
             "redirect_uri" => route("pinterest.callback"),
-            "continuous_refresh" => true,
+            "continuous_refresh" => false,
         );
         $header = array(
             "Content-Type" => "application/x-www-form-urlencoded"
