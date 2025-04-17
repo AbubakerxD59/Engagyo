@@ -8,7 +8,7 @@ class PinterestService
 {
     private $pinterest;
     private $client;
-    private $baseUrl = "https://api.pinterest.com/v5/";
+    private $baseUrl = "https://api.pinterest.com/v5";
     public function __construct()
     {
         $this->pinterest = new Pinterest(env("PINTEREST_KEY"), env("PINTEREST_SECRET"));

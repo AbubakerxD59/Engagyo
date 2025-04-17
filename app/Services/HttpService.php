@@ -25,7 +25,7 @@ class HttpService
      */
     public function __construct($baseUrl)
     {
-        $this->baseUrl = $baseUrl ?? env("APP_URL");
+        $this->baseUrl = $baseUrl;
         $this->client = new Client([
             'base_uri' => $this->baseUrl,
             'timeout' => 60,
