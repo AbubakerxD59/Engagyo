@@ -26,7 +26,10 @@ class HttpService
     public function __construct($baseUrl)
     {
         $this->baseUrl = $baseUrl;
-        $this->client = new Client();
+        $this->client = new Client([
+            'base_uri' => $this->baseUrl,
+            "timeout" => 60,
+        ]);
     }
 
     /**
@@ -37,24 +40,6 @@ class HttpService
     public function getClient(): Client
     {
         return $this->client;
-    }
-    /**
-     * Set a custom header for the next request.
-     *
-     * @param string $name
-     * @param string $value
-     * @return $this
-     */
-    public function withHeader(array $header): self
-    {
-        $headers = [
-            'base_uri' => $this->baseUrl,
-            "timeout" => 60,
-        ];
-        $merged_heaaders = array_merge($headers, $header);
-        dd($merged_heaaders);
-        $this->client = new Client($merged_heaaders);
-        return $this;
     }
 
     /**
@@ -91,8 +76,8 @@ class HttpService
     public function post(string $endpoint, array $body = [], array $headers = []): ?array
     {
         $response = $this->client->post($endpoint, [
-            'json' => $body,
-            'headers' => $headers,
+            "headers" => $headers,
+            "form_params" => $body,
         ]);
         dd($response);
         return $this->handleResponse($response);
