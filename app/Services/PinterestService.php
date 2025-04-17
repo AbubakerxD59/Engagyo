@@ -32,8 +32,8 @@ class PinterestService
             "continuous_refresh" => false,
         );
         $header = array(
-            "Content-Type: application/x-www-form-urlencoded",
-            "Authorization: Basic" . $this->auth
+            "Content-Type" => "application/x-www-form-urlencoded",
+            "Authorization" => "Basic " . $this->auth
         );
         $oauthToken = $this->client->post("oauth/token", $data, $header);
         dd($oauthToken);
