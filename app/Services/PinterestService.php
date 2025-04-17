@@ -7,9 +7,12 @@ use DirkGroenen\Pinterest\Pinterest;
 class PinterestService
 {
     private $pinterest;
+    private $client;
+    private $baseUrl = "https://api.pinterest.com/v5/";
     public function __construct()
     {
         $this->pinterest = new Pinterest(env("PINTEREST_KEY"), env("PINTEREST_SECRET"));
+        $this->client = new HttpService($this->baseUrl);
     }
 
     public function getLoginUrl()
@@ -20,7 +23,18 @@ class PinterestService
 
     public function getOauthToken($code = null)
     {
-        $oauthToken = $this->pinterest->auth->getOAuthToken($code);
+        $data = array(
+            "grant_type" => "authorization_code",
+            "code" => $code,
+            "redirect_uri" => route("pinterest.callback"),
+            "continuous_refresh" => true,
+        );
+        $header = array(
+            "Content-Type" => "application/x-www-form-urlencoded"
+        );
+        $oauthToken = $this->client->post("/oauth/token", $data, $header);
+        dd($oauthToken);
+        // $oauthToken = $this->pinterest->auth->getOAuthToken($code);
         return $oauthToken;
     }
 
