@@ -49,12 +49,11 @@ class HttpService
      */
     public function get(string $endpoint, array $queryParameters = [], array $headers = []): ?array
     {
-        $response = $this->client->get($endpoint, [
-            'headers' => $headers,
-            'query' => $queryParameters,
-        ]);
-        dd($response, $headers);
         try {
+            $response = $this->client->get($endpoint, [
+                'headers' => $headers,
+                'query' => $queryParameters,
+            ]);
             return $this->handleResponse($response);
         } catch (GuzzleException $e) {
             $this->handleException($e);

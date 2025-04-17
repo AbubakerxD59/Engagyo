@@ -43,7 +43,6 @@ class PinterestService
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $me = $this->client->get($this->baseUrl . "user_account", [], $this->header);
-        dd($me);
         return $me;
     }
 }
