@@ -51,9 +51,8 @@ class HttpService
             'base_uri' => $this->baseUrl,
             "timeout" => 60,
         ];
-        array_merge($headers, $header);
-        dd($headers, $header);
-        $this->client = new Client($headers);
+        $merged_heaaders = array_merge($headers, $header);
+        $this->client = new Client($merged_heaaders);
         return $this;
     }
 
