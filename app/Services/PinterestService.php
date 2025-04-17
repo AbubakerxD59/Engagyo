@@ -8,11 +8,13 @@ class PinterestService
 {
     private $pinterest;
     private $client;
+    private $auth;
     private $baseUrl = "https://api.pinterest.com/v5/";
     public function __construct()
     {
         $this->pinterest = new Pinterest(env("PINTEREST_KEY"), env("PINTEREST_SECRET"));
         $this->client = new HttpService($this->baseUrl);
+        $this->auth = base64_encode("{" . env("PINTEREST_KEY") . "}:{" . env("PINTEREST_SECRET") . "}");
     }
 
     public function getLoginUrl()
@@ -30,7 +32,8 @@ class PinterestService
             "continuous_refresh" => false,
         );
         $header = array(
-            "Content-Type" => "application/x-www-form-urlencoded"
+            "Content-Type: application/x-www-form-urlencoded",
+            "Authorization: Basic" . $this->auth
         );
         $oauthToken = $this->client->post("oauth/token", $data, $header);
         dd($oauthToken);
