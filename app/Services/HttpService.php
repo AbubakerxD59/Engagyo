@@ -26,14 +26,7 @@ class HttpService
     public function __construct($baseUrl)
     {
         $this->baseUrl = $baseUrl;
-        $this->client = new Client([
-            'base_uri' => $this->baseUrl,
-            'timeout' => 60,
-            'headers' => [
-                'Content-Type' => 'application/json',
-                'Accept' => 'application/json',
-            ],
-        ]);
+        $this->client = new Client();
     }
 
     /**
@@ -44,6 +37,18 @@ class HttpService
     public function getClient(): Client
     {
         return $this->client;
+    }
+    /**
+     * Set a custom header for the next request.
+     *
+     * @param string $name
+     * @param string $value
+     * @return $this
+     */
+    public function withHeader(array $header): self
+    {
+        $this->client = new Client($header);
+        return $this;
     }
 
     /**

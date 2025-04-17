@@ -25,17 +25,18 @@ class PinterestService
 
     public function getOauthToken($code = null)
     {
+        $header = array(
+            "Content-Type" => "application/x-www-form-urlencoded",
+            "Authorization" => "Basic " . $this->auth
+        );
+        $this->client->withHeader($header);
         $data = array(
             "grant_type" => "authorization_code",
             "code" => (string) $code,
             "redirect_uri" => route("pinterest.callback"),
             "continuous_refresh" => false,
         );
-        $header = array(
-            "Content-Type" => "application/x-www-form-urlencoded",
-            "Authorization" => "Basic " . $this->auth
-        );
-        $oauthToken = $this->client->post("oauth/token", $data, $header);
+        $oauthToken = $this->client->post("oauth/token", $data);
         dd($oauthToken);
         // $oauthToken = $this->pinterest->auth->getOAuthToken($code);
         return $oauthToken;
