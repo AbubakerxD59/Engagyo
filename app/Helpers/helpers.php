@@ -259,11 +259,11 @@ function check_features($features, $package_id)
 function social_logo($type = null)
 {
     if ($type == 'facebook') {
-        $logo = asset("assets/frontend/images/icons/facebook-circle.svg");
+        $logo = asset("assets/frontend/images/Icons/facebook-circle.svg");
     } elseif ($type == 'instagram') {
-        $logo = asset("assets/frontend/images/icons/instagram.png");
+        $logo = asset("assets/frontend/images/Icons/instagram.png");
     } elseif ($type == 'pinterest') {
-        $logo = asset("assets/frontend/images/icons/pinterest-circle.svg");
+        $logo = asset("assets/frontend/images/Icons/pinterest-circle.svg");
     }
     return $logo;
 }

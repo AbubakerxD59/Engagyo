@@ -16,6 +16,24 @@ class PinterestController extends Controller
     }
     public function pinterestCallback(Request $request)
     {
-        dd($request->all());
+        if ($request->has('code') && $request->has('state')) {
+            $token = $this->pinterestService->getOauthToken($request->code);
+            if (isset($token->access_token)) {
+                $this->pinterestService->setOAuthToken($token->access_token);
+                $me = $this->pinterestService->me();
+                dd($me);
+            } else {
+                $response = [
+                    "success" => "error",
+                    "message" => "Invalid Code!"
+                ];
+            }
+        } else {
+            $response = [
+                "success" => "error",
+                "message" => "Something went Wrong!"
+            ];
+        }
+        return redirect(route("panel.accounts"))->with($response["success"], $response["message"]);
     }
 }
