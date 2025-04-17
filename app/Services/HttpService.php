@@ -84,7 +84,7 @@ class HttpService
                 'json' => $body,
                 'headers' => $headers,
             ]);
-
+            dd($response);
             return $this->handleResponse($response);
         } catch (GuzzleException $e) {
             $this->handleException($e);
