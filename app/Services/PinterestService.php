@@ -23,7 +23,7 @@ class PinterestService
 
     public function getLoginUrl()
     {
-        $url = $this->pinterest->auth->getLoginUrl(route("pinterest.callback"), array('boards:read', 'pins:read', 'boards:write', 'pins:write'));
+        $url = $this->pinterest->auth->getLoginUrl(route("pinterest.callback"), array('user_accounts:read', 'boards:read', 'pins:read', 'boards:write', 'pins:write'));
         return $url;
     }
 
