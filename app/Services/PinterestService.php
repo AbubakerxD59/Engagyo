@@ -12,9 +12,11 @@ class PinterestService
     private $baseUrl = "https://api.pinterest.com/v5/";
     public function __construct()
     {
-        $this->pinterest = new Pinterest(env("PINTEREST_KEY"), env("PINTEREST_SECRET"));
+        $pinterest_id = env("PINTEREST_KEY");
+        $pinterest_secret = env("PINTEREST_SECRET");
+        $this->pinterest = new Pinterest($pinterest_id, $pinterest_secret);
         $this->client = new HttpService($this->baseUrl);
-        $this->auth = base64_encode(env("PINTEREST_KEY") . ":" . env("PINTEREST_SECRET"));
+        $this->auth = base64_encode("{$pinterest_id}:{$pinterest_secret}");
     }
 
     public function getLoginUrl()
