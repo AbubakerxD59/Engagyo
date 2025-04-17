@@ -262,6 +262,8 @@ function social_logo($type = null)
         $logo = asset("assets/frontend/images/icons/facebook-circle.svg");
     } elseif ($type == 'instagram') {
         $logo = asset("assets/frontend/images/icons/instagram.png");
+    } elseif ($type == 'pinterest') {
+        $logo = asset("assets/frontend/images/icons/pinterest-circle.svg");
     }
     return $logo;
 }
