@@ -27,7 +27,7 @@ class HttpService
     {
         $this->baseUrl = $baseUrl;
         $this->client = new Client([
-            'base_uri' => $this->baseUrl,
+            "base_url" => $this->baseUrl,
             "timeout" => 60,
         ]);
     }
