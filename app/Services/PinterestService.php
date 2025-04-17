@@ -14,7 +14,7 @@ class PinterestService
     {
         $this->pinterest = new Pinterest(env("PINTEREST_KEY"), env("PINTEREST_SECRET"));
         $this->client = new HttpService($this->baseUrl);
-        $this->auth = base64_encode("{" . env("PINTEREST_KEY") . "}:{" . env("PINTEREST_SECRET") . "}");
+        $this->auth = base64_encode(env("PINTEREST_KEY") . ":" . env("PINTEREST_SECRET"));
     }
 
     public function getLoginUrl()
