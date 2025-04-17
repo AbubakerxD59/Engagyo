@@ -41,7 +41,7 @@ class PinterestService
 
     public function me($access_token)
     {
-        $me = $this->client->get("user_account", [], $this->header);
+        $me = $this->client->get($this->baseUrl . "user_account", [], $this->header);
         dd($me);
         return $me;
     }
