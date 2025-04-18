@@ -90,7 +90,7 @@ class PinterestController extends Controller
                 "name" => $board["name"],
                 "status" => 1
             ]);
-            return response()->json(["success" => false, "message" => "Board connected Successfully!"]);
+            return response()->json(["success" => true, "message" => "Board connected Successfully!"]);
         } else {
             return response()->json(["success" => false, "message" => "Something went Wrong!"]);
         }

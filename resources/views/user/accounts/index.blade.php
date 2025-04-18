@@ -120,7 +120,7 @@
                     success: function(response) {
                         console.log(response);
                         toastr.success("Board Connected Successfully!");
-                        $(this).html('Connected');
+                        $(this).text('Connected').removeClass('pinterest_connect pointer');
                     },
                 });
             });
