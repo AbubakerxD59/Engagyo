@@ -85,11 +85,12 @@
         }
 
         .item_count {
-            padding: 5px;
-            border: 1px solid black;
-            border-radius: 11px;
-            background: #bebaba;
+            padding: 10px;
+            margin-block: 5px;
+            border: 1px solid grey;
+            border-radius: 10px;
             color: #fff;
+            font-weight: 600
         }
     </style>
 @endpush

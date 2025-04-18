@@ -6,7 +6,7 @@
                   <h5 class="modal-title" id="exampleModalLongTitle">
                       <img src="{{ social_logo(session_get('account')) }}" alt="{{ no_image() }}"
                           class="rounded-pill" height="25px" width="25px">
-                      <p class="acc_title">{{ session_get('account') }}</p>
+                      <span class="acc_title">{{ session_get('account') }}</span>
                   </h5>
                   <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                       <span aria-hidden="true">&times;</span>
@@ -18,8 +18,8 @@
                       <div class="d-flex justify-content-between item_count">
                           <div class="d-flex">
                               <img src="{{ $pinterest->profile_image }}" alt="{{ social_logo(session_get('account')) }}"
-                                  class="rounded-pill mr-3" height="25px" width="25px">
-                              <p>{{ $item['name'] }}</p>
+                                  class="rounded-pill mr-2" height="25px" width="25px">
+                              <span>{{ $item['name'] }}</span>
                           </div>
                           <div>
                               <span class="pinterest_connect" data-id="{{ $item['id'] }}">Connect</span>
