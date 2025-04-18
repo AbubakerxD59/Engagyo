@@ -317,5 +317,8 @@ function social_logo($type = null)
     } elseif ($type == 'pinterest') {
         $logo = asset("assets/frontend/images/Icons/pinterest-circle.svg");
     }
+    else{
+        $logo = "";
+    }
     return $logo;
 }
