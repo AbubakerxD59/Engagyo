@@ -85,7 +85,8 @@
     <script>
         $(document).ready(function() {
             var pinAcc = $('#pinterestAcc').val();
-            if (pinAcc == 1) {
+            console.log(pinAcc);
+            if (pinAcc) {
                 $('#connect_pinterest_modal').modal('toggle');
             }
         });
