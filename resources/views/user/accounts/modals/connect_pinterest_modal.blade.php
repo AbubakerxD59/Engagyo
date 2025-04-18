@@ -19,7 +19,7 @@
                           <div class="d-flex">
                               <img src="{{ $pinterest->profile_image }}" alt="{{ social_logo(session_get('account')) }}"
                                   class="rounded-pill mr-3" height="25px" width="25px">
-                              <p>{{ $item->name }}</p>
+                              <p>{{ $item["name"] }}</p>
                           </div>
                           <div>
                               <button class="btn btn-primary btn-sm">Connect</button>
