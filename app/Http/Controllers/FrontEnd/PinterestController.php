@@ -80,6 +80,7 @@ class PinterestController extends Controller
     {
         $items = session_get('items');
         $board = isset($items[$request->id]) ? $items[$request->id] : 0;
+        dd($items, $board);
         if ($board) {
             $user = Auth::user();
             $pinterest = $this->pinterest->search($request->pin_id)->where('user_id', $user->id)->first();
