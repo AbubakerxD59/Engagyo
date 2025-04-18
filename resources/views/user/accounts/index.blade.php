@@ -59,9 +59,11 @@
             </div>
         </section>
     </div>
-    @include('user.accounts.modals.connect_pinterest_modal', [
-        'pinterest' => $user->pinterest()->latest()->first(),
-    ])
+    @if (!empty(session_get('items')))
+        @include('user.accounts.modals.connect_pinterest_modal', [
+            'pinterest' => $user->pinterest()->latest()->first(),
+        ])
+    @endif
 @endsection
 @push('styles')
     <style>
