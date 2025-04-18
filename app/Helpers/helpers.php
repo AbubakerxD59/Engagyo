@@ -27,6 +27,10 @@ function site_company()
     return $company;
 }
 
+function no_image(){
+    $image = asset("assets/img/noimage.png");
+}
+
 function saveImage($file)
 {
     $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.' . $file->extension();
