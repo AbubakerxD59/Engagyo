@@ -16,6 +16,7 @@ class AccountsController extends Controller
     }
     public function index()
     {
+        dd(session()->all(), request()->sess()->get('items'));
         $user = Auth::user();
         $pinterestUrl = $this->pinterestService->getLoginUrl();
         return view("user.accounts.index", compact("user", "pinterestUrl"));
