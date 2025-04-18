@@ -60,6 +60,10 @@ class User extends Authenticatable
         "2" => "Pending"
     ];
 
+    public function pinterest()
+    {
+        return $this->hasOne(Pinterest::class, 'user_id', 'id');
+    }
     public function scopeSearch($query, $value)
     {
         $query->where('first_name', 'like', "%{$value}%")->where('last_name', 'like', "%{$value}%")->orWhere('email', 'like', "%{$value}%");
@@ -91,7 +95,7 @@ class User extends Authenticatable
     {
         return Attribute::make(
             get: function ($value) {
-                $full_name = $this->first_name.' '.$this->last_name;
+                $full_name = $this->first_name . ' ' . $this->last_name;
                 return $full_name;
             }
         );
