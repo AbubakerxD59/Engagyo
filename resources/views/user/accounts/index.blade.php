@@ -106,8 +106,9 @@
                 {{ session_delete('pinterest_auth') }}
             }
             $('.pinterest_connect').on('click', function() {
-                var id = $(this).data('id');
-                var pin_id = $(this).data('pin-id');
+                var button = $(this);
+                var id = button.data('id');
+                var pin_id = button.data('pin-id');
                 var token = $('meta[name="csrf-token"]').attr('content');
                 $.ajax({
                     url: "{{ route('pinterest.addBoard') }}",
@@ -120,7 +121,7 @@
                     success: function(response) {
                         console.log(response);
                         toastr.success("Board Connected Successfully!");
-                        $(this).text('Connected').removeClass('pinterest_connect pointer');
+                        button.text('Connected').removeClass('pinterest_connect pointer');
                     },
                 });
             });
