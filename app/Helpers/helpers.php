@@ -8,6 +8,7 @@ use App\Models\Category;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
 use Carbon\Exceptions\InvalidFormatException;
+use Illuminate\Support\Facades\Session;
 
 function site_logo()
 {
@@ -129,30 +130,30 @@ function get_status_view($type)
 
 function session_set($key, $value)
 {
-    if (request()->session()->exists($key)) {
-        request()->session()->put($key, $value);
-    }
+    Session::put($key, $value);
     return true;
 }
 
 function session_get($key)
 {
-    if (request()->session()->exists($key)) {
-        $session = request()->session()->get($key);
-        return $session;
-    } else {
-        return "";
-    }
+    $session = Session::get($key);
+    return $session;
 }
 
 function session_check($key)
 {
-    if (request()->session()->exists($key)) {
-        if (!empty(request()->session()->get($key))) {
+    if (Session::has($key)) {
+        if (!empty(Session::get($key))) {
             return true;
         }
     }
     return false;
+}
+
+function session_delete($key)
+{
+    Session::forget($key);
+    return true;
 }
 
 function calculate_discount_price($base_price, $discount_price, $discount_type, $type)
@@ -316,8 +317,7 @@ function social_logo($type = null)
         $logo = asset("assets/frontend/images/Icons/instagram.png");
     } elseif ($type == 'pinterest') {
         $logo = asset("assets/frontend/images/Icons/pinterest-circle.svg");
-    }
-    else{
+    } else {
         $logo = "";
     }
     return $logo;
