@@ -433,10 +433,21 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
 
 .account_box {
     padding: 10px;
-    border: 1px solid black;
-    border-radius: 5px;
+    border: 1px solid grey;
+    border-radius: 10px;
 }
 
 .account_box article {
     display: flex;
+    align-items: center;
+}
+
+.account_box article picture img {
+    width: 50px;
+    height: 50px;
+}
+
+.account_name {
+    font-weight: 600;
+    color: #000;
 }
