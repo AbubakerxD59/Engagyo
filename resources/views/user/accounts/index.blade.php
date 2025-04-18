@@ -102,7 +102,7 @@
         $(document).ready(function() {
             var pinAcc = $('#pinterestAcc').val();
             console.log(pinAcc);
-            if (pinAcc) {
+            if (pinAcc == 1) {
                 $('#connectPinterestModal').modal('toggle');
                 {{ session_delete('pinterest_auth') }}
             }
