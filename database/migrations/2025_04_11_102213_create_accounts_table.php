@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('accounts', function (Blueprint $table) {
             $table->id();
             $table->integer('user_id');
-            $table->integer('acc_id');
+            $table->bigInteger('acc_id');
             $table->string('type');
             $table->integer('status')->default(0);
             $table->timestamps();

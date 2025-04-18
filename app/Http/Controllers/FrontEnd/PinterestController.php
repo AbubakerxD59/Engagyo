@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\FrontEnd;
 
+use App\Models\Account;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\PinterestService;
@@ -13,10 +14,12 @@ class PinterestController extends Controller
 {
     private $pinterestService;
     private $pinterest;
-    public function __construct(Pinterest $pinterest)
+    private $account;
+    public function __construct(Pinterest $pinterest, Account $account)
     {
         $this->pinterestService = new PinterestService();
         $this->pinterest = $pinterest;
+        $this->account = $account;
     }
     public function pinterestCallback(Request $request)
     {
@@ -39,6 +42,10 @@ class PinterestController extends Controller
                         "monthly_views" => $me["monthly_views"] > 0 ? $me["monthly_views"] : 0,
                     ];
                     $this->pinterest->updateOrCreate(["user_id" => $user->id, "pin_id" => $me["id"]], $data);
+                    $this->account->updateOrCreate(["user_id" => $user->id, "pin_id" => $me["id"]], ["user_id" => $user->id, "pin_id" => $me["id"], "type" => "Pinterest", "status" => 1]);
+
+                    $boards = $this->pinterestService->getBoards($token["acces_token"]);
+                    dd($boards);
                     $response = [
                         "success" => "success",
                         "message" => "Pinterest Authorization completed!"

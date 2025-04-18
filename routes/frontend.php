@@ -43,7 +43,7 @@ Route::name("frontend.")->controller(FrontendController::class)->group(function 
 });
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(function () {
     Route::controller(AccountsController::class)->group(function () {
-        Route::get("accounts", "index")->name("accounts");
+        Route::get("accounts/{id?}", "index")->name("accounts");
     });
 });
 

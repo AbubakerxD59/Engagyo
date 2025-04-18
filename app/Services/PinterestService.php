@@ -45,4 +45,11 @@ class PinterestService
         $me = $this->client->get($this->baseUrl . "user_account", [], $this->header);
         return $me;
     }
+
+    public function getBoards($access_token)
+    {
+        $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
+        $boards = $this->client->get($this->baseUrl . "boards", [], $this->header);
+        return $boards;
+    }
 }
