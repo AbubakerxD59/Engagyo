@@ -36,7 +36,7 @@ class PinterestController extends Controller
                         "pin_count" => $me["pin_count"],
                         "following_count" => $me["following_count"],
                         "follower_count" => $me["follower_count"],
-                        "monthly_views" => $me["monthly_views"],
+                        "monthly_views" => $me["monthly_views"] > 0 ? $me["monthly_views"] : 0,
                     ];
                     $this->pinterest->updateOrCreate(["user_id" => $user->id, "pin_id" => $me["id"]], $data);
                     $response = [
