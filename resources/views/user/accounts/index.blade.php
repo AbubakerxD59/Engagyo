@@ -79,6 +79,18 @@
         .card-title span {
             font-weight: 600
         }
+
+        .acc_title {
+            font-weight: 600
+        }
+
+        .item_count {
+            padding: 5px;
+            border: 1px solid black;
+            border-radius: 11px;
+            background: #bebaba;
+            color: #fff;
+        }
     </style>
 @endpush
 @push('scripts')
