@@ -48,7 +48,6 @@ class PinterestController extends Controller
                     $boards = $this->pinterestService->getBoards($token["access_token"]);
                     if (isset($boards['items'])) {
                         session_set('account', 'Pinterest');
-                        session_set('profile_pic', $profile_pic);
                         session_set('items', $boards["items"]);
                     }
                     $response = [

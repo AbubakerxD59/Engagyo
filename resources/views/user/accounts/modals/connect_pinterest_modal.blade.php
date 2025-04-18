@@ -1,4 +1,4 @@
-  <div class="modal fade" id="connectModal" tabindex="-1" role="dialog" aria-labelledby="connectModalTitle"
+  <div class="modal fade" id="connectPinterestModal" tabindex="-1" role="dialog" aria-labelledby="connectPinterestModal"
       aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered" role="document">
           <div class="modal-content">
@@ -17,9 +17,8 @@
                   @foreach (session_get('items') as $item)
                       <div class="row justify-content-between">
                           <div class="d-flex">
-                              <img src="{{ asset('images/' . session_get('profile_pic')) }}"
-                                  alt="{{ social_logo(session_get('account')) }}" class="rounded-pill mr-3"
-                                  height="25px" width="25px">
+                              <img src="{{ $pinterest->profile_image }}" alt="{{ social_logo(session_get('account')) }}"
+                                  class="rounded-pill mr-3" height="25px" width="25px">
                               <p>{{ $item->name }}</p>
                           </div>
                           <div>

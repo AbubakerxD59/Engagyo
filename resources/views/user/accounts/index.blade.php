@@ -5,7 +5,6 @@
         <div class="content-header clearfix"></div>
         <section class="content">
             <div class="container-fluid">
-                <input type="hidden" value="{{ session_check('item') ? 1 : 0 }}">
                 {{-- Facebook --}}
                 <div class="card">
                     <div class="card-header with-border clearfix">
@@ -28,6 +27,7 @@
                 <div class="card">
                     <div class="card-header with-border clearfix">
                         <div class="card-title">
+                            <input type="hidden" id="pinterestAcc" value="{{ session_check('item') ? 1 : 0 }}">
                             <img src="{{ social_logo('pinterest') }}">
                             <span>Pinterest</span>
                         </div>
@@ -59,6 +59,9 @@
             </div>
         </section>
     </div>
+    @include('user.accounts.modals.connect_pinterest_modal', [
+        'pinterest' => $user->pinterest()->latest()->first(),
+    ])
 @endsection
 @push('styles')
     <style>
@@ -75,4 +78,14 @@
             font-weight: 600
         }
     </style>
+@endpush
+@push('scripts')
+    <script>
+        $(document).ready(function() {
+            var pinAcc = $('#pinterestAcc').val();
+            if (pinAcc == 1) {
+                $('#connect_pinterest_modal').modal('toggle');
+            }
+        });
+    </script>
 @endpush
