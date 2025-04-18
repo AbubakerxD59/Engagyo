@@ -38,7 +38,7 @@
                         </div>
                     </div>
                     <div class="card-body d-flex">
-                        @foreach ($user->load('pinterest')->pintereste as $pin)
+                        @foreach ($user->load('pinterest')->pinterest as $pin)
                             <a href="" class="account_box">
                                 <article>
                                     <picture>
