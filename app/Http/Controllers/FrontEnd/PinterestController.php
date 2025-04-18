@@ -37,7 +37,7 @@ class PinterestController extends Controller
                         "follower_count" => $me["follower_count"],
                         "monthly_views" => $me["monthly_views"],
                     ];
-                    $this->user->createOrUpdate(["user_id" => $user->id, "pin_id" => $me["id"]], $data);
+                    $this->user->updateOrCreate(["user_id" => $user->id, "pin_id" => $me["id"]], $data);
                     $response = [
                         "success" => "success",
                         "message" => "Pinterest Authorization completed!"
