@@ -42,7 +42,7 @@ class PinterestController extends Controller
                         "monthly_views" => $me["monthly_views"] > 0 ? $me["monthly_views"] : 0,
                     ];
                     $this->pinterest->updateOrCreate(["user_id" => $user->id, "pin_id" => $me["id"]], $data);
-                    $this->account->updateOrCreate(["user_id" => $user->id, "pin_id" => $me["id"]], ["user_id" => $user->id, "pin_id" => $me["id"], "type" => "Pinterest", "status" => 1]);
+                    $this->account->updateOrCreate(["user_id" => $user->id, "acc_id" => $me["id"]], ["user_id" => $user->id, "acc_id" => $me["id"], "type" => "Pinterest", "status" => 1]);
 
                     $boards = $this->pinterestService->getBoards($token["acces_token"]);
                     dd($boards);
