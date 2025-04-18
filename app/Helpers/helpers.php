@@ -41,7 +41,7 @@ function saveImageFromUrl($url)
     $image_info = pathinfo($url);
     if (isset($image_info["extension"])) {
         $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.' . $image_info["extension"];
-        $path = public_path() . '/images//' . $fileName;
+        $path = public_path() . "/images" . '/' . $fileName;
         $imageData = @file_get_contents($url);
         if ($imageData === false) {
             return false;
