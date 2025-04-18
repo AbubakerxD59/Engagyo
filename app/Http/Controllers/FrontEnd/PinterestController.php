@@ -29,12 +29,13 @@ class PinterestController extends Controller
                 $me = $this->pinterestService->me($token["access_token"]);
                 if (isset($me['id'])) {
                     $user = Auth::user();
+                    $profile_pic = saveImageFromUrl($me["profile_image"]) ? saveImageFromUrl($me["profile_image"]) : '';
                     $data = [
                         "user_id" => $user->id,
                         "pin_id" => $me["id"],
                         "username" => $me["username"],
                         "about" => $me["about"],
-                        "profile_image" => saveImageFromUrl($me["profile_image"]) ? saveImageFromUrl($me["profile_image"]) : '',
+                        "profile_image" => $profile_pic,
                         "board_count" => $me["board_count"],
                         "pin_count" => $me["pin_count"],
                         "following_count" => $me["following_count"],
@@ -45,7 +46,11 @@ class PinterestController extends Controller
                     $this->account->updateOrCreate(["user_id" => $user->id, "acc_id" => $me["id"]], ["user_id" => $user->id, "acc_id" => $me["id"], "type" => "Pinterest", "status" => 1]);
 
                     $boards = $this->pinterestService->getBoards($token["access_token"]);
-                    dd($boards);
+                    if (isset($boards['items'])) {
+                        session_set('account', 'Pinterest');
+                        session_set('profile_pic', $profile_pic);
+                        session_set('items', $boards["items"]);
+                    }
                     $response = [
                         "success" => "success",
                         "message" => "Pinterest Authorization completed!"

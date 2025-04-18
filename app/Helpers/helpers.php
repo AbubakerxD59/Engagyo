@@ -27,7 +27,8 @@ function site_company()
     return $company;
 }
 
-function no_image(){
+function no_image()
+{
     $image = asset("assets/img/noimage.png");
 }
 
@@ -132,6 +133,26 @@ function session_set($key, $value)
         request()->session()->put($key, $value);
     }
     return true;
+}
+
+function session_get($key)
+{
+    if (request()->session()->exists($key)) {
+        $session = request()->session()->get($key);
+        return $session;
+    } else {
+        return "";
+    }
+}
+
+function session_check($key)
+{
+    if (request()->session()->exists($key)) {
+        if (!empty(request()->session()->get($key))) {
+            return true;
+        }
+    }
+    return false;
 }
 
 function calculate_discount_price($base_price, $discount_price, $discount_type, $type)
@@ -288,6 +309,7 @@ function check_features($features, $package_id)
 
 function social_logo($type = null)
 {
+    $type = strtolower($type);
     if ($type == 'facebook') {
         $logo = asset("assets/frontend/images/Icons/facebook-circle.svg");
     } elseif ($type == 'instagram') {

@@ -5,6 +5,7 @@
         <div class="content-header clearfix"></div>
         <section class="content">
             <div class="container-fluid">
+                <input type="hidden" value="{{ session_check('item') ? 1 : 0 }}">
                 {{-- Facebook --}}
                 <div class="card">
                     <div class="card-header with-border clearfix">
