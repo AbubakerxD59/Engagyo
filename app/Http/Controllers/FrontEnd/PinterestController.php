@@ -44,7 +44,7 @@ class PinterestController extends Controller
                     $this->pinterest->updateOrCreate(["user_id" => $user->id, "pin_id" => $me["id"]], $data);
                     $this->account->updateOrCreate(["user_id" => $user->id, "acc_id" => $me["id"]], ["user_id" => $user->id, "acc_id" => $me["id"], "type" => "Pinterest", "status" => 1]);
 
-                    $boards = $this->pinterestService->getBoards($token["acces_token"]);
+                    $boards = $this->pinterestService->getBoards($token["access_token"]);
                     dd($boards);
                     $response = [
                         "success" => "success",
