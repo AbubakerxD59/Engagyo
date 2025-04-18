@@ -28,7 +28,7 @@
                   @endforeach
               </div>
               <div class="modal-footer">
-                  <button type="button" class="btn btn-primary btn-xs">Continue</button>
+                  <button type="button" class="btn btn-primary">Continue</button>
               </div>
           </div>
       </div>

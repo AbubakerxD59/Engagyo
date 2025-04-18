@@ -27,7 +27,7 @@
                 <div class="card">
                     <div class="card-header with-border clearfix">
                         <div class="card-title">
-                            <input type="hidden" id="pinterestAcc" value="{{ session_check('items') ? 1 : 0 }}">
+                            <input type="hidden" id="pinterestAcc" value="{{ session_check('pinterest_auth') ? 1 : 0 }}">
                             <img src="{{ social_logo('pinterest') }}">
                             <span>Pinterest</span>
                         </div>
@@ -104,6 +104,7 @@
             console.log(pinAcc);
             if (pinAcc) {
                 $('#connectPinterestModal').modal('toggle');
+                {{ session_delete('pinterest_auth') }}
             }
         });
     </script>
