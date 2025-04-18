@@ -23,10 +23,20 @@ class Pinterest extends Model
         "monthly_views",
     ];
 
+    public function boards()
+    {
+        return $this->hasMany(Board::class, 'pin_id', 'pin_id');
+    }
+
     protected function profileImage(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => asset("images/".$value)
+            get: fn($value) => asset("images/" . $value)
         );
+    }
+
+    public function scopeSearch($query, $search)
+    {
+        $query->where('pin_id', $search);
     }
 }

@@ -75,4 +75,24 @@ class PinterestController extends Controller
         }
         return redirect(route("panel.accounts"))->with($response["success"], $response["message"]);
     }
+
+    public function addBoard(Request $request)
+    {
+        $items = session_get('items');
+        $board = isset($items[$request->id]) ? $items[$request->id] : 0;
+        if ($board) {
+            $user = Auth::user();
+            $pinterest = $this->pinterest->search($request->pin_id)->where('user_id', $user->id)->first();
+            $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "pin_id" => $pinterest->pin_id], [
+                "user_id" => $user->id,
+                "pin_id" => $pinterest->pin_id,
+                "board_id" => $board["board_id"],
+                "name" => $board["name"],
+                "status" => 1
+            ]);
+            return response()->json(["success" => false, "message" => "Board connected Successfully!"]);
+        } else {
+            return response()->json(["success" => false, "message" => "Something went Wrong!"]);
+        }
+    }
 }

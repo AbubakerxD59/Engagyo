@@ -60,7 +60,7 @@
         </section>
     </div>
     @if (!empty(session_get('items')))
-        @include('user.accounts.modals.connect_pinterest_modal', [
+        @include('user.accounts.modals.pinterest_boards_modal', [
             'pinterest' => $user->pinterest()->latest()->first(),
         ])
     @endif
@@ -101,11 +101,27 @@
     <script>
         $(document).ready(function() {
             var pinAcc = $('#pinterestAcc').val();
-            console.log(pinAcc);
             if (pinAcc == 1) {
                 $('#connectPinterestModal').modal('toggle');
                 {{ session_delete('pinterest_auth') }}
             }
+            $('.pinterest_connect').on('click', function() {
+                var id = $(this).data('id');
+                var pin_id = $(this).data('pin-id');
+                $.ajax({
+                    url: "{{ route('pinterest.addBoard') }}",
+                    type: 'POST',
+                    data: {
+                        "id": id,
+                        "pin_id": pin_id
+                    },
+                    success: function(response) {
+                        console.log(response);
+                        toastr.success("Board Connected Successfully!");
+                        $(this).html('Connected');
+                    },
+                });
+            });
         });
     </script>
 @endpush

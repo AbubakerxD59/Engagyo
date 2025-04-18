@@ -14,7 +14,7 @@
               </div>
               <div class="modal-body">
                   <span class="text-muted">Select the accounts that you want to add.</span>
-                  @foreach (session_get('items') as $item)
+                  @foreach (session_get('items') as $key => $item)
                       <div class="d-flex justify-content-between item_count">
                           <div class="d-flex">
                               <img src="{{ $pinterest->profile_image }}" alt="{{ social_logo(session_get('account')) }}"
@@ -22,7 +22,8 @@
                               <span>{{ $item['name'] }}</span>
                           </div>
                           <div>
-                              <span class="pinterest_connect pointer" data-id="{{ $item['id'] }}">Connect</span>
+                              <span class="pinterest_connect pointer" data-id="{{ $key }}"
+                                  data-pin-id="{{ $pinterest->pin_id }}">Connect</span>
                           </div>
                       </div>
                   @endforeach
