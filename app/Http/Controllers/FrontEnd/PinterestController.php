@@ -87,7 +87,7 @@ class PinterestController extends Controller
             $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "pin_id" => $pinterest->pin_id], [
                 "user_id" => $user->id,
                 "pin_id" => $pinterest->pin_id,
-                "board_id" => $board["board_id"],
+                "board_id" => $board["id"],
                 "name" => $board["name"],
                 "status" => 1
             ]);
