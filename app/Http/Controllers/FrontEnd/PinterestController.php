@@ -6,16 +6,17 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
+use App\Models\Pinterest;
 use Illuminate\Support\Facades\Auth;
 
 class PinterestController extends Controller
 {
     private $pinterestService;
-    private $user;
-    public function __construct(User $user)
+    private $pinterest;
+    public function __construct(Pinterest $pinterest)
     {
         $this->pinterestService = new PinterestService();
-        $this->user = $user;
+        $this->pinterest = $pinterest;
     }
     public function pinterestCallback(Request $request)
     {
@@ -37,7 +38,7 @@ class PinterestController extends Controller
                         "follower_count" => $me["follower_count"],
                         "monthly_views" => $me["monthly_views"],
                     ];
-                    $this->user->updateOrCreate(["user_id" => $user->id, "pin_id" => $me["id"]], $data);
+                    $this->pinterest->updateOrCreate(["user_id" => $user->id, "pin_id" => $me["id"]], $data);
                     $response = [
                         "success" => "success",
                         "message" => "Pinterest Authorization completed!"
