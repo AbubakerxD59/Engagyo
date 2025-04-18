@@ -89,7 +89,6 @@
             margin-block: 5px;
             border: 1px solid grey;
             border-radius: 10px;
-            color: #fff;
             font-weight: 600
         }
     </style>
