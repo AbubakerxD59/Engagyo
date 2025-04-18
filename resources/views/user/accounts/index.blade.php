@@ -91,6 +91,10 @@
             border-radius: 10px;
             font-weight: 600
         }
+
+        .pinterest_connect {
+            color: #008100 !important;
+        }
     </style>
 @endpush
 @push('scripts')

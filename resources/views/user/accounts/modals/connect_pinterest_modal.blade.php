@@ -22,7 +22,7 @@
                               <span>{{ $item['name'] }}</span>
                           </div>
                           <div>
-                              <span class="pinterest_connect" data-id="{{ $item['id'] }}">Connect</span>
+                              <span class="pinterest_connect pointer" data-id="{{ $item['id'] }}">Connect</span>
                           </div>
                       </div>
                   @endforeach
