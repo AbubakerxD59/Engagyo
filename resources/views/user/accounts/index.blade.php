@@ -38,8 +38,7 @@
                         </div>
                     </div>
                     <div class="card-body d-flex">
-                        @foreach ($user->load('pinterest') as $key => $pin)
-                            @dd($key, $pin)
+                        @foreach ($user->load('pinterest')->pintereste as $pin)
                             <a href="" class="account_box">
                                 <article>
                                     <picture>

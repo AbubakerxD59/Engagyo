@@ -62,7 +62,7 @@ class User extends Authenticatable
 
     public function pinterest()
     {
-        return $this->hasOne(Pinterest::class, 'user_id', 'id');
+        return $this->hasMany(Pinterest::class, 'user_id', 'id');
     }
     public function scopeSearch($query, $value)
     {
