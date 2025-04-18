@@ -36,6 +36,26 @@ function saveImage($file)
     return $fileName;
 }
 
+function saveImageFromUrl($url)
+{
+    $image_info = pathinfo($url);
+    if (isset($image_info["extension"])) {
+        $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.' . $image_info["extension"];
+        $path = public_path() . '/images//' . $fileName;
+        $imageData = @file_get_contents($url);
+        if ($imageData === false) {
+            return false;
+        }
+        if (file_put_contents($path, $imageData)) {
+            return $fileName;
+        } else {
+            return false;
+        }
+    } else {
+        return false;
+    }
+}
+
 function saveVideo($folderName, $file)
 {
     $fileName = strtotime(date('Y-m-d H:i:s')) . '.' . $file->extension();

@@ -31,7 +31,7 @@ class PinterestController extends Controller
                         "pin_id" => $me["id"],
                         "username" => $me["username"],
                         "about" => $me["about"],
-                        "profile_image" => $me["profile_image"],
+                        "profile_image" => saveImageFromUrl($me["profile_image"]) ? saveImageFromUrl($me["profile_image"]) : '',
                         "board_count" => $me["board_count"],
                         "pin_count" => $me["pin_count"],
                         "following_count" => $me["following_count"],
