@@ -37,8 +37,19 @@
                             </button>
                         </div>
                     </div>
-                    <div class="card-body">
-
+                    <div class="card-body d-flex">
+                        @foreach ($user->load('pinterest')->pinterest as $pin)
+                            <a href="" class="account_box">
+                                <article>
+                                    <picture>
+                                        <img src="{{ $pin->profile_image }}" alt="{{ no_image() }}">
+                                    </picture>
+                                    <div>
+                                        <div class="account_name">{{ $pin->username }}</div>
+                                    </div>
+                                </article>
+                            </a>
+                        @endforeach
                     </div>
                 </div>
             </div>

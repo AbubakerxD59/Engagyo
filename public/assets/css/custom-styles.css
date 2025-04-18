@@ -430,3 +430,13 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
 .dataTable a {
     color: #008100;
 }
+
+.account_box {
+    padding: 10px;
+    border: 1px solid black;
+    border-radius: 5px;
+}
+
+.account_box article {
+    display: flex;
+}
