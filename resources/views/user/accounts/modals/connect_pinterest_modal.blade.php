@@ -28,7 +28,8 @@
                   @endforeach
               </div>
               <div class="modal-footer">
-                  <button type="button" class="btn btn-primary">Continue</button>
+                  <button type="button" class="btn btn-primary" data-dismiss="modal"
+                      aria-label="Close">Continue</button>
               </div>
           </div>
       </div>
