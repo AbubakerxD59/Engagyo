@@ -48,7 +48,7 @@ class AccountsController extends Controller
                 return view('user.accounts.pinterest', compact('pinterest'));
             }
             else{
-                pinterest
+                // pinterest
             }
         }
         else{
