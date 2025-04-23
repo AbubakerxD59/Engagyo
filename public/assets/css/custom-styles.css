@@ -444,6 +444,7 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
 .account_box article {
     display: flex;
     align-items: center;
+    justify-content: space-between;
 }
 
 .account_box article picture img {
