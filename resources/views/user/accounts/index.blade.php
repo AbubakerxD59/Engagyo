@@ -41,7 +41,7 @@
                     <div class="card-body">
                         <div class="d-flex">
                             @foreach ($user->load('pinterest')->pinterest as $pin)
-                                <div class="account_box col-md-3 mx-1">
+                                <a class="account_box col-md-3 mx-1" href="{{route("panels.accounts.pinterest", $pin->pin_id)}}">
                                     <article>
                                         <div class="d-flex align-items-center">
                                             <picture>
@@ -62,7 +62,7 @@
                                             </form>
                                         </div>
                                     </article>
-                                </div>
+                                </a>
                             @endforeach
                         </div>
                     </div>

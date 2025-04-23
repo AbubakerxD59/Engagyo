@@ -48,7 +48,7 @@ class AccountsController extends Controller
             if ($pinterest) {
                 return view('user.accounts.pinterest', compact('pinterest'));
             } else {
-                // pinterest
+                return back()->with('error', 'Something went Wrong!');
             }
         } else {
             return back()->with('error', 'Something went Wrong!');
