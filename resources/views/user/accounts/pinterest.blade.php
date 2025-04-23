@@ -52,7 +52,6 @@
                                             <div class="account_name">{{ $pin->username }}</div>
                                         </div>
                                     </article>
-                                    <a href="{{ route('panel.accounts.pinterest.delete', $pin->id) }}"></a>
                                 </a>
                             @endforeach
                         </div>

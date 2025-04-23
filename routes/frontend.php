@@ -41,9 +41,16 @@ Route::name("frontend.")->controller(FrontendController::class)->group(function 
     // Privacy Policy
     Route::get("privacy", "privacy")->name("privacy");
 });
+// User Panel
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(function () {
+    // Accounts Routes
     Route::controller(AccountsController::class)->group(function () {
-        Route::get("accounts/{id?}", "index")->name("accounts");
+        Route::get("accounts", "index")->name("accounts");
+        // Accounts sub Routes
+        Route::name("accounts.")->group(function () {
+            Route::get('pinterest-delete/{id?}', 'pinterestDelete')->name('pinterest.delete');
+            Route::get("pinterest/{id?}", "pinterest")->name("pinterest");
+        });
     });
 });
 

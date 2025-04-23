@@ -37,6 +37,11 @@ class Pinterest extends Model
 
     public function scopeSearch($query, $search)
     {
-        $query->where('pin_id', $search);
+        $query->where('pin_id', $search)->orWhere("username", "%{$search}%");
+    }
+
+    public function scopeUser($query, $id)
+    {
+        $query->where('user_id', $id);
     }
 }
