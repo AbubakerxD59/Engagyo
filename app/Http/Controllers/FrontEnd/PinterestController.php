@@ -83,8 +83,7 @@ class PinterestController extends Controller
 
     public function addBoard(Request $request)
     {
-        $board = json_decode($request->board_data);
-        dd($request->all(), $board);
+        $board = $request->board_data;
         if ($board) {
             $user = Auth::user();
             $pinterest = $this->pinterest->search($request->pin_id)->where('user_id', $user->id)->first();
