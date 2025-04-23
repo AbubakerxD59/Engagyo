@@ -29,7 +29,7 @@
                               @else
                                   <span class="pinterest_connect pointer" data-id="{{ $key }}"
                                       data-pin-id="{{ @$pinterest->pin_id }}"
-                                      data-board-data:{{ json_encode($item) }}>Connect</span>
+                                      data-board-data="{{ json_encode($item) }}">Connect</span>
                               @endif
                           </div>
                       </div>
