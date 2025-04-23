@@ -41,22 +41,18 @@
                     <div class="card-body">
                         <div class="d-flex">
                             @foreach ($user->load('pinterest')->pinterest as $pin)
-                                <a href="{{ route('panel.accounts.pinterest', $pin->id) }}"
-                                    class="account_box col-md-3 mx-1">
-                                    <article>
-                                        <picture>
-                                            <img src="{{ $pin->profile_image }}" alt="{{ no_image() }}"
-                                                class="rounded-pill">
-                                        </picture>
-                                        <div>
-                                            <div class="account_name">{{ $pin->username }}</div>
-                                        </div>
-                                        <a href="{{ route('panel.accounts.pinterest.delete', $pin->id) }}"
-                                            class="btn btn-outline-primary">
-                                            Delete
-                                        </a>
-                                    </article>
-                                </a>
+                                <article>
+                                    <picture>
+                                        <img src="{{ $pin->profile_image }}" alt="{{ no_image() }}" class="rounded-pill">
+                                    </picture>
+                                    <div>
+                                        <div class="account_name">{{ $pin->username }}</div>
+                                    </div>
+                                    <a href="{{ route('panel.accounts.pinterest.delete', $pin->id) }}"
+                                        class="btn btn-outline-primary">
+                                        Delete
+                                    </a>
+                                </article>
                             @endforeach
                         </div>
                     </div>
