@@ -41,7 +41,7 @@
                     <div class="card-body">
                         <div class="d-flex">
                             @foreach ($user->load('pinterest')->pinterest as $pin)
-                                <a href="" class="account_box col-md-3 mx-1">
+                                <div class="account_box col-md-3 mx-1">
                                     <article>
                                         <picture>
                                             <img src="{{ $pin->profile_image }}" alt="{{ no_image() }}"
@@ -50,8 +50,13 @@
                                         <div>
                                             <div class="account_name">{{ $pin->username }}</div>
                                         </div>
+                                        <div>
+                                            <a href="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}">
+                                                <i class="fa fa-trash"></i>
+                                            </a>
+                                        </div>
                                     </article>
-                                </a>
+                                </div>
                             @endforeach
                         </div>
                     </div>
