@@ -51,6 +51,7 @@ class PinterestController extends Controller
                         foreach ($boards["items"] as $board) {
                             $board['connected'] = $this->board->connected(['user_id' => $user->id, 'pin_id' => $me["id"], 'board_id' => $board["id"]])->first() ? true : false;
                         }
+                        dd($boards["items"]);
                         session_set('pinterest_auth', '1');
                         session_set('account', 'Pinterest');
                         session_set('items', $boards["items"]);
