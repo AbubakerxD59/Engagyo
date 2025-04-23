@@ -14,7 +14,7 @@
               </div>
               <div class="modal-body">
                   <span class="text-muted">Select the accounts that you want to add.</span>
-                  @dd($items)
+                  @dd(session_get('items'))
                   @foreach (session_get('items') as $key => $item)
                       <div class="d-flex justify-content-between item_count">
                           <div class="d-flex">
