@@ -41,8 +41,9 @@
                     <div class="card-body">
                         <div class="d-flex">
                             @foreach ($user->load('pinterest')->pinterest as $pin)
-                                <a class="account_box col-md-3 mx-1" href="{{route("panel.accounts.pinterest", $pin->pin_id)}}">
-                                    <article>
+                                <article>
+                                    <a class="account_box col-md-3 mx-1"
+                                        href="{{ route('panel.accounts.pinterest', $pin->pin_id) }}">
                                         <div class="d-flex align-items-center">
                                             <picture>
                                                 <img src="{{ $pin->profile_image }}" alt="{{ no_image() }}"
@@ -50,19 +51,19 @@
                                             </picture>
                                             <div class="account_name">{{ $pin->username }}</div>
                                         </div>
-                                        <div>
-                                            <button class="btn btn-outline-danger btn-sm delete-btn border-0"
-                                                onclick="confirmDelete(event)">
-                                                <i class="fa fa-trash px-2"></i>
-                                            </button>
-                                            <form action="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}"
-                                                method="POST" class="delete_form">
-                                                @csrf
-                                                @method('DELETE')
-                                            </form>
-                                        </div>
-                                    </article>
-                                </a>
+                                    </a>
+                                    <div>
+                                        <button class="btn btn-outline-danger btn-sm delete-btn border-0"
+                                            onclick="confirmDelete(event)">
+                                            <i class="fa fa-trash px-2"></i>
+                                        </button>
+                                        <form action="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}"
+                                            method="POST" class="delete_form">
+                                            @csrf
+                                            @method('DELETE')
+                                        </form>
+                                    </div>
+                                </article>
                             @endforeach
                         </div>
                     </div>
