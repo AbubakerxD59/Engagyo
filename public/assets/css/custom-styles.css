@@ -441,7 +441,7 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
     border-radius: 10px;
 }
 
-.account_box article {
+.account_box {
     display: flex;
     align-items: center;
     justify-content: space-between;
