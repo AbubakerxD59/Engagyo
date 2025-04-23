@@ -48,7 +48,8 @@ class PinterestController extends Controller
 
                     $boards = $this->pinterestService->getBoards($token["access_token"]);
                     if (isset($boards['items'])) {
-                        foreach ($boards as $board) {
+                        foreach ($boards["items"] as $board) {
+                            dd($board);
                             $board['connected'] = $this->board->connected(['user_id' => $user->id, 'pin_id' => $me["id"], 'board_id' => $me["board_id"]])->first() ? true : false;
                         }
                         session_set('pinterest_auth', '1');
