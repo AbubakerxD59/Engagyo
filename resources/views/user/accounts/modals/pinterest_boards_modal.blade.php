@@ -24,7 +24,7 @@
                           </div>
                           <div>
                               @if (@$item['connected'])
-                                  <span class="pointer" data-id="{{ $key }}"
+                                  <span data-id="{{ $key }}"
                                       data-pin-id="{{ @$pinterest->pin_id }}">Connected</span>
                               @else
                                   <span class="pinterest_connect pointer" data-id="{{ $key }}"
