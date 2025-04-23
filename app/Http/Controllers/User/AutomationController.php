@@ -92,7 +92,7 @@ class AutomationController extends Controller
                             "account_id" => $account_id,
                             "type" => $type,
                             "title" => $item["title"],
-                            "decription" => $item["decription"],
+                            "description" => $item["description"],
                             "domain_id" => $domain->id,
                             "url" => $item["url"],
                             "publish_date" => newDateTime($request->time),

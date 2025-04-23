@@ -16,7 +16,7 @@ class Post extends Model
         "account_id",
         "type",
         "title",
-        "decription",
+        "description",
         "comment",
         "domain_id",
         "url",

@@ -18,7 +18,7 @@ return new class extends Migration
             $table->bigInteger("account_id")->nullable();
             $table->string("type")->nullable();
             $table->text("title")->nullable();
-            $table->longText("decription")->nullable();
+            $table->longText("description")->nullable();
             $table->longText("comment")->nullable();
             $table->integer("domain_id")->nullable();
             $table->text("url")->nullable();
