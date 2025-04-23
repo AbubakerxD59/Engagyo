@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use Illuminate\Http\Request;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
+use App\Models\Board;
 use App\Models\Pinterest;
 use Illuminate\Support\Facades\Auth;
 
@@ -12,10 +13,12 @@ class AccountsController extends Controller
 {
     private $pinterestService;
     private $pinterest;
-    public function __construct(Pinterest $pinterest)
+    private $board;
+    public function __construct(Pinterest $pinterest, Board $board)
     {
         $this->pinterestService = new PinterestService();
         $this->pinterest = $pinterest;
+        $this->board = $board;
     }
     public function index()
     {
@@ -48,6 +51,22 @@ class AccountsController extends Controller
             $pinterest = $this->pinterest->search($id)->first();
             if ($pinterest) {
                 return view('user.accounts.pinterest', compact('pinterestUrl', 'pinterest'));
+            } else {
+                return back()->with('error', 'Something went Wrong!');
+            }
+        } else {
+            return back()->with('error', 'Something went Wrong!');
+        }
+    }
+
+    public function boardDelete($id = null)
+    {
+        if (!empty($id)) {
+            $user = Auth::user();
+            $board = $this->board->search($id)->userSearch($user->id)->first();
+            if ($board) {
+                $board->delete();
+                return back()->with("success", "Board deleted Successfully!");
             } else {
                 return back()->with('error', 'Something went Wrong!');
             }

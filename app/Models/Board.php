@@ -26,4 +26,19 @@ class Board extends Model
     {
         return $this->belongsTo(Pinterest::class, 'pin_id', 'pin_id');
     }
+
+    public function scopeSearch($query, $search)
+    {
+        $query->where('pin_id', $search)->orWhere('board_id', $search)->orWhere('name', $search);
+    }
+
+    public function scopeUserSearch($query, $id)
+    {
+        $query->where('user_id', $id);
+    }
+
+    public function scopeActive($query)
+    {
+        $query->where('status', '1');
+    }
 }
