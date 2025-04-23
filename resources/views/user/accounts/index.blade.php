@@ -46,7 +46,7 @@
                                         <div class="d-flex align-items-center">
                                             <picture>
                                                 <img src="{{ $pin->profile_image }}" alt="{{ no_image() }}"
-                                                    class="rounded-pill">
+                                                    class="rounded-pill logo">
                                             </picture>
                                             <div class="account_name">{{ $pin->username }}</div>
                                         </div>

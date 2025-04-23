@@ -447,7 +447,7 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
     justify-content: space-between;
 }
 
-.account_box article picture img {
+.account_box .logo {
     width: 40px;
     height: 40px;
     margin-right: 15px;
