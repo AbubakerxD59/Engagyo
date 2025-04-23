@@ -23,7 +23,7 @@
                               <span>{{ $item['name'] }}</span>
                           </div>
                           <div>
-                              @if ($item->connected)
+                              @if ($item["connected"])
                                   <span class="pointer" data-id="{{ $key }}"
                                       data-pin-id="{{ @$pinterest->pin_id }}">Connected</span>
                               @else
