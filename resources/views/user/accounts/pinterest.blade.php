@@ -20,7 +20,7 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <table class="table table-striped">
+                        <table class="table table-striped table-bordered" id="dataTable">
                             <thead>
                                 <tr>
                                     <td>ID</td>
@@ -38,7 +38,7 @@
                                         <td>{{ $board->name }}</td>
                                         <td>{{ $board->pin_id }}</td>
                                         <td>{{ $board->board_id }}</td>
-                                        <td>{{ get_status_view($board->status) }}</td>
+                                        <td>{!! get_status_view($board->status) !!}</td>
                                         <td>
                                             <div>
                                                 <button class="btn btn-outline-danger btn-sm delete-btn"
@@ -93,4 +93,14 @@
     </style>
 @endpush
 @push('scripts')
+    <script>
+        var dataTable = $('#dataTable').DataTable({
+            "paging": true,
+            'iDisplayLength': 10,
+            "lengthChange": true,
+            "searching": true,
+            "ordering": false,
+            "info": false,
+        });
+    </script>
 @endpush
