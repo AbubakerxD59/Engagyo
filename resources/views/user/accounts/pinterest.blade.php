@@ -43,8 +43,8 @@
                                             <div>
                                                 <button class="btn btn-outline-danger btn-sm delete-btn"
                                                     onclick="confirmDelete(event)">Delete</button>
-                                                <form action="{{ route('board-delete', $board->board_id) }}" method="POST"
-                                                    class="delete_form">
+                                                <form action="{{ route('panel.accounts.board.delete', $board->board_id) }}"
+                                                    method="POST" class="delete_form">
                                                     @csrf
                                                     @method('DELETE')
                                                 </form>
