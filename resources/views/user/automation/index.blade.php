@@ -77,7 +77,7 @@
 @endpush
 @push('scripts')
     <script>
-        $('#dataTable').DataTable({
+        var postsDatatable = $('#dataTable').DataTable({
             "paging": true,
             'iDisplayLength': 10,
             "lengthChange": true,
@@ -129,7 +129,13 @@
                         "_token": token,
                     },
                     success: function(response) {
-                        console.log(response);
+                        if (response.success) {
+                            $("#fetchPostsModal").modal("toggle");
+                            postsDatatable.ajax.reload();
+                            toastr.success(response.message);
+                        } else {
+                            toastr.error(response.message);
+                        }
                     }
                 });
             });

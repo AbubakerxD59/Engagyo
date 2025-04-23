@@ -94,7 +94,7 @@ class AutomationController extends Controller
                             "title" => $item["title"],
                             "description" => $item["description"],
                             "domain_id" => $domain->id,
-                            "url" => $item["url"],
+                            "url" => $item["link"],
                             "publish_date" => newDateTime($request->time),
                             "status" => 0,
                         ]);
