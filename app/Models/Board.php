@@ -41,4 +41,8 @@ class Board extends Model
     {
         $query->where('status', '1');
     }
+
+    public function scopeConnected($query, $search){
+        $query->where('user_id', $search['user_id'])->where('pin_id', $search['pin_id'])->where('board_id', $search['board_id']);
+    }
 }

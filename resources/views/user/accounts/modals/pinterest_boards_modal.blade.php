@@ -17,13 +17,19 @@
                   @foreach (session_get('items') as $key => $item)
                       <div class="d-flex justify-content-between item_count">
                           <div class="d-flex">
-                              <img src="{{ @$pinterest->profile_image }}" alt="{{ social_logo(session_get('account')) }}"
-                                  class="rounded-pill mr-2" height="25px" width="25px">
+                              <img src="{{ @$pinterest->profile_image }}"
+                                  alt="{{ social_logo(session_get('account')) }}" class="rounded-pill mr-2"
+                                  height="25px" width="25px">
                               <span>{{ $item['name'] }}</span>
                           </div>
                           <div>
-                              <span class="pinterest_connect pointer" data-id="{{ $key }}"
-                                  data-pin-id="{{ @$pinterest->pin_id }}">Connect</span>
+                              @if ($item->connected)
+                                  <span class="pointer" data-id="{{ $key }}"
+                                      data-pin-id="{{ @$pinterest->pin_id }}">Connected</span>
+                              @else
+                                  <span class="pinterest_connect pointer" data-id="{{ $key }}"
+                                      data-pin-id="{{ @$pinterest->pin_id }}">Connect</span>
+                              @endif
                           </div>
                       </div>
                   @endforeach

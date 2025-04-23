@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
+use App\Models\Board;
 use App\Models\Pinterest;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,10 +16,12 @@ class PinterestController extends Controller
     private $pinterestService;
     private $pinterest;
     private $account;
-    public function __construct(Pinterest $pinterest)
+    private $board;
+    public function __construct(Pinterest $pinterest, Board $board)
     {
         $this->pinterestService = new PinterestService();
         $this->pinterest = $pinterest;
+        $this->board = $board;
     }
     public function pinterestCallback(Request $request)
     {
@@ -45,6 +48,9 @@ class PinterestController extends Controller
 
                     $boards = $this->pinterestService->getBoards($token["access_token"]);
                     if (isset($boards['items'])) {
+                        foreach ($boards as $board) {
+                            $board['connected'] = $this->board->connected(['user_id' => $user->id, 'pin_id' => $me["id"], 'board_id' => $me["board_id"]])->first() ? true : false;
+                        }
                         session_set('pinterest_auth', '1');
                         session_set('account', 'Pinterest');
                         session_set('items', $boards["items"]);
