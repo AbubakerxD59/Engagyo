@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 
 class AutomationController extends Controller
 {
@@ -15,7 +16,8 @@ class AutomationController extends Controller
     }
     public function index()
     {
-        return view("user.automation.index");
+        $user = Auth::user();
+        return view("user.automation.index", compact("user"));
     }
 
     public function posts(Request $request)

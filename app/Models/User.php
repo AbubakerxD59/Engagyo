@@ -64,6 +64,12 @@ class User extends Authenticatable
     {
         return $this->hasMany(Pinterest::class, 'user_id', 'id');
     }
+
+    public function domains()
+    {
+        return $this->hasMany(Domain::class, 'user_id', 'id');
+    }
+
     public function scopeSearch($query, $value)
     {
         $query->where('first_name', 'like', "%{$value}%")->where('last_name', 'like', "%{$value}%")->orWhere('email', 'like', "%{$value}%");
@@ -105,5 +111,18 @@ class User extends Authenticatable
     {
         $role = $this->roles()->first();
         return $role ? $role->name : '';
+    }
+
+    public function getAccounts()
+    {
+        $pinterest = $this->pinterest()->get();
+        $accounts = $pinterest;
+        return $accounts;
+    }
+
+    public function getDomains()
+    {
+        $domains = $this->domains()->get();
+        return count($domains) > 0 ? $domains : [];
     }
 }
