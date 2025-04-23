@@ -23,6 +23,8 @@ class Pinterest extends Model
         "monthly_views",
     ];
 
+    protected $appends = ["type"];
+
     public function boards()
     {
         return $this->hasMany(Board::class, 'pin_id', 'pin_id')->where('user_id', auth()->id());
@@ -30,12 +32,12 @@ class Pinterest extends Model
 
     public function posts()
     {
-        return $this->hasMany(Post::class, 'account_id', 'id')->where('type', 'like', '%pinterest%');
+        return $this->hasMany(Post::class, 'account_id', 'pin_id')->where('type', 'like', '%pinterest%');
     }
 
     public function domains()
     {
-        return $this->hasMany(Domain::class, 'account_id', 'id')->where('type', 'like', '%pinterest%');
+        return $this->hasMany(Domain::class, 'account_id', 'pin_id')->where('type', 'like', '%pinterest%');
     }
 
     protected function profileImage(): Attribute
@@ -53,5 +55,14 @@ class Pinterest extends Model
     public function scopeUser($query, $id)
     {
         $query->where('user_id', $id);
+    }
+
+    protected function type(): Attribute
+    {
+        return Attribute::make(
+            get: function(){
+                return "pinterest";
+            }
+        );
     }
 }

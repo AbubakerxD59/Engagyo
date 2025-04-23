@@ -25,7 +25,8 @@
                                 <select name="account" id="account" class="form-control">
                                     <option value="">All Accounts</option>
                                     @foreach ($user->getAccounts() as $key => $account)
-                                        <option value="{{ $account->id }}">{{ $account->username }}</option>
+                                        <option value="{{ $account->id }}" data-type="{{ $account->type }}">
+                                            {{ $account->username }}</option>
                                     @endforeach
                                 </select>
                             </div>
@@ -112,6 +113,7 @@
         $(document).ready(function() {
             $("#fetchPostsBtn").on('click', function() {
                 var selected_account = $("#fetch_account").find(":selected").val();
+                var selected_type = $("#fetch_account").find(":selected").data("type");
                 var selected_time = $("#time").val();
                 var selected_url = $("#feed_url").val();
                 var token = $('meta[name="csrf-token"]').attr('content');
@@ -121,6 +123,7 @@
                     type: "POST",
                     data: {
                         "account": selected_account,
+                        "type": selected_type,
                         "time": selected_time,
                         "url": selected_url,
                         "_token": token,

@@ -15,7 +15,8 @@
                         <select name="account" id="fetch_account" class="form-control" required>
                             <option value="">All Accounts</option>
                             @foreach ($user->getAccounts() as $key => $account)
-                                <option value="{{ $account->id }}">{{ $account->username }}</option>
+                                <option value="{{ $account->id }}" data-type="{{ $account->type }}">
+                                    {{ $account->username }}</option>
                             @endforeach
                         </select>
                     </div>

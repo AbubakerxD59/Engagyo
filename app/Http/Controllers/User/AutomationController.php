@@ -4,18 +4,24 @@ namespace App\Http\Controllers\User;
 
 use App\Models\Domain;
 use App\Models\Post;
+use App\Services\FeedService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\Pinterest;
 use Illuminate\Support\Facades\Auth;
 
 class AutomationController extends Controller
 {
     private $post;
     private $domain;
-    public function __construct(Post $post, Domain $domain)
+    private $pinterest;
+    private $feedService;
+    public function __construct(Post $post, Domain $domain, Pinterest $pinterest)
     {
         $this->post = $post;
         $this->domain = $domain;
+        $this->pinterest = $pinterest;
+        $this->feedService = new FeedService();
     }
     public function index()
     {
@@ -56,6 +62,30 @@ class AutomationController extends Controller
 
     public function feedUrl(Request $request)
     {
-        dd($request->all());
+        $user = Auth::user();
+        $type = $request->type;
+        if ($type == 'pinterest') {
+            $account = $this->pinterest->find($request->account);
+            $account_id = $account ? $account->pin_id : '';
+        }
+        if ($account) {
+            $urlDomain = parse_url($request->url, PHP_URL_HOST);
+            $domain = $this->domain->exists(["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain])->first();
+            if (!$domain) {
+                $domain = $this->domain->create([
+                    "user_id" => $user->id,
+                    "account_id" => $account_id,
+                    "type" => $type,
+                    "name" => $urlDomain,
+                ]);
+            }
+            $posts = $this->feedService->fetch($urlDomain);
+        } else {
+            $response = array(
+                "success" => false,
+                "message" => "Something went Wrong!"
+            );
+        }
+        return response()->json($response);
     }
 }
