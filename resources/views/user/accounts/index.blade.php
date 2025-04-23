@@ -134,12 +134,13 @@
                             toastr.success("Board Connected Successfully!");
                             button.text('Connected').removeClass('pinterest_connect pointer');
                         } else {
-                            toastr.success(response.message);
+                            toastr.error(response.message);
                         }
                     },
                 });
             });
             $("#connectPinterestModal").on("hide.bs.modal", function() {
+                console.log('here');
                 {{ session_delete('account') }}
                 {{ session_delete('items') }}
             });
