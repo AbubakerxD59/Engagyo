@@ -24,34 +24,33 @@ class AccountsController extends Controller
         return view("user.accounts.index", compact("user", "pinterestUrl"));
     }
 
-    public function deletePinterest($id = null){
-        if(!empty($id)){
+    public function pinterestDelete($id = null)
+    {
+        if (!empty($id)) {
             $user = Auth::user();
             $pinterest = $this->pinterest->search($id)->user($user->id)->first();
-            if($pinterest){
+            if ($pinterest) {
                 $pinterest->boards()->delete();
                 $pinterest->delete();
-            }
-            else{
+                return back()->with("success", "Pinterest Account deleted Successfully!");
+            } else {
                 return back()->with("error", "Somewthing went Wrong!");
             }
-        }
-        else{
+        } else {
             return back()->with("error", "Somewthing went Wrong!");
         }
     }
 
-    public function pinterest($id = null){
-        if(!empty($id)){
+    public function pinterest($id = null)
+    {
+        if (!empty($id)) {
             $pinterest = $this->pinterest->search($id)->first();
-            if($pinterest){
+            if ($pinterest) {
                 return view('user.accounts.pinterest', compact('pinterest'));
-            }
-            else{
+            } else {
                 // pinterest
             }
-        }
-        else{
+        } else {
             return back()->with('error', 'Something went Wrong!');
         }
     }
