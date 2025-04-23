@@ -51,7 +51,7 @@
                                             <div class="account_name">{{ $pin->username }}</div>
                                         </div>
                                         <div>
-                                            <button class="btn btn-outline-danger btn-sm delete-btn"
+                                            <button class="btn btn-outline-danger btn-sm delete-btn border-0"
                                                 onclick="confirmDelete(event)">
                                                 <i class="fa fa-trash px-2"></i>
                                             </button>
