@@ -128,7 +128,7 @@
                     data: {
                         "id": id,
                         "pin_id": pin_id,
-                        "board_data": board_data
+                        "board_data": board_data,
                         "_token": token
                     },
                     success: function(response) {
