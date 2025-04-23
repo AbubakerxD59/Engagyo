@@ -4,6 +4,7 @@ use App\Http\Controllers\FrontEnd\AuthController;
 use App\Http\Controllers\FrontEnd\FrontendController;
 use App\Http\Controllers\FrontEnd\PinterestController;
 use App\Http\Controllers\User\AccountsController;
+use App\Http\Controllers\User\AutomationController;
 use Illuminate\Support\Facades\Route;
 
 // Routes for frontend
@@ -51,6 +52,13 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
             Route::get("pinterest/{id?}", "pinterest")->name("pinterest");
             Route::delete('pinterest-delete/{id?}', 'pinterestDelete')->name('pinterest.delete');
             Route::delete('board-delete/{id?}', 'boardDelete')->name("board.delete");
+        });
+    });
+    // Automation Routes
+    Route::controller(AutomationController::class)->group(function () {
+        Route::get("automation", "index")->name("automation");
+        Route::name("automation.")->group(function () {
+            Route::get("posts", "posts")->name("posts");
         });
     });
 });

@@ -20,6 +20,18 @@
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column py-2" data-widget="treeview" role="menu"
                 data-accordion="false">
+                {{-- Automation --}}
+                <?php
+                $automation = ['panel.automation'];
+                ?>
+                <li class="nav-item">
+                    <a href="{{ route('panel.automation') }}"
+                        class="nav-link {{ in_array(request()->route()->getName(), $automation) ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-rss"></i>
+                        <p>Automation</p>
+                    </a>
+                </li>
+                {{-- Accounts --}}
                 <?php
                 $account = ['panel.accounts', 'panel.accounts.pinterest'];
                 ?>

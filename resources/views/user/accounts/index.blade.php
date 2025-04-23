@@ -142,7 +142,6 @@
                 });
             });
             $("#connectPinterestModal").on("hide.bs.modal", function() {
-                console.log('here');
                 {{ session_delete('account') }}
                 {{ session_delete('items') }}
             });

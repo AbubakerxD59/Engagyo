@@ -128,6 +128,18 @@ function get_status_view($type)
     return $div;
 }
 
+function get_post_status($type)
+{
+    if ($type == '1') {
+        $div = '<span class="badge badge-success">Published</span>';
+    } else if ($type == '0') {
+        $div = '<span class="badge badge-primary">Pending</span>';
+    } else if ($type == '-1') {
+        $div = '<span class="badge badge-danger">Failed</span>';
+    }
+    return $div;
+}
+
 function session_set($key, $value)
 {
     Session::put($key, $value);
