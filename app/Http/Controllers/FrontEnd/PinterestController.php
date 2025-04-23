@@ -52,7 +52,6 @@ class PinterestController extends Controller
                             $connected = $this->board->connected(['user_id' => $user->id, 'pin_id' => $me["id"], 'board_id' => $board["id"]])->first() ? true : false;
                             $boards["items"][$key]["connected"] = $connected;
                         }
-                        dd(vars: $boards["items"]);
                         session_set('pinterest_auth', '1');
                         session_set('account', 'Pinterest');
                         session_set('items', $boards["items"]);
