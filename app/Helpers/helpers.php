@@ -319,7 +319,6 @@ function check_features($features, $package_id)
     }
 }
 
-
 function social_logo($type = null)
 {
     $type = strtolower($type);
@@ -333,4 +332,12 @@ function social_logo($type = null)
         $logo = "";
     }
     return $logo;
+}
+
+function newDateTime($time)
+{
+    $now = strtotime(date("Y-m-d H:i:s"));
+    $time = strtotime($time);
+    $newTime = $now + $time;
+    return date("Y-m-d H:i:s");
 }

@@ -70,7 +70,8 @@ class AutomationController extends Controller
         }
         if ($account) {
             $urlDomain = parse_url($request->url, PHP_URL_HOST);
-            $domain = $this->domain->exists(["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain])->first();
+            $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain];
+            $domain = $this->domain->exists($search)->first();
             if (!$domain) {
                 $domain = $this->domain->create([
                     "user_id" => $user->id,
@@ -80,6 +81,35 @@ class AutomationController extends Controller
                 ]);
             }
             $posts = $this->feedService->fetch($urlDomain);
+            if ($posts["success"]) {
+                foreach ($posts["items"] as $item) {
+                    $search["url"] = $item['link'];
+                    $search["domain_id"] = $domain->id;
+                    $post = $this->post->exist($search)->notPublished()->first();
+                    if (!$post) {
+                        $this->post->crate([
+                            "user_id" => $user->id,
+                            "account_id" => $account_id,
+                            "type" => $type,
+                            "title" => $item["title"],
+                            "decription" => $item["decription"],
+                            "domain_id" => $domain->id,
+                            "url" => $item["url"],
+                            "publish_date" => newDateTime($request->time),
+                            "status" => 0,
+                        ]);
+                    }
+                }
+                $response = array(
+                    "success" => true,
+                    "message" => "Posts fetched Succesfully!"
+                );
+            } else {
+                $response = array(
+                    "success" => false,
+                    "message" => $posts["error"]
+                );
+            }
         } else {
             $response = array(
                 "success" => false,

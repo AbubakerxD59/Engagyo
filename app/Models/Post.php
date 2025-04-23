@@ -50,7 +50,24 @@ class Post extends Model
             });
     }
 
-    public function getDomain(){
+    public function scopeExist($query, $search)
+    {
+        $query->where("user_id", $search["user_id"])->where("account_id", $search["account_id"])->where("type", $search["type"])
+            ->where("url", "like", "%" . $search["url"] . "%")->where("domain_id", $search["domain_id"]);
+    }
+
+    public function scopePublished($query)
+    {
+        $query->where("status", "1");
+    }
+
+    public function scopeNotPublished($query)
+    {
+        $query->whereIn("status", ["0", "-1"]);
+    }
+
+    public function getDomain()
+    {
         $domain = $this->domain()->first();
         return $domain ? $domain->name : '';
     }

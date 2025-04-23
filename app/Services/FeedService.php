@@ -19,7 +19,7 @@ class FeedService
         }
         $targetUrl = $feedUrls[0];
         try {
-            $response = Http::timeout(15) // Set a reasonable timeout
+            $response = Http::timeout(5) // Set a reasonable timeout
                 ->withHeaders(['User-Agent' => 'Engagyo RSS bot']) // Be polite, identify your bot
                 ->get($targetUrl);
 
@@ -29,7 +29,6 @@ class FeedService
             }
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
-            dd($items);
             return ["success" => true, "items" => $items];
         } catch (Exception $e) {
             Log::error("Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage());
