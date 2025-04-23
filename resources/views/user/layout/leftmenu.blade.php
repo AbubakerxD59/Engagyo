@@ -20,9 +20,12 @@
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column py-2" data-widget="treeview" role="menu"
                 data-accordion="false">
+                <?php
+                $account = ['panel.accounts', 'panel.accounts.pinterest'];
+                ?>
                 <li class="nav-item">
                     <a href="{{ route('panel.accounts') }}"
-                        class="nav-link {{ request()->route()->getName() == 'panel.accounts' ? 'active' : '' }}">
+                        class="nav-link {{ in_array(request()->route()->getName(), $account) ? 'active' : '' }}">
                         <i class="nav-icon fas fa-user-circle"></i>
                         <p>Accounts</p>
                     </a>
