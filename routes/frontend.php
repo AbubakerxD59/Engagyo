@@ -48,7 +48,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
         Route::get("accounts", "index")->name("accounts");
         // Accounts sub Routes
         Route::name("accounts.")->group(function () {
-            Route::get('pinterest-delete/{id?}', 'pinterestDelete')->name('pinterest.delete');
+            Route::post('pinterest-delete/{id?}', 'pinterestDelete')->name('pinterest.delete');
             Route::get("pinterest/{id?}", "pinterest")->name("pinterest");
         });
     });

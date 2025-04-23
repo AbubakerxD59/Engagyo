@@ -51,9 +51,15 @@
                                             <div class="account_name">{{ $pin->username }}</div>
                                         </div>
                                         <div>
-                                            <a href="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}">
+                                            <button class="btn btn-outline-danger btn-sm delete-btn"
+                                                onclick="confirmDelete(event)">
                                                 <i class="fa fa-trash text-danger px-2"></i>
-                                            </a>
+                                            </button>
+                                            <form action="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}"
+                                                method="POST" class="delete_form">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
                                         </div>
                                     </article>
                                 </div>
