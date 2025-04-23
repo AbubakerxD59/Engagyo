@@ -120,6 +120,7 @@
                 var button = $(this);
                 var id = button.data('id');
                 var pin_id = button.data('pin-id');
+                var board_data = button.data('board-data');
                 var token = $('meta[name="csrf-token"]').attr('content');
                 $.ajax({
                     url: "{{ route('pinterest.addBoard') }}",
@@ -127,6 +128,7 @@
                     data: {
                         "id": id,
                         "pin_id": pin_id,
+                        "board_data": board_data
                         "_token": token
                     },
                     success: function(response) {
