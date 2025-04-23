@@ -43,16 +43,16 @@
                             @foreach ($user->load('pinterest')->pinterest as $pin)
                                 <div class="account_box col-md-3 mx-1">
                                     <article>
-                                        <picture>
-                                            <img src="{{ $pin->profile_image }}" alt="{{ no_image() }}"
-                                                class="rounded-pill">
-                                        </picture>
-                                        <div>
+                                        <div class="d-flex align-items-center">
+                                            <picture>
+                                                <img src="{{ $pin->profile_image }}" alt="{{ no_image() }}"
+                                                    class="rounded-pill">
+                                            </picture>
                                             <div class="account_name">{{ $pin->username }}</div>
                                         </div>
                                         <div>
                                             <a href="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}">
-                                                <i class="fa fa-trash"></i>
+                                                <i class="fa fa-trash text-danger px-2"></i>
                                             </a>
                                         </div>
                                     </article>
