@@ -32,8 +32,8 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr>
-                                    @foreach ($pinterest->load('boards')->boards as $board)
+                                @foreach ($pinterest->load('boards')->boards as $board)
+                                    <tr>
                                         <td>{{ $board->id }}</td>
                                         <td>{{ $board->name }}</td>
                                         <td>{{ $board->pin_id }}</td>
@@ -50,8 +50,8 @@
                                                 </form> --}}
                                             </div>
                                         </td>
-                                    @endforeach
-                                </tr>
+                                    </tr>
+                                @endforeach
                             </tbody>
                         </table>
                     </div>
