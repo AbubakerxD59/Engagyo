@@ -83,6 +83,7 @@ class PinterestController extends Controller
 
     public function addBoard(Request $request)
     {
+        dd($request->all());
         $items = session_get('items');
         $board = isset($items[$request->id]) ? $items[$request->id] : 0;
         if ($board) {
