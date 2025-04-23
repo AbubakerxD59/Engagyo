@@ -44,9 +44,10 @@ class AccountsController extends Controller
     public function pinterest($id = null)
     {
         if (!empty($id)) {
+            $pinterestUrl = $this->pinterestService->getLoginUrl();
             $pinterest = $this->pinterest->search($id)->first();
             if ($pinterest) {
-                return view('user.accounts.pinterest', compact('pinterest'));
+                return view('user.accounts.pinterest', compact('pinterestUrl', 'pinterest'));
             } else {
                 return back()->with('error', 'Something went Wrong!');
             }
