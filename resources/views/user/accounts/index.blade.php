@@ -130,9 +130,12 @@
                         "_token": token
                     },
                     success: function(response) {
-                        console.log(response);
-                        toastr.success("Board Connected Successfully!");
-                        button.text('Connected').removeClass('pinterest_connect pointer');
+                        if (response.success) {
+                            toastr.success("Board Connected Successfully!");
+                            button.text('Connected').removeClass('pinterest_connect pointer');
+                        } else {
+                            toastr.success(response.message);
+                        }
                     },
                 });
             });
