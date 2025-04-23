@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Models\Domain;
 use App\Models\Post;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -10,9 +11,11 @@ use Illuminate\Support\Facades\Auth;
 class AutomationController extends Controller
 {
     private $post;
-    public function __construct(Post $post)
+    private $domain;
+    public function __construct(Post $post, Domain $domain)
     {
         $this->post = $post;
+        $this->domain = $domain;
     }
     public function index()
     {
@@ -49,5 +52,10 @@ class AutomationController extends Controller
             'iTotalDisplayRecords' => $totalRecordswithFilter->count(),
             'aaData' => $posts,
         ]);
+    }
+
+    public function feedUrl(Request $request)
+    {
+        dd($request->all());
     }
 }

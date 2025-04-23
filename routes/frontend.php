@@ -59,6 +59,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
         Route::get("automation", "index")->name("automation");
         Route::name("automation.")->group(function () {
             Route::get("posts", "posts")->name("posts");
+            Route::post("feed-url", "feedUrl")->name("feedUrl");
         });
     });
 });

@@ -47,9 +47,11 @@
                                     <option value="-1">Failed</option>
                                 </select>
                             </div>
-                            <div class="col-md-4 form-group mt-4">
-                                <button id="searchButton" class="btn btn-primary">Search</button>
-                                <button id="clearFilters" class="btn btn-secondary">Clear Filters</button>
+                            <div class="col-md-4 form-group">
+                                <button id="searchButton" class="btn btn-outline-primary btn-sm">Search</button>
+                                <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear Filters</button>
+                                <button id="postsFetch" class="btn btn-outline-info btn-sm" data-toggle="modal"
+                                    data-target="#fetchPostsModal">Fetch Post</button>
                             </div>
                         </div>
                         <table class="table table-striped table-bordered" id="dataTable">
@@ -68,6 +70,7 @@
             </div>
         </section>
     </div>
+    @include('user.automation.fetch_posts_modal', ['user' => $user])
 @endsection
 @push('styles')
 @endpush
@@ -103,6 +106,30 @@
                     data: 'action'
                 }
             ],
+        });
+    </script>
+    <script>
+        $(document).ready(function() {
+            $("#fetchPostsBtn").on('click', function() {
+                var selected_account = $("#fetch_account").find(":selected").val();
+                var selected_time = $("#time").val();
+                var selected_url = $("#feed_url").val();
+                var token = $('meta[name="csrf-token"]').attr('content');
+
+                $.ajax({
+                    url: "{{ route('panel.automation.feedUrl') }}",
+                    type: "POST",
+                    data: {
+                        "account": selected_account,
+                        "time": selected_time,
+                        "url": selected_url,
+                        "_token": token,
+                    },
+                    success: function(response) {
+                        console.log(response);
+                    }
+                });
+            });
         });
     </script>
 @endpush
