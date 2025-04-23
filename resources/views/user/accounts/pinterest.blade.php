@@ -10,7 +10,7 @@
                     <div class="card-header with-border clearfix">
                         <div class="card-title">
                             <img src="{{ social_logo('pinterest') }}">
-                            <span>{{ $pinteres->username }}</span>
+                            <span>{{ $pinterest->username }}</span>
                         </div>
                         <a href="{{ $pinterestUrl }}" class="btn btn-outline-primary btn-sm mx-2">Reauthorize</a>
                         <div class="card-tools">
