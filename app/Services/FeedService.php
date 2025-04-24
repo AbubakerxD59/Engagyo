@@ -26,48 +26,50 @@ class FeedService
             );
         }
         $targetUrl = $feedUrls[0];
-        try {
-            $response = Http::timeout(5) // Set a reasonable timeout
-                ->withHeaders(['User-Agent' => 'Engagyo RSS bot']) // Be polite, identify your bot
-                ->get($targetUrl);
 
-            if (!$response->successful()) {
-                Log::error("Failed to fetch feed/sitemap from {$targetUrl}. Status: " . $response->status());
-                return array(
-                    "success" => false,
-                    'error' => 'Failed to fetch content from the target URL.'
-                );
-            }
-            $xmlContent = $response->body();
-            $items = $this->parseContent($xmlContent, $targetUrl);
-            foreach ($items as $key => $item) {
-                $nextTime = $this->post->nextTime(["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain->id]);
-                $post = $this->post->exist(["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain->id, "url" => $item["link"]])->notPublished()->first();
-                if (!$post) {
-                    $this->post->create([
-                        "user_id" => $user->id,
-                        "account_id" => $account_id,
-                        "type" => $type,
-                        "title" => $item["title"],
-                        "description" => $item["description"],
-                        "domain_id" => $domain->id,
-                        "url" => $item["link"],
-                        "publish_date" => newDateTime($nextTime, $time, $key - 1),
-                        "status" => 0,
-                    ]);
-                }
-            }
-            return array(
-                "success" => true,
-                "items" => $items
-            );
-        } catch (Exception $e) {
-            Log::error("Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage());
+
+        $response = Http::timeout(5) // Set a reasonable timeout
+            ->withHeaders(['User-Agent' => 'Engagyo RSS bot']) // Be polite, identify your bot
+            ->get($targetUrl);
+
+        if (!$response->successful()) {
+            Log::error("Failed to fetch feed/sitemap from {$targetUrl}. Status: " . $response->status());
             return array(
                 "success" => false,
-                'error' => 'An error occurred while processing the feed/sitemap.'
+                'error' => 'Failed to fetch content from the target URL.'
             );
         }
+        $xmlContent = $response->body();
+        $items = $this->parseContent($xmlContent, $targetUrl);
+        foreach ($items as $key => $item) {
+            $nextTime = $this->post->nextTime(["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain->id]);
+            $post = $this->post->exist(["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain->id, "url" => $item["link"]])->notPublished()->first();
+            if (!$post) {
+                $this->post->create([
+                    "user_id" => $user->id,
+                    "account_id" => $account_id,
+                    "type" => $type,
+                    "title" => $item["title"],
+                    "description" => $item["description"],
+                    "domain_id" => $domain->id,
+                    "url" => $item["link"],
+                    "publish_date" => newDateTime($nextTime, $time, $key - 1),
+                    "status" => 0,
+                ]);
+            }
+        }
+        return array(
+            "success" => true,
+            "items" => $items
+        );
+        // try {
+        // } catch (Exception $e) {
+        //     Log::error("Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage());
+        //     return array(
+        //         "success" => false,
+        //         'error' => 'An error occurred while processing the feed/sitemap.'
+        //     );
+        // }
     }
 
     /**
