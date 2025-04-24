@@ -34,7 +34,7 @@ class AutomationController extends Controller
         $data = $request->all();
         $iTotalRecords = $this->post;
         $account = $data["account"];
-        $type = $data["type"];
+        $type = $data["account_type"];
         $domain = $data["domain"];
         $status = $data["status"];
         $search = $data['search_input'];
