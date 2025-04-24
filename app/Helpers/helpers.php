@@ -335,6 +335,7 @@ function newDateTime($nextDate, $time, $day = 0)
     if ($day) {
         $nextDate = date("Y-m-d", strtotime($nextDate . ' +' . $day . ' days'));
     }
+    $nextDate = strtotime($nextDate);
     $time = strtotime($time);
     $newDate = $nextDate + $time;
     return $newDate;
