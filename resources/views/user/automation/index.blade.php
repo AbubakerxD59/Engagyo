@@ -99,10 +99,10 @@
             ajax: {
                 url: "{{ route('panel.automation.posts.dataTable') }}",
                 data: {
-                    "account": $("#account").find(":selected").val(),
-                    "domain": $("#domains").find(":selected").val(),
-                    "status": $("#status").find(":selected").val(),
-                    "search_input": $("#search").val(),
+                    account: $("#account").find(":selected").val(),
+                    domain: $("#domains").find(":selected").val(),
+                    status: $("#status").find(":selected").val(),
+                    search_input: $("#search").val(),
                 },
             },
             columns: [{
