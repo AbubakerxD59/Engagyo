@@ -77,8 +77,7 @@ class Post extends Model
         return $domain ? $domain->name : '';
     }
 
-    public function getAccount(){
-        $type = $this->type;
+    public function getAccount($type){
         if($type == 'pinterest'){
             $account = $this->board()->first();
         }
