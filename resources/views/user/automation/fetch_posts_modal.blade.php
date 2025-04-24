@@ -16,7 +16,7 @@
                             <option value="">All Accounts</option>
                             @foreach ($user->getAccounts() as $key => $account)
                                 <option value="{{ $account->id }}" data-type="{{ $account->type }}">
-                                    {!! social_icon($account->type) !!} {{ $account->name }}
+                                    {!! social_icon($account->type) !!}
                                 </option>
                             @endforeach
                         </select>
