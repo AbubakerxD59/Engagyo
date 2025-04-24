@@ -77,6 +77,14 @@ class Post extends Model
         return $domain ? $domain->name : '';
     }
 
+    public function getAccount(){
+        $type = $this->type;
+        if($type == 'pinterest'){
+            $account = $this->board()->first();
+        }
+        return $account ? $account->name : '';
+    }
+
     public function nextTime($search)
     {
         $lastPost = $this->exist($search)->latest()->first();

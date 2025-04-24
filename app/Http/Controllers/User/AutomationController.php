@@ -65,6 +65,7 @@ class AutomationController extends Controller
         $posts = $posts->get();
         foreach ($posts as $k => $val) {
             $posts[$k]['post'] = view('user.automation.post')->with('post', $val)->render();
+            $posts[$k]['account_name'] = $val->getAccount();
             $posts[$k]['domain_name'] = $val->getDomain();
             $posts[$k]['publish'] = date("Y-m-d H:i A", strtotime($val->publish_date));
             $posts[$k]['status_view'] = get_post_status($val->status);

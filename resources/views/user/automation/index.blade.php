@@ -68,6 +68,7 @@
                             <thead>
                                 <tr>
                                     <th>Post</th>
+                                    <th>Account</th>
                                     <th>Domain</th>
                                     <th>Publish Date</th>
                                     <th>Status</th>
@@ -112,6 +113,9 @@
             },
             columns: [{
                     data: 'post'
+                },
+                {
+                    data: 'account_name',
                 },
                 {
                     data: 'domain_name',
