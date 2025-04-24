@@ -32,11 +32,26 @@ class AutomationController extends Controller
     public function posts(Request $request)
     {
         $data = $request->all();
-        $search = $data['search']['value'];
         $iTotalRecords = $this->post;
+        $account = $data["account"];
+        $domain = $data["domain"];
+        $status = $data["status"];
+        $search = $data['search_input'];
         $posts = $this->post;
         if (!empty($search)) {
             $posts = $posts->search($search);
+        }
+        if ($account) {
+            $posts = $posts->where("account_id", $account);
+        }
+        if ($account) {
+            $posts = $posts->where("account_id", $account);
+        }
+        if ($domain) {
+            $posts = $posts->where("domain_id", $domain);
+        }
+        if ($status) {
+            $posts = $posts->where("status", $status);
         }
         $totalRecordswithFilter = clone $posts;
         $posts = $posts->orderBy('id', 'ASC');
