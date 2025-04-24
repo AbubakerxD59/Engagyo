@@ -85,7 +85,7 @@ class Post extends Model
     public function getAccount($type)
     {
         if ($type == 'pinterest') {
-            $account = $this->pinterest()->board()->first();
+            $account = $this->board()->first();
         }
         return $account ? $account->name : '';
     }
