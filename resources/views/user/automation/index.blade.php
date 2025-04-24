@@ -98,11 +98,12 @@
             "serverSide": true,
             ajax: {
                 url: "{{ route('panel.automation.posts.dataTable') }}",
-                data: {
-                    account: $("#account").find(":selected").val(),
-                    domain: $("#domains").find(":selected").val(),
-                    status: $("#status").find(":selected").val(),
-                    search_input: $("#search").val(),
+                data: function(param) {
+                    param.account = $("#account").find(":selected").val();
+                    param.domain = $("#domains").find(":selected").val();
+                    param.status = $("#status").find(":selected").val();
+                    param.search_input = $("#search").val();
+                    return param;
                 },
             },
             columns: [{
