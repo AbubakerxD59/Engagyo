@@ -101,7 +101,7 @@
                 data: function(param) {
                     console.log($("#account").find(":selected").data("type"));
                     param.account = $("#account").find(":selected").val();
-                    param.account_type = $("#account").find(":selected").data("type");
+                    param.account_type = $("#account").find(":selected").val() ? $("#account").find(":selected").data("type") : 0;
                     param.domain = $("#domains").find(":selected").val();
                     param.status = $("#status").find(":selected").val();
                     param.search_input = $("#search").val();
