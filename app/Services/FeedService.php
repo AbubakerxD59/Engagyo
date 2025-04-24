@@ -11,9 +11,9 @@ use Illuminate\Support\Facades\Http;
 class FeedService
 {
     private $post;
-    public function __construct(Post $post)
+    public function __construct()
     {
-        $this->post = $post;
+        $this->post = new Post();
     }
     public function fetch($url, $domain, $user, $account_id, $type, $time)
     {
