@@ -16,7 +16,7 @@
                             <option value="">All Accounts</option>
                             @foreach ($user->getAccounts() as $key => $account)
                                 <option value="{{ $account->id }}" data-type="{{ $account->type }}">
-                                    {{ $account->username }}</option>
+                                    {{ $account->name }}</option>
                             @endforeach
                         </select>
                     </div>

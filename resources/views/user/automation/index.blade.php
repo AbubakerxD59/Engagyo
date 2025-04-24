@@ -27,7 +27,7 @@
                                         <option value="">All Accounts</option>
                                         @foreach ($user->getAccounts() as $key => $account)
                                             <option value="{{ $account->id }}" data-type="{{ $account->type }}">
-                                                {{ $account->username }}</option>
+                                                {{ $account->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
@@ -101,7 +101,8 @@
                 data: function(param) {
                     console.log($("#account").find(":selected").data("type"));
                     param.account = $("#account").find(":selected").val();
-                    param.account_type = $("#account").find(":selected").val() ? $("#account").find(":selected").data("type") : 0;
+                    param.account_type = $("#account").find(":selected").val() ? $("#account").find(":selected")
+                        .data("type") : 0;
                     param.domain = $("#domains").find(":selected").val();
                     param.status = $("#status").find(":selected").val();
                     param.search_input = $("#search").val();

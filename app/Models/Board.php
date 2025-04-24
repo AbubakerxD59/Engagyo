@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Board extends Model
 {
@@ -16,6 +17,8 @@ class Board extends Model
         "name",
         "status",
     ];
+
+    protected $appends = ["type"];
 
     public function user()
     {
@@ -44,5 +47,14 @@ class Board extends Model
 
     public function scopeConnected($query, $search){
         $query->where('user_id', $search['user_id'])->where('pin_id', $search['pin_id'])->where('board_id', $search['board_id']);
+    }
+
+    protected function type(): Attribute
+    {
+        return Attribute::make(
+            get: function(){
+                return "pinterest";
+            }
+        );
     }
 }

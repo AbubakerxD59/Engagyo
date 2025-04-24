@@ -30,9 +30,9 @@ class Post extends Model
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
-    public function pinterest()
+    public function board()
     {
-        return $this->belongsTo(Pinterest::class, 'account_id', 'id')->where('type', 'like', '%pinterest%');
+        return $this->belongsTo(Board::class, 'account_id', 'id')->where('type', 'like', '%pinterest%');
     }
 
     public function domain()

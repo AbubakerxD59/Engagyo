@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Services\FeedService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Models\Board;
 use App\Models\Pinterest;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,12 +16,14 @@ class AutomationController extends Controller
     private $post;
     private $domain;
     private $pinterest;
+    private $board;
     private $feedService;
-    public function __construct(Post $post, Domain $domain, Pinterest $pinterest)
+    public function __construct(Post $post, Domain $domain, Pinterest $pinterest, Board $board)
     {
         $this->post = $post;
         $this->domain = $domain;
         $this->pinterest = $pinterest;
+        $this->board = $board;
         $this->feedService = new FeedService();
     }
     public function index()
@@ -44,12 +47,9 @@ class AutomationController extends Controller
         }
         if ($account) {
             if ($type == 'pinterest') {
-                $account = $this->pinterest->find($account);
-                $account = $account->pin_id;
+                $account = $this->board->find($account);
+                $account = $account->board_id;
             }
-            $posts = $posts->where("account_id", $account);
-        }
-        if ($account) {
             $posts = $posts->where("account_id", $account);
         }
         if ($domain) {
@@ -111,8 +111,8 @@ class AutomationController extends Controller
         $user = Auth::user();
         $type = $request->type;
         if ($type == 'pinterest') {
-            $account = $this->pinterest->find($request->account);
-            $account_id = $account ? $account->pin_id : '';
+            $account = $this->board->find($request->account);
+            $account_id = $account ? $account->board_id : '';
         }
         if ($account) {
             $urlDomain = parse_url($request->url, PHP_URL_HOST);

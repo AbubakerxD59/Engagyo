@@ -115,8 +115,11 @@ class User extends Authenticatable
 
     public function getAccounts()
     {
+        // Pinterest Boards
         $pinterest = $this->pinterest()->get();
-        $accounts = $pinterest;
+        $boards = $pinterest->boards()->get();
+
+        $accounts = $boards;
         return $accounts;
     }
 
