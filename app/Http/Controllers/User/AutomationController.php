@@ -60,8 +60,9 @@ class AutomationController extends Controller
         ]);
     }
 
-    public function postDelete($id = null)
+    public function postDelete(Request $request)
     {
+        $id = $request->id;
         if ($id) {
             $post = $this->post->find($id);
             if ($post) {
