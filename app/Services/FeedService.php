@@ -20,7 +20,10 @@ class FeedService
         $websiteUrl = $url;
         $feedUrls = $this->discoverFeedUrls($websiteUrl);
         if (empty($feedUrls)) {
-            return ["success" => false, 'error' => 'Could not find RSS/Atom feed or Sitemap URL.'];
+            return array(
+                "success" => false,
+                'error' => 'Could not find RSS/Atom feed or Sitemap URL.'
+            );
         }
         $targetUrl = $feedUrls[0];
         try {
@@ -30,7 +33,10 @@ class FeedService
 
             if (!$response->successful()) {
                 Log::error("Failed to fetch feed/sitemap from {$targetUrl}. Status: " . $response->status());
-                return ["success" => false, 'error' => 'Failed to fetch content from the target URL.'];
+                return array(
+                    "success" => false,
+                    'error' => 'Failed to fetch content from the target URL.'
+                );
             }
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
@@ -51,10 +57,16 @@ class FeedService
                     ]);
                 }
             }
-            return ["success" => true, "items" => $items];
+            return array(
+                "success" => true,
+                "items" => $items
+            );
         } catch (Exception $e) {
             Log::error("Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage());
-            return response()->json(['error' => 'An error occurred while processing the feed/sitemap.'], 500);
+            return array(
+                "success" => false,
+                'error' => 'An error occurred while processing the feed/sitemap.'
+            );
         }
     }
 
