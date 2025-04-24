@@ -20,7 +20,7 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <form id="adv_filter_form">
+                            <form id="adv_filter_form" class="row col-md-12">
                                 <div class="col-md-4 form-group">
                                     <label for="account">Accounts</label>
                                     <select name="account" id="account" class="form-control adv_filter">
@@ -54,13 +54,14 @@
                                     <input type="text" name="search" id="search"
                                         class="form-control adv_filter_search">
                                 </div>
-                                <div class="col-md-4 form-group">
-                                    <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear
-                                        Filters</button>
-                                    <button id="postsFetch" class="btn btn-outline-info btn-sm" data-toggle="modal"
-                                        data-target="#fetchPostsModal">Fetch Post</button>
-                                </div>
                             </form>
+                            <div class="col-md-4 form-group">
+                                <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear
+                                    Filters
+                                </button>
+                                <button id="postsFetch" class="btn btn-outline-info btn-sm" data-toggle="modal"
+                                    data-target="#fetchPostsModal">Fetch Post</button>
+                            </div>
                         </div>
                         <table class="table table-striped table-bordered" id="dataTable">
                             <thead>
@@ -157,7 +158,7 @@
                 postsDatatable.ajax.reload();
             });
 
-            $('#adv_filter_search').on('keydown', function() {
+            $('.adv_filter_search').on('keydown', function() {
                 postsDatatable.ajax.reload();
             })
 
