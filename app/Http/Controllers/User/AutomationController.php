@@ -34,6 +34,7 @@ class AutomationController extends Controller
         $data = $request->all();
         $iTotalRecords = $this->post;
         $account = $data["account"];
+        $type = $data["type"];
         $domain = $data["domain"];
         $status = $data["status"];
         $search = $data['search_input'];
@@ -42,6 +43,10 @@ class AutomationController extends Controller
             $posts = $posts->search($search);
         }
         if ($account) {
+            if ($type == 'pinterest') {
+                $account = $this->pinterest->find($account);
+                $account = $account->pin_id;
+            }
             $posts = $posts->where("account_id", $account);
         }
         if ($account) {
