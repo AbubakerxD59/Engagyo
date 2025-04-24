@@ -330,6 +330,21 @@ function social_logo($type = null)
     return $logo;
 }
 
+function social_icon($type = null)
+{
+    $type = strtolower($type);
+    if ($type == 'facebook') {
+        $logo = '<i class="fa-brands fa-facebook"></i>';
+    } elseif ($type == 'instagram') {
+        $logo = '<i class="fa-brands fa-instagram"></i>';
+    } elseif ($type == 'pinterest') {
+        $logo = '<i class="fa-brands fa-pinterest"></i>';
+    } else {
+        $logo = "";
+    }
+    return $logo;
+}
+
 function newDateTime($nextDate, $time, $day = 0)
 {
     if ($day) {
