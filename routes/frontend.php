@@ -58,8 +58,13 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
     Route::controller(AutomationController::class)->group(function () {
         Route::get("automation", "index")->name("automation");
         Route::name("automation.")->group(function () {
-            Route::get("posts", "posts")->name("posts");
             Route::post("feed-url", "feedUrl")->name("feedUrl");
+            // Posts Routes
+            Route::name("posts.")->group(function () {
+                Route::get("posts-dataTable", "posts")->name("dataTable");
+                Route::post("post-delete", "postDelete")->name("destroy");
+                Route::post("post-edit/{id?}", "postEdit")->name("edit");
+            });
         });
     });
 });

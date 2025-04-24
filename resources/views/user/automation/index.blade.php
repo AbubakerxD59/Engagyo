@@ -20,40 +20,47 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            <div class="col-md-4 form-group">
-                                <label for="account">Accounts</label>
-                                <select name="account" id="account" class="form-control">
-                                    <option value="">All Accounts</option>
-                                    @foreach ($user->getAccounts() as $key => $account)
-                                        <option value="{{ $account->id }}" data-type="{{ $account->type }}">
-                                            {{ $account->username }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-4 form-group">
-                                <label for="domains">Domains</label>
-                                <select name="domains" id="domains" class="form-control">
-                                    <option value="">All Domains</option>
-                                    @foreach ($user->getDomains() as $key => $domains)
-                                        <option value="{{ $domains->id }}">{{ $domains->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-4 form-group">
-                                <label for="status">Status</label>
-                                <select name="status" id="status" class="form-control">
-                                    <option value="">All Status</option>
-                                    <option value="1">Published</option>
-                                    <option value="0">Pending</option>
-                                    <option value="-1">Failed</option>
-                                </select>
-                            </div>
-                            <div class="col-md-4 form-group">
-                                <button id="searchButton" class="btn btn-outline-primary btn-sm">Search</button>
-                                <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear Filters</button>
-                                <button id="postsFetch" class="btn btn-outline-info btn-sm" data-toggle="modal"
-                                    data-target="#fetchPostsModal">Fetch Post</button>
-                            </div>
+                            <form id="adv_filter_form">
+                                <div class="col-md-4 form-group">
+                                    <label for="account">Accounts</label>
+                                    <select name="account" id="account" class="form-control adv_filter">
+                                        <option value="">All Accounts</option>
+                                        @foreach ($user->getAccounts() as $key => $account)
+                                            <option value="{{ $account->id }}" data-type="{{ $account->type }}">
+                                                {{ $account->username }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label for="domains">Domains</label>
+                                    <select name="domains" id="domains" class="form-control adv_filter">
+                                        <option value="">All Domains</option>
+                                        @foreach ($user->getDomains() as $key => $domains)
+                                            <option value="{{ $domains->id }}">{{ $domains->name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <label for="status">Status</label>
+                                    <select name="status" id="status" class="form-control adv_filter">
+                                        <option value="">All Status</option>
+                                        <option value="1">Published</option>
+                                        <option value="0">Pending</option>
+                                        <option value="-1">Failed</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-12 form-group">
+                                    <label for="search">Search</label>
+                                    <input type="text" name="search" id="search"
+                                        class="form-control adv_filter_search">
+                                </div>
+                                <div class="col-md-4 form-group">
+                                    <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear
+                                        Filters</button>
+                                    <button id="postsFetch" class="btn btn-outline-info btn-sm" data-toggle="modal"
+                                        data-target="#fetchPostsModal">Fetch Post</button>
+                                </div>
+                            </form>
                         </div>
                         <table class="table table-striped table-bordered" id="dataTable">
                             <thead>
@@ -89,7 +96,13 @@
             "processing": true,
             "serverSide": true,
             ajax: {
-                url: "{{ route('panel.automation.posts') }}",
+                url: "{{ route('panel.automation.posts.dataTable') }}",
+            },
+            data: {
+                "account": $("#account").find(":selected").val(),
+                "domain": $("#domains").find(":selected").val(),
+                "status": $("#status").find(":selected").val(),
+                "search": $("#search").val(),
             },
             columns: [{
                     data: 'post'
@@ -129,7 +142,6 @@
                         "_token": token,
                     },
                     success: function(response) {
-                        console.log(response);
                         if (response.success) {
                             $("#fetchPostsModal").modal("toggle");
                             postsDatatable.ajax.reload();
@@ -140,6 +152,40 @@
                     }
                 });
             });
+
+            $('.adv_filter').on('change', function() {
+                postsDatatable.ajax.reload();
+            });
+
+            $('#adv_filter_search').on('keydown', function() {
+                postsDatatable.ajax.reload();
+            })
+
+            $("#clearFilters").on("click", function() {
+                $("#adv_filter_form").trigger("reset");
+                postsDatatable.ajax.reload();
+            })
+
+            $(document).on("click", ".post-delete", function() {
+                var id = $(this).data('id');
+                var token = $('meta[name="csrf-token"]').attr('content');
+                $.ajax({
+                    url: "{{ route('panel.automation.posts.destroy') }}",
+                    type: "POST",
+                    data: {
+                        "id": id,
+                        "_token": token
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            postsDatatable.ajax.reload();
+                            toastr.success(response.message);
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    }
+                });
+            })
         });
     </script>
 @endpush

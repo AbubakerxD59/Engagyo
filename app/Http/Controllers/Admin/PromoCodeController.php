@@ -20,7 +20,7 @@ class PromoCodeController extends Controller
         // permissions
 
         $this->promoCode = $promoCode;
-        $this->stripe = new \Stripe\StripeClient(env('STRIPE_SECRET'));
+        // $this->stripe = new \Stripe\StripeClient(env('STRIPE_SECRET'));
     }
     /**
      * Display a listing of the resource.

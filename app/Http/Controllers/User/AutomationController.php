@@ -60,6 +60,31 @@ class AutomationController extends Controller
         ]);
     }
 
+    public function postDelete($id = null)
+    {
+        if ($id) {
+            $post = $this->post->find($id);
+            if ($post) {
+                $post->delete();
+                $response = array(
+                    "success" => true,
+                    "message" => "Post deleted Successfully!"
+                );
+            } else {
+                $response = array(
+                    "success" => false,
+                    "message" => "Something went Wrong!"
+                );
+            }
+        } else {
+            $response = array(
+                "success" => false,
+                "message" => "Something went Wrong!"
+            );
+        }
+        return response()->json($response);
+    }
+
     public function feedUrl(Request $request)
     {
         $user = Auth::user();

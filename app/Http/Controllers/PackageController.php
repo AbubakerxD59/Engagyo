@@ -23,7 +23,7 @@ class PackageController extends Controller
 
         $this->package = $package;
         $this->feature = $feature;
-        $this->stripe = new \Stripe\StripeClient(env('STRIPE_SECRET'));
+        // $this->stripe = new \Stripe\StripeClient(env('STRIPE_SECRET'));
     }
     /**
      * Display a listing of the resource.
