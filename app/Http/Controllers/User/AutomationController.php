@@ -80,26 +80,8 @@ class AutomationController extends Controller
                     "name" => $urlDomain,
                 ]);
             }
-            $posts = $this->feedService->fetch($urlDomain);
+            $posts = $this->feedService->fetch($urlDomain, $domain, $user, $account_id, $type, $request->time);
             if ($posts["success"]) {
-                foreach ($posts["items"] as $item) {
-                    $search["url"] = $item['link'];
-                    $search["domain_id"] = $domain->id;
-                    $post = $this->post->exist($search)->notPublished()->first();
-                    if (!$post) {
-                        $this->post->crate([
-                            "user_id" => $user->id,
-                            "account_id" => $account_id,
-                            "type" => $type,
-                            "title" => $item["title"],
-                            "description" => $item["description"],
-                            "domain_id" => $domain->id,
-                            "url" => $item["link"],
-                            "publish_date" => newDateTime($request->time),
-                            "status" => 0,
-                        ]);
-                    }
-                }
                 $response = array(
                     "success" => true,
                     "message" => "Posts fetched Succesfully!"

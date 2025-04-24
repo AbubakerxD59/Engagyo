@@ -105,16 +105,12 @@ function get_total_roles()
 function get_total_users($type = null)
 {
     $users = new User;
-    if (empty($type)) {
-        $users = $users->get();
-    }
     if ($type == 'active') {
-        $users = $users->where('status', '1')->get();
+        $users = $users->where('status', '1');
+    } else if ($type == 'inactive') {
+        $users = $users->where('status', '0');
     }
-    if ($type == 'inactive') {
-        $users = $users->where('status', '0')->get();
-    }
-
+    $users = $users->get();
     return count($users);
 }
 
@@ -340,4 +336,10 @@ function newDateTime($time)
     $time = strtotime($time);
     $newTime = $now + $time;
     return date("Y-m-d H:i:s");
+}
+
+function loader()
+{
+    $loader = "<span class='loader'></span>";
+    return $loader;
 }

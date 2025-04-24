@@ -129,6 +129,7 @@
                         "_token": token,
                     },
                     success: function(response) {
+                        console.lg(success);
                         if (response.success) {
                             $("#fetchPostsModal").modal("toggle");
                             postsDatatable.ajax.reload();

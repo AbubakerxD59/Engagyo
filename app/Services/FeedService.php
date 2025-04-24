@@ -2,15 +2,20 @@
 
 namespace App\Services;
 
+use App\Models\Post;
 use Exception;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 
 
 class FeedService
 {
-    public function fetch($url)
+    private $post;
+    public function __construct(Post $post)
+    {
+        $this->post = $post;
+    }
+    public function fetch($url, $domain, $user, $account_id, $type, $time)
     {
         $websiteUrl = $url;
         $feedUrls = $this->discoverFeedUrls($websiteUrl);
@@ -29,6 +34,22 @@ class FeedService
             }
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
+            foreach ($items as $key => $item) {
+                $post = $this->post->exist(["url" => $item["link"], "domain_id" => $domain->id])->notPublished()->first();
+                if (!$post) {
+                    $this->post->create([
+                        "user_id" => $user->id,
+                        "account_id" => $account_id,
+                        "type" => $type,
+                        "title" => $item["title"],
+                        "description" => $item["description"],
+                        "domain_id" => $domain->id,
+                        "url" => $item["link"],
+                        "publish_date" => newDateTime($time),
+                        "status" => 0,
+                    ]);
+                }
+            }
             return ["success" => true, "items" => $items];
         } catch (Exception $e) {
             Log::error("Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage());
