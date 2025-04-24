@@ -99,6 +99,7 @@
             ajax: {
                 url: "{{ route('panel.automation.posts.dataTable') }}",
                 data: function(param) {
+                    console.log($("#account").find(":selected").data("type"));
                     param.account = $("#account").find(":selected").val();
                     param.account_type = $("#account").find(":selected").data("type");
                     param.domain = $("#domains").find(":selected").val();
