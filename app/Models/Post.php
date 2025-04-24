@@ -52,6 +52,7 @@ class Post extends Model
 
     public function scopeExist($query, $search)
     {
+        dd($search);
         $query->where("user_id", $search["user_id"])
             ->where("account_id", $search["account_id"])
             ->where("type", $search["type"])
