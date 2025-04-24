@@ -57,4 +57,9 @@ class Board extends Model
             }
         );
     }
+
+    public function getPinterest(){
+        $pinterest = $this->pinterest()->first();
+        return $pinterest;
+    }
 }

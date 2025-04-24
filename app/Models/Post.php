@@ -87,7 +87,17 @@ class Post extends Model
         if ($type == 'pinterest') {
             $account = $this->board()->first();
         }
-        return $account ? $account->name : '';
+        return $account;
+    }
+
+    public function getAccountUrl($type)
+    {
+        $account = self::getAccount($type);
+        if ($type == 'pinterest') {
+            $mainAccount = $account->getPinterest();
+            $accountUrl = "pinterest.com/" . $mainAccount->username . '/' . $account->name;
+        }
+        return $accountUrl;
     }
 
     public function nextTime($search)
