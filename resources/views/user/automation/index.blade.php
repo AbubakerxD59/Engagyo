@@ -100,7 +100,7 @@
                 url: "{{ route('panel.automation.posts.dataTable') }}",
                 data: function(param) {
                     param.account = $("#account").find(":selected").val();
-                    param.account_type = $("#account").find(":selected").data('type');
+                    param.account_type = $("#account").find(":selected").data("type");
                     param.domain = $("#domains").find(":selected").val();
                     param.status = $("#status").find(":selected").val();
                     param.search_input = $("#search").val();
