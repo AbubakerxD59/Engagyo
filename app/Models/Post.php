@@ -32,7 +32,7 @@ class Post extends Model
 
     public function board()
     {
-        return $this->belongsTo(Board::class, 'account_id', 'id')->where('type', 'like', '%pinterest%');
+        return $this->belongsTo(Board::class, 'account_id', 'id');
     }
 
     public function domain()
@@ -71,15 +71,21 @@ class Post extends Model
         $query->whereIn("status", ["0", "-1"]);
     }
 
+    public function scopePinterest($query)
+    {
+        $query->where("type", "like", "%pinterest%");
+    }
+
     public function getDomain()
     {
         $domain = $this->domain()->first();
         return $domain ? $domain->name : '';
     }
 
-    public function getAccount($type){
-        if($type == 'pinterest'){
-            $account = $this->board()->first();
+    public function getAccount($type)
+    {
+        if ($type == 'pinterest') {
+            $account = $this->pinterest()->board()->first();
         }
         return $account ? $account->name : '';
     }
