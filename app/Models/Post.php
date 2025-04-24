@@ -95,7 +95,7 @@ class Post extends Model
         $account = self::getAccount($type);
         if ($type == 'pinterest') {
             $mainAccount = $account->getPinterest();
-            $accountUrl = "pinterest.com/" . $mainAccount->username . '/' . $account->name;
+            $accountUrl = "www.pinterest.com/" . $mainAccount->username . '/' . $account->name;
         }
         return $accountUrl;
     }
