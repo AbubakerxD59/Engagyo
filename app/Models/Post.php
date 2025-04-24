@@ -32,7 +32,7 @@ class Post extends Model
 
     public function board()
     {
-        return $this->belongsTo(Board::class, 'account_id', 'id');
+        return $this->belongsTo(Board::class, 'account_id', 'board_id');
     }
 
     public function domain()
