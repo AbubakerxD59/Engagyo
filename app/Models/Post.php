@@ -52,8 +52,13 @@ class Post extends Model
 
     public function scopeExist($query, $search)
     {
-        $query->where("user_id", $search["user_id"])->where("account_id", $search["account_id"])->where("type", $search["type"])
-            ->where("url", "like", "%" . $search["url"] . "%")->where("domain_id", $search["domain_id"]);
+        $query->where("user_id", $search["user_id"])
+            ->where("account_id", $search["account_id"])
+            ->where("type", $search["type"])
+            ->where("domain_id", $search["domain_id"]);
+        if (isset($search["url"])) {
+            $query->where("url", "like", "%" . $search["url"] . "%");
+        }
     }
 
     public function scopePublished($query)
@@ -70,5 +75,17 @@ class Post extends Model
     {
         $domain = $this->domain()->first();
         return $domain ? $domain->name : '';
+    }
+
+    public function nextTime($search)
+    {
+        $lastPost = $this->exist($search)->latest()->first();
+        if ($lastPost) {
+            $lastPublisDate = date("Y-m-d H:i:s", strtotime($lastPost->publish_date));
+            $nextDate = date("Y-m-d", strtotime($lastPublisDate . " +1 days"));
+        } else {
+            $nextDate = date("Y-m-d");
+        }
+        return $nextDate;
     }
 }

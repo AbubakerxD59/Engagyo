@@ -330,12 +330,14 @@ function social_logo($type = null)
     return $logo;
 }
 
-function newDateTime($time)
+function newDateTime($nextDate, $time, $day = 0)
 {
-    $now = strtotime(date("Y-m-d H:i:s"));
+    if ($day) {
+        $nextDate = date("Y-m-d", strtotime($nextDate . ' +' . $day . ' days'));
+    }
     $time = strtotime($time);
-    $newTime = $now + $time;
-    return date("Y-m-d H:i:s");
+    $newDate = $nextDate + $time;
+    return $newDate;
 }
 
 function loader()

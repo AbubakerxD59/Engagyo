@@ -35,6 +35,7 @@ class FeedService
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
             foreach ($items as $key => $item) {
+                $nextTime = $this->post->nextTime(["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain->id]);
                 $post = $this->post->exist(["url" => $item["link"], "domain_id" => $domain->id])->notPublished()->first();
                 if (!$post) {
                     $this->post->create([
@@ -45,7 +46,7 @@ class FeedService
                         "description" => $item["description"],
                         "domain_id" => $domain->id,
                         "url" => $item["link"],
-                        "publish_date" => newDateTime($time),
+                        "publish_date" => newDateTime($nextTime, $time, $key - 1),
                         "status" => 0,
                     ]);
                 }
