@@ -26,8 +26,7 @@ class FeedService
             );
         }
         $targetUrl = $feedUrls[0];
-        try {
-            $response = Http::timeout(5) // Set a reasonable timeout
+        $response = Http::timeout(5) // Set a reasonable timeout
                 ->withHeaders(['User-Agent' => 'Engagyo RSS bot']) // Be polite, identify your bot
                 ->get($targetUrl);
 
@@ -40,7 +39,7 @@ class FeedService
             }
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
-            dd($items);
+            // dd($items);
             foreach ($items as $key => $item) {
                 $nextTime = $this->post->nextTime(["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain->id]);
                 $post = $this->post->exist(["url" => $item["link"], "domain_id" => $domain->id])->notPublished()->first();
@@ -62,13 +61,15 @@ class FeedService
                 "success" => true,
                 "items" => $items
             );
-        } catch (Exception $e) {
-            Log::error("Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage());
-            return array(
-                "success" => false,
-                'error' => 'An error occurred while processing the feed/sitemap.'
-            );
-        }
+        // try {
+            
+        // } catch (Exception $e) {
+        //     Log::error("Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage());
+        //     return array(
+        //         "success" => false,
+        //         'error' => 'An error occurred while processing the feed/sitemap.'
+        //     );
+        // }
     }
 
     /**
