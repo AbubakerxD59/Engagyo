@@ -1,6 +1,7 @@
 <div class="d-flex">
     <div>
-        <button class="btn btn-outline-success btn-sm delete-btn publish-post" data-id="{{ $post->id }}">
+        <button class="btn btn-outline-success btn-sm delete-btn publish-post" data-id="{{ $post->id }}"
+            data-type="{{ $post->type }}">
             Publish
         </button>
     </div>

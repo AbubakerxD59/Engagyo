@@ -266,8 +266,8 @@
             $(document).on("click", ".publish-post", function() {
                 if (confirm("Do you wish to Publish?")) {
                     var id = $(this).data('id');
+                    var type = $(this).data("type");
                     var token = $('meta[name="csrf-token"]').attr('content');
-                    var type = $("#account").find(":selected").data("type");
                     $.ajax({
                         url: "{{ route('panel.automation.posts.publish') }}/" + id,
                         method: "POST",
