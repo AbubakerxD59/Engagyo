@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Post extends Model
 {
@@ -24,6 +25,8 @@ class Post extends Model
         "publish_date",
         "status",
     ];
+
+    protected $appends = ["date", "time"];
 
     public function user()
     {
@@ -110,5 +113,25 @@ class Post extends Model
             $nextDate = date("Y-m-d");
         }
         return $nextDate;
+    }
+
+    protected function date(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $date = date("d-m-Y", strtotime($this->publish_date));
+                return $date;
+            }
+        );
+    }
+
+    protected function time(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $time = date("H:i A", strtotime($this->publish_date));
+                return $time;
+            }
+        );
     }
 }
