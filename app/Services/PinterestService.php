@@ -65,6 +65,7 @@ class PinterestService
 
     public function create($access_token, $post)
     {
+        $this->pinterest->auth->setOAuthToken($access_token);
         $publish = $this->pinterest->pins->create($post);
         dd($publish);
     }

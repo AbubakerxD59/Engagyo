@@ -237,8 +237,13 @@ class AutomationController extends Controller
                         if ($pinterest) {
                             if (!$pinterest->validToken()) {
                                 $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token);
-                                dd($token);
-                                // $pinterest->update([]);
+                                $access_token = $token["access_token"];
+                                $pinterest->update([
+                                    "access_token" => $token["access_token"],
+                                    "expires_in" => $token["expires_in"],
+                                    "refresh_token" => $token["refresh_token"],
+                                    "refresh_token_expires_in" => $token["refresh_token_expires_in"],
+                                ]);
                             } else {
                                 $access_token = $pinterest->access_token;
                             }
@@ -249,7 +254,7 @@ class AutomationController extends Controller
                                 "board_id" => $post->account_id,
                                 "image" => $post->image
                             ];
-                            $response = $this->pinterestService->create($pinterest->access_token, $postData);
+                            $response = $this->pinterestService->create($access_token, $postData);
                         } else {
                             $response = array(
                                 "success" => false,
