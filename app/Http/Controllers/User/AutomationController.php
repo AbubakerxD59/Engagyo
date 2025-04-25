@@ -249,9 +249,12 @@ class AutomationController extends Controller
                             }
                             $postData = [
                                 "title" => $post->title,
-                                "description" => $post->description,
                                 "link" => $post->url,
-                                "board_id" => $post->account_id
+                                "board_id" => $post->account_id,
+                                "media_source" => (object) array(
+                                    "source_type" => "image_url",
+                                    "url" => $post->image
+                                )
                             ];
                             $response = $this->pinterestService->create($access_token, $postData);
                         } else {
