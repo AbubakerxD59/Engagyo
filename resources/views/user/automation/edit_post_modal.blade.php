@@ -11,6 +11,7 @@
             <form id="editPostForm">
                 <div class="modal-body">
                     <div class="card-body">
+                        <input type="hidden" name="post_id" id="post_id">
                         <div class="form-group row">
                             <div class="col-md-3">
                                 <label for="post_title">Title</label>
@@ -49,14 +50,14 @@
                                 <label for="post_image">Image</label>
                             </div>
                             <div class="col-md-9">
-                                <input type="file" name="post_image"class="form-control">
-                                <img id="post_image" class="rounded" width="100px">
+                                <input type="file" name="post_image" id="post_image" class="form-control">
+                                <img id="post_image_preview" class="rounded" width="100px">
                             </div>
                         </div>
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-primary">Submit</button>
+                    <button type="submit" class="btn btn-outline-primary update_post_btn">Submit</button>
                     <button type="button" class="btn btn-outline-danger" data-dismiss="modal"
                         aria-label="Close">Close</button>
                 </div>

@@ -226,13 +226,82 @@
                 var post = $(this).data("body");
                 var modal = $("#editPostModal");
                 form.trigger("reset");
+                modal.find("#post_id").val(post.id);
                 modal.find("#post_title").val(post.title);
                 modal.find("#post_url").val(post.url);
                 modal.find("#post_date").val(post.date);
                 modal.find("#post_time").val(post.time);
-                modal.find("#post_image").attr("src", post.image);
+                modal.find("#post_image_preview").attr("src", post.image);
                 modal.modal("toggle");
             })
+
+            $(document).on('submit', '#editPostForm', function(event) {
+                event.preventDefault();
+                var form = $("#editPostForm");
+                var data = form.serializeArray();
+                console.log(data);
+                return true;
+                var formData = new FormData();
+                var token = $('meta[name="csrf-token"]').attr('content');
+                var post_id = form.find('#post_id').val();
+                var post_title = $('#court_id').val();
+                var post_url = $('#court_id').val();
+                var post_date = $('#court_id').val();
+                var post_time = $('#court_id').val();
+                var post_image = $('#court_id').val();
+
+                formData.append('_token', token);
+                formData.append('court_id', court_id);
+                formData.append('ground_id', ground_id);
+                formData.append('name', name);
+                formData.append('start_time', start_time);
+                formData.append('end_time', end_time);
+                formData.append('active', status);
+
+                $.ajax({
+                    url: "",
+                    type: 'POST',
+                    contentType: 'multipart/form-data',
+                    cache: false,
+                    contentType: false,
+                    processData: false,
+                    data: formData,
+                    success: function(response) {
+                        var errors = response.errors;
+                        if (errors.length == 0) {
+                            courts_datatable.ajax.reload();
+                            toastr.success(response.message);
+                            $('#CourtForm').trigger('reset');
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    },
+                    error: function(response) {
+                        response = response.responseJSON;
+                        errors = response.errors;
+                        $.each(errors, function(index, error) {
+                            toastr.error(error);
+                        });
+                    }
+                });
+            })
+        });
+    </script>
+    </script>
+    <script>
+        var imageInput = document.getElementById('post_image');
+        var imagePreview = document.getElementById('post_image_preview');
+        imageInput.addEventListener('change', function(event) {
+            var file = event.target.files[0];
+            if (file) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    imagePreview.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            } else {
+                imagePreview.src = "/img/noimage.png";
+            }
         });
     </script>
 @endpush
