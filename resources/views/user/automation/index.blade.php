@@ -36,9 +36,6 @@
                                     <label for="domains">Domains</label>
                                     <select name="domains" id="domains" class="form-control adv_filter">
                                         <option value="">All Domains</option>
-                                        @foreach ($user->getDomains() as $key => $domains)
-                                            <option value="{{ $domains->id }}">{{ $domains->name }}</option>
-                                        @endforeach
                                     </select>
                                 </div>
                                 <div class="col-md-4 form-group">
