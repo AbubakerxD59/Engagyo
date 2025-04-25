@@ -28,7 +28,6 @@ class PinterestController extends Controller
         $user = Auth::user();
         if ($request->has('code') && $request->has('state')) {
             $token = $this->pinterestService->getOauthToken($request->code);
-            dd($token);
             if (isset($token["access_token"])) {
                 $me = $this->pinterestService->me($token["access_token"]);
                 if (isset($me['id'])) {
