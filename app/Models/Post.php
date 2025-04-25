@@ -42,7 +42,7 @@ class Post extends Model
 
     public function scopeSearch($query, $search)
     {
-        $query->where("title", "%{$search}%")
+        $query->where("title", "like", "%{$search}%")
             ->orWhere(function ($q) use ($search) {
                 $q->whereHas('domain', function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%");
