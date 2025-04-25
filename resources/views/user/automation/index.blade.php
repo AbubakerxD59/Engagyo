@@ -77,6 +77,7 @@
         </section>
     </div>
     @include('user.automation.fetch_posts_modal', ['user' => $user])
+    @include('user.automation.edit_post_modal')
 @endsection
 @push('styles')
 @endpush
