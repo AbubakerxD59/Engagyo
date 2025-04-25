@@ -168,14 +168,14 @@ class AutomationController extends Controller
                 } else {
                     $response = [
                         "success" => false,
-                        "message" => "Something went Wrong!"
+                        "message" => "Something went Wrong1!"
                     ];
                 }
             }
         } else {
             $response = [
                 "success" => false,
-                "message" => "Something went Wrong!"
+                "message" => "Something went Wrong2!"
             ];
         }
         return response()->json($response);
