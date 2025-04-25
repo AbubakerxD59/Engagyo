@@ -99,7 +99,8 @@
                     param.account = $("#account").find(":selected").val();
                     param.account_type = $("#account").find(":selected").val() ? $("#account").find(":selected")
                         .data("type") : 0;
-                    param.domain = $("#domains").find(":selected").val() ? $("#domains").find(":selected").val() : 0;
+                    param.domain = $("#domains").find(":selected").val() ? $("#domains").find(":selected")
+                    .val() : 0;
                     param.status = $("#status").find(":selected").val();
                     param.search_input = $("#search").val();
                     return param;
@@ -217,6 +218,13 @@
                         }
                     }
                 });
+            })
+
+            $(document).on('click', '.post_edit', function() {
+                var post = $(this).data("body");
+                console.log(post);
+                console.log(post.title);
+                $("#editPostModal").modal("toggle");
             })
         });
     </script>

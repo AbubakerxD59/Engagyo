@@ -1,0 +1,45 @@
+<div class="modal fade" id="editPostModal" tabindex="-1" role="dialog" aria-labelledby="myLargeModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="exampleModalLongTitle">Edit Post</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <form action="">
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-8 form-group">
+                            <label for="post_title">Title</label>
+                            <input type="text" name="post_title" id="post_title" class="form-control" required>
+                        </div>
+                        <div class="col-md-8 form-group">
+                            <label for="post_url">Url</label>
+                            <input type="text" name="post_url" id="post_url" class="form-control" required>
+                        </div>
+                        <div class="col-md-8 form-group">
+                            <label for="post_date">Date</label>
+                            <input type="date" name="post_date" id="post_date" class="form-control" required>
+                        </div>
+                        <div class="col-md-8 form-group">
+                            <label for="post_time">Time</label>
+                            <input type="time" name="post_time" id="post_time" class="form-control" required>
+                        </div>
+                        <div class="col-md-8 form-group">
+                            <label for="post_image">Image</label>
+                            <input type="file" name="post_image"class="form-control">
+                            <img id="post_image" class="rounded" width="100px">
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-primary">Submit</button>
+                    <button type="button" class="btn btn-outline-danger" data-dismiss="modal"
+                        aria-label="Close">Close</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

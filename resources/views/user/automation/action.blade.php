@@ -1,6 +1,9 @@
 <div class="d-flex">
     <div>
-        <a href="{{ route('panel.automation.posts.edit', $post->id) }}" class="btn btn-outline-primary btn-sm">Edit</a>
+        <a class="btn btn-outline-primary btn-sm post_edit" data-toggle="modal" data-target="#editPostModal"
+            data-body="{{ $post }}">
+            Edit
+        </a>
     </div>
     <div>
         <button type="submit" class="btn btn-outline-danger btn-sm delete-btn post-delete" data-id="{{ $post->id }}">
