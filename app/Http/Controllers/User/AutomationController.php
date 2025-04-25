@@ -159,7 +159,9 @@ class AutomationController extends Controller
             if ($type == 'pinterest') {
                 $account = $this->board->find($id);
                 if ($account) {
-                    $domains = $this->domain->account($id)->get();
+                    $user_domains = $user->getDomains($account->pin_id);
+                    $domains = $this->domain->account($account->pin_id)->get();
+                    dd($user_domains, $domains);
                     $response = [
                         "success" => true,
                         "data" => $domains
