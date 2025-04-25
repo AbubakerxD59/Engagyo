@@ -69,7 +69,6 @@ class HttpService
                 "headers" => $headers,
                 "form_params" => $body,
             ]);
-            dd($response);
             return $this->handleResponse($response);
         // } catch (GuzzleException $e) {
         //     $this->handleException($e);
