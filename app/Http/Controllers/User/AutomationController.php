@@ -257,7 +257,7 @@ class AutomationController extends Controller
                                 )
                             );
                             dd($postData);
-                            $response = $this->pinterestService->create($access_token, $postData);
+                            // $response = $this->pinterestService->create($access_token, $postData);
                         } else {
                             $response = array(
                                 "success" => false,
