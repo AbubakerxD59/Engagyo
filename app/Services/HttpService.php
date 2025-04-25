@@ -64,16 +64,38 @@ class HttpService
      */
     public function post(string $endpoint, array $body = [], array $headers = []): ?array
     {
-        // try {
+        try {
             $response = $this->client->post($endpoint, [
                 "headers" => $headers,
                 "form_params" => $body,
             ]);
             return $this->handleResponse($response);
-        // } catch (GuzzleException $e) {
-        //     $this->handleException($e);
-        //     return null;
-        // }
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+            return null;
+        }
+    }
+
+    /**
+     * Send a POST request to the specified endpoint with JSON.
+     *
+     * @param string $endpoint
+     * @param array $body
+     * @param array $headers
+     * @return array|null
+     */
+    public function postJson(string $endpoint, $body = null, array $headers = []): ?array
+    {
+        try {
+            $response = $this->client->post($endpoint, [
+                "headers" => $headers,
+                "json" => $body,
+            ]);
+            return $this->handleResponse($response);
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+            return null;
+        }
     }
 
     /**
