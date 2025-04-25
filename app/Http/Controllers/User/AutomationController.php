@@ -247,7 +247,7 @@ class AutomationController extends Controller
                             } else {
                                 $access_token = $pinterest->access_token;
                             }
-                            $postData = [
+                            $postData = (object) array(
                                 "title" => $post->title,
                                 "link" => $post->url,
                                 "board_id" => $post->account_id,
@@ -255,7 +255,8 @@ class AutomationController extends Controller
                                     "source_type" => "image_url",
                                     "url" => $post->image
                                 )
-                            ];
+                            );
+                            dd($postData);
                             $response = $this->pinterestService->create($access_token, $postData);
                         } else {
                             $response = array(
