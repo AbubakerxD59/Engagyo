@@ -163,7 +163,7 @@
                 var account_id = $(this).find(":selected").val();
                 var selected_type = $(this).find(":selected").data("type");
                 $.ajax({
-                    urk: "{{ route('panel.automation.getDomain') }}",
+                    url: "{{ route('panel.automation.getDomain') }}",
                     method: "GET",
                     data: {
                         "account_id": account_id,
