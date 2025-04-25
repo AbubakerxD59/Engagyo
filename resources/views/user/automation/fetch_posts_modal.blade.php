@@ -23,7 +23,7 @@
                     </div>
                     <div class="col-md-4 form-group">
                         <label for="time">Time</label>
-                        <input type="time" name="time" id="time" class="form-control" required>
+                        <input type="time" name="time" id="time" class="form-control" onfocus="this.showPicker()" required>
                     </div>
                     <div class="col-md-4 form-group">
                         <label for="feed_url">Feed Url</label>

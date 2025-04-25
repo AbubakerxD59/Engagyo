@@ -40,7 +40,8 @@
                                 <label for="post_time">Time</label>
                             </div>
                             <div class="col-md-9">
-                                <input type="time" name="post_time" id="post_time" class="form-control" required>
+                                <input type="time" name="post_time" id="post_time" class="form-control"
+                                    onfocus="this.showPicker()" required>
                             </div>
                         </div>
                         <div class="form-group row">
@@ -49,8 +50,8 @@
                             </div>
                             <div class="col-md-9">
                                 <input type="file" name="post_image"class="form-control">
+                                <img id="post_image" class="rounded" width="100px">
                             </div>
-                            <img id="post_image" class="rounded" width="100px">
                         </div>
                     </div>
                 </div>

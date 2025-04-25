@@ -119,7 +119,7 @@ class Post extends Model
     {
         return Attribute::make(
             get: function () {
-                $date = date("d-m-Y", strtotime($this->publish_date));
+                $date = date("m/d/Y", strtotime($this->publish_date));
                 return $date;
             }
         );
@@ -129,7 +129,7 @@ class Post extends Model
     {
         return Attribute::make(
             get: function () {
-                $time = date("H:i A", strtotime($this->publish_date));
+                $time = date("H:i", strtotime($this->publish_date));
                 return $time;
             }
         );
