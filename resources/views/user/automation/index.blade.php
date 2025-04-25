@@ -237,29 +237,14 @@
 
             $(document).on('submit', '#editPostForm', function(event) {
                 event.preventDefault();
+                var modal = $("#editPostModal");
                 var form = $("#editPostForm");
-                var data = new FormData(this);
-                console.log(data);
-                return true;
-                var formData = new FormData();
                 var token = $('meta[name="csrf-token"]').attr('content');
                 var post_id = form.find('#post_id').val();
-                var post_title = $('#court_id').val();
-                var post_url = $('#court_id').val();
-                var post_date = $('#court_id').val();
-                var post_time = $('#court_id').val();
-                var post_image = $('#court_id').val();
-
+                var formData = new FormData(this);
                 formData.append('_token', token);
-                formData.append('court_id', court_id);
-                formData.append('ground_id', ground_id);
-                formData.append('name', name);
-                formData.append('start_time', start_time);
-                formData.append('end_time', end_time);
-                formData.append('active', status);
-
                 $.ajax({
-                    url: "",
+                    url: "{{ route('panel.automation.posts.update') }}/" + post_id,
                     type: 'POST',
                     contentType: 'multipart/form-data',
                     cache: false,
@@ -267,22 +252,14 @@
                     processData: false,
                     data: formData,
                     success: function(response) {
-                        var errors = response.errors;
-                        if (errors.length == 0) {
-                            courts_datatable.ajax.reload();
+                        if (response.success) {
+                            postsDatatable.ajax.reload();
+                            modal.modal("toggle");
                             toastr.success(response.message);
-                            $('#CourtForm').trigger('reset');
                         } else {
                             toastr.error(response.message);
                         }
                     },
-                    error: function(response) {
-                        response = response.responseJSON;
-                        errors = response.errors;
-                        $.each(errors, function(index, error) {
-                            toastr.error(error);
-                        });
-                    }
                 });
             })
         });

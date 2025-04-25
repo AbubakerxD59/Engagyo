@@ -64,7 +64,6 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
             Route::name("posts.")->group(function () {
                 Route::get("posts-dataTable", "posts")->name("dataTable");
                 Route::post("post-delete", "postDelete")->name("destroy");
-                Route::post("post-edit/{id?}", "postEdit")->name("edit");
                 Route::post("post-update/{id?}", "postUpdate")->name("update");
             });
         });

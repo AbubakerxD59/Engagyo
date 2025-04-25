@@ -107,6 +107,11 @@ class AutomationController extends Controller
         return response()->json($response);
     }
 
+    public function postUpdate(Request $request)
+    {
+        dd($request->all());
+    }
+
     public function feedUrl(Request $request)
     {
         $user = Auth::user();
