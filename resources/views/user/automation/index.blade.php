@@ -225,6 +225,8 @@
                 var form = $("#editPostForm");
                 var post = $(this).data("body");
                 var modal = $("#editPostModal");
+                console.log(post.date);
+                console.log(post.time);
                 form.trigger("reset");
                 modal.find("#post_title").val(post.title);
                 modal.find("#post_url").val(post.url);
