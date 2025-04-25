@@ -111,9 +111,11 @@ class AutomationController extends Controller
     {
         $user = Auth::user();
         $type = $request->type;
+        $mode = 1;
         if ($type == 'pinterest') {
             $account = $this->board->find($request->account);
             $account_id = $account ? $account->board_id : '';
+            $mode = 1;
         }
         if ($account) {
             $urlDomain = parse_url($request->url, PHP_URL_HOST);
@@ -127,7 +129,7 @@ class AutomationController extends Controller
                     "name" => $urlDomain,
                 ]);
             }
-            $posts = $this->feedService->fetch($urlDomain, $domain, $user, $account_id, $type, $request->time);
+            $posts = $this->feedService->fetch($urlDomain, $domain, $user, $account_id, $type, $request->time, $mode);
             if ($posts["success"]) {
                 $response = array(
                     "success" => true,

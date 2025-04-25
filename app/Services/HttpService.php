@@ -16,16 +16,9 @@ class HttpService
     /**
      * @var string
      */
-    protected $baseUrl;
 
-    /**
-     * ApiService constructor.
-     *
-     * @param string|null $baseUrl
-     */
-    public function __construct($baseUrl)
+    public function __construct()
     {
-        $this->baseUrl = $baseUrl;
         $this->client = new Client();
     }
 

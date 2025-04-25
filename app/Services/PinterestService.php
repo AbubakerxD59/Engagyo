@@ -16,7 +16,7 @@ class PinterestService
         $pinterest_id = env("PINTEREST_KEY");
         $pinterest_secret = env("PINTEREST_SECRET");
         $this->pinterest = new Pinterest($pinterest_id, $pinterest_secret);
-        $this->client = new HttpService($this->baseUrl);
+        $this->client = new HttpService();
         $this->auth = base64_encode("{$pinterest_id}:{$pinterest_secret}");
         $this->header = array("Content-Type" => "application/x-www-form-urlencoded", "Authorization" => "Basic " . $this->auth);
     }

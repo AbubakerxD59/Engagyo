@@ -11,11 +11,13 @@ use Illuminate\Support\Facades\Http;
 class FeedService
 {
     private $post;
+    private $dom;
     public function __construct()
     {
         $this->post = new Post();
+        $this->dom = new HtmlParseService();
     }
-    public function fetch($url, $domain, $user, $account_id, $type, $time)
+    public function fetch($url, $domain, $user, $account_id, $type, $time, $mode = 0)
     {
         $websiteUrl = $url;
         $feedUrls = $this->discoverFeedUrls($websiteUrl);
@@ -53,6 +55,7 @@ class FeedService
                         "description" => $item["description"],
                         "domain_id" => $domain->id,
                         "url" => $item["link"],
+                        "image" => $this->dom->get_info($item["link"], $mode),
                         "publish_date" => newDateTime($nextTime, $time, $key - 1),
                         "status" => 0,
                     ]);
