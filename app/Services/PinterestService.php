@@ -67,6 +67,6 @@ class PinterestService
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $publish = $this->client->post($this->baseUrl . "pins", $post, $this->header);
-        dd($publish);
+        dd($post, $publish);
     }
 }
