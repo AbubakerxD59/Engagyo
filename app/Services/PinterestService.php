@@ -11,6 +11,7 @@ class PinterestService
     private $auth;
     private $header;
     private $baseUrl = "https://api.pinterest.com/v5/";
+    private $sandbox_baseUrl = "https://api-sandbox.pinterest.com/";
     public function __construct()
     {
         $pinterest_id = env("PINTEREST_KEY");
@@ -66,7 +67,7 @@ class PinterestService
     public function create($access_token, $post)
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
-        $publish = $this->client->post($this->baseUrl . "pins", $post, $this->header);
+        $publish = $this->client->post($this->sandbox_baseUrl . "pins", $post, $this->header);
         dd($post, $publish);
     }
 }
