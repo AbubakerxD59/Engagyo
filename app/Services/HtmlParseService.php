@@ -8,118 +8,102 @@ use voku\helper\HtmlDomParser;
 class HtmlParseService
 {
     private $client;
+    private $dom;
+    private $parser;
     public function __construct()
     {
         $this->client = new HttpService();
+        $this->dom = new DOMDocument();
+        $this->parser = new HtmlDomParser();
     }
     public function get_info($url, $mode = null)
     {
         $response = $this->client->get($url, [], ['User-Agent' => $this->user_agent()]);
-        dd($response);
-        if ($mode == 1) {
-            $pinterest = true;
-        } else { //for pinterest images
-            $pinterest = false;
-        }
-        $dom = new DOMDocument();
-        @$dom->loadHTML($response);
-        $tags = $dom->getElementsByTagName('img');
-        $html = HtmlDomParser::str_get_html($response);
-        $meta_title = $html->find("meta[property='og:title']", 0)->content;
-        $meta_image = $html->find("meta[property='og:image']", 0)->content;
+        if ($response["status"] == "200") {
+            if ($mode == 1) {
+                $pinterest = true;
+            } else { //for pinterest images
+                $pinterest = false;
+            }
+            $response = $response["body"];
+            @$this->dom->loadHTML($response);
+            $tags = $this->dom->getElementsByTagName('img');
+            $html = $this->parser->str_get_html($response);
+            // Post title
+            $title = $html->find("meta[property='og:title']", 0)->content ? $html->find("meta[property='og:title']", 0)->content : $html->find("meta[name='twitter:title']", 0)->content;
+            if (empty($title)) {
+                $title = $this->dom->getElementsByTagName('title')->item(0);
+                $title = empty($title) ? $html->find('title', 0) : $title->nodeValue;
+                $colon_pos = strpos($title, needle: ":");
+                if ($colon_pos !== false) {
+                    $title = substr($title, 0, $colon_pos);
+                }
+            }
 
-        if ($meta_title == "") {
-            $meta_title = $html->find("meta[name='twitter:title']", 0)->content;
-        }
-        if (!empty($meta_title)) {
-            $meta_title = trim($meta_title);
-        }
-        if ($meta_image == "") {
-            $meta_image = $html->find("meta[name='twitter:image']", 0)->content;
-        }
-        if ($meta_image == "") {
-            $json_ld = $this->get_string_between($response, '<script type="application/ld+json" class="yoast-schema-graph">', "</script>");
-            if ($json_ld) {
-                $data = json_decode($json_ld, true);
-                if ($data) {
-                    if (isset($data['@graph'])) {
-                        if (isset($data['@graph'][0]['thumbnailUrl'])) {
-                            $meta_image = $data['@graph'][0]['thumbnailUrl'];
+            // Post image
+            $image = $html->find("meta[property='og:image']", 0)->content ? $html->find("meta[property='og:image']", 0)->content : $html->find("meta[name='twitter:image']", 0)->content;
+
+            if ($pinterest) {
+                $pinterest_image = $this->fetch_pinterest_image($tags);
+                if ($pinterest_image != '' && $pinterest_image != null) {
+                    $image = $pinterest_image;
+                }
+            }
+
+            if (empty($image)) {
+                $json_ld = $this->get_string_between($response, '<script type="application/ld+json" class="yoast-schema-graph">', "</script>");
+                if ($json_ld) {
+                    $data = json_decode($json_ld, true);
+                    if ($data) {
+                        if (isset($data['@graph'])) {
+                            if (isset($data['@graph'][0]['thumbnailUrl'])) {
+                                $image = $data['@graph'][0]['thumbnailUrl'];
+                            }
                         }
                     }
                 }
             }
-        }
-        // fetch images  if pinterest channel is active 
-        if ($pinterest_active) {
-            $pinterest_image = $this->fetch_pinterest_image($tags);
-            if ($pinterest_image != '' && $pinterest_image != null) {
-                $meta_image = $pinterest_image;
-            }
-        }
-        // fetch images for pinterest
 
-        if (empty($meta_image) && $meta_image == "") {
-            $ogimage = "";
-            $ogimagesecure = "";
-            $meta_image = "";
-            $metaTags = $dom->getElementsByTagName('meta');
-            foreach ($metaTags as $meta) {
-                if ($meta->getAttribute('property') == 'og:image') {
-                    $ogimage = $meta->getAttribute('content');
-                }
-                if ($meta->getAttribute('property') == 'og:image:secure_url') {
-                    $ogimagesecure = $meta->getAttribute('content');
-                }
-                if (empty($ogimage) && $meta->getAttribute('name') == 'twitter:image') {
-                    $ogimage = $meta->getAttribute('content');
+            if (empty($image)) {
+                $metaTags = $this->dom->getElementsByTagName('meta');
+                foreach ($metaTags as $meta) {
+                    if ($meta->getAttribute('property') == 'og:image') {
+                        $image = $meta->getAttribute('content');
+                    }
+                    if ($meta->getAttribute('property') == 'og:image:secure_url') {
+                        $image = $meta->getAttribute('content');
+                    }
+                    if (empty($image) && $meta->getAttribute('name') == 'twitter:image') {
+                        $image = $meta->getAttribute('content');
+                    }
                 }
             }
 
-            if ($ogimage && $ogimagesecure && $ogimage == $ogimagesecure) {
-                $meta_image = $ogimage;
-            } elseif ($ogimagesecure) {
-                $meta_image = $ogimagesecure;
-            } else {
-                $meta_image = $ogimage;
+            if (empty($image)) {
+                $thumbnails = $this->dom->getElementsByTagName('div');
+                foreach ($thumbnails as $thumbnail) {
+                    if (check_for($thumbnail->getAttribute('class'), 'thumbnail')) {
+                        $image = $thumbnail->getElementsByTagName('img')->item(0);
+                        $image = $image->getAttribute('src');
+                    }
+                }
             }
-        }
 
-        if (empty($meta_image)) {
-            $thumbnails = $dom->getElementsByTagName('div');
-            foreach ($thumbnails as $thumbnail) {
-                if (check_for($thumbnail->getAttribute('class'), 'thumbnail')) {
-                    $image = $thumbnail->getElementsByTagName('img')->item(0);
-                    $src = $image->getAttribute('src');
-                    $meta_image = $src;
+            if (empty($image)) {
+                $thumbnails = $this->dom->getElementsByTagName('img');
+                foreach ($thumbnails as $thumbnail) {
+                    if (check_for($thumbnail->getAttribute('class'), 'size-post-thumbnail')) {
+                        $image = $thumbnail->getAttribute('data-lazy-src');
+                    }
                 }
             }
+            return array(
+                "title" => $title,
+                "image" => $image
+            );
+        } else {
+            return false;
         }
-        if (empty($meta_image)) {
-            $thumbnails = $dom->getElementsByTagName('img');
-            foreach ($thumbnails as $thumbnail) {
-                if (check_for($thumbnail->getAttribute('class'), 'size-post-thumbnail')) {
-                    $image = $thumbnail->getAttribute('src');
-                    $image = isImage($image) ? $image : $thumbnail->getAttribute('data-lazy-src');
-                    $src = $image;
-                    $meta_image = $src;
-                }
-            }
-        }
-        if (empty($meta_title)) {
-            $title = $dom->getElementsByTagName('title')->item(0);
-            if (empty($title)) {
-                $title = $html->find('title', 0);
-            } else {
-                $title = $title->nodeValue;
-            }
-            $colon_pos = strpos($title, ":");
-            if ($colon_pos !== false) {
-                $title = substr($title, 0, $colon_pos);
-            }
-            $meta_title = $title;
-        }
-        return ['title' => $meta_title, 'image' => $meta_image];
     }
     private function get_string_between($string, $start, $end)
     {
@@ -152,24 +136,20 @@ class HtmlParseService
     }
     private function fetch_pinterest_image($tags)
     {
-        $meta_image = '';
+        $image = '';
         $pin_image = false;
         foreach ($tags as $tag) {
             if ($this->get_aspect_ratio($tag)) {
-                $image = $tag->getAttribute('src');
-                if ($tag->hasAttribute('data-lazy-src')) {
-                    $image = $tag->getAttribute("data-lazy-src");
-                }
                 $pin_image = true;
+                $image = $tag->hasAttribute('data-lazy-src') ? $tag->getAttribute('data-lazy-src') : $tag->getAttribute('src');
                 $pinterest_image = $image;
                 break;
             }
         }
-        if ($pin_image && $pinterest_image != '' && $pinterest_image != null) {
-            $meta_image = $pinterest_image;
+        if ($pin_image && !empty($pinterest_image)) {
+            $image = $pinterest_image;
         }
-
-        return $meta_image;
+        return $image;
     }
 
     private function user_agent()

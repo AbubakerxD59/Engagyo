@@ -46,6 +46,7 @@ class FeedService
             foreach ($items as $key => $item) {
                 $nextTime = $this->post->nextTime(["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain->id]);
                 $post = $this->post->exist(["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain->id, "url" => $item["link"]])->notPublished()->first();
+                $rss_image = $this->dom->get_info($item["link"], $mode);
                 if (!$post) {
                     $this->post->create([
                         "user_id" => $user->id,
@@ -55,7 +56,7 @@ class FeedService
                         "description" => $item["description"],
                         "domain_id" => $domain->id,
                         "url" => $item["link"],
-                        "image" => $this->dom->get_info($item["link"], $mode),
+                        "image" => $rss_image ? $rss_image["iamge"] : no_image(),
                         "publish_date" => newDateTime($nextTime, $time, $key - 1),
                         "status" => 0,
                     ]);

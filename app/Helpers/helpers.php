@@ -359,3 +359,12 @@ function loader()
     $loader = "<span class='loader'></span>";
     return $loader;
 }
+
+function check_for($string, $find)
+{
+    $words = explode(' ', $string);
+    if (in_array($find, $words)) {
+        return true;
+    }
+    return false;
+}
