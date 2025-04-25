@@ -153,7 +153,7 @@ class AutomationController extends Controller
     public function getDomain(Request $request)
     {
         $id = $request->account_id;
-        if (empty($id)) {
+        if (!empty($id)) {
             $user = Auth::user();
             $type = $request->type;
             if ($type == 'pinterest') {
@@ -168,14 +168,14 @@ class AutomationController extends Controller
                 } else {
                     $response = [
                         "success" => false,
-                        "message" => "Something went Wrong1!"
+                        "message" => "Something went Wrong!"
                     ];
                 }
             }
         } else {
             $response = [
                 "success" => false,
-                "message" => "Something went Wrong2!"
+                "message" => "Something went Wrong1!"
             ];
         }
         return response()->json($response);
