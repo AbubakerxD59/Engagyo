@@ -99,7 +99,7 @@
                     param.account = $("#account").find(":selected").val();
                     param.account_type = $("#account").find(":selected").val() ? $("#account").find(":selected")
                         .data("type") : 0;
-                    param.domain = $("#domains").find(":selected").val();
+                    param.domain = $("#domains").find(":selected").val() ? $("#domains").find(":selected").val() : 0;
                     param.status = $("#status").find(":selected").val();
                     param.search_input = $("#search").val();
                     return param;
