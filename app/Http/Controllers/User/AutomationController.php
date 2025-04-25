@@ -247,12 +247,11 @@ class AutomationController extends Controller
                             } else {
                                 $access_token = $pinterest->access_token;
                             }
-                            $postData = (object) array(
-                                "title" => $post->title,
-                                "link" => $post->url,
-                                "board_id" => $post->account_id,
-                            );
-                            dd($postData);
+                            $postData = '{
+                                "title": "' . $post->title . '",
+                                "link": "' . $post->link . '",
+                                "board_id": "' . $post->account_id . '"
+                            }';
                             $response = $this->pinterestService->create($access_token, $postData);
                         } else {
                             $response = array(
