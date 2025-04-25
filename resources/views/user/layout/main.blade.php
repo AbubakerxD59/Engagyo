@@ -134,7 +134,7 @@
 
         function confirmDelete(event) {
             if (confirm('Are you sure you want to Delete?')) {
-                $(this).closest(".delete_form").submit();
+                $(this).next(".delete_form").submit();
             } else {
                 event.preventDefault()
             }
