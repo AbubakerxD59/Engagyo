@@ -225,7 +225,7 @@ class AutomationController extends Controller
 
     public function postPublish(Request $request, $id = null)
     {
-        if (empty($id)) {
+        if (!empty($id)) {
             $user = Auth::user();
             $type = $request->type;
             $post = $this->post->notPublished()->where("id", $id)->first();
