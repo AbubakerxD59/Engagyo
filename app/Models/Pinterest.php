@@ -34,16 +34,6 @@ class Pinterest extends Model
         return $this->hasMany(Board::class, 'pin_id', 'pin_id')->where('user_id', auth()->id());
     }
 
-    public function posts()
-    {
-        return $this->hasMany(Post::class, 'account_id', 'pin_id')->where('type', 'like', '%pinterest%');
-    }
-
-    public function domains()
-    {
-        return $this->hasMany(Domain::class, 'account_id', 'pin_id')->where('type', 'like', '%pinterest%');
-    }
-
     public function scopeSearch($query, $search)
     {
         $query->where('pin_id', $search)->orWhere("username", "%{$search}%");
