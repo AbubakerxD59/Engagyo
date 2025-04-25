@@ -194,6 +194,7 @@
 
             $("#clearFilters").on("click", function() {
                 $("#adv_filter_form").trigger("reset");
+                $("#account").trigger("change");
                 postsDatatable.ajax.reload();
             })
 
