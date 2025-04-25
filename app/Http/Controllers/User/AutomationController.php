@@ -233,12 +233,14 @@ class AutomationController extends Controller
                 if ($post) {
                     $board = $this->board->search($post->account_id)->active()->first();
                     if ($board) {
-                        $pinterest = $this->board->getPinterest($board->pin_id);
-                        dd($pinterest);
+                        $pinterest = $this->pinterest->where("pin_id", $board->pin_id)->first();
                         if ($pinterest) {
                             if (!$pinterest->validToken()) {
                                 $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token);
+                                dd($token);
                                 // $pinterest->update([]);
+                            } else {
+                                $access_token = $pinterest->access_token;
                             }
                             $postData = [
                                 "title" => $post->title,
