@@ -98,7 +98,6 @@
             ajax: {
                 url: "{{ route('panel.automation.posts.dataTable') }}",
                 data: function(param) {
-                    console.log($("#account").find(":selected").data("type"));
                     param.account = $("#account").find(":selected").val();
                     param.account_type = $("#account").find(":selected").val() ? $("#account").find(":selected")
                         .data("type") : 0;
@@ -167,7 +166,8 @@
                     urk: "{{ route('panel.automation.getDomain') }}",
                     method: "GET",
                     data: {
-                        "account_id": account_id "type": selected_type
+                        "account_id": account_id,
+                        "type": selected_type
                     },
                     success: function(response) {
                         if (response.success) {
