@@ -7,7 +7,7 @@
                 </a>
             </div>
         </div>
-        <div class="card-body">
+        <div class="card-body p-2">
             <div>
                 <div class="form-group font-weight-bold">
                     <p>{{ $post->title }}</p>
