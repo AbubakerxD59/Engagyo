@@ -118,8 +118,6 @@ class Post extends Model
     public function publishDate($date, $time)
     {
         $date_time = $date . ' ' . $time;
-        dd($date, $time, $date_time);
-        $date_time = strtotime($date_time);
         return $date_time;
     }
 
