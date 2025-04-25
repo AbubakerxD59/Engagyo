@@ -115,6 +115,26 @@ class Post extends Model
         return $nextDate;
     }
 
+    public function publishDate($date, $time)
+    {
+        $date_time = $date . ' ' . $time;
+        $date_time = strtotime($date_time);
+        return $date_time;
+    }
+
+    protected function image(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                if (str_contains($value, "http")) {
+                    return $value;
+                } else {
+                    return !empty($value) ? url(getImage('', $value)) : no_image();
+                }
+            }
+        );
+    }
+
     protected function date(): Attribute
     {
         return Attribute::make(

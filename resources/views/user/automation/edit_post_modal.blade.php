@@ -33,7 +33,8 @@
                                 <label for="post_date">Date</label>
                             </div>
                             <div class="col-md-9">
-                                <input type="date" name="post_date" id="post_date" class="form-control" required>
+                                <input type="date" name="post_date" id="post_date" class="form-control"
+                                    onfocus="this.showPicker()" required>
                             </div>
                         </div>
                         <div class="form-group row">

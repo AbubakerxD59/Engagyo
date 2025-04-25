@@ -107,9 +107,43 @@ class AutomationController extends Controller
         return response()->json($response);
     }
 
-    public function postUpdate(Request $request)
+    public function postUpdate(Request $request, $id = null)
     {
-        dd($request->all());
+        $data = $request->validate([
+            'post_title' => 'required',
+            'post_url' => 'required',
+            'post_date' => 'required',
+            'post_time' => 'required',
+        ]);
+        if (!empty($id)) {
+            $post = $this->post->notPublished()->where("id", $id)->first();
+            if ($post) {
+                $data = [
+                    "title" => $request->post_title,
+                    "url" => $request->post_url,
+                    "publish_date" => $post->publishDate($request->post_date, $request->post_time),
+                ];
+                if ($request->has("post_image")) {
+                    $data['image'] = saveImage($request->File('post_image'));
+                }
+                $post->update($data);
+                $response = array(
+                    "success" => true,
+                    "message" => "Post updated Successfully!"
+                );
+            } else {
+                $response = array(
+                    "success" => false,
+                    "message" => "Something went Wrong!"
+                );
+            }
+        } else {
+            $response = array(
+                "success" => false,
+                "message" => "Something went Wrong!"
+            );
+        }
+        return response()->json($response);
     }
 
     public function feedUrl(Request $request)
