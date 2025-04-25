@@ -68,7 +68,7 @@ class AutomationController extends Controller
         $posts = $posts->get();
         foreach ($posts as $k => $val) {
             $posts[$k]['post'] = view('user.automation.post')->with('post', $val)->render();
-            $posts[$k]['account_name'] = "<a href='" . $val->getAccountUrl($val->type, $val->account_id) . "' target='_blank'><img src='" . social_logo($val->type) . "' width='20px' height='20px'></img> " . $val->getAccount($val->type)->name . "</a>";
+            $posts[$k]['account_name'] = "<a href='" . $val->getAccountUrl($val->type, $val->account_id) . "' target='_blank'><img src='" . social_logo($val->type) . "' width='20px' height='20px'></img> " . $val->getAccount($val->type, $val->account_id)->name . "</a>";
             $posts[$k]['domain_name'] = $val->getDomain();
             $posts[$k]['publish'] = date("Y-m-d H:i A", strtotime($val->publish_date));
             $posts[$k]['status_view'] = get_post_status($val->status);
