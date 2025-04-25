@@ -11,9 +11,6 @@
             <div class="col-md-4 form-group">
                 <p>{{ $post->title }}</p>
             </div>
-            <div class="col-md-4 form-group">
-                <p>{{ $post->title }}</p>
-            </div>
         </div>
     </div>
 </div>
