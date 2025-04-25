@@ -25,4 +25,9 @@ class Domain extends Model
     {
         $query->where('user_id', $search["user_id"])->where('account_id', $search["account_id"])->where('type', $search["type"])->where("name", $search["name"]);
     }
+
+    public function scopeAccount($query, $id)
+    {
+        $query->where("account_id", $id);
+    }
 }
