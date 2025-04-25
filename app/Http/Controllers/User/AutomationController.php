@@ -247,11 +247,11 @@ class AutomationController extends Controller
                             } else {
                                 $access_token = $pinterest->access_token;
                             }
-                            $postData = (object) array(
+                            $postData = array(
                                 "title" => $post->title,
                                 "link" => $post->url,
                                 "board_id" => $post->account_id,
-                                "media_source" => (object) array(
+                                "media_source" => array(
                                     "source_type" => "image_url",
                                     "url" => $post->image
                                 )
