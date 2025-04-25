@@ -238,7 +238,7 @@
             $(document).on('submit', '#editPostForm', function(event) {
                 event.preventDefault();
                 var form = $("#editPostForm");
-                var data = form.serializeArray();
+                var data = new FormData(this);
                 console.log(data);
                 return true;
                 var formData = new FormData();
