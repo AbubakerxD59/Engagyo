@@ -120,7 +120,6 @@
         $(document).ready(function() {
             $('.sign-out').on('click', function() {
                 if (confirm('Do you wish to Signout?')) {
-                    console.log('here');
                     $('#signout_form').submit();
                 }
             });

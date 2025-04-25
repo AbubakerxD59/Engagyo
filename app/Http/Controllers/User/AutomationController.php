@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Models\Domain;
 use App\Models\Post;
 use App\Services\FeedService;
+use App\Services\PinterestService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use App\Models\Board;
@@ -18,6 +19,7 @@ class AutomationController extends Controller
     private $pinterest;
     private $board;
     private $feedService;
+    private $pinterestService;
     public function __construct(Post $post, Domain $domain, Pinterest $pinterest, Board $board)
     {
         $this->post = $post;
@@ -25,6 +27,7 @@ class AutomationController extends Controller
         $this->pinterest = $pinterest;
         $this->board = $board;
         $this->feedService = new FeedService();
+        $this->pinterestService = new PinterestService();
     }
     public function index()
     {
@@ -216,6 +219,29 @@ class AutomationController extends Controller
                 "success" => false,
                 "message" => "Something went Wrong1!"
             ];
+        }
+        return response()->json($response);
+    }
+
+    public function postPublish(Request $request, $id = null)
+    {
+        if (empty($id)) {
+            $user = Auth::user();
+            $type = $request->type;
+            $post = $this->post->notPublished()->where("id", $id)->first();
+            $postData = [
+                "title" => $post->title,
+                "description" => $post->description,
+                "link" => $post->url,
+                "board_id" => $post->account_id,
+                "image" => $post->image
+            ];
+            $response = $this->pinterestService->create($postData);
+        } else {
+            $response = array(
+                "success" => false,
+                "message" => "Something went Wrong!"
+            );
         }
         return response()->json($response);
     }

@@ -52,4 +52,10 @@ class PinterestService
         $boards = $this->client->get($this->baseUrl . "boards", [], $this->header);
         return $boards;
     }
+
+    public function create($post)
+    {
+        $publish = $this->pinterest->pins->create($post);
+        dd($publish);
+    }
 }

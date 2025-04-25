@@ -262,6 +262,30 @@
                     },
                 });
             })
+
+            $(document).on("click", ".publish-post", function() {
+                if (confirm("Do you wish to Publish?")) {
+                    var id = $(this).data('id');
+                    var token = $('meta[name="csrf-token"]').attr('content');
+                    var type = $("#account").find(":selected").data("type");
+                    $.ajax({
+                        url: "{{ route('panel.automation.posts.publish') }}/" + id,
+                        method: "POST",
+                        data: {
+                            "_token": token,
+                            "type": type
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                postsDatatable.ajax.reload();
+                                toastr.error(response.message);
+                            } else {
+                                toastr.error(response.message);
+                            }
+                        }
+                    });
+                }
+            })
         });
     </script>
     </script>
