@@ -3,19 +3,19 @@
 namespace App\Services;
 
 use DOMDocument;
-use App\Services\HttpService;
 use voku\helper\HtmlDomParser;
+use App\Services\HttpService;
 
 class HtmlParseService
 {
     private $client;
     private $dom;
-    // private $parser;
+    private $parser;
     public function __construct()
     {
         $this->client = new HttpService();
         $this->dom = new DOMDocument();
-        // $this->parser = new HtmlDomParser();
+        $this->parser = new HtmlDomParser();
     }
     public function get_info($url, $mode = null)
     {
@@ -29,7 +29,7 @@ class HtmlParseService
             $response = $response["body"];
             @$this->dom->loadHTML($response);
             $tags = $this->dom->getElementsByTagName('img');
-            $html = HtmlDomParser::str_get_html($response);
+            $html = $this->parser->str_get_html($response);
             // Post title
             $title = $html->find("meta[property='og:title']", 0)->content ? $html->find("meta[property='og:title']", 0)->content : $html->find("meta[name='twitter:title']", 0)->content;
             if (empty($title)) {
