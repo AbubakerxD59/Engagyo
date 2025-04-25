@@ -29,7 +29,7 @@ class FeedService
         }
         $targetUrl = $feedUrls[0];
 
-        try {
+        // try {
             $response = Http::timeout(5) // Set a reasonable timeout
                 ->withHeaders(['User-Agent' => 'Engagyo RSS bot']) // Be polite, identify your bot
                 ->get($targetUrl);
@@ -66,13 +66,13 @@ class FeedService
                 "success" => true,
                 "items" => $items
             );
-        } catch (Exception $e) {
-            Log::error("Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage());
-            return array(
-                "success" => false,
-                'error' => 'An error occurred while processing the feed/sitemap.'
-            );
-        }
+        // } catch (Exception $e) {
+        //     Log::error("Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage());
+        //     return array(
+        //         "success" => false,
+        //         'error' => 'An error occurred while processing the feed/sitemap.'
+        //     );
+        // }
     }
 
     /**
