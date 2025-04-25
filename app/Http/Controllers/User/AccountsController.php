@@ -33,6 +33,8 @@ class AccountsController extends Controller
             $user = Auth::user();
             $pinterest = $this->pinterest->search($id)->user($user->id)->first();
             if ($pinterest) {
+                $pinterest()->boards()->posts()->delete();
+                $pinterest()->boards()->domains()->delete();
                 $pinterest->boards()->delete();
                 $pinterest->delete();
                 return back()->with("success", "Pinterest Account deleted Successfully!");

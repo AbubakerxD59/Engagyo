@@ -30,6 +30,14 @@ class Board extends Model
         return $this->belongsTo(Pinterest::class, 'pin_id', 'pin_id');
     }
 
+    public function posts(){
+        return $this->hasMany(Post::class, 'account_id', 'board_id');
+    }
+
+    public function domains(){
+        return $this->hasMany(Domain::class, 'account_id', 'board_id');
+    }
+
     public function scopeSearch($query, $search)
     {
         $query->where('pin_id', $search)->orWhere('board_id', $search)->orWhere('name', $search);
