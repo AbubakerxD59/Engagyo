@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use DOMDocument;
+use App\Services\HttpService;
 use voku\helper\HtmlDomParser;
 
 class HtmlParseService
