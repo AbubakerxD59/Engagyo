@@ -232,6 +232,7 @@ class AutomationController extends Controller
                 $post = $this->post->notPublished()->where("id", $id)->first();
                 if ($post) {
                     $board = $this->board->search($post->account_id)->active()->first();
+                    dd($board);
                     if ($board) {
                         $pinterest = $this->board->getPinterest($board->pin_id);
                         if ($pinterest) {

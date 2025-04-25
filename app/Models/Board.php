@@ -61,8 +61,7 @@ class Board extends Model
 
     public function getPinterest($pin_id)
     {
-        $pinterest = $this->pinterest()->first();
-        dd($pinterest, $pin_id);
+        $pinterest = $this->pinterest()->where("pin_id", $pin_id)->first();
         return $pinterest;
     }
 }
