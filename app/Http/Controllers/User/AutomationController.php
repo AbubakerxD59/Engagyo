@@ -149,4 +149,35 @@ class AutomationController extends Controller
         }
         return response()->json($response);
     }
+
+    public function getDomain(Request $request)
+    {
+        $id = $request->account_id;
+        if (empty($id)) {
+            $user = Auth::user();
+            $type = $request->type;
+            if ($type == 'pinterest') {
+                $account = $this->board->find($id);
+                if ($account) {
+                    $domains = $user->getDomains($id);
+                    dd($domains);
+                    $response = [
+                        "success" => true,
+                        "data" => $domains
+                    ];
+                } else {
+                    $response = [
+                        "success" => false,
+                        "message" => "Something went Wrong!"
+                    ];
+                }
+            }
+        } else {
+            $response = [
+                "success" => false,
+                "message" => "Something went Wrong!"
+            ];
+        }
+        return response()->json($response);
+    }
 }

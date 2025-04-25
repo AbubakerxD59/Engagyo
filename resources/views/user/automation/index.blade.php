@@ -163,11 +163,28 @@
                 });
             });
 
+            $('#account').on('change', function() {
+                var account_id = $(this).find(":selected").val();
+                var selected_type = $(this).find(":selected").data("type");
+                $.ajax({
+                    urk: "{{ route('panel.automation.getDomain') }}",
+                    method: "GET",
+                    data: {
+                        "account_id": account_id "type": selected_type
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            options = response.data;
+                        }
+                    }
+                });
+            });
+
             $('.adv_filter').on('change', function() {
                 postsDatatable.ajax.reload();
             });
 
-            $('.adv_filter_search').on('keydown', function() {
+            $('.adv_filter_search').on('keyup', function() {
                 postsDatatable.ajax.reload();
             })
 
