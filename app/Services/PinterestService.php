@@ -11,7 +11,7 @@ class PinterestService
     private $auth;
     private $header;
     private $baseUrl = "https://api.pinterest.com/v5/";
-    private $sandbox_baseUrl = "https://api-sandbox.pinterest.com/";
+    private $sandbox_baseUrl = "https://api-sandbox.pinterest.com/v5/";
     public function __construct()
     {
         $pinterest_id = env("PINTEREST_KEY");
