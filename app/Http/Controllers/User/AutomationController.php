@@ -68,7 +68,7 @@ class AutomationController extends Controller
         $posts = $posts->get();
         foreach ($posts as $k => $val) {
             $posts[$k]['post'] = view('user.automation.post')->with('post', $val)->render();
-            $posts[$k]['account_name'] = "<a href='" . $val->getAccountUrl($val->type) . "' target='_blank'><img src='" . social_logo($val->type) . "' width='20px' height='20px'></img> " . $val->getAccount($val->type)->name . "</a>";
+            $posts[$k]['account_name'] = "<a href='" . $val->getAccountUrl($val->type, $val->account_id) . "' target='_blank'><img src='" . social_logo($val->type) . "' width='20px' height='20px'></img> " . $val->getAccount($val->type)->name . "</a>";
             $posts[$k]['domain_name'] = $val->getDomain();
             $posts[$k]['publish'] = date("Y-m-d H:i A", strtotime($val->publish_date));
             $posts[$k]['status_view'] = get_post_status($val->status);
@@ -228,19 +228,49 @@ class AutomationController extends Controller
         if (!empty($id)) {
             $user = Auth::user();
             $type = $request->type;
-            $post = $this->post->notPublished()->where("id", $id)->first();
-            $postData = [
-                "title" => $post->title,
-                "description" => $post->description,
-                "link" => $post->url,
-                "board_id" => $post->account_id,
-                "image" => $post->image
-            ];
-            $response = $this->pinterestService->create($postData);
+            if ($type == "pinterest") {
+                $post = $this->post->notPublished()->where("id", $id)->first();
+                if ($post) {
+                    $board = $this->board->search($post->account_id)->active()->first();
+                    if ($board) {
+                        $pinterest = $this->board->getPinterest($board->pin_id);
+                        if ($pinterest) {
+                            dd($pinterest);
+                            if (!$pinterest->validToken()) {
+                                $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token);
+                                // $pinterest->update([]);
+                            }
+                            $postData = [
+                                "title" => $post->title,
+                                "description" => $post->description,
+                                "link" => $post->url,
+                                "board_id" => $post->account_id,
+                                "image" => $post->image
+                            ];
+                            $response = $this->pinterestService->create($pinterest->access_token, $postData);
+                        } else {
+                            $response = array(
+                                "success" => false,
+                                "message" => "Something went Wrong0!"
+                            );
+                        }
+                    } else {
+                        $response = array(
+                            "success" => false,
+                            "message" => "Something went Wrong1!"
+                        );
+                    }
+                } else {
+                    $response = array(
+                        "success" => false,
+                        "message" => "Something went Wrong2!"
+                    );
+                }
+            }
         } else {
             $response = array(
                 "success" => false,
-                "message" => "Something went Wrong!"
+                "message" => "Something went Wrong3!"
             );
         }
         return response()->json($response);

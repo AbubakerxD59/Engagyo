@@ -45,21 +45,23 @@ class Board extends Model
         $query->where('status', '1');
     }
 
-    public function scopeConnected($query, $search){
+    public function scopeConnected($query, $search)
+    {
         $query->where('user_id', $search['user_id'])->where('pin_id', $search['pin_id'])->where('board_id', $search['board_id']);
     }
 
     protected function type(): Attribute
     {
         return Attribute::make(
-            get: function(){
+            get: function () {
                 return "pinterest";
             }
         );
     }
 
-    public function getPinterest(){
-        $pinterest = $this->pinterest()->first();
+    public function getPinterest($pin_id)
+    {
+        $pinterest = $this->pinterest()->where("pin_id", $pin_id)->first();
         return $pinterest;
     }
 }

@@ -85,19 +85,19 @@ class Post extends Model
         return $domain ? $domain->name : '';
     }
 
-    public function getAccount($type)
+    public function getAccount($type, $id)
     {
         if ($type == 'pinterest') {
-            $account = $this->board()->first();
+            $account = $this->board()->where("board_id", $id)->first();
         }
         return $account;
     }
 
-    public function getAccountUrl($type)
+    public function getAccountUrl($type, $account_id)
     {
-        $account = self::getAccount($type);
+        $account = self::getAccount($type, $account_id);
         if ($type == 'pinterest') {
-            $mainAccount = $account->getPinterest();
+            $mainAccount = $account->getPinterest($account->pin_id);
             $accountUrl = "https://www.pinterest.com/" . $mainAccount->username . '/' . $account->name;
         }
         return $accountUrl;

@@ -21,6 +21,10 @@ class Pinterest extends Model
         "following_count",
         "follower_count",
         "monthly_views",
+        "access_token",
+        "expires_in",
+        "refresh_token",
+        "refresh_token_expires_in",
     ];
 
     protected $appends = ["type"];
@@ -40,13 +44,6 @@ class Pinterest extends Model
         return $this->hasMany(Domain::class, 'account_id', 'pin_id')->where('type', 'like', '%pinterest%');
     }
 
-    protected function profileImage(): Attribute
-    {
-        return Attribute::make(
-            get: fn($value) => asset("images/" . $value)
-        );
-    }
-
     public function scopeSearch($query, $search)
     {
         $query->where('pin_id', $search)->orWhere("username", "%{$search}%");
@@ -57,12 +54,56 @@ class Pinterest extends Model
         $query->where('user_id', $id);
     }
 
+    protected function expiresIn(): Attribute
+    {
+        return Attribute::make(
+            set: function ($value) {
+                $now = strtotime(date("Y-m-d H:i:s"));
+                $expires_in = $now + $value;
+                return date("Y-m-d H:i:s", $expires_in);
+            },
+            get: function ($value) {
+                $expires_in = strtotime($value);
+                return $expires_in;
+            }
+        );
+    }
+
+    protected function refreshTokenExpiresIn(): Attribute
+    {
+        return Attribute::make(
+            set: function ($value) {
+                $now = strtotime(date("Y-m-d H:i:s"));
+                $refresh_token_expires_in = $now + $value;
+                return date("Y-m-d H:i:s", $refresh_token_expires_in);
+            },
+            get: function ($value) {
+                $refresh_token_expires_in = strtotime($value);
+                return $refresh_token_expires_in;
+            }
+        );
+    }
+
+    protected function profileImage(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => asset("images/" . $value)
+        );
+    }
+
     protected function type(): Attribute
     {
         return Attribute::make(
-            get: function(){
+            get: function () {
                 return "pinterest";
             }
         );
+    }
+
+    public function validToken()
+    {
+        $now = strtotime(date("Y-m-d H:i:s"));
+        $expires_in = $this->expires_in;
+        return $now > $expires_in ? true : false;
     }
 }

@@ -25,12 +25,12 @@ class PinterestController extends Controller
     }
     public function pinterestCallback(Request $request)
     {
+        $user = Auth::user();
         if ($request->has('code') && $request->has('state')) {
             $token = $this->pinterestService->getOauthToken($request->code);
             if (isset($token["access_token"])) {
                 $me = $this->pinterestService->me($token["access_token"]);
                 if (isset($me['id'])) {
-                    $user = Auth::user();
                     $profile_pic = saveImageFromUrl($me["profile_image"]) ? saveImageFromUrl($me["profile_image"]) : '';
                     $data = [
                         "user_id" => $user->id,
@@ -43,8 +43,12 @@ class PinterestController extends Controller
                         "following_count" => $me["following_count"],
                         "follower_count" => $me["follower_count"],
                         "monthly_views" => $me["monthly_views"] > 0 ? $me["monthly_views"] : 0,
+                        "access_token" => $token["access_token"],
+                        "expires_in" => $token["expires_in"],
+                        "refresh_token" => $token["refresh_token"],
+                        "refresh_token_expires_in" => $token["refresh_token_expires_in"],
                     ];
-                    $this->pinterest->updateOrCreate(["user_id" => $user->id, "pin_id" => $me["id"]], $data);
+                    $user->pinterest()->updateOrCreate(["pin_id" => $me["id"]], $data);
 
                     $boards = $this->pinterestService->getBoards($token["access_token"]);
                     if (isset($boards['items'])) {

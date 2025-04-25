@@ -39,6 +39,16 @@ class PinterestService
         return $token;
     }
 
+    public function refreshAccessToken($refresh_token)
+    {
+        $data = array(
+            "refresh_token" => $refresh_token,
+            "grant_type" => "refresh_token",
+        );
+        $token = $this->client->post($this->baseUrl . "oauth/token", $data,  $this->header);
+        return $token;
+    }
+
     public function me($access_token)
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
@@ -53,7 +63,7 @@ class PinterestService
         return $boards;
     }
 
-    public function create($post)
+    public function create($access_token, $post)
     {
         $publish = $this->pinterest->pins->create($post);
         dd($publish);
