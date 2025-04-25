@@ -64,16 +64,17 @@ class HttpService
      */
     public function post(string $endpoint, array $body = [], array $headers = []): ?array
     {
-        try {
+        // try {
             $response = $this->client->post($endpoint, [
                 "headers" => $headers,
                 "form_params" => $body,
             ]);
+            dd($response);
             return $this->handleResponse($response);
-        } catch (GuzzleException $e) {
-            $this->handleException($e);
-            return null;
-        }
+        // } catch (GuzzleException $e) {
+        //     $this->handleException($e);
+        //     return null;
+        // }
     }
 
     /**
