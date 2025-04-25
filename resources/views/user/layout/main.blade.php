@@ -132,13 +132,13 @@
             });
         });
 
-        function confirmDelete(event) {
+        $(document).on('click', '.delete-btn', function(event) {
             if (confirm('Are you sure you want to Delete?')) {
-                $(event.target).next(".delete_form").submit();
+                $(this).next().submit();
             } else {
-                event.preventDefault()
+                event.preventDefault();
             }
-        }
+        })
 
         function confirmSubmit(event) {
             if (confirm('Do you wish to submit?')) {
