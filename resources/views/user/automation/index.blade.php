@@ -162,19 +162,28 @@
             $('#account').on('change', function() {
                 var account_id = $(this).find(":selected").val();
                 var selected_type = $(this).find(":selected").data("type");
-                $.ajax({
-                    url: "{{ route('panel.automation.getDomain') }}",
-                    method: "GET",
-                    data: {
-                        "account_id": account_id,
-                        "type": selected_type
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            options = response.data;
+                if (account_id != '') {
+                    $.ajax({
+                        url: "{{ route('panel.automation.getDomain') }}",
+                        method: "GET",
+                        data: {
+                            "account_id": account_id,
+                            "type": selected_type
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                options = response.data;
+                                var select = $('#domains');
+                                select.empty();
+                                $.each(options, function(index, value) {
+                                    var option = $("<option></option>");
+                                    option.val(value.id).text(value.name);
+                                    select.append(option);
+                                });
+                            }
                         }
-                    }
-                });
+                    });
+                }
             });
 
             $('.adv_filter').on('change', function() {
