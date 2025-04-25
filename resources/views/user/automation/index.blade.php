@@ -34,9 +34,7 @@
                                 </div>
                                 <div class="col-md-4 form-group">
                                     <label for="domains">Domains</label>
-                                    <select name="domains" id="domains" class="form-control adv_filter">
-                                        <option value="">All Domains</option>
-                                    </select>
+                                    <select name="domains" id="domains" class="form-control adv_filter"></select>
                                 </div>
                                 <div class="col-md-4 form-group">
                                     <label for="status">Status</label>
@@ -162,6 +160,8 @@
             $('#account').on('change', function() {
                 var account_id = $(this).find(":selected").val();
                 var selected_type = $(this).find(":selected").data("type");
+                var select = $('#domains');
+                select.empty();
                 if (account_id != '') {
                     $.ajax({
                         url: "{{ route('panel.automation.getDomain') }}",
@@ -173,8 +173,6 @@
                         success: function(response) {
                             if (response.success) {
                                 options = response.data;
-                                var select = $('#domains');
-                                select.empty();
                                 $.each(options, function(index, value) {
                                     var option = $("<option></option>");
                                     option.val(value.id).text(value.name);
