@@ -87,11 +87,10 @@ class HttpService
     public function postJson(string $endpoint, $body = null, array $headers = []): ?array
     {
         // try {
-            // $response = $this->client->post($endpoint, [
-            //     "headers" => $headers,
-            //     "json" => $body,
-            // ]);
-            dd($headers, $body);
+            $response = $this->client->post($endpoint, [
+                "headers" => $headers,
+                "json" => $body,
+            ]);
             return $this->handleResponse($response);
         // } catch (GuzzleException $e) {
         //     $this->handleException($e);
