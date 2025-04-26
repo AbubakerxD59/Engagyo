@@ -259,11 +259,20 @@ class AutomationController extends Controller
                             $publish = $this->pinterestService->create($access_token, $postData);
                             if (isset($publish["id"])) {
                                 $post->update([
-                                    "post_id" => $publish["id"]
+                                    "post_id" => $publish["id"],
+                                    "status" => 1
                                 ]);
                                 $response = array(
                                     "success" => true,
-                                    "message" => "Post published Successfully@"
+                                    "message" => "Post published Successfully!"
+                                );
+                            } else {
+                                $post->update([
+                                    "status" => -1
+                                ]);
+                                $response = array(
+                                    "success" => false,
+                                    "message" => "Failed to publish Post!"
                                 );
                             }
                         } else {
