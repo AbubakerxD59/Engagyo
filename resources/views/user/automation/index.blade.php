@@ -278,7 +278,7 @@
                         success: function(response) {
                             if (response.success) {
                                 postsDatatable.ajax.reload();
-                                toastr.error(response.message);
+                                toastr.success(response.message);
                             } else {
                                 toastr.error(response.message);
                             }
