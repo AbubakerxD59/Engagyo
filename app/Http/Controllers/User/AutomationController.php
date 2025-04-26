@@ -256,30 +256,39 @@ class AutomationController extends Controller
                                     "url" => $post->image
                                 )
                             );
-                            $response = $this->pinterestService->create($access_token, $postData);
+                            $publish = $this->pinterestService->create($access_token, $postData);
+                            if (isset($publish["id"])) {
+                                $post->update([
+                                    "post_id" => $publish["id"]
+                                ]);
+                                $response = array(
+                                    "success" => true,
+                                    "message" => "Post published Successfully@"
+                                );
+                            }
                         } else {
                             $response = array(
                                 "success" => false,
-                                "message" => "Something went Wrong0!"
+                                "message" => "Something went Wrong!"
                             );
                         }
                     } else {
                         $response = array(
                             "success" => false,
-                            "message" => "Something went Wrong1!"
+                            "message" => "Something went Wrong!"
                         );
                     }
                 } else {
                     $response = array(
                         "success" => false,
-                        "message" => "Something went Wrong2!"
+                        "message" => "Something went Wrong!"
                     );
                 }
             }
         } else {
             $response = array(
                 "success" => false,
-                "message" => "Something went Wrong3!"
+                "message" => "Something went Wrong!"
             );
         }
         return response()->json($response);
