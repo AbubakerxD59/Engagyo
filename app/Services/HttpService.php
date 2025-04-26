@@ -89,7 +89,7 @@ class HttpService
         // try {
             $response = $this->client->post($endpoint, [
                 "headers" => $headers,
-                "json" => $body,
+                "body" => json_encode($body),
             ]);
             return $this->handleResponse($response);
         // } catch (GuzzleException $e) {
@@ -108,17 +108,17 @@ class HttpService
      */
     public function put(string $endpoint, array $body = [], array $headers = []): ?array
     {
-        // try {
+        try {
             $response = $this->client->put($endpoint, [
                 'json' => $body,
                 'headers' => $headers,
             ]);
 
             return $this->handleResponse($response);
-        // } catch (GuzzleException $e) {
-        //     $this->handleException($e);
-        //     return null;
-        // }
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+            return null;
+        }
     }
 
     /**
