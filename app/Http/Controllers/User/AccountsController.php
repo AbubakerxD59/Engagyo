@@ -2,11 +2,12 @@
 
 namespace App\Http\Controllers\User;
 
-use Illuminate\Http\Request;
-use App\Services\PinterestService;
-use App\Http\Controllers\Controller;
+use App\Models\Domain;
+use App\Models\Post;
 use App\Models\Board;
 use App\Models\Pinterest;
+use App\Services\PinterestService;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 
 class AccountsController extends Controller
@@ -14,11 +15,15 @@ class AccountsController extends Controller
     private $pinterestService;
     private $pinterest;
     private $board;
-    public function __construct(Pinterest $pinterest, Board $board)
+    private $post;
+    private $domain;
+    public function __construct(Pinterest $pinterest, Board $board, Post $post, Domain $domain)
     {
         $this->pinterestService = new PinterestService();
         $this->pinterest = $pinterest;
         $this->board = $board;
+        $this->post = $post;
+        $this->domain = $domain;
     }
     public function index()
     {
@@ -33,10 +38,14 @@ class AccountsController extends Controller
             $user = Auth::user();
             $pinterest = $this->pinterest->search($id)->user($user->id)->first();
             if ($pinterest) {
-                $boards = $pinterest->boards()->where("user_id", $user->id)->get();
-                $boards->posts()->where("user_id", $user->id)->delete();
-                $boards->domains()->where("user_id", $user->id)->delete();
+                $board_ids = $pinterest->boards()->where("user_id", $user->id)->pluck('board_id')->toArray();
+                // posts
+                $this->post->whereIn("account_id", $board_ids)->where("user_id", $user->id)->delete();
+                // domains
+                $this->domain->whereIn("account_id", $board_ids)->where("user_id", $user->id)->delete();
+                // boards
                 $pinterest->boards()->where("user_id", $user->id)->delete();
+                // pinterest account
                 $pinterest->delete();
                 return back()->with("success", "Pinterest Account deleted Successfully!");
             } else {
