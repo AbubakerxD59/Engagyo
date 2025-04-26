@@ -58,7 +58,7 @@ class AutomationController extends Controller
         if ($domain) {
             $posts = $posts->where("domain_id", $domain);
         }
-        if ($status) {
+        if (in_array($status, ['-1', '0', '1'])) {
             $posts = $posts->where("status", $status);
         }
         $totalRecordswithFilter = clone $posts;
