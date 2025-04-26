@@ -108,17 +108,17 @@ class HttpService
      */
     public function put(string $endpoint, array $body = [], array $headers = []): ?array
     {
-        try {
+        // try {
             $response = $this->client->put($endpoint, [
                 'json' => $body,
                 'headers' => $headers,
             ]);
 
             return $this->handleResponse($response);
-        } catch (GuzzleException $e) {
-            $this->handleException($e);
-            return null;
-        }
+        // } catch (GuzzleException $e) {
+        //     $this->handleException($e);
+        //     return null;
+        // }
     }
 
     /**
