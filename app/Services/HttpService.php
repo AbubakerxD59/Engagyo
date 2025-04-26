@@ -89,7 +89,7 @@ class HttpService
         // try {
             $response = $this->client->post($endpoint, [
                 "headers" => $headers,
-                "body" => json_encode($body),
+                "json" => $body,
             ]);
             return $this->handleResponse($response);
         // } catch (GuzzleException $e) {
