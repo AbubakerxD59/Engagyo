@@ -191,7 +191,7 @@ class AutomationController extends Controller
                 // $posts = $this->feedService->fetch($urlDomain, $domain, $user, $account_id, $type, $request->time, $mode);
                 $response = array(
                     "success" => true,
-                    "message" => "Posts fetched Succesfully!"
+                    "message" => "Your posts are being Fetched!"
                 );
             }
         } else {

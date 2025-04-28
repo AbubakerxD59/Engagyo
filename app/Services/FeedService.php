@@ -84,7 +84,7 @@ class FeedService
                 "type" => $type,
                 "domain_id" => $domain_id,
                 "url" => $url,
-                "message" => "Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage()
+                "message" => $e->getMessage()
             ];
             create_notification($user_id, $body, "Post");
         }
