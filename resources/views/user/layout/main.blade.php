@@ -102,6 +102,12 @@
     <script type="text/javascript">
         $.widget.bridge('uibutton', $.ui.button)
     </script>
+    <script>
+        window.toastr.options = {
+            "maxOpened": 1,
+            "preventOpenDuplicates": true
+        }
+    </script>
     @if (Session::has('success'))
         <script type="text/javascript">
             toastr.success('{{ Session::get('success') }}');
