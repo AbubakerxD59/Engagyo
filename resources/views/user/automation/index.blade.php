@@ -34,7 +34,8 @@
                                 </div>
                                 <div class="col-md-4 form-group">
                                     <label for="domains">Domains</label>
-                                    <select name="domains" id="domains" class="form-control adv_filter"></select>
+                                    <select name="domains[]" id="domains" class="form-control adv_filter select2"
+                                        multiple></select>
                                 </div>
                                 <div class="col-md-4 form-group">
                                     <label for="status">Status</label>
@@ -100,8 +101,7 @@
                     param.account = $("#account").find(":selected").val();
                     param.account_type = $("#account").find(":selected").val() ? $("#account").find(":selected")
                         .data("type") : 0;
-                    param.domain = $("#domains").find(":selected").val() ? $("#domains").find(":selected")
-                        .val() : 0;
+                    param.domain = $("#domains").val();
                     param.status = $("#status").find(":selected").val();
                     param.search_input = $("#search").val();
                     return param;
@@ -130,13 +130,25 @@
     </script>
     <script>
         $(document).ready(function() {
-            $("#fetchPostsBtn").on('click', function() {
+            // fetch feed posts
+            $("#fetchPostForm").on('submit', function(event) {
+                event.preventDefault();
+                var form = $(this);
+                var submit_button = form.find("#fetchPostsBtn");
                 var selected_account = $("#fetch_account").find(":selected").val();
                 var selected_type = $("#fetch_account").find(":selected").data("type");
                 var selected_time = $("#time").val();
                 var selected_url = $("#feed_url").val();
+                var new_url = $(".new_feed_url").val();
                 var token = $('meta[name="csrf-token"]').attr('content');
-
+                submit_button.attr('disabled', true);
+                new_url = new_url == undefined ? [] : new_url;
+                var urls = selected_url.concat(new_url);
+                if (urls.length == 0) {
+                    toastr.error("Feed URL not selected!");
+                    submit_button.attr('disabled', false);
+                    return false;
+                }
                 $.ajax({
                     url: "{{ route('panel.automation.feedUrl') }}",
                     type: "POST",
@@ -144,10 +156,11 @@
                         "account": selected_account,
                         "type": selected_type,
                         "time": selected_time,
-                        "url": selected_url,
+                        "url": urls,
                         "_token": token,
                     },
                     success: function(response) {
+                        submit_button.attr('disabled', false);
                         if (response.success) {
                             $("#fetchPostsModal").modal("toggle");
                             postsDatatable.ajax.reload();
@@ -158,33 +171,67 @@
                     }
                 });
             });
-
+            // add new url input
+            $(document).on('click', '#addNewUrl', function() {
+                var new_url = $('.new_url');
+                new_url.show();
+                var new_url_body =
+                    '<div class="col-md-12 form-group d-flex justify-content-end new_url_body">';
+                new_url_body +=
+                    '<button class="btn btn-outline-danger mr-4 new_url_delete_btn"><i class="fa fa-trash"></i></button>';
+                new_url_body +=
+                    '<input type="text" name="new_feed_url[]" class="form-control new_feed_url" placeholder="Add new Feed URL" required>';
+                new_url_body += '</div>';
+                new_url.append(new_url_body);
+            })
+            // delete new url input
+            $(document).on("click", ".new_url_delete_btn", function() {
+                var delete_button = $(this);
+                var new_url = delete_button.closest(".new_url_body");
+                new_url.remove();
+            })
+            // Fetch domains
             $('#account').on('change', function() {
                 var account_id = $(this).find(":selected").val();
                 var selected_type = $(this).find(":selected").data("type");
                 var select = $('#domains');
                 select.empty();
                 if (account_id != '') {
-                    $.ajax({
-                        url: "{{ route('panel.automation.getDomain') }}",
-                        method: "GET",
-                        data: {
-                            "account_id": account_id,
-                            "type": selected_type
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                options = response.data;
-                                $.each(options, function(index, value) {
-                                    var option = $("<option></option>");
-                                    option.val(value.id).text(value.name);
-                                    select.append(option);
-                                });
-                            }
-                        }
-                    });
+                    fetchDomains(account_id, selected_type, select, 'id');
                 }
             });
+            // Fetch domains
+            $('#fetch_account').on('change', function() {
+                var account_id = $(this).find(":selected").val();
+                var selected_type = $(this).find(":selected").data("type");
+                var select = $('#feed_url');
+                select.empty();
+                if (account_id != '') {
+                    fetchDomains(account_id, selected_type, select, 'name');
+                }
+            });
+            // Fetch domains function
+            var fetchDomains = function(account_id, selected_type, select, mode) {
+                $.ajax({
+                    url: "{{ route('panel.automation.getDomain') }}",
+                    method: "GET",
+                    data: {
+                        "account_id": account_id,
+                        "type": selected_type
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            options = response.data;
+                            $.each(options, function(index, value) {
+                                var option = $("<option></option>");
+                                mode == "id" ? option.val(value.id).text(value.name) :
+                                    option.val(value.name).text(value.name);
+                                select.append(option);
+                            });
+                        }
+                    }
+                });
+            }
 
             $('.adv_filter').on('change', function() {
                 postsDatatable.ajax.reload();

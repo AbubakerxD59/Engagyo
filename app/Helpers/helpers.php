@@ -356,7 +356,7 @@ function newDateTime($nextDate, $time, $day = 0)
 
 function loader()
 {
-    $loader = "<span class='loader'></span>";
+    $loader = "<span class='preLoader' id='preLoader'></span>";
     return $loader;
 }
 

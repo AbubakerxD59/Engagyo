@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Jobs\FetchPost;
 use App\Models\Domain;
 use App\Models\Post;
 use App\Services\FeedService;
@@ -20,6 +21,7 @@ class AutomationController extends Controller
     private $board;
     private $feedService;
     private $pinterestService;
+    private $fetchPostJob;
     public function __construct(Post $post, Domain $domain, Pinterest $pinterest, Board $board)
     {
         $this->post = $post;
@@ -28,6 +30,7 @@ class AutomationController extends Controller
         $this->board = $board;
         $this->feedService = new FeedService();
         $this->pinterestService = new PinterestService();
+        // $this->fetchPostJob = new FetchPost();
     }
     public function index()
     {
@@ -41,7 +44,7 @@ class AutomationController extends Controller
         $iTotalRecords = $this->post;
         $account = $data["account"];
         $type = $data["account_type"];
-        $domain = $data["domain"];
+        $domain = isset($data["domain"]) ? $data["domain"] : [];
         $status = $data["status"];
         $search = $data['search_input'];
         $posts = $this->post;
@@ -55,8 +58,8 @@ class AutomationController extends Controller
             }
             $posts = $posts->where("account_id", $account);
         }
-        if ($domain) {
-            $posts = $posts->where("domain_id", $domain);
+        if (count($domain) > 0) {
+            $posts = $posts->whereIn("domain_id", $domain);
         }
         if (in_array($status, ['-1', '0', '1'])) {
             $posts = $posts->where("status", $status);
@@ -153,6 +156,8 @@ class AutomationController extends Controller
     {
         $user = Auth::user();
         $type = $request->type;
+        $domains = $request->url;
+        $time = $request->time;
         $mode = 1;
         if ($type == 'pinterest') {
             $account = $this->board->find($request->account);
@@ -160,27 +165,33 @@ class AutomationController extends Controller
             $mode = 1;
         }
         if ($account) {
-            $urlDomain = parse_url($request->url, PHP_URL_HOST);
-            $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain];
-            $domain = $this->domain->exists($search)->first();
-            if (!$domain) {
-                $domain = $this->domain->create([
-                    "user_id" => $user->id,
+            foreach ($domains as $domain) {
+                $urlDomain = parse_url($domain, PHP_URL_HOST);
+                $urlDomain = empty($urlDomain) ? $domain : $urlDomain;
+                $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain];
+                $domain = $this->domain->exists($search)->first();
+                if (!$domain) {
+                    $domain = $this->domain->create([
+                        "user_id" => $user->id,
+                        "account_id" => $account_id,
+                        "type" => $type,
+                        "name" => $urlDomain,
+                    ]);
+                }
+                $data = [
+                    "urlDomain" => $urlDomain,
+                    "domain" => $domain->id,
+                    "user" => $user->id,
                     "account_id" => $account_id,
                     "type" => $type,
-                    "name" => $urlDomain,
-                ]);
-            }
-            $posts = $this->feedService->fetch($urlDomain, $domain, $user, $account_id, $type, $request->time, $mode);
-            if ($posts["success"]) {
+                    "time" => $time,
+                    "mode" => $mode,
+                ];
+                FetchPost::dispatch($data);
+                // $posts = $this->feedService->fetch($urlDomain, $domain, $user, $account_id, $type, $request->time, $mode);
                 $response = array(
                     "success" => true,
                     "message" => "Posts fetched Succesfully!"
-                );
-            } else {
-                $response = array(
-                    "success" => false,
-                    "message" => $posts["error"]
                 );
             }
         } else {

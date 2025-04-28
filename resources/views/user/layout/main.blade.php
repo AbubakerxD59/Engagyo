@@ -32,7 +32,7 @@
     <link rel="stylesheet" href="{{ asset('assets/plugins/datatables-buttons/css/buttons.bootstrap4.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/main.css') }}">
     <!-- Select2 -->
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
     <!-- Theme style -->
     <link rel="stylesheet" href="{{ asset('assets/css/adminlte.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/custom-styles.css') }}">
@@ -95,6 +95,8 @@
     <script src="{{ asset('assets/plugins/datatables-buttons/js/buttons.colVis.min.js') }}"></script>
     <!-- AdminLTE App -->
     <script src="{{ asset('assets/js/adminlte.js') }}"></script>
+    {{-- Select 2 --}}
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
     <!--app JS-->
     <script src="{{ asset('assets/js/app.js') }}"></script>
     <script type="text/javascript">
@@ -118,11 +120,13 @@
     @stack('scripts')
     <script>
         $(document).ready(function() {
+            // Logout button
             $('.sign-out').on('click', function() {
                 if (confirm('Do you wish to Signout?')) {
                     $('#signout_form').submit();
                 }
             });
+            // Increase number of rows according to text
             $('textarea').on('input', function() {
                 const textarea = $(this)[0];
                 // While the scroll height is greater than the client height, increase the number of rows
@@ -130,23 +134,25 @@
                     $(this).attr('rows', parseInt($(this).attr('rows')) + 1);
                 }
             });
+            // Show confirm pop-up on delete button
+            $(document).on('click', '.delete-btn', function(event) {
+                if (confirm('Are you sure you want to Delete?')) {
+                    $(this).next().submit();
+                } else {
+                    event.preventDefault();
+                }
+            })
+            // Show confrm pop-up on submit button
+            function confirmSubmit(event) {
+                if (confirm('Do you wish to submit?')) {
+                    return true;
+                } else {
+                    event.preventDefault();
+                }
+            }
+            // Select2
+            $('.select2').select2();
         });
-
-        $(document).on('click', '.delete-btn', function(event) {
-            if (confirm('Are you sure you want to Delete?')) {
-                $(this).next().submit();
-            } else {
-                event.preventDefault();
-            }
-        })
-
-        function confirmSubmit(event) {
-            if (confirm('Do you wish to submit?')) {
-                return true;
-            } else {
-                event.preventDefault();
-            }
-        }
     </script>
 </body>
 
