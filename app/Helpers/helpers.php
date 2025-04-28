@@ -1,13 +1,9 @@
 <?php
 
+use App\Models\Notification;
 use App\Models\Package;
-use Carbon\Carbon;
 use App\Models\Role;
 use App\Models\User;
-use App\Models\Category;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Cache;
-use Carbon\Exceptions\InvalidFormatException;
 use Illuminate\Support\Facades\Session;
 
 function site_logo()
@@ -367,4 +363,14 @@ function check_for($string, $find)
         return true;
     }
     return false;
+}
+
+function create_notification($user_id, $body, $modal)
+{
+    Notification::create([
+        "user_id" => $user_id,
+        "body" => json_encode($body),
+        "modal" => $modal
+    ]);
+    return true;
 }

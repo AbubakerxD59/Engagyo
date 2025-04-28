@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Notification;
 use App\Models\Post;
 use Exception;
 use Illuminate\Support\Facades\Log;
@@ -12,34 +13,44 @@ class FeedService
 {
     private $post;
     private $dom;
+    private $notification;
     public function __construct()
     {
         $this->post = new Post();
         $this->dom = new HtmlParseService();
+        $this->notification = new Notification();
     }
     public function fetch($url, $domain_id, $user_id, $account_id, $type, $time, $mode = 0)
     {
         $websiteUrl = $url;
         $feedUrls = $this->discoverFeedUrls($websiteUrl);
         if (empty($feedUrls)) {
-            return array(
-                "success" => false,
-                'error' => 'Could not find RSS/Atom feed or Sitemap URL.'
-            );
+            $body = [
+                "user_id" => $user_id,
+                "account_id" => $account_id,
+                "type" => $type,
+                "domain_id" => $domain_id,
+                "url" => $url,
+                "message" => "Could not find RSS/Atom feed or Sitemap URL"
+            ];
+            create_notification($user_id, $body, "Post");
         }
         $targetUrl = $feedUrls[0];
-
         try {
             $response = Http::timeout(5) // Set a reasonable timeout
                 ->withHeaders(['User-Agent' => 'Engagyo RSS bot']) // Be polite, identify your bot
                 ->get($targetUrl);
 
             if (!$response->successful()) {
-                Log::error("Failed to fetch feed/sitemap from {$targetUrl}. Status: " . $response->status());
-                return array(
-                    "success" => false,
-                    'error' => 'Failed to fetch content from the target URL.'
-                );
+                $body = [
+                    "user_id" => $user_id,
+                    "account_id" => $account_id,
+                    "type" => $type,
+                    "domain_id" => $domain_id,
+                    "url" => $url,
+                    "message" => "Failed to fetch feed/sitemap from {$targetUrl}. Status: " . $response->status()
+                ];
+                create_notification($user_id, $body, "Post");
             }
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
@@ -67,11 +78,15 @@ class FeedService
                 "items" => $items
             );
         } catch (Exception $e) {
-            Log::error("Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage());
-            return array(
-                "success" => false,
-                'error' => 'An error occurred while processing the feed/sitemap.'
-            );
+            $body = [
+                "user_id" => $user_id,
+                "account_id" => $account_id,
+                "type" => $type,
+                "domain_id" => $domain_id,
+                "url" => $url,
+                "message" => "Error fetching or parsing feed/sitemap from {$targetUrl}: " . $e->getMessage()
+            ];
+            create_notification($user_id, $body, "Post");
         }
     }
 
