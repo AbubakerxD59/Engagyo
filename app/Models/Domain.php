@@ -41,7 +41,8 @@ class Domain extends Model
     {
         return Attribute::make(
             get: function ($value) {
-                return empty($this->category) ? $value : $value . $this->category;
+                $name = empty($this->category) ? $value : $value . $this->category;
+                return "http://" . $name;
             }
         );
     }
