@@ -52,12 +52,20 @@
                                         class="form-control adv_filter_search">
                                 </div>
                             </form>
-                            <div class="col-md-4 form-group">
-                                <button id="clearFilters" class="btn btn-outline-secondary btn-sm">Clear
-                                    Filters
-                                </button>
-                                <button id="postsFetch" class="btn btn-outline-info btn-sm" data-toggle="modal"
-                                    data-target="#fetchPostsModal">Fetch Post</button>
+                            <div class="col-md-12 row form-group  justify-content-between">
+                                <div class="col-md-10">
+                                    <button id="clearFilters" class="btn btn-outline-secondary btn-sm ">Clear
+                                        Filters
+                                    </button>
+                                    <button id="postsFetch" class="btn btn-outline-info btn-sm " data-toggle="modal"
+                                        data-target="#fetchPostsModal">Fetch Post</button>
+                                </div>
+                                <div class="col-md-2 d-flex justify-content-end">
+                                    <a class="btn btn-outline-info btn-sm">
+                                        Scheduled Till:
+                                        <span class="scheduled_till"></span>
+                                    </a>
+                                </div>
                             </div>
                         </div>
                         <table class="table table-striped table-bordered" id="dataTable">
@@ -89,12 +97,15 @@
             'iDisplayLength': 10,
             "lengthChange": true,
             "searching": false,
-            "ordering": false,
+            "ordering": true,
             "info": true,
             "autoWidth": false,
             "responsive": true,
             "processing": true,
             "serverSide": true,
+            order: [
+                [3, 'ASC']
+            ],
             ajax: {
                 url: "{{ route('panel.automation.posts.dataTable') }}",
                 data: function(param) {
@@ -107,23 +118,33 @@
                     return param;
                 },
             },
+            drawCallback: function() {
+                var api = this.api();
+                var response = api.ajax.json();
+                $('.scheduled_till').html(response.scheduled_till);
+            },
             columns: [{
-                    data: 'post'
+                    data: 'post',
+                    sortable: false
                 },
                 {
                     data: 'account_name',
+                    sortable: false
                 },
                 {
                     data: 'domain_name',
+                    sortable: false
                 },
                 {
-                    data: 'publish'
+                    data: 'publish',
                 },
                 {
-                    data: 'status_view'
+                    data: 'status_view',
+                    sortable: false
                 },
                 {
-                    data: 'action'
+                    data: 'action',
+                    sortable: false
                 }
             ],
         });

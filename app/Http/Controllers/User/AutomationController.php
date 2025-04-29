@@ -43,11 +43,12 @@ class AutomationController extends Controller
     {
         $data = $request->all();
         $iTotalRecords = $this->post;
+        $order = $data["order"][0]["dir"];
         $account = $data["account"];
         $type = $data["account_type"];
-        $domain = isset($data["domain"]) ? $data["domain"] : [];
         $status = $data["status"];
         $search = $data['search_input'];
+        $domain = isset($data["domain"]) ? $data["domain"] : [];
         $posts = $this->post;
         if (!empty($search)) {
             $posts = $posts->search($search);
@@ -66,7 +67,8 @@ class AutomationController extends Controller
             $posts = $posts->where("status", $status);
         }
         $totalRecordswithFilter = clone $posts;
-        $posts = $posts->orderBy('id', 'ASC');
+        $scheduledTill = $this->post->scheduledTill($search, $type, $data["account"], $domain, $status);
+        $posts = $posts->orderBy('publish_date', $order);
         /*Set limit offset */
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
         $posts = $posts->get();
@@ -84,6 +86,7 @@ class AutomationController extends Controller
             'draw' => intval($data['draw']),
             'iTotalRecords' => $iTotalRecords->count(),
             'iTotalDisplayRecords' => $totalRecordswithFilter->count(),
+            'scheduled_till' => $scheduledTill,
             'aaData' => $posts,
         ]);
     }
@@ -167,9 +170,15 @@ class AutomationController extends Controller
         }
         if ($account) {
             foreach ($domains as $domain) {
-                $urlDomain = parse_url($domain, PHP_URL_HOST);
-                $urlDomain = empty($urlDomain) ? $domain : $urlDomain;
-                $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain];
+                $parsedUrl = parse_url($domain);
+                if (isset($parsedUrl['host'])) {
+                    $urlDomain = $parsedUrl["host"];
+                    $category = $parsedUrl["path"];
+                } else {
+                    $urlDomain = $parsedUrl["path"];
+                    $category = null;
+                }
+                $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
                 $domain = $this->domain->exists($search)->first();
                 if (!$domain) {
                     $domain = $this->domain->create([
@@ -177,10 +186,12 @@ class AutomationController extends Controller
                         "account_id" => $account_id,
                         "type" => $type,
                         "name" => $urlDomain,
+                        "category" => $category
                     ]);
                 }
                 $data = [
-                    "urlDomain" => $urlDomain,
+                    "urlDomain" => !empty($category) ? $urlDomain . $category : $urlDomain,
+                    "category" => $category,
                     "domain" => $domain->id,
                     "user" => $user->id,
                     "account_id" => $account_id,
@@ -189,7 +200,6 @@ class AutomationController extends Controller
                     "mode" => $mode,
                 ];
                 FetchPost::dispatch($data);
-                // $posts = $this->feedService->fetch($urlDomain, $domain, $user, $account_id, $type, $request->time, $mode);
                 $response = array(
                     "success" => true,
                     "message" => "Your posts are being Fetched!"

@@ -67,7 +67,7 @@ class PinterestService
         return $boards;
     }
 
-    public function create($id, $access_token, $post)
+    public function create($access_token, $post)
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $publish = $this->client->postJson($this->sandbox_baseUrl . "pins", $post, $this->header);

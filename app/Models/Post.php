@@ -122,6 +122,29 @@ class Post extends Model
         return $date_time;
     }
 
+    public function scheduledTill($search, $type, $account, $domain, $status)
+    {
+        $post = $this->orderBy('publish_date', 'DESC');
+        if (!empty($search)) {
+            $post = $post->search($search);
+        }
+        if ($account) {
+            if ($type == 'pinterest') {
+                $account = Board::find($account);
+                $account = $account->board_id;
+            }
+            $post = $post->where("account_id", $account);
+        }
+        if (count($domain) > 0) {
+            $post = $post->whereIn("domain_id", $domain);
+        }
+        if (in_array($status, ['-1', '0', '1'])) {
+            $post = $post->where("status", $status);
+        }
+        $post = $post->first();
+        return $post ? $post->publish_date : '-';
+    }
+
     protected function image(): Attribute
     {
         return Attribute::make(

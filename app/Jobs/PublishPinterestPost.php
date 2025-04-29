@@ -35,7 +35,7 @@ class PublishPinterestPost implements ShouldQueue
     public function handle(): void
     {
         $pinterest = new PinterestService();
-        $publish = $pinterest->create($this->id, $this->access_token, $this->data);
+        $publish = $pinterest->create($this->access_token, $this->data);
         $post = $this->post->find($this->id);
         if (isset($publish['id'])) {
             $post->update([

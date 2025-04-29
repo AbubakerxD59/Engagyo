@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Domain extends Model
 {
@@ -14,6 +15,7 @@ class Domain extends Model
         "account_id",
         "type",
         "name",
+        "category",
     ];
 
     public function scopeSearch($query, $search)
@@ -23,11 +25,24 @@ class Domain extends Model
 
     public function scopeExists($query, $search)
     {
-        $query->where('user_id', $search["user_id"])->where('account_id', $search["account_id"])->where('type', $search["type"])->where("name", $search["name"]);
+        $query->where('user_id', $search["user_id"])
+            ->where('account_id', $search["account_id"])
+            ->where('type', $search["type"])
+            ->where("name", $search["name"])
+            ->where("category", $search['category']);
     }
 
     public function scopeAccount($query, $id)
     {
         $query->where("account_id", $id);
+    }
+
+    protected function name(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                return empty($this->category) ? $value : $value . $this->category;
+            }
+        );
     }
 }
