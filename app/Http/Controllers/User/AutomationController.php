@@ -191,6 +191,7 @@ class AutomationController extends Controller
                 }
                 $data = [
                     "urlDomain" => !empty($category) ? $urlDomain . $category : $urlDomain,
+                    "category" => $category,
                     "domain" => $domain->id,
                     "user" => $user->id,
                     "account_id" => $account_id,
@@ -198,8 +199,7 @@ class AutomationController extends Controller
                     "time" => $time,
                     "mode" => $mode,
                 ];
-                $this->feedService->fetch($data["urlDomain"], $data["domain"], $data["user"], $data["account_id"], $data["type"], $data["time"], $data["mode"]);
-                // FetchPost::dispatch($data);
+                FetchPost::dispatch($data);
                 $response = array(
                     "success" => true,
                     "message" => "Your posts are being Fetched!"
