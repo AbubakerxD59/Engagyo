@@ -16,7 +16,6 @@ class PublishPinterestPost implements ShouldQueue
 
     private $id;
     private $data;
-    private $post;
     private $access_token;
     private $pinterest;
     /**
@@ -26,7 +25,6 @@ class PublishPinterestPost implements ShouldQueue
     {
         $this->id = $id;
         $this->data = $data;
-        $this->post = new Post();
         $this->access_token = $access_token;
         $this->pinterest = new PinterestService();
     }
@@ -36,19 +34,6 @@ class PublishPinterestPost implements ShouldQueue
      */
     public function handle(): void
     {
-        $publish = $this->pinterest->create($this->access_token, $this->data);
-        $post = $this->post->find($this->id);
-        if ($publish['id']) {
-            $post->update([
-                "post_id" => $publish["id"],
-                "status" => 1,
-                "response" => "Published Successfully!"
-            ]);
-        } else {
-            $post->update([
-                "status" => -1,
-                "response" => json_encode($publish)
-            ]);
-        }
+        $publish = $this->pinterest->create($this->id, $this->access_token, $this->data);
     }
 }

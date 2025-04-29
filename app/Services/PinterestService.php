@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Post;
 use DirkGroenen\Pinterest\Pinterest;
 
 class PinterestService
@@ -10,10 +11,12 @@ class PinterestService
     private $client;
     private $auth;
     private $header;
+    private $post;
     private $baseUrl = "https://api.pinterest.com/v5/";
     private $sandbox_baseUrl = "https://api-sandbox.pinterest.com/v5/";
     public function __construct()
     {
+        $this->post = new Post();
         $pinterest_id = env("PINTEREST_KEY");
         $pinterest_secret = env("PINTEREST_SECRET");
         $this->pinterest = new Pinterest($pinterest_id, $pinterest_secret);
@@ -64,10 +67,22 @@ class PinterestService
         return $boards;
     }
 
-    public function create($access_token, $post)
+    public function create($id, $access_token, $post)
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $publish = $this->client->postJson($this->sandbox_baseUrl . "pins", $post, $this->header);
-        return $publish;
+        $post = $this->post->find($id);
+        if (isset($publish['id'])) {
+            $post->update([
+                "post_id" => $publish["id"],
+                "status" => 1,
+                "response" => "Published Successfully!"
+            ]);
+        } else {
+            $post->update([
+                "status" => -1,
+                "response" => json_encode($publish)
+            ]);
+        }
     }
 }
