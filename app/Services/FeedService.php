@@ -54,6 +54,7 @@ class FeedService
             }
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
+            dd($items);
             foreach ($items as $key => $item) {
                 $nextTime = $this->post->nextTime(["user_id" => $user_id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain_id]);
                 $post = $this->post->exist(["user_id" => $user_id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain_id, "url" => $item["link"]])->notPublished()->first();
