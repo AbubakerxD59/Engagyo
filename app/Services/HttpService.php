@@ -86,16 +86,16 @@ class HttpService
      */
     public function postJson(string $endpoint, $body = null, array $headers = []): ?array
     {
-        // try {
+        try {
             $response = $this->client->post($endpoint, [
                 "headers" => $headers,
                 "json" => $body,
             ]);
             return $this->handleResponse($response);
-        // } catch (GuzzleException $e) {
-        //     $this->handleException($e);
-        //     return null;
-        // }
+        } catch (GuzzleException $e) {
+            $this->handleException($e);
+            return ["success" => false, 'message' => $e->getMessage()];
+        }
     }
 
     /**
