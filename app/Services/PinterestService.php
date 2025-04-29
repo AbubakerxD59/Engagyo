@@ -71,18 +71,6 @@ class PinterestService
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $publish = $this->client->postJson($this->sandbox_baseUrl . "pins", $post, $this->header);
-        $post = $this->post->find($id);
-        if (isset($publish['id'])) {
-            $post->update([
-                "post_id" => $publish["id"],
-                "status" => 1,
-                "response" => "Published Successfully!"
-            ]);
-        } else {
-            $post->update([
-                "status" => -1,
-                "response" => json_encode($publish)
-            ]);
-        }
+        return $publish;
     }
 }
