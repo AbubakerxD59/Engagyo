@@ -25,6 +25,7 @@ return new class extends Migration
             $table->text("image")->nullable();
             $table->text("publish_date")->nullable();
             $table->integer("status")->default(0);
+            $table->text("response")->nullable();
             $table->softDeletes();
             $table->timestamps();
         });

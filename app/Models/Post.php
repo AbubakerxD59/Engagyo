@@ -24,6 +24,7 @@ class Post extends Model
         "image",
         "publish_date",
         "status",
+        "response"
     ];
 
     protected $appends = ["date", "time"];
@@ -125,10 +126,11 @@ class Post extends Model
     {
         return Attribute::make(
             get: function ($value) {
-                if (str_contains($value, "http")) {
+                if (!empty($value) && str_contains($value, "http")) {
                     return $value;
                 } else {
-                    return !empty($value) ? url(getImage('', $value)) : no_image();
+                    $image = !empty($value) ? url(getImage('', $value)) : no_image();
+                    return $image;
                 }
             }
         );

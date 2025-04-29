@@ -9,6 +9,7 @@ use App\Services\FeedService;
 use App\Services\PinterestService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
+use App\Jobs\PublishPinterestPost;
 use App\Models\Board;
 use App\Models\Pinterest;
 use Illuminate\Support\Facades\Auth;
@@ -267,25 +268,27 @@ class AutomationController extends Controller
                                     "url" => $post->image
                                 )
                             );
-                            $publish = $this->pinterestService->create($access_token, $postData);
-                            if (isset($publish["id"])) {
-                                $post->update([
-                                    "post_id" => $publish["id"],
-                                    "status" => 1
-                                ]);
-                                $response = array(
-                                    "success" => true,
-                                    "message" => "Post published Successfully!"
-                                );
-                            } else {
-                                $post->update([
-                                    "status" => -1
-                                ]);
-                                $response = array(
-                                    "success" => false,
-                                    "message" => "Failed to publish Post!"
-                                );
-                            }
+                            PublishPinterestPost::dispatch($post->id, $postData, $access_token);
+                            $response = array(
+                                "success" => true,
+                                "message" => "Your post is being Published!"
+                            );
+                            // $publish = $this->pinterestService->create($access_token, $postData);
+                            // if (isset($publish["id"])) {
+                            //     $post->update([
+                            //         "post_id" => $publish["id"],
+                            //         "status" => 1
+                            //     ]);
+
+                            // } else {
+                            //     $post->update([
+                            //         "status" => -1
+                            //     ]);
+                            //     $response = array(
+                            //         "success" => false,
+                            //         "message" => "Failed to publish Post!"
+                            //     );
+                            // }
                         } else {
                             $response = array(
                                 "success" => false,

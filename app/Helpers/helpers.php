@@ -27,6 +27,7 @@ function site_company()
 function no_image()
 {
     $image = asset("assets/img/noimage.png");
+    return $image;
 }
 
 function saveImage($file)
