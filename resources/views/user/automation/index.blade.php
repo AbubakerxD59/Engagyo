@@ -31,11 +31,16 @@
                                             </option>
                                         @endforeach
                                     </select>
+                                    <a class="btn btn-outline-info btn-sm mt-1">
+                                        Last Fetch:
+                                        <span class="last_fetch"></span>
+                                    </a>
                                 </div>
                                 <div class="col-md-4 form-group">
                                     <label for="domains">Domains</label>
                                     <select name="domains[]" id="domains" class="form-control adv_filter select2"
-                                        multiple></select>
+                                        multiple>
+                                    </select>
                                 </div>
                                 <div class="col-md-4 form-group">
                                     <label for="status">Status</label>
@@ -57,7 +62,7 @@
                                     <button id="clearFilters" class="btn btn-outline-secondary btn-sm ">Clear
                                         Filters
                                     </button>
-                                    <button id="postsFetch" class="btn btn-outline-info btn-sm " data-toggle="modal"
+                                    <button id="postsFetch" class="btn btn-outline-success btn-sm" data-toggle="modal"
                                         data-target="#fetchPostsModal">Fetch Post</button>
                                 </div>
                                 <div class="col-md-2 d-flex justify-content-end">
@@ -122,6 +127,7 @@
                 var api = this.api();
                 var response = api.ajax.json();
                 $('.scheduled_till').html(response.scheduled_till);
+                $('.last_fetch').html(response.last_fetch);
             },
             columns: [{
                     data: 'post',

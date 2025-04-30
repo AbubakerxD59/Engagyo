@@ -49,6 +49,7 @@ class AutomationController extends Controller
         $status = $data["status"];
         $search = $data['search_input'];
         $domain = isset($data["domain"]) ? $data["domain"] : [];
+        $lastFetch = '';
         $posts = $this->post;
         if (!empty($search)) {
             $posts = $posts->search($search);
@@ -56,6 +57,7 @@ class AutomationController extends Controller
         if ($account) {
             if ($type == 'pinterest') {
                 $account = $this->board->find($account);
+                $lastFetch = $account->last_fetch;
                 $account = $account->board_id;
             }
             $posts = $posts->where("account_id", $account);
@@ -87,6 +89,7 @@ class AutomationController extends Controller
             'iTotalRecords' => $iTotalRecords->count(),
             'iTotalDisplayRecords' => $totalRecordswithFilter->count(),
             'scheduled_till' => $scheduledTill,
+            'last_fetch' => $lastFetch,
             'aaData' => $posts,
         ]);
     }
@@ -205,6 +208,10 @@ class AutomationController extends Controller
                     "message" => "Your posts are being Fetched!"
                 );
             }
+            // Update last fetch
+            $account->update([
+                "last_fetch" => date("Y-m-d H:i A")
+            ]);
         } else {
             $response = array(
                 "success" => false,

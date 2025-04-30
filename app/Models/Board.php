@@ -16,6 +16,7 @@ class Board extends Model
         "board_id",
         "name",
         "status",
+        "last_fetch"
     ];
 
     protected $appends = ["type"];
