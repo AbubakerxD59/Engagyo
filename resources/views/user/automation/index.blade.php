@@ -58,14 +58,14 @@
                                 </div>
                             </form>
                             <div class="col-md-12 row form-group  justify-content-between">
-                                <div class="col-md-10">
+                                <div class="col-md-9">
                                     <button id="clearFilters" class="btn btn-outline-secondary btn-sm ">Clear
                                         Filters
                                     </button>
                                     <button id="postsFetch" class="btn btn-outline-success btn-sm" data-toggle="modal"
                                         data-target="#fetchPostsModal">Fetch Post</button>
                                 </div>
-                                <div class="col-md-2 d-flex justify-content-end">
+                                <div class="col-md-3 d-flex justify-content-end">
                                     <a class="btn btn-outline-info btn-sm">
                                         Scheduled Till:
                                         <span class="scheduled_till"></span>

@@ -142,7 +142,7 @@ class Post extends Model
             $post = $post->where("status", $status);
         }
         $post = $post->first();
-        return $post ? $post->publish_date : '-';
+        return $post ? date("Y-m-d h:i A", strtotime($post->publish_date)) : '-';
     }
 
     protected function image(): Attribute
@@ -173,7 +173,7 @@ class Post extends Model
     {
         return Attribute::make(
             get: function () {
-                $time = date("H:i A", strtotime($this->publish_date));
+                $time = date("h:i A", strtotime($this->publish_date));
                 return $time;
             }
         );
