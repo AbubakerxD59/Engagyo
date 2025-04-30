@@ -40,17 +40,14 @@ class HtmlParseService
                     $title = substr($title, 0, $colon_pos);
                 }
             }
-
             // Post image
             $image = $html->find("meta[property='og:image']", 0)->content ? $html->find("meta[property='og:image']", 0)->content : $html->find("meta[name='twitter:image']", 0)->content;
-
             if ($pinterest) {
                 $pinterest_image = $this->fetch_pinterest_image($tags);
                 if ($pinterest_image != '' && $pinterest_image != null) {
                     $image = $pinterest_image;
                 }
             }
-
             if (empty($image)) {
                 $json_ld = $this->get_string_between($response, '<script type="application/ld+json" class="yoast-schema-graph">', "</script>");
                 if ($json_ld) {
@@ -64,7 +61,6 @@ class HtmlParseService
                     }
                 }
             }
-
             if (empty($image)) {
                 $metaTags = $this->dom->getElementsByTagName('meta');
                 foreach ($metaTags as $meta) {
@@ -79,7 +75,6 @@ class HtmlParseService
                     }
                 }
             }
-
             if (empty($image)) {
                 $thumbnails = $this->dom->getElementsByTagName('div');
                 foreach ($thumbnails as $thumbnail) {
@@ -89,7 +84,6 @@ class HtmlParseService
                     }
                 }
             }
-
             if (empty($image)) {
                 $thumbnails = $this->dom->getElementsByTagName('img');
                 foreach ($thumbnails as $thumbnail) {
@@ -122,6 +116,7 @@ class HtmlParseService
         if ($image != '' && $image != null) {
             $height = $image->getAttribute('height');
             $width = $image->getAttribute('width');
+            dd($image, $height, $width);
             if ($height == "" || $height == null || $width == "" || $width == null) {
                 $dimensions = getimagesize($image->getAttribute('src'));
                 $width = $dimensions[0];
