@@ -58,14 +58,25 @@
                                 </div>
                             </form>
                             <div class="col-md-12 row form-group  justify-content-between">
-                                <div class="col-md-9">
+                                <div class="col-md-6">
                                     <button id="clearFilters" class="btn btn-outline-secondary btn-sm ">Clear
                                         Filters
                                     </button>
                                     <button id="postsFetch" class="btn btn-outline-success btn-sm" data-toggle="modal"
                                         data-target="#fetchPostsModal">Fetch Post</button>
                                 </div>
-                                <div class="col-md-3 d-flex justify-content-end">
+                                <div class="col-md-6 d-flex justify-content-end">
+                                    <div class="btn shuffle_toggle" style="display: none;">
+                                        <div class="d-flex align-items-start">
+                                            <span>
+                                                Shuffle
+                                            </span>
+                                            <div class="toggle-switch mx-1">
+                                                <input class="toggle-input" id="toggle" type="checkbox">
+                                                <label class="toggle-label" for="toggle"></label>
+                                            </div>
+                                        </div>
+                                    </div>
                                     <a class="btn btn-outline-info btn-sm">
                                         Scheduled Till:
                                         <span class="scheduled_till"></span>
@@ -223,6 +234,7 @@
                 var selected_type = $(this).find(":selected").data("type");
                 var select = $('#domains');
                 select.empty();
+                toggleShuffle(account_id);
                 if (account_id != '') {
                     fetchDomains(account_id, selected_type, select, 'id');
                 }
@@ -259,21 +271,19 @@
                     }
                 });
             }
-
+            // Filters and Reset
             $('.adv_filter').on('change', function() {
                 postsDatatable.ajax.reload();
             });
-
             $('.adv_filter_search').on('keyup', function() {
                 postsDatatable.ajax.reload();
             })
-
             $("#clearFilters").on("click", function() {
                 $("#adv_filter_form").trigger("reset");
                 $("#account").trigger("change");
                 postsDatatable.ajax.reload();
             })
-
+            // Delete Post
             $(document).on("click", ".post-delete", function() {
                 var id = $(this).data('id');
                 var token = $('meta[name="csrf-token"]').attr('content');
@@ -294,7 +304,7 @@
                     }
                 });
             })
-
+            // Edit Post
             $(document).on('click', '.post_edit', function() {
                 var form = $("#editPostForm");
                 var post = $(this).data("body");
@@ -308,7 +318,7 @@
                 modal.find("#post_image_preview").attr("src", post.image);
                 modal.modal("toggle");
             })
-
+            // Edit Post Modal
             $(document).on('submit', '#editPostForm', function(event) {
                 event.preventDefault();
                 var modal = $("#editPostModal");
@@ -336,7 +346,7 @@
                     },
                 });
             })
-
+            // Publish Post
             $(document).on("click", ".publish-post", function() {
                 if (confirm("Do you wish to Publish?")) {
                     var id = $(this).data('id');
@@ -359,6 +369,40 @@
                         }
                     });
                 }
+            })
+            // Toggle shuffle
+            var toggleShuffle = function(id) {
+                console.log('1');
+                if (id != '') {
+                    $(".shuffle_toggle").show();
+                } else {
+                    $(".shuffle_toggle").hide();
+                }
+            }
+            // Shuffle toggle
+            $(document).on('click', '#toggle', function() {
+                var toggle = $("#toggle");
+                var shuffle = toggle.is(":checked") ? 1 : 0;
+                var selected_account = $("#account").find(":selected").val();
+                var selected_type = $("#account").find(":selected").data("type");
+                var token = $('meta[name="csrf-token"]').attr('content');
+                $.ajax({
+                    url: "{{ route('panel.automation.posts.shuffle') }}",
+                    method: "POST",
+                    data: {
+                        "shuffle": shuffle,
+                        "account": selected_account,
+                        "type": selected_type,
+                        "_token": token
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    }
+                });
             })
         });
     </script>

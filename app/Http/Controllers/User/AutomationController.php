@@ -333,4 +333,37 @@ class AutomationController extends Controller
         }
         return response()->json($response);
     }
+
+    public function postShuffle(Request $request)
+    {
+        $id = $request->account;
+        $type = $request->type;
+        $shuffle = $request->shuffle;
+        if (!empty($id)) {
+            $user = Auth::user();
+            if ($type == 'pinterest') {
+                $account = $this->board->userSearch($user->id)->where("id", $id)->first();
+            }
+            if ($account) {
+                $account->update([
+                    "shuffle" => $shuffle
+                ]);
+                $response = array(
+                    "success" => true,
+                    "message" => "Shuffle toggle updated Successfully!"
+                );
+            } else {
+                $response = array(
+                    "success" => false,
+                    "message" => "Something went Wrong!"
+                );
+            }
+        } else {
+            $response = array(
+                "success" => false,
+                "message" => "Something went Wrong!"
+            );
+        }
+        return response()->json($response);
+    }
 }
