@@ -58,7 +58,7 @@
                                         class="form-control adv_filter_search">
                                 </div>
                             </form>
-                            <div class="col-md-12 row form-group  justify-content-between">
+                            <div class="col-md-12 row form-group justify-content-between">
                                 <div class="col-md-6">
                                     <button id="clearFilters" class="btn btn-outline-secondary btn-sm ">Clear
                                         Filters
@@ -67,11 +67,10 @@
                                         data-target="#fetchPostsModal">Fetch Post</button>
                                 </div>
                                 <div class="col-md-6 d-flex justify-content-end">
-                                    <div class="btn shuffle_toggle py-0" style="display: none;">
+                                    <div class="btn btn-success bg-transparent text-muted shuffle_toggle py-1 mx-1"
+                                        style="display: none;">
                                         <div class="d-flex align-items-start">
-                                            <span>
-                                                Shuffle
-                                            </span>
+                                            <label for="toggle" class="pointer m-0">Shuffle</label>
                                             <div class="toggle-switch mx-1">
                                                 <input class="toggle-input" id="toggle" type="checkbox">
                                                 <label class="toggle-label" for="toggle"></label>
