@@ -8,7 +8,7 @@
         @yield('page_title') {{ ' - ' . getCompanyName() }}
     </title>
     <!--favicon-->
-    <link rel="icon" href="{{ getCompanyLogoUrl() }}" type="image/png" />
+    <link rel="icon" href="{{ site_logo() }}" type="image/png" />
     <!-- Google Font: Source Sans Pro -->
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">

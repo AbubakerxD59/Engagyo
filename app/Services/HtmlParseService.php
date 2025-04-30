@@ -117,9 +117,11 @@ class HtmlParseService
         if ($image != '' && $image != null) {
             $height = $image->getAttribute('height');
             $width = $image->getAttribute('width');
+            clearLogFile();
             Log::info($image);
             Log::info($height);
             Log::info($width);
+            dd('here');
             if ($height == "" || $height == null || $width == "" || $width == null) {
                 $dimensions = getimagesize($image->getAttribute('src'));
                 $width = $dimensions[0];

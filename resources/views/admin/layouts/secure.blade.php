@@ -9,7 +9,7 @@
         @yield('page_title') {{ ' - ' . getCompanyName() }}
     </title>
     <!--favicon-->
-    <link class="rounded-pill" rel="icon" href="{{ getCompanyLogoUrl() }}" type="image/png" />
+    <link class="rounded-pill" rel="icon" href="{{ site_logo() }}" type="image/png" />
     <!-- Google Font: Source Sans Pro -->
     <link rel="stylesheet"
         href="https://fonts.googleapis.com/css?family=Source+Sans+Pro:300,400,400i,700&display=fallback">
@@ -43,7 +43,7 @@
     <div class="wrapper">
         <!-- Preloader -->
         <div class="preloader flex-column justify-content-center align-items-center">
-            <img class="animation__shake rounded-pill" src="{{ getCompanyLogoUrl() }}"
+            <img class="animation__shake rounded-pill" src="{{ site_logo() }}"
                 alt="{{ env('APP_NAME', 'Engagyo') }}" width="100px">
         </div>
 

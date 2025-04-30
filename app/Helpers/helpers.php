@@ -1,9 +1,10 @@
 <?php
 
-use App\Models\Notification;
-use App\Models\Package;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Package;
+use App\Models\Notification;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Session;
 
 function site_logo()
@@ -374,4 +375,15 @@ function create_notification($user_id, $body, $modal)
         "modal" => $modal
     ]);
     return true;
+}
+
+function clearLogFile()
+{
+    $logPath = storage_path('logs/laravel.log');
+
+    if (File::exists($logPath)) {
+        File::put($logPath, '');
+        return "Log file cleared successfully!";
+    }
+    return "Log file not found.";
 }

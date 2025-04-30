@@ -8,7 +8,7 @@
         <div class="login-holder">
             <div class="login-logo">
                 <!-- <a href="#"><b>User Login</b></a> -->
-                <img src="{{ getCompanyLogoUrl() }}" alt="{{ env('APP_NAME') }}">
+                <img src="{{ site_logo() }}" alt="{{ env('APP_NAME') }}">
             </div>
             <div class="card">
                 <div class="card-body login-card-body">
