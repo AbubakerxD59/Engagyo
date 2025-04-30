@@ -3,8 +3,9 @@
 namespace App\Services;
 
 use DOMDocument;
-use voku\helper\HtmlDomParser;
 use App\Services\HttpService;
+use voku\helper\HtmlDomParser;
+use Illuminate\Support\Facades\Log;
 
 class HtmlParseService
 {
@@ -116,7 +117,9 @@ class HtmlParseService
         if ($image != '' && $image != null) {
             $height = $image->getAttribute('height');
             $width = $image->getAttribute('width');
-            dd($image, $height, $width);
+            Log::info($image);
+            Log::info($height);
+            Log::info($width);
             if ($height == "" || $height == null || $width == "" || $width == null) {
                 $dimensions = getimagesize($image->getAttribute('src'));
                 $width = $dimensions[0];
