@@ -66,7 +66,7 @@
                                         data-target="#fetchPostsModal">Fetch Post</button>
                                 </div>
                                 <div class="col-md-6 d-flex justify-content-end">
-                                    <div class="btn shuffle_toggle" style="display: none;">
+                                    <div class="btn shuffle_toggle py-0" style="display: none;">
                                         <div class="d-flex align-items-start">
                                             <span>
                                                 Shuffle
