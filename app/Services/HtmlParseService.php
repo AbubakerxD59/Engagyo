@@ -127,8 +127,8 @@ class HtmlParseService
                 $width = $dimensions[0];
                 $height = $dimensions[1];
             }
-            $heightArray = array("1128", "900", "1000", "1024");
-            $widthArray = array("564", "700", "1500", "512", "513");
+            $heightArray = array("1128", "900", "1000", "1024", "1349");
+            $widthArray = array("564", "700", "1500", "512", "513", "759");
             if (in_array(ceil($height), $heightArray) && in_array(ceil($width), $widthArray)) {
                 $pin_image = true;
             }
