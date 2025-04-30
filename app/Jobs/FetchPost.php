@@ -4,15 +4,17 @@ namespace App\Jobs;
 
 use App\Services\FeedService;
 use Illuminate\Bus\Queueable;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Queue\SerializesModels;
+use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
-use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 
 class FetchPost implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $tries = 1;
     protected $data;
 
     /**
@@ -30,5 +32,12 @@ class FetchPost implements ShouldQueue
     {
         $feedService = new FeedService();
         $feedService->fetch($this->data["urlDomain"], $this->data["domain"], $this->data["user"], $this->data["account_id"], $this->data["type"], $this->data["time"], $this->data["mode"]);
+    }
+
+    public function failed(\Throwable $exception)
+    {
+        // This method will be called if the job fails after all attempts (in this case, after the first attempt).
+        // You can log the failure, send a notification, or perform any other necessary actions here.
+        Log::error("FetchPost job failed: " . $exception->getMessage());
     }
 }
