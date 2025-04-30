@@ -366,4 +366,35 @@ class AutomationController extends Controller
         }
         return response()->json($response);
     }
+
+    public function deleteAll(Request $request)
+    {
+        $id = $request->account;
+        $type = $request->type;
+        $domain = $request->domain;
+        if (!empty($id)) {
+            $user = Auth::user();
+            if ($type == 'pinterest') {
+                $account = $this->board->userSearch($user->id)->where("id", $id)->first();
+            }
+            if ($account) {
+                $posts = $account->posts()->domainSearch($domain)->delete();
+                $response = array(
+                    "success" => true,
+                    "message" => "Posts deleted Successfully!!"
+                );
+            } else {
+                $response = array(
+                    "success" => false,
+                    "message" => "Something went Wrong!"
+                );
+            }
+        } else {
+            $response = array(
+                "success" => false,
+                "message" => "Something went Wrong!"
+            );
+        }
+        return response()->json($response);
+    }
 }

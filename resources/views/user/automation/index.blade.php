@@ -64,7 +64,12 @@
                                         Filters
                                     </button>
                                     <button id="postsFetch" class="btn btn-outline-success btn-sm" data-toggle="modal"
-                                        data-target="#fetchPostsModal">Fetch Post</button>
+                                        data-target="#fetchPostsModal">
+                                        Fetch Post
+                                    </button>
+                                    <button id="deleteAll" class="btn btn-outline-danger btn-sm" style="display: none;">
+                                        Delete All
+                                    </button>
                                 </div>
                                 <div class="col-md-6 d-flex justify-content-end">
                                     <div class="btn btn-success bg-transparent text-muted shuffle_toggle py-1 mx-1"
@@ -237,6 +242,7 @@
                 shuffle == 1 ? $('.shuffle').attr('checked', true) : $('.shuffle').attr('checked', false);
                 select.empty();
                 toggleShuffle(account_id);
+                toggleDelete(account_id);
                 if (account_id != '') {
                     fetchDomains(account_id, selected_type, select, 'id');
                 }
@@ -380,6 +386,13 @@
                     $(".shuffle_toggle").hide();
                 }
             }
+            var toggleDelete = function(id) {
+                if (id != '') {
+                    $("#deleteAll").show();
+                } else {
+                    $("#deleteAll").hide();
+                }
+            }
             // Shuffle toggle
             $(document).on('click', '.shuffle', function() {
                 var toggle = $(".shuffle");
@@ -404,6 +417,36 @@
                         }
                     }
                 });
+            })
+            $(document).on('click', '#deleteAll', function() {
+                if (confirm("Do you wish to Delete all Posts!")) {
+                    var selected_account = $("#account").find(":selected").val();
+                    var selected_type = $("#account").find(":selected").data("type");
+                    var domain = $("#domains").val();
+                    var token = $('meta[name="csrf-token"]').attr('content');
+                    if (domain.length == 0) {
+                        toastr.error("No domain selected!");
+                        return false;
+                    }
+                    $.ajax({
+                        url: "{{ route('panel.automation.posts.deleteAll') }}",
+                        method: "POST",
+                        data: {
+                            "account": selected_account,
+                            "type": selected_type,
+                            "domain": domain,
+                            "_token": token
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                toastr.success(response.message);
+                                postsDatatable.ajax.reload();
+                            } else {
+                                toastr.error(response.message);
+                            }
+                        }
+                    });
+                }
             })
         });
     </script>

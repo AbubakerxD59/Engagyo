@@ -65,6 +65,10 @@ class Post extends Model
         }
     }
 
+    public function scopeDomainSearch($query, $id){
+        $query->whereIn("domain_id", $id);
+    }
+
     public function scopePublished($query)
     {
         $query->where("status", "1");

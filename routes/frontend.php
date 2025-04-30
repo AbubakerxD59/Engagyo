@@ -67,6 +67,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
                 Route::post("post-update/{id?}", "postUpdate")->name("update");
                 Route::post("post-publish/{id?}", "postPublish")->name("publish");
                 Route::post("posts-shuffle", "postShuffle")->name("shuffle");
+                Route::post("posts-delete-all", "deleteAll")->name("deleteAll");
             });
         });
     });
