@@ -26,7 +26,8 @@
                                     <select name="account" id="account" class="form-control adv_filter">
                                         <option value="">All Accounts</option>
                                         @foreach ($user->getAccounts() as $key => $account)
-                                            <option value="{{ $account->id }}" data-type="{{ $account->type }}">
+                                            <option value="{{ $account->id }}" data-type="{{ $account->type }}"
+                                                data-shuffle="{{ $account->shuffle }}">
                                                 {{ strtoupper($account->name . ' - ' . $account->type) }}
                                             </option>
                                         @endforeach
@@ -232,7 +233,9 @@
             $('#account').on('change', function() {
                 var account_id = $(this).find(":selected").val();
                 var selected_type = $(this).find(":selected").data("type");
+                var shuffle = $(this).find(":selected").data('shuffle');
                 var select = $('#domains');
+                shuffle == 1 ? $('#toggle').attr('checked', true) : $('#toggle').attr('checked', false);
                 select.empty();
                 toggleShuffle(account_id);
                 if (account_id != '') {
@@ -372,7 +375,6 @@
             })
             // Toggle shuffle
             var toggleShuffle = function(id) {
-                console.log('1');
                 if (id != '') {
                     $(".shuffle_toggle").show();
                 } else {
