@@ -72,7 +72,7 @@
                                         <div class="d-flex align-items-start">
                                             <label for="toggle" class="pointer m-0">Shuffle</label>
                                             <div class="toggle-switch mx-1">
-                                                <input class="toggle-input" id="toggle" type="checkbox">
+                                                <input class="toggle-input shuffle" id="toggle" type="checkbox">
                                                 <label class="toggle-label" for="toggle"></label>
                                             </div>
                                         </div>
@@ -234,7 +234,7 @@
                 var selected_type = $(this).find(":selected").data("type");
                 var shuffle = $(this).find(":selected").data('shuffle');
                 var select = $('#domains');
-                shuffle == 1 ? $('#toggle').attr('checked', true) : $('#toggle').attr('checked', false);
+                shuffle == 1 ? $('.shuffle').attr('checked', true) : $('.shuffle').attr('checked', false);
                 select.empty();
                 toggleShuffle(account_id);
                 if (account_id != '') {
@@ -381,8 +381,8 @@
                 }
             }
             // Shuffle toggle
-            $(document).on('click', '#toggle', function() {
-                var toggle = $("#toggle");
+            $(document).on('click', '.shuffle', function() {
+                var toggle = $(".shuffle");
                 var shuffle = toggle.is(":checked") ? 1 : 0;
                 var selected_account = $("#account").find(":selected").val();
                 var selected_type = $("#account").find(":selected").data("type");
