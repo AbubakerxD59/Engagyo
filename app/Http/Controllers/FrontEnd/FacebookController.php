@@ -16,4 +16,9 @@ class FacebookController extends Controller
     {
         dd($request->all());
     }
+
+    public function deauthorizeCallback(Request $request)
+    {
+        dd($request->all());
+    }
 }
