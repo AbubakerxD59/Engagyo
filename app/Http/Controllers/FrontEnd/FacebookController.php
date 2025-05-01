@@ -7,7 +7,13 @@ use Illuminate\Http\Request;
 
 class FacebookController extends Controller
 {
-    public function deleteCallback(Request $request){
+    public function deleteCallback(Request $request)
+    {
+        dd($request->all());
+    }
+
+    public function facebookCallback(Request $request)
+    {
         dd($request->all());
     }
 }
