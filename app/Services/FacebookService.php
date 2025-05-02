@@ -40,8 +40,7 @@ class FacebookService
             $getOAuth2Client = $this->facebook->getOAuth2Client();
             $tokenMetadata = $getOAuth2Client->debugToken($access_token);
             $tokenMetadata->validateExpiration();
-            if (! $access_token->isLongLived()) {
-                // Exchanges a short-lived access token for a long-lived one
+            if (!$access_token->isLongLived()) {
                 try {
                     $access_token = $getOAuth2Client->getLongLivedAccessToken($access_token);
                 } catch (FacebookSDKException $e) {
@@ -61,6 +60,26 @@ class FacebookService
             ];
         } catch (FacebookSDKException $e) {
             // When validation fails or other local issues
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        }
+        return $response;
+    }
+
+    public function me($access_token)
+    {
+        try {
+            $response = $this->facebook->get('/me?fields=id,name', $access_token);
+        } catch (FacebookResponseException $e) {
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        } catch (FacebookSDKException $e) {
             $error = $e->getMessage();
             $response = [
                 "success" => false,
