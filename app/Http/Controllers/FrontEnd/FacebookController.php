@@ -25,6 +25,7 @@ class FacebookController extends Controller
             $access_token = $this->facebookService->getAccessToken();
             if ($access_token["success"]) {
                 $access_token = $access_token["data"];
+                $access_token = $access_token->getValue();
                 dd($access_token);
                 $me = $this->facebookService->me($access_token);
                 dd($me);
