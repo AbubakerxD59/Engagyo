@@ -3,10 +3,16 @@
 namespace App\Http\Controllers\FrontEnd;
 
 use App\Http\Controllers\Controller;
+use App\Services\FacebookService;
 use Illuminate\Http\Request;
 
 class FacebookController extends Controller
 {
+    private $facebookService;
+    public function __construct()
+    {
+        $this->facebookService = new FacebookService();
+    }
     public function deleteCallback(Request $request)
     {
         dd($request->all());
@@ -14,7 +20,19 @@ class FacebookController extends Controller
 
     public function facebookCallback(Request $request)
     {
-        dd($request->all());
+        $code = $request->code;
+        if (!empty($code)) {
+            $access_token = $this->facebookService->getAccessToken();
+            if ($access_token["success"]) {
+                $access_token = $access_token["data"];
+                $accessToken = $access_token->getValue();
+                dd($accessToken, $access_token);
+            } else {
+                return redirect()->route("panel.accounts")->with("error", $access_token["message"]);
+            }
+        } else {
+            return redirect()->route("panel.accounts")->with("error", "Invalid Code!");
+        }
     }
 
     public function deauthorizeCallback(Request $request)

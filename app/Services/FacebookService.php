@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use Facebook\Facebook;
+use Facebook\Exceptions\FacebookSDKException;
+use Facebook\Exceptions\FacebookResponseException;
 
 class FacebookService
 {
@@ -24,5 +26,31 @@ class FacebookService
     {
         $url = $this->helper->getLoginUrl(route("facebook.callback"), $this->scopes);
         return $url;
+    }
+
+    public function getAccessToken()
+    {
+        try {
+            $access_token = $this->helper->getAccessToken();
+            $response = [
+                "success" => true,
+                "data" => $access_token,
+            ];
+        } catch (FacebookResponseException $e) {
+            // When Graph returns an error
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        } catch (FacebookSDKException $e) {
+            // When validation fails or other local issues
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        }
+        return $response;
     }
 }
