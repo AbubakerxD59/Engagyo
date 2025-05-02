@@ -35,9 +35,19 @@ class FacebookService
         if (request('state')) {
             $this->helper->getPersistentDataHandler()->set('state', request('state'));
         }
-        $access_token = $this->helper->getAccessToken();
-        dd($access_token);
         try {
+            $access_token = $this->helper->getAccessToken();
+            $getOAuth2Client = $this->facebook->getOAuth2Client();
+            $tokenMetadata = $getOAuth2Client->debugToken($access_token);
+            $tokenMetadata->validateExpiration();
+            if (! $access_token->isLongLived()) {
+                // Exchanges a short-lived access token for a long-lived one
+                try {
+                    $access_token = $getOAuth2Client->getLongLivedAccessToken($access_token);
+                } catch (FacebookSDKException $e) {
+                    $e->getMessage();
+                }
+            }
             $response = [
                 "success" => true,
                 "data" => $access_token,

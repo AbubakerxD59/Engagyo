@@ -24,9 +24,7 @@ class FacebookController extends Controller
         if (!empty($code)) {
             $access_token = $this->facebookService->getAccessToken();
             if ($access_token["success"]) {
-                $access_token = $access_token["data"];
-                $accessToken = $access_token->getValue();
-                dd($accessToken, $access_token);
+                dd($access_token);
             } else {
                 return redirect()->route("panel.accounts")->with("error", $access_token["message"]);
             }
