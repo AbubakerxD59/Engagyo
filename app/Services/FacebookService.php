@@ -73,7 +73,7 @@ class FacebookService
     public function me($access_token)
     {
         try {
-            $me = $this->facebook->get('/me?fields=id,name', $access_token);
+            $me = $this->facebook->get('/me?fields=id,name,email,picture', $access_token);
             $user = $me->getGraphUser();
             $response = [
                 "success" => true,
