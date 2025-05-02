@@ -15,6 +15,7 @@ class Facebook extends Model
         "fb_id",
         "username",
         "profile_image",
+        "access_token",
     ];
 
     public function user()

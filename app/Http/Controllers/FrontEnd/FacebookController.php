@@ -36,10 +36,11 @@ class FacebookController extends Controller
                 $data = [
                     "fb_id" => $profile["id"],
                     "username" => $profile["name"],
-                    "profile_image" => saveImageFromUrl($image) ? saveImageFromUrl($image) : '',
+                    "profile_image" => saveImageFromUrl($image["image"]) ? saveImageFromUrl($image["image"]) : '',
                     "access_token" => $access_token,
                 ];
                 $user->facebook()->updateOrCreate(["fb_id" => $profile["id"]], $data);
+                dd($data);
             } else {
                 return redirect()->route("panel.accounts")->with("error", $getAccessToken["message"]);
             }
