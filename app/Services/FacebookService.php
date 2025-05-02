@@ -30,8 +30,8 @@ class FacebookService
 
     public function getAccessToken()
     {
-        $access_token = $this->helper->getAccessToken();
         try {
+            $access_token = $this->helper->getAccessToken();
             $response = [
                 "success" => true,
                 "data" => $access_token,
