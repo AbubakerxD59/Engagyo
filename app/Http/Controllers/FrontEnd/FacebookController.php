@@ -32,11 +32,11 @@ class FacebookController extends Controller
                 $access_token = $getAccessToken["data"];
                 $me = $this->facebookService->me($access_token);
                 $profile = $me["data"];
-                dd($profile->getPicture());
+                $image = $profile->getPicture();
                 $data = [
                     "fb_id" => $profile["id"],
                     "username" => $profile["name"],
-                    "profile_image" => $profile["name"],
+                    "profile_image" => saveImageFromUrl($image) ? saveImageFromUrl($image) : '',
                     "access_token" => $access_token,
                 ];
                 $user->facebook()->updateOrCreate(["fb_id" => $profile["id"]], $data);
