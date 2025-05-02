@@ -30,7 +30,6 @@ class FacebookService
 
     public function getAccessToken()
     {
-        dd(session()->all());
         $access_token = $this->helper->getAccessToken();
         try {
             $response = [
