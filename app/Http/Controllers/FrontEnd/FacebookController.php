@@ -36,7 +36,7 @@ class FacebookController extends Controller
                 $data = [
                     "fb_id" => $profile["id"],
                     "username" => $profile["name"],
-                    "profile_image" => saveImageFromUrl($image["image"]) ? saveImageFromUrl($image["image"]) : '',
+                    "profile_image" => saveImageFromUrl($image["url"]) ? saveImageFromUrl($image["url"]) : '',
                     "access_token" => $access_token,
                 ];
                 $user->facebook()->updateOrCreate(["fb_id" => $profile["id"]], $data);
