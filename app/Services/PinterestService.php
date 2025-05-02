@@ -11,12 +11,12 @@ class PinterestService
     private $client;
     private $auth;
     private $header;
-    private $post;
+    private $scopes;
     private $baseUrl = "https://api.pinterest.com/v5/";
     private $sandbox_baseUrl = "https://api-sandbox.pinterest.com/v5/";
     public function __construct()
     {
-        $this->post = new Post();
+        $this->scopes = ['user_accounts:read', 'boards:read', 'pins:read', 'boards:write', 'pins:write'];
         $pinterest_id = env("PINTEREST_KEY");
         $pinterest_secret = env("PINTEREST_SECRET");
         $this->pinterest = new Pinterest($pinterest_id, $pinterest_secret);
@@ -27,7 +27,7 @@ class PinterestService
 
     public function getLoginUrl()
     {
-        $url = $this->pinterest->auth->getLoginUrl(route("pinterest.callback"), array('user_accounts:read', 'boards:read', 'pins:read', 'boards:write', 'pins:write'));
+        $url = $this->pinterest->auth->getLoginUrl(route("pinterest.callback"), $this->scopes);
         return $url;
     }
 

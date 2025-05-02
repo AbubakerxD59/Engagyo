@@ -10,7 +10,7 @@ Route::name("pinterest.")->controller(PinterestController::class)->group(functio
 });
 
 Route::name("facebook.")->controller(FacebookController::class)->group(function(){
-    Route::get("facebook-delete-callback", "deleteCallback")->name("deleteCallback");
     Route::get("facebook-callback", "facebookCallback")->name("callback");
+    Route::get("facebook-delete-callback", "deleteCallback")->name("deleteCallback");
     Route::post("deauthorize-callback", "deauthorizeCallback")->name("deauthorize");
 });

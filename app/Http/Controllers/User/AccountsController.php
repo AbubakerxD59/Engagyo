@@ -6,6 +6,7 @@ use App\Models\Domain;
 use App\Models\Post;
 use App\Models\Board;
 use App\Models\Pinterest;
+use App\Services\FacebookService;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -13,6 +14,7 @@ use Illuminate\Support\Facades\Auth;
 class AccountsController extends Controller
 {
     private $pinterestService;
+    private $facebookService;
     private $pinterest;
     private $board;
     private $post;
@@ -20,6 +22,7 @@ class AccountsController extends Controller
     public function __construct(Pinterest $pinterest, Board $board, Post $post, Domain $domain)
     {
         $this->pinterestService = new PinterestService();
+        $this->facebookService = new FacebookService();
         $this->pinterest = $pinterest;
         $this->board = $board;
         $this->post = $post;
@@ -28,8 +31,9 @@ class AccountsController extends Controller
     public function index()
     {
         $user = Auth::user();
+        $facebookUrl = $this->facebookService->getLoginUrl();
         $pinterestUrl = $this->pinterestService->getLoginUrl();
-        return view("user.accounts.index", compact("user", "pinterestUrl"));
+        return view("user.accounts.index", compact("user", "facebookUrl", "pinterestUrl"));
     }
 
     public function pinterestDelete($id = null)

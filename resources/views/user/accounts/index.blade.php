@@ -12,7 +12,7 @@
                             <img src="{{ social_logo('facebook') }}">
                             <span>Facebook</span>
                         </div>
-                        <button class="btn btn-outline-primary btn-sm mx-2">+ Connect</button>
+                        <a href="{{ $facebookUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
                                 <i class="fas fa-minus"></i>
