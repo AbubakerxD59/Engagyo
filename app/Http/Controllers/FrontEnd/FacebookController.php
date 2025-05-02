@@ -22,14 +22,14 @@ class FacebookController extends Controller
     {
         $code = $request->code;
         if (!empty($code)) {
-            $access_token = $this->facebookService->getAccessToken();
-            if ($access_token["success"]) {
-                $access_token = $access_token["data"];
-                $access_token = $access_token->getValue();
+            $getAccessToken = $this->facebookService->getAccessToken();
+            if ($getAccessToken["success"]) {
+                $access_token = $getAccessToken["data"];
                 $me = $this->facebookService->me($access_token);
-                dd($me);
+                $user = $me["data"];
+                dd($user);
             } else {
-                return redirect()->route("panel.accounts")->with("error", $access_token["message"]);
+                return redirect()->route("panel.accounts")->with("error", $getAccessToken["message"]);
             }
         } else {
             return redirect()->route("panel.accounts")->with("error", "Invalid Code!");

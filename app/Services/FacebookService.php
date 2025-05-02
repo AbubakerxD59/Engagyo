@@ -43,6 +43,7 @@ class FacebookService
             if (!$access_token->isLongLived()) {
                 try {
                     $access_token = $getOAuth2Client->getLongLivedAccessToken($access_token);
+                    $access_token = $access_token->getValue();
                 } catch (FacebookSDKException $e) {
                     $e->getMessage();
                 }
@@ -72,7 +73,12 @@ class FacebookService
     public function me($access_token)
     {
         try {
-            $response = $this->facebook->get('/me?fields=id,name', $access_token);
+            $me = $this->facebook->get('/me?fields=id,name', $access_token);
+            $user = $me->getGraphUser();
+            $response = [
+                "success" => true,
+                "data" => $user
+            ];
         } catch (FacebookResponseException $e) {
             $error = $e->getMessage();
             $response = [
