@@ -21,7 +21,7 @@ class FacebookController extends Controller
     public function facebookCallback(Request $request)
     {
         $code = $request->code;
-        if (!empty($code) && !empty($state)) {
+        if (!empty($code)) {
             $access_token = $this->facebookService->getAccessToken();
             if ($access_token["success"]) {
                 $access_token = $access_token["data"];
