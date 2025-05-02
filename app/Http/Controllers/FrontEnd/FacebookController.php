@@ -2,16 +2,20 @@
 
 namespace App\Http\Controllers\FrontEnd;
 
-use App\Http\Controllers\Controller;
-use App\Services\FacebookService;
+use App\Models\Facebook;
 use Illuminate\Http\Request;
+use App\Services\FacebookService;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 
 class FacebookController extends Controller
 {
+    private $facebook;
     private $facebookService;
-    public function __construct()
+    public function __construct(Facebook $facebook)
     {
         $this->facebookService = new FacebookService();
+        $this->facebook = $facebook;
     }
     public function deleteCallback(Request $request)
     {
@@ -22,12 +26,20 @@ class FacebookController extends Controller
     {
         $code = $request->code;
         if (!empty($code)) {
+            $user = Auth::user();
             $getAccessToken = $this->facebookService->getAccessToken();
             if ($getAccessToken["success"]) {
                 $access_token = $getAccessToken["data"];
                 $me = $this->facebookService->me($access_token);
-                $user = $me["data"];
-                dd($user);
+                $profile = $me["data"];
+                dd($profile->getPicture());
+                $data = [
+                    "fb_id" => $profile["id"],
+                    "username" => $profile["name"],
+                    "profile_image" => $profile["name"],
+                    "access_token" => $access_token,
+                ];
+                $user->facebook()->updateOrCreate(["fb_id" => $profile["id"]], $data);
             } else {
                 return redirect()->route("panel.accounts")->with("error", $getAccessToken["message"]);
             }

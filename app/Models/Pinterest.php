@@ -94,7 +94,6 @@ class Pinterest extends Model
     {
         $now = strtotime(date("Y-m-d H:i:s"));
         $expires_in = $this->expires_in;
-        return true;
-        // return $now > $expires_in ? true : false;
+        return $now > $expires_in ? true : false;
     }
 }

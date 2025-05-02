@@ -66,6 +66,11 @@ class User extends Authenticatable
         return $this->hasMany(Pinterest::class, 'user_id', 'id');
     }
 
+    public function facebook()
+    {
+        return $this->hasMany(Facebook::class, 'user_id', 'id');
+    }
+
     public function domains()
     {
         return $this->hasMany(Domain::class, 'user_id', 'id');

@@ -13,6 +13,11 @@ return new class extends Migration
     {
         Schema::create('facebooks', function (Blueprint $table) {
             $table->id();
+            $table->intger("user_id");
+            $table->longText("fb_id");
+            $table->string("username");
+            $table->string("profile_image")->nullable();
+            $table->string('access_token');
             $table->timestamps();
         });
     }
