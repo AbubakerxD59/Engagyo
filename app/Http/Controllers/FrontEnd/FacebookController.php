@@ -41,7 +41,7 @@ class FacebookController extends Controller
                 ];
                 $user->facebook()->updateOrCreate(["fb_id" => $profile["id"]], $data);
                 $pages = $this->facebookService->pages($access_token);
-                foreach ($pages as $page) {
+                foreach ($pages["data"] as $page) {
                     dd($page->getField("id"));
                     $data = array(
                         "fb_id" => $profile["id"],
