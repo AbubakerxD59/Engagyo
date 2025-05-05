@@ -153,7 +153,7 @@
                 var board_data = button.data('board-data');
                 var token = $('meta[name="csrf-token"]').attr('content');
                 $.ajax({
-                    url: "{{ route('accounts.addBoard') }}",
+                    url: "{{ route('panel.accounts.addBoard') }}",
                     type: 'POST',
                     data: {
                         "id": id,
@@ -188,7 +188,7 @@
                 var page_data = button.data('page-data');
                 var token = $('meta[name="csrf-token"]').attr('content');
                 $.ajax({
-                    url: "{{ route('accounts.addPage') }}",
+                    url: "{{ route('panel.accounts.addPage') }}",
                     type: 'POST',
                     data: {
                         "id": id,
