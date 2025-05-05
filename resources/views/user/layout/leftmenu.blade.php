@@ -33,7 +33,7 @@
                 </li>
                 {{-- Accounts --}}
                 <?php
-                $account = ['panel.accounts', 'panel.accounts.pinterest'];
+                $account = ['panel.accounts', 'panel.accounts.pinterest', 'panel.accounts.facebook'];
                 ?>
                 <li class="nav-item">
                     <a href="{{ route('panel.accounts') }}"
