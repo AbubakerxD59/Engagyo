@@ -132,7 +132,8 @@
             font-weight: 600
         }
 
-        .pinterest_connect {
+        .pinterest_connect,
+        .facebook_connect {
             color: #008100 !important;
         }
     </style>

@@ -6,7 +6,7 @@
                 <h5 class="modal-title" id="exampleModalLongTitle">
                     <img src="{{ social_logo(session_get('account')) }}" alt="{{ no_image() }}" class="rounded-pill"
                         height="25px" width="25px">
-                    <span class="acc_title">{{ session_get('account') }}</span>
+                    <span class="acc_title">{{ $facebook->username }}</span>
                 </h5>
                 <button type="button" class="close" data-dismiss="modal" aria-label="Close">
                     <span aria-hidden="true">&times;</span>
