@@ -75,7 +75,7 @@ class FacebookService
         try {
             $me = $this->facebook->get('/me?fields=id,name,email,picture', $access_token);
             $user = $me->getGraphUser();
-            
+
             $response = [
                 "success" => true,
                 "data" => $user
@@ -96,12 +96,12 @@ class FacebookService
         return $response;
     }
 
-    public function pages($access_token){
-        $this->helper = $this->facebook->getPageTabHelper();
-        $accessToken = $this->helper->getAccessToken();
-        $pageId = $this->helper->getPageId();
-        $pageData = $this->helper->getPageData($pageId);
-        dd($accessToken, $pageId, $pageData);
+    public function pages($access_token)
+    {
+        $accounts = $this->facebook->get('/me/accounts', $access_token);
+        $getGraphPage = $accounts->getGraphPage();
+        dd($accounts, $getGraphPage);
+
         try {
             $response = [
                 "success" => true,
