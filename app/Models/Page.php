@@ -44,7 +44,7 @@ class Page extends Model
 
     public function scopeSearch($query, $search)
     {
-        $query->where('pin_id', $search)->orWhere('board_id', $search)->orWhere('name', $search);
+        $query->where('fb_id', $search)->orWhere('page_id', $search)->orWhere('name', $search);
     }
 
     public function scopeUserSearch($query, $id)
