@@ -9,6 +9,7 @@
                 <div class="card">
                     <div class="card-header with-border clearfix">
                         <div class="card-title">
+                            <input type="hidden" id="facebookAcc" value="{{ session_check('facebook_auth') ? 1 : 0 }}">
                             <img src="{{ social_logo('facebook') }}">
                             <span>Facebook</span>
                         </div>
@@ -99,6 +100,9 @@
         @include('user.accounts.modals.pinterest_boards_modal', [
             'pinterest' => $user->pinterest()->latest()->first(),
         ])
+        @include('user.accounts.modals.facebook_pages_modal', [
+            'facebook' => $user->facebook()->latest()->first(),
+        ])
     @endif
 @endsection
 @push('styles')
@@ -136,6 +140,7 @@
 @push('scripts')
     <script>
         $(document).ready(function() {
+            // Pinterest Modal
             var pinAcc = $('#pinterestAcc').val();
             if (pinAcc == 1) {
                 $('#connectPinterestModal').modal('toggle');
@@ -166,10 +171,16 @@
                     },
                 });
             });
-            $("#connectPinterestModal").on("hide.bs.modal", function() {
+            $("#connectFacebookModal").on("hide.bs.modal", function() {
                 {{ session_delete('account') }}
                 {{ session_delete('items') }}
             });
+            // Facebook Modal
+            var facAcc = $('#facebookAcc').val();
+            if (facAcc == 1) {
+                $('#connectFacebookModal').modal('toggle');
+                {{ session_delete('facebook_auth') }}
+            }
         });
     </script>
 @endpush

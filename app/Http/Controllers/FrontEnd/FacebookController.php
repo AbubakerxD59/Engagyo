@@ -51,11 +51,10 @@ class FacebookController extends Controller
                     $key = 0;
                     foreach ($items as $page) {
                         $connected = $this->page->connected(['user_id' => $user->id, 'fb_id' => $me["id"], 'page_id' => $page->getField("id")])->first() ? true : false;
-                        $pages["items"][$key] = $page;
+                        $pages["items"][$key] = ["id" => $page->getValue("id"), "name" => $page->getValue("name"), "access_token" => $page->getValue("access_token")];
                         $pages["items"][$key]["connected"] = $connected;
                         $key++;
                     }
-                    dd($pages);
                     session_set('facebook_auth', '1');
                     session_set('account', 'Facebook');
                     session_set('items', $pages["items"]);
