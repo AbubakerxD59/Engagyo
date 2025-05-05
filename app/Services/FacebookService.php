@@ -100,9 +100,9 @@ class FacebookService
     {
         $accounts = $this->facebook->get('/me/accounts', $access_token);
         $getGraphEdge = $accounts->getGraphEdge();
-        $items = $accounts->getGraphUser();
-        dd($getGraphEdge, is_array($getGraphEdge), is_object($getGraphEdge), $items);
-
+        foreach ($getGraphEdge as $page) {
+            dd($page);
+        }
         try {
             $response = [
                 "success" => true,
