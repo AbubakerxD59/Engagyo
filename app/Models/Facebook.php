@@ -23,6 +23,15 @@ class Facebook extends Model
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
+    public function pages()
+    {
+        return $this->hasMany(Page::class, 'fb_id', 'fb_id');
+    }
+
+    public function scopeSearch($query, $search){
+        $query->where('fb_id', $search)->orWhere("username", "%{$search}%");
+    }
+
     protected function profileImage(): Attribute
     {
         return Attribute::make(

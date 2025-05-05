@@ -54,6 +54,11 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
             Route::delete('pinterest-delete/{id?}', 'pinterestDelete')->name('pinterest.delete');
             Route::delete('board-delete/{id?}', 'boardDelete')->name("board.delete");
         });
+        Route::name("accounts.")->group(function () {
+            Route::get("facebook/{id?}", "facebook")->name("facebook");
+            Route::delete('facebook-delete/{id?}', 'facebookDelete')->name('facebook.delete');
+            Route::delete('page-delete/{id?}', 'pageDelete')->name("page.delete");
+        });
     });
     // Automation Routes
     Route::controller(AutomationController::class)->group(function () {

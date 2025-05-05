@@ -41,6 +41,15 @@ class FacebookController extends Controller
                 ];
                 $user->facebook()->updateOrCreate(["fb_id" => $profile["id"]], $data);
                 $pages = $this->facebookService->pages($access_token);
+                foreach ($pages as $page) {
+                    $data = array(
+                        "fb_id" => $profile["id"],
+                        "page_id" => $page["id"],
+                        "name" => $page["name"],
+                        "status" => 1
+                    );
+                    dd($data);
+                }
             } else {
                 return redirect()->route("panel.accounts")->with("error", $getAccessToken["message"]);
             }

@@ -98,15 +98,12 @@ class FacebookService
 
     public function pages($access_token)
     {
-        $accounts = $this->facebook->get('/me/accounts', $access_token);
-        $getGraphEdge = $accounts->getGraphEdge();
-        foreach ($getGraphEdge as $page) {
-            dd($page);
-        }
         try {
+            $accounts = $this->facebook->get('/me/accounts', $access_token);
+            $getGraphEdge = $accounts->getGraphEdge();
             $response = [
                 "success" => true,
-                "data" => $user
+                "data" => $getGraphEdge
             ];
         } catch (FacebookResponseException $e) {
             $error = $e->getMessage();

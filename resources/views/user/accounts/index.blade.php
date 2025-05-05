@@ -20,7 +20,32 @@
                         </div>
                     </div>
                     <div class="card-body">
-
+                        <div class="d-flex">
+                            @foreach ($user->load('facebook')->facebook as $fb)
+                                <article class="account_box col-md-3 mx-1">
+                                    <a href="{{ route('panel.accounts.pinterest', $fb->fb_id) }}">
+                                        <div class="d-flex align-items-center">
+                                            <picture>
+                                                <img src="{{ $fb->profile_image }}" alt="{{ no_image() }}"
+                                                    class="rounded-pill logo">
+                                            </picture>
+                                            <div class="account_name">{{ $fb->username }}</div>
+                                        </div>
+                                    </a>
+                                    <div>
+                                        <button class="btn btn-outline-danger btn-sm delete-btn border-0"
+                                            onclick="confirmDelete(event)">
+                                            <i class="fa fa-trash px-2"></i>
+                                        </button>
+                                        <form action="{{ route('panel.accounts.pinterest.delete', $fb->fb_id) }}"
+                                            method="POST" class="delete_form">
+                                            @csrf
+                                            @method('DELETE')
+                                        </form>
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
                     </div>
                 </div>
                 {{-- Pinterest --}}
