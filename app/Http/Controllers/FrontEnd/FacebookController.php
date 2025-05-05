@@ -52,13 +52,19 @@ class FacebookController extends Controller
                     foreach ($items as $page) {
                         $connected = $this->page->connected(['user_id' => $user->id, 'fb_id' => $me["id"], 'page_id' => $page->getField("id")])->first() ? true : false;
                         $profile_image = $this->facebookService->pageProfileImage($access_token, $page->getField("id"));
-                        dd($profile_image);
+                        if ($profile_image["success"]) {
+                            $profile_image = $profile_image["data"];
+                            $profile_image = $profile_image->getField("url");
+                        } else {
+                            $profile_image = '';
+                        }
+
                         $pages["items"][$key] = [
                             "id" => $page->getField("id"),
                             "name" => $page->getField("name"),
                             "access_token" => $page->getField("access_token"),
                             "connected" => $connected,
-                            "profile_image" => $profile_image
+                            "profile_image" => saveImageFromUrl($profile_image) ? saveImageFromUrl($profile_image) : '',
                         ];
                         $key++;
                     }
