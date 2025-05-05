@@ -32,4 +32,9 @@ class Page extends Model
     public function domains(){
         return $this->hasMany(Domain::class, 'account_id', 'fb_id');
     }
+
+    public function scopeConnected($query, $search)
+    {
+        $query->where('user_id', $search['user_id'])->where('fb_id', $search['fb_id'])->where('page_id', $search['page_id']);
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\FrontEnd;
 
 use App\Models\Facebook;
+use App\Models\Page;
 use Illuminate\Http\Request;
 use App\Services\FacebookService;
 use App\Http\Controllers\Controller;
@@ -10,12 +11,14 @@ use Illuminate\Support\Facades\Auth;
 
 class FacebookController extends Controller
 {
-    private $facebook;
     private $facebookService;
-    public function __construct(Facebook $facebook)
+    private $facebook;
+    private $page;
+    public function __construct(Facebook $facebook, Page $page)
     {
         $this->facebookService = new FacebookService();
         $this->facebook = $facebook;
+        $this->page = $page;
     }
     public function deleteCallback(Request $request)
     {
@@ -31,25 +34,33 @@ class FacebookController extends Controller
             if ($getAccessToken["success"]) {
                 $access_token = $getAccessToken["data"];
                 $me = $this->facebookService->me($access_token);
-                $profile = $me["data"];
-                $image = $profile->getPicture();
+                $me = $me["data"];
+                $image = $me->getPicture();
                 $data = [
-                    "fb_id" => $profile["id"],
-                    "username" => $profile["name"],
+                    "fb_id" => $me["id"],
+                    "username" => $me["name"],
                     "profile_image" => saveImageFromUrl($image["url"]) ? saveImageFromUrl($image["url"]) : '',
                     "access_token" => $access_token,
                 ];
-                $user->facebook()->updateOrCreate(["fb_id" => $profile["id"]], $data);
+                $user->facebook()->updateOrCreate(["fb_id" => $me["id"]], $data);
+
                 $pages = $this->facebookService->pages($access_token);
-                foreach ($pages["data"] as $page) {
-                    dd($page->getField("id"));
-                    $data = array(
-                        "fb_id" => $profile["id"],
-                        "page_id" => $page["id"],
-                        "name" => $page["name"],
-                        "status" => 1
-                    );
-                    dd($data);
+                if ($pages["success"]) {
+                    $items = $pages["data"];
+                    $pages = [];
+                    $key = 0;
+                    foreach ($items as $page) {
+                        $connected = $this->page->connected(['user_id' => $user->id, 'fb_id' => $me["id"], 'page_id' => $page->getField("id")])->first() ? true : false;
+                        $pages["items"][$key] = $page;
+                        $pages["items"][$key]["connected"] = $connected;
+                        $key++;
+                    }
+                    dd($pages);
+                    session_set('facebook_auth', '1');
+                    session_set('account', 'Facebook');
+                    session_set('items', $pages["items"]);
+                } else {
+                    return redirect()->route("panel.accounts")->with("error", $pages["message"]);
                 }
             } else {
                 return redirect()->route("panel.accounts")->with("error", $getAccessToken["message"]);
