@@ -109,7 +109,7 @@ class AccountsController extends Controller
                 // domains
                 $this->domain->whereIn("account_id", $fb_ids)->where("user_id", $user->id)->delete();
                 // boards
-                $facebook->posts()->where("user_id", $user->id)->delete();
+                $facebook->pages()->where("user_id", $user->id)->delete();
                 // pinterest account
                 $facebook->delete();
                 return back()->with("success", "Facebook Account deleted Successfully!");

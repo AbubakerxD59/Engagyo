@@ -18,11 +18,6 @@ class Facebook extends Model
         "access_token",
     ];
 
-    public function user()
-    {
-        return $this->belongsTo(User::class, 'user_id', 'id');
-    }
-
     public function pages()
     {
         return $this->hasMany(Page::class, 'fb_id', 'fb_id');
