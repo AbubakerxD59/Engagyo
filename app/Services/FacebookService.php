@@ -100,7 +100,7 @@ class FacebookService
     {
         try {
             $accounts = $this->facebook->get('/me/accounts', $access_token);
-            $getGraphEdge = $accounts->getGraphEvent();
+            $getGraphEdge = $accounts->getGraphEdge();
             $response = [
                 "success" => true,
                 "data" => $getGraphEdge
