@@ -23,7 +23,7 @@
                         <div class="d-flex">
                             @foreach ($user->load('facebook')->facebook as $fb)
                                 <article class="account_box col-md-3 mx-1">
-                                    <a href="{{ route('panel.accounts.pinterest', $fb->fb_id) }}">
+                                    <a href="{{ route('panel.accounts.facebook', $fb->fb_id) }}">
                                         <div class="d-flex align-items-center">
                                             <picture>
                                                 <img src="{{ $fb->profile_image }}" alt="{{ no_image() }}"
@@ -37,7 +37,7 @@
                                             onclick="confirmDelete(event)">
                                             <i class="fa fa-trash px-2"></i>
                                         </button>
-                                        <form action="{{ route('panel.accounts.pinterest.delete', $fb->fb_id) }}"
+                                        <form action="{{ route('panel.accounts.facebook.delete', $fb->fb_id) }}"
                                             method="POST" class="delete_form">
                                             @csrf
                                             @method('DELETE')
