@@ -58,15 +58,29 @@ class FacebookController extends Controller
                     session_set('facebook_auth', '1');
                     session_set('account', 'Facebook');
                     session_set('items', $pages["items"]);
+                    $response = [
+                        "success" => "success",
+                        "message" => "Facebook Authorization completed!"
+                    ];
                 } else {
-                    return redirect()->route("panel.accounts")->with("error", $pages["message"]);
+                    $response = [
+                        "success" => "error",
+                        "message" => $pages["message"]
+                    ];
                 }
             } else {
-                return redirect()->route("panel.accounts")->with("error", $getAccessToken["message"]);
+                $response = [
+                    "success" => "error",
+                    "message" => $getAccessToken["message"]
+                ];
             }
         } else {
-            return redirect()->route("panel.accounts")->with("error", "Invalid Code!");
+            $response = [
+                "success" => "error",
+                "message" => "Invalid Code!"
+            ];
         }
+        return redirect(route("panel.accounts"))->with($response["success"], $response["message"]);
     }
 
     public function deauthorizeCallback(Request $request)
