@@ -21,7 +21,7 @@ class FacebookService
             'persistent_data_handler' => new LaravelSessionPersistentDataHandler()
         ]);
         $this->helper = $this->facebook->getRedirectLoginHelper();
-        $this->scopes = ['email', 'public_profile', 'pages_manage_metadata', 'pages_manage_posts', 'pages_read_engagement', 'pages_show_list', 'business_management', 'pages_manage_engagement', 'pages_read_user_content', 'read_insights', 'pages_manage_ads'];
+        $this->scopes = ['business_management', 'email', 'public_profile', 'pages_manage_metadata', 'pages_manage_posts', 'pages_read_engagement', 'pages_show_list', 'pages_manage_engagement', 'pages_read_user_content', 'read_insights', 'pages_manage_ads'];
     }
 
     public function getLoginUrl()
@@ -100,7 +100,8 @@ class FacebookService
     {
         $accounts = $this->facebook->get('/me/accounts', $access_token);
         $getGraphEdge = $accounts->getGraphEdge();
-        dd($accounts, $getGraphEdge);
+        $items = $getGraphEdge->items;
+        dd($items);
 
         try {
             $response = [
