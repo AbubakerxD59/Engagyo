@@ -51,7 +51,7 @@ class FacebookController extends Controller
                     $key = 0;
                     foreach ($items as $page) {
                         $connected = $this->page->connected(['user_id' => $user->id, 'fb_id' => $me["id"], 'page_id' => $page->getField("id")])->first() ? true : false;
-                        $pages["items"][$key] = ["id" => $page->getValue("id"), "name" => $page->getValue("name"), "access_token" => $page->getValue("access_token")];
+                        $pages["items"][$key] = ["id" => $page->getField("id"), "name" => $page->getField("name"), "access_token" => $page->getField("access_token")];
                         $pages["items"][$key]["connected"] = $connected;
                         $key++;
                     }
