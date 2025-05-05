@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers\User;
 
-use App\Models\Domain;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\Board;
+use App\Models\Domain;
+use App\Models\Facebook;
 use App\Models\Pinterest;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
-use App\Models\Facebook;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Http\Request;
 
 class AccountsController extends Controller
 {
@@ -81,6 +82,25 @@ class AccountsController extends Controller
         }
     }
 
+    public function addBoard(Request $request)
+    {
+        $board = $request->board_data;
+        if ($board) {
+            $user = Auth::user();
+            $pinterest = $this->pinterest->search($request->pin_id)->where('user_id', $user->id)->first();
+            $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "pin_id" => $pinterest->pin_id, "board_id" => $board["id"]], [
+                "user_id" => $user->id,
+                "pin_id" => $pinterest->pin_id,
+                "board_id" => $board["id"],
+                "name" => $board["name"],
+                "status" => 1
+            ]);
+            return response()->json(["success" => true, "message" => "Board connected Successfully!"]);
+        } else {
+            return response()->json(["success" => false, "message" => "Something went Wrong!"]);
+        }
+    }
+
     public function boardDelete($id = null)
     {
         if (!empty($id)) {
@@ -133,6 +153,25 @@ class AccountsController extends Controller
             }
         } else {
             return back()->with('error', 'Something went Wrong!');
+        }
+    }
+
+    public function addPage(Request $request)
+    {
+        $page = $request->page_data;
+        if ($page) {
+            $user = Auth::user();
+            $facebook = $this->facebook->search($request->fb_id)->user($user->id)->first();
+            $facebook->pages()->updateOrCreate(["user_id" => $user->id, "fb_id" => $facebook->fb_id, "page_id" => $page["id"]], [
+                "user_id" => $user->id,
+                "fb_id" => $facebook->fb_id,
+                "page_id" => $page["id"],
+                "name" => $page["name"],
+                "status" => 1
+            ]);
+            return response()->json(["success" => true, "message" => "Page connected Successfully!"]);
+        } else {
+            return response()->json(["success" => false, "message" => "Something went Wrong!"]);
         }
     }
 

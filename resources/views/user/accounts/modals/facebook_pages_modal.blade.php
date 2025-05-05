@@ -24,11 +24,11 @@
                         <div>
                             @if (@$item['connected'])
                                 <span data-id="{{ $key }}"
-                                    data-pin-id="{{ @$facebook->fb_id }}">Connected</span>
+                                    data-fb-id="{{ @$facebook->fb_id }}">Connected</span>
                             @else
                                 <span class="facebook_connect pointer" data-id="{{ $key }}"
-                                    data-pin-id="{{ @$facebook->fb_id }}"
-                                    data-board-data="{{ json_encode($item) }}">Connect</span>
+                                    data-fb-id="{{ @$facebook->fb_id }}"
+                                    data-page-data="{{ json_encode($item) }}">Connect</span>
                             @endif
                         </div>
                     </div>

@@ -153,7 +153,7 @@
                 var board_data = button.data('board-data');
                 var token = $('meta[name="csrf-token"]').attr('content');
                 $.ajax({
-                    url: "{{ route('pinterest.addBoard') }}",
+                    url: "{{ route('accounts.addBoard') }}",
                     type: 'POST',
                     data: {
                         "id": id,
@@ -171,7 +171,7 @@
                     },
                 });
             });
-            $("#connectFacebookModal").on("hide.bs.modal", function() {
+            $("#connectPinterestModal").on("hide.bs.modal", function() {
                 {{ session_delete('account') }}
                 {{ session_delete('items') }}
             });
@@ -181,6 +181,36 @@
                 $('#connectFacebookModal').modal('toggle');
                 {{ session_delete('facebook_auth') }}
             }
+            $('.facebook_connect').on('click', function() {
+                var button = $(this);
+                var id = button.data('id');
+                var fb_id = button.data('fb-id');
+                var page_data = button.data('page-data');
+                var token = $('meta[name="csrf-token"]').attr('content');
+                $.ajax({
+                    url: "{{ route('accounts.addPage') }}",
+                    type: 'POST',
+                    data: {
+                        "id": id,
+                        "fb_id": fb_id,
+                        "page_data": page_data,
+                        "_token": token
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success("Page Connected Successfully!");
+                            button.text('Connected').removeClass('facebook_connect pointer');
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    },
+                });
+            });
+            $("#connectFacebookModal").on("hide.bs.modal", function() {
+                {{ session_delete('account') }}
+                {{ session_delete('items') }}
+            });
+
         });
     </script>
 @endpush

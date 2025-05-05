@@ -51,11 +51,13 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
         // Accounts sub Routes
         Route::name("accounts.")->group(function () {
             Route::get("pinterest/{id?}", "pinterest")->name("pinterest");
+            Route::post("add-board", "addBoard")->name("addBoard");
             Route::delete('pinterest-delete/{id?}', 'pinterestDelete')->name('pinterest.delete');
             Route::delete('board-delete/{id?}', 'boardDelete')->name("board.delete");
         });
         Route::name("accounts.")->group(function () {
             Route::get("facebook/{id?}", "facebook")->name("facebook");
+            Route::post("add-page", "addPage")->name("addPage");
             Route::delete('facebook-delete/{id?}', 'facebookDelete')->name('facebook.delete');
             Route::delete('page-delete/{id?}', 'pageDelete')->name("page.delete");
         });
