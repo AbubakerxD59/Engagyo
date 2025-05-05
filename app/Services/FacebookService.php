@@ -120,4 +120,29 @@ class FacebookService
         }
         return $response;
     }
+
+    public function pageProfileImage($access_token, $page_id)
+    {
+        try {
+            $profile_picture = $this->facebook->get('/' . $page_id . '/picture?redirect=0&', $access_token);
+            $getGraphEdge = $profile_picture->getGraphEdge();
+            $response = [
+                "success" => true,
+                "data" => $getGraphEdge
+            ];
+        } catch (FacebookResponseException $e) {
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        } catch (FacebookSDKException $e) {
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        }
+        return $response;
+    }
 }

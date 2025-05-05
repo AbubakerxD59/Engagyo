@@ -51,8 +51,15 @@ class FacebookController extends Controller
                     $key = 0;
                     foreach ($items as $page) {
                         $connected = $this->page->connected(['user_id' => $user->id, 'fb_id' => $me["id"], 'page_id' => $page->getField("id")])->first() ? true : false;
-                        $pages["items"][$key] = ["id" => $page->getField("id"), "name" => $page->getField("name"), "access_token" => $page->getField("access_token")];
-                        $pages["items"][$key]["connected"] = $connected;
+                        $profile_image = $this->facebookService->pageProfileImage($access_token, $page->getField("id"));
+                        dd($profile_image);
+                        $pages["items"][$key] = [
+                            "id" => $page->getField("id"),
+                            "name" => $page->getField("name"),
+                            "access_token" => $page->getField("access_token"),
+                            "connected" => $connected,
+                            "profile_image" => $profile_image
+                        ];
                         $key++;
                     }
                     session_set('facebook_auth', '1');
