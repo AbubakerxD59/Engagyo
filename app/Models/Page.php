@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Page extends Model
 {
@@ -18,6 +19,8 @@ class Page extends Model
         "last_fetch",
         "shuffle",
     ];
+
+    protected $appends = ["type"];
 
     public function user()
     {
@@ -52,5 +55,14 @@ class Page extends Model
     public function scopeUserSearch($query, $id)
     {
         $query->where('user_id', $id);
+    }
+
+    protected function type(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                return "facebook";
+            }
+        );
     }
 }
