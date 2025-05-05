@@ -99,8 +99,9 @@ class FacebookService
     public function pages($access_token)
     {
         $accounts = $this->facebook->get('/me/accounts', $access_token);
-        $getGraphEdge = $accounts->getGraphEdge('items');
-        dd($getGraphEdge);
+        $getGraphEdge = $accounts->getGraphEdge();
+        $items = $accounts->getGraphUser();
+        dd($getGraphEdge, is_array($getGraphEdge), is_object($getGraphEdge), $items);
 
         try {
             $response = [
