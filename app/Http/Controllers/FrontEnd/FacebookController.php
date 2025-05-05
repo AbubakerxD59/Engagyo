@@ -40,7 +40,7 @@ class FacebookController extends Controller
                     "access_token" => $access_token,
                 ];
                 $user->facebook()->updateOrCreate(["fb_id" => $profile["id"]], $data);
-                dd($data);
+                dd($data, $image);
             } else {
                 return redirect()->route("panel.accounts")->with("error", $getAccessToken["message"]);
             }
