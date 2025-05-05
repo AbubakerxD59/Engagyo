@@ -99,7 +99,7 @@ class FacebookService
     public function pages($access_token){
         $this->helper = $this->facebook->getPageTabHelper();
         $accessToken = $this->helper->getAccessToken();
-        $pageId = $this->helper->getPageId()
+        $pageId = $this->helper->getPageId();
         $pageData = $this->helper->getPageData($pageId);
         dd($accessToken, $pageId, $pageData);
         try {
