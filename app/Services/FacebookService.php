@@ -99,7 +99,7 @@ class FacebookService
     public function pages($access_token)
     {
         $accounts = $this->facebook->get('/me/accounts', $access_token);
-        $getGraphPage = $accounts->getGraphPage();
+        $getGraphNode = $accounts->getGraphNode();
         dd($accounts, $getGraphPage);
 
         try {
