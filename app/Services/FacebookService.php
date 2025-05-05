@@ -100,8 +100,8 @@ class FacebookService
     {
         $accounts = $this->facebook->get('/me/accounts', $access_token);
         $getGraphEdge = $accounts->getGraphEdge();
-        $items = $getGraphEdge->items;
-        dd($items);
+        $items = $accounts->getGraphList();
+        dd($getGraphEdge, $items);
 
         try {
             $response = [
