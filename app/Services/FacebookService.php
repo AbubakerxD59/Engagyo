@@ -124,7 +124,7 @@ class FacebookService
     public function pageProfileImage($access_token, $page_id)
     {
         $profile_picture = $this->facebook->get('/' . $page_id . '/picture?redirect=0&', $access_token);
-        dd($profile_picture);
+        dd($profile_picture->getGraphEdge());
         try {
             $getGraphEdge = $profile_picture->getGraphEdge();
             $response = [
