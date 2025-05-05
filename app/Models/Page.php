@@ -15,6 +15,8 @@ class Page extends Model
         "page_id",
         "name",
         "status",
+        "last_fetch",
+        "shuffle",
     ];
 
     public function user()

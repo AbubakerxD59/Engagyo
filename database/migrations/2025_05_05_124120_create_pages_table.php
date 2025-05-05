@@ -18,6 +18,8 @@ return new class extends Migration
             $table->bigInteger('page_id');
             $table->string('name');
             $table->integer('status')->default(0);
+            $table->text('last_fetch')->nullable();
+            $table->integer("shuffle")->default(0);
             $table->timestamps();
         });
     }
