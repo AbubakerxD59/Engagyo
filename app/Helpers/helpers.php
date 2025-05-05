@@ -62,6 +62,17 @@ function saveImageFromUrl($url)
             return false;
         }
     } else {
+        $imageData = @file_get_contents($url);
+        if ($imageData !== false) {
+            $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.png';
+            $path = public_path() . "/images" . '/';
+            $path .= $fileName;
+            if (file_put_contents($path, $imageData)) {
+                return $fileName;
+            } else {
+                return false;
+            }
+        }
         return false;
     }
 }

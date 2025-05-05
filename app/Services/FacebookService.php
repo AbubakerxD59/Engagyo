@@ -75,6 +75,34 @@ class FacebookService
         try {
             $me = $this->facebook->get('/me?fields=id,name,email,picture', $access_token);
             $user = $me->getGraphUser();
+            
+            $response = [
+                "success" => true,
+                "data" => $user
+            ];
+        } catch (FacebookResponseException $e) {
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        } catch (FacebookSDKException $e) {
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        }
+        return $response;
+    }
+
+    public function pages($access_token){
+        $this->helper = $this->facebook->getPageTabHelper();
+        $accessToken = $this->helper->getAccessToken();
+        $pageId = $this->helper->getPageId()
+        $pageData = $this->helper->getPageData($pageId);
+        dd($accessToken, $pageId, $pageData);
+        try {
             $response = [
                 "success" => true,
                 "data" => $user

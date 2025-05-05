@@ -7,7 +7,7 @@ use App\Http\Controllers\User\AccountsController;
 use App\Http\Controllers\User\AutomationController;
 use Illuminate\Support\Facades\Route;
 
-// Routes for frontend
+// Routes for frontend auth
 Route::name("frontend.")->controller(AuthController::class)->group(function () {
     Route::middleware(["frontend_guest"])->group(function () {
         Route::get("users/sign_in", "showLogin")->name("showLogin");
@@ -17,6 +17,7 @@ Route::name("frontend.")->controller(AuthController::class)->group(function () {
     });
     Route::get("users/logout", "logout")->name("logout");
 });
+// Routes for frontend
 Route::name("frontend.")->controller(FrontendController::class)->group(function () {
     // Landing Page
     Route::get("/", "home")->name("home");
