@@ -20,6 +20,7 @@ class AutomationController extends Controller
     private $domain;
     private $pinterest;
     private $board;
+    private $page;
     private $feedService;
     private $pinterestService;
     private $fetchPostJob;
@@ -59,6 +60,11 @@ class AutomationController extends Controller
                 $account = $this->board->find($account);
                 $lastFetch = $account->last_fetch;
                 $account = $account->board_id;
+            }
+            if ($type == 'facebook') {
+                $account = $this->page->find($account);
+                $lastFetch = $account->last_fetch;
+                $account = $account->page_id;
             }
             $posts = $posts->where("account_id", $account);
         }
@@ -238,6 +244,17 @@ class AutomationController extends Controller
                     ];
                 }
             }
+            if ($type == 'facebook') {
+                $account = $this->page->find($id);
+                if ($account) {
+                    $account_id = $account->page_id;
+                } else {
+                    $response = [
+                        "success" => false,
+                        "message" => "Something went Wrong!"
+                    ];
+                }
+            }
             $domains = $user->getDomains($account_id);
             $response = [
                 "success" => true,
@@ -344,6 +361,9 @@ class AutomationController extends Controller
             if ($type == 'pinterest') {
                 $account = $this->board->userSearch($user->id)->where("id", $id)->first();
             }
+            if ($type == 'facebook') {
+                $account = $this->page->userSearch($user->id)->where("id", $id)->first();
+            }
             if ($account) {
                 $account->update([
                     "shuffle" => $shuffle
@@ -376,6 +396,9 @@ class AutomationController extends Controller
             $user = Auth::user();
             if ($type == 'pinterest') {
                 $account = $this->board->userSearch($user->id)->where("id", $id)->first();
+            }
+            if ($type == 'facebook') {
+                $account = $this->page->userSearch($user->id)->where("id", $id)->first();
             }
             if ($account) {
                 $posts = $account->posts()->domainSearch($domain)->delete();
