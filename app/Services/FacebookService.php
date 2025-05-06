@@ -48,7 +48,9 @@ class FacebookService
         $access_token = $this->helper->getAccessToken();
         $getOAuth2Client = $this->facebook->getOAuth2Client();
         $tokenMetadata = $getOAuth2Client->debugToken($access_token);
-        dd($access_token, $tokenMetadata);
+        $validate = $tokenMetadata->validateExpiration();
+        $getLongLivedAccessToken = $getOAuth2Client->getLongLivedAccessToken($access_token);
+        dd($access_token, $tokenMetadata, $valid, $getLongLivedAccessToken);
         try {
             $tokenMetadata->validateExpiration();
             if (!$access_token->isLongLived()) {
@@ -80,6 +82,8 @@ class FacebookService
         }
         return $response;
     }
+
+    public function 
 
     public function me($access_token)
     {
