@@ -42,6 +42,6 @@ class Facebook extends Model
 
     public function validToken()
     {
-       return false;
+       return true;
     }
 }

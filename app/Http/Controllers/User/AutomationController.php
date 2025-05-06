@@ -287,7 +287,7 @@ class AutomationController extends Controller
                 if ($post) {
                     $board = $this->board->search($post->account_id)->active()->first();
                     if ($board) {
-                        $pinterest = $this->pinterest->where("pin_id", $board->pin_id)->first();
+                        $pinterest = $this->pinterest->where("pin_id", operator: $board->pin_id)->first();
                         if ($pinterest) {
                             if (!$pinterest->validToken()) {
                                 $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token);
@@ -355,8 +355,7 @@ class AutomationController extends Controller
                 if ($post) {
                     $page = $this->page->search($post->account_id)->active()->first();
                     if ($page) {
-                        $facebook = $this->facebook->where("page_id", $board->page_id)->first();
-                        dd($facebook);
+                        $facebook = $this->facebook->where("fb_id", $page->fb_id)->first();
                         if ($facebook) {
                             if (!$facebook->validToken()) {
                                 // $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token);
@@ -375,35 +374,10 @@ class AutomationController extends Controller
                                 'message' => $post->title,
                             ];
                             $this->facebookService->create($access_token, $postData);
-                            $postData = array(
-                                "title" => $post->title,
-                                "link" => $post->url,
-                                "pin" => (string) $post->account_id,
-                                "media_source" => array(
-                                    "source_type" => str_contains($post->image, "http") ? "image_url" : "image_base64",
-                                    "url" => $post->image
-                                )
-                            );
                             $response = array(
                                 "success" => true,
                                 "message" => "Your post is being Published!"
                             );
-                            // $publish = $this->pinterestService->create($access_token, $postData);
-                            // if (isset($publish["id"])) {
-                            //     $post->update([
-                            //         "post_id" => $publish["id"],
-                            //         "status" => 1
-                            //     ]);
-
-                            // } else {
-                            //     $post->update([
-                            //         "status" => -1
-                            //     ]);
-                            //     $response = array(
-                            //         "success" => false,
-                            //         "message" => "Failed to publish Post!"
-                            //     );
-                            // }
                         } else {
                             $response = array(
                                 "success" => false,
