@@ -189,7 +189,7 @@ class AutomationController extends Controller
                 $parsedUrl = parse_url($domain);
                 if (isset($parsedUrl['host'])) {
                     $urlDomain = $parsedUrl["host"];
-                    $category = $parsedUrl["path"];
+                    $category = isset($parsedUrl["path"]) ? $parsedUrl["path"] : '';
                 } else {
                     $urlDomain = $parsedUrl["path"];
                     $category = null;
