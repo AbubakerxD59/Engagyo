@@ -41,8 +41,7 @@ class FacebookService
             "redirect_uri" => route("facebook.callback"),
             "code" => request('code'),
         );
-        $access_token = $this->facebook->post('/oauth/access_token/', $params);
-        // $access_token = $this->facebook->post('/oauth/access_token/?' . http_build_query($params));
+        $access_token = $this->facebook->get('/oauth/access_token/?' . http_build_query($params));
         dd($access_token);
         try {
             $access_token = $this->helper->getAccessToken();
