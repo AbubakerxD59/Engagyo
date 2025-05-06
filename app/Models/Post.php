@@ -27,7 +27,7 @@ class Post extends Model
         "response"
     ];
 
-    protected $appends = ["date", "time"];
+    protected $appends = ["date", "time", "modal_time"];
 
     public function user()
     {
@@ -194,6 +194,16 @@ class Post extends Model
         return Attribute::make(
             get: function () {
                 $time = date("h:i A", strtotime($this->publish_date));
+                return $time;
+            }
+        );
+    }
+
+    protected function modalTime(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $time = date("H:i", strtotime($this->publish_date));
                 return $time;
             }
         );

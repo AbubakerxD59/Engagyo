@@ -322,7 +322,7 @@
                 modal.find("#post_title").val(post.title);
                 modal.find("#post_url").val(post.url);
                 modal.find("#post_date").val(post.date);
-                modal.find("#post_time").val(post.time);
+                modal.find("#post_time").val(post.modal_time);
                 modal.find("#post_image_preview").attr("src", post.image);
                 modal.modal("toggle");
             })
