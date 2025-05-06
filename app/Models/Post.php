@@ -115,7 +115,6 @@ class Post extends Model
             $accountUrl = "https://www.pinterest.com/" . $mainAccount->username . '/' . $account->name;
         }
         if ($type == 'facebook') {
-            $mainAccount = $account->getPinterest($account->pin_id);
             $accountUrl = "https://www.facebook.com/" . $account->page_id;
         }
         return $accountUrl;
