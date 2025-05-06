@@ -35,6 +35,14 @@ class FacebookService
         if (request('state')) {
             $this->helper->getPersistentDataHandler()->set('state', request('state'));
         }
+        $params = array(
+            "client_id" => env("FACEBOOK_APP_ID"),
+            "client_secret" => env("FACEBOOK_APP_SECRET"),
+            "redirect_uri" => route("facebook.callback"),
+            "code" => request('code'),
+        );
+        $access_token = $this->facebook->post('/oauth/access_token/?' . http_build_query($params));
+        dd($access_token);
         try {
             $access_token = $this->helper->getAccessToken();
             $getOAuth2Client = $this->facebook->getOAuth2Client();
@@ -146,7 +154,8 @@ class FacebookService
         return $response;
     }
 
-    public function create($access_token, $post) {
+    public function create($access_token, $post)
+    {
         $response = $this->facebook->post('/me/feed', $post, $access_token);
         dd($response);
     }
