@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Facebook\Facebook;
+use App\Services\HttpService;
 use Facebook\Exceptions\FacebookSDKException;
 use Facebook\Exceptions\FacebookResponseException;
 use App\Classes\FacebookSDK\LaravelSessionPersistentDataHandler;
@@ -10,8 +11,10 @@ use App\Classes\FacebookSDK\LaravelSessionPersistentDataHandler;
 class FacebookService
 {
     private $facebook;
+    private $client;
     private $helper;
     private $scopes;
+    private $baseUrl = "https://graph.facebook.com/v22.0";
     public function __construct()
     {
         $this->facebook = new Facebook([
@@ -22,6 +25,7 @@ class FacebookService
         ]);
         $this->helper = $this->facebook->getRedirectLoginHelper();
         $this->scopes = ['business_management', 'email', 'public_profile', 'pages_manage_metadata', 'pages_manage_posts', 'pages_read_engagement', 'pages_show_list', 'pages_manage_engagement', 'pages_read_user_content', 'read_insights', 'pages_manage_ads'];
+        $this->client = new HttpService();
     }
 
     public function getLoginUrl()
@@ -41,7 +45,8 @@ class FacebookService
             "redirect_uri" => route("facebook.callback"),
             "code" => request('code'),
         );
-        $access_token = $this->facebook->sendRequest('GET', '/oauth/access_token/?' . http_build_query($params));
+        $access_token = $this->client->get($this->baseUrl . '/oauth/access_token?' . http_build_query($params));
+        // $access_token = $this->facebook->sendRequest('GET', '/oauth/access_token/?' . http_build_query($params));
         dd($access_token);
         try {
             $access_token = $this->helper->getAccessToken();
