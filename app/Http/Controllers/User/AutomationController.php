@@ -6,7 +6,6 @@ use App\Jobs\FetchPost;
 use App\Models\Domain;
 use App\Models\Page;
 use App\Models\Post;
-use App\Services\FeedService;
 use App\Services\PinterestService;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -22,9 +21,7 @@ class AutomationController extends Controller
     private $pinterest;
     private $board;
     private $page;
-    private $feedService;
     private $pinterestService;
-    private $fetchPostJob;
     public function __construct(Post $post, Domain $domain, Pinterest $pinterest, Board $board, Page $page)
     {
         $this->post = $post;
@@ -32,9 +29,7 @@ class AutomationController extends Controller
         $this->pinterest = $pinterest;
         $this->board = $board;
         $this->page = $page;
-        $this->feedService = new FeedService();
         $this->pinterestService = new PinterestService();
-        // $this->fetchPostJob = new FetchPost();
     }
     public function index()
     {
@@ -408,7 +403,7 @@ class AutomationController extends Controller
                 $account = $this->page->userSearch($user->id)->where("id", $id)->first();
             }
             if ($account) {
-                $posts = $account->posts()->domainSearch($domain)->delete();
+                $account->posts()->domainSearch($domain)->delete();
                 $response = array(
                     "success" => true,
                     "message" => "Posts deleted Successfully!!"

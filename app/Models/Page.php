@@ -34,12 +34,12 @@ class Page extends Model
 
     public function posts()
     {
-        return $this->hasMany(Post::class, 'account_id', 'fb_id');
+        return $this->hasMany(Post::class, 'account_id', 'page_id');
     }
 
     public function domains()
     {
-        return $this->hasMany(Domain::class, 'account_id', 'fb_id');
+        return $this->hasMany(Domain::class, 'account_id', 'page_id');
     }
 
     public function scopeConnected($query, $search)
