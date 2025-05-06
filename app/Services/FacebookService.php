@@ -50,7 +50,7 @@ class FacebookService
         $tokenMetadata = $getOAuth2Client->debugToken($access_token);
         $validate = $tokenMetadata->validateExpiration();
         $getLongLivedAccessToken = $getOAuth2Client->getLongLivedAccessToken($access_token);
-        dd($access_token, $tokenMetadata, $valid, $getLongLivedAccessToken);
+        dd($access_token, $tokenMetadata, $validate, $getLongLivedAccessToken);
         try {
             $tokenMetadata->validateExpiration();
             if (!$access_token->isLongLived()) {
