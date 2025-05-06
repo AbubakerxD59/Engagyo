@@ -145,4 +145,9 @@ class FacebookService
         }
         return $response;
     }
+
+    public function create($access_token, $post) {
+        $response = $this->facebook->post('/me/feed', $post, $access_token);
+        dd($response);
+    }
 }

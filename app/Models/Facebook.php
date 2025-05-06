@@ -39,4 +39,9 @@ class Facebook extends Model
             get: fn($value) => !empty($value) ? asset("images/" . $value) : no_image()
         );
     }
+
+    public function validToken()
+    {
+       return false;
+    }
 }
