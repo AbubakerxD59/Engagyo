@@ -57,6 +57,11 @@ class Page extends Model
         $query->where('user_id', $id);
     }
 
+    public function scopeActive($query)
+    {
+        $query->where('status', '1');
+    }
+
     protected function type(): Attribute
     {
         return Attribute::make(

@@ -356,6 +356,7 @@ class AutomationController extends Controller
                     $page = $this->page->search($post->account_id)->active()->first();
                     if ($page) {
                         $facebook = $this->facebook->where("page_id", $board->page_id)->first();
+                        dd($facebook);
                         if ($facebook) {
                             if (!$facebook->validToken()) {
                                 // $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token);
