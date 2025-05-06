@@ -177,6 +177,11 @@ class AutomationController extends Controller
             $account_id = $account ? $account->board_id : '';
             $mode = 1;
         }
+        if ($type == 'facebook') {
+            $account = $this->page->find($request->account);
+            $account_id = $account ? $account->page_id : '';
+            $mode = 1;
+        }
         if ($account) {
             foreach ($domains as $domain) {
                 $parsedUrl = parse_url($domain);
