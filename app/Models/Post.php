@@ -124,7 +124,7 @@ class Post extends Model
     {
         $lastPost = $this->exist($search)->latest()->first();
         if ($lastPost) {
-            $lastPublisDate = date("Y-m-d H:i:s", strtotime($lastPost->publish_date));
+            $lastPublisDate = $lastPost->publish_date;
             $nextDate = date("Y-m-d", strtotime($lastPublisDate . " +1 days"));
         } else {
             $nextDate = date("Y-m-d");
