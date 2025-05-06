@@ -349,8 +349,7 @@ class AutomationController extends Controller
                         "message" => "Something went Wrong!"
                     );
                 }
-            }
-            if ($type == 'facebook') {
+            } elseif ($type == 'facebook') {
                 $post = $this->post->notPublished()->where("id", $id)->first();
                 if ($post) {
                     $page = $this->page->search($post->account_id)->active()->first();
@@ -396,6 +395,12 @@ class AutomationController extends Controller
                         "message" => "Something went Wrong!"
                     );
                 }
+            }
+            else{
+                $response = array(
+                    "success" => false,
+                    "message" => "Something went Wrong!!"
+                );
             }
         } else {
             $response = array(
