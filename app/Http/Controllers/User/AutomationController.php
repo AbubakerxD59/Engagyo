@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Jobs\FetchPost;
 use App\Models\Domain;
+use App\Models\Page;
 use App\Models\Post;
 use App\Services\FeedService;
 use App\Services\PinterestService;
@@ -24,12 +25,13 @@ class AutomationController extends Controller
     private $feedService;
     private $pinterestService;
     private $fetchPostJob;
-    public function __construct(Post $post, Domain $domain, Pinterest $pinterest, Board $board)
+    public function __construct(Post $post, Domain $domain, Pinterest $pinterest, Board $board, Page $page)
     {
         $this->post = $post;
         $this->domain = $domain;
         $this->pinterest = $pinterest;
         $this->board = $board;
+        $this->page = $page;
         $this->feedService = new FeedService();
         $this->pinterestService = new PinterestService();
         // $this->fetchPostJob = new FetchPost();
