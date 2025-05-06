@@ -46,10 +46,10 @@ class FacebookService
         // );
         // $access_token = $this->facebook->sendRequest('GET', '/oauth/access_token/?' . http_build_query($params));
         $access_token = $this->helper->getAccessToken();
-        dd($access_token);
+        $getOAuth2Client = $this->facebook->getOAuth2Client();
+        $tokenMetadata = $getOAuth2Client->debugToken($access_token);
+        dd($access_token, $tokenMetadata);
         try {
-            $getOAuth2Client = $this->facebook->getOAuth2Client();
-            $tokenMetadata = $getOAuth2Client->debugToken($access_token);
             $tokenMetadata->validateExpiration();
             if (!$access_token->isLongLived()) {
                 try {
