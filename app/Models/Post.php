@@ -39,6 +39,11 @@ class Post extends Model
         return $this->belongsTo(Board::class, 'account_id', 'board_id');
     }
 
+    public function page()
+    {
+        return $this->belongsTo(Page::class, 'account_id', 'page_id');
+    }
+
     public function domain()
     {
         return $this->belongsTo(Domain::class, 'domain_id', 'id');
@@ -65,7 +70,8 @@ class Post extends Model
         }
     }
 
-    public function scopeDomainSearch($query, $id){
+    public function scopeDomainSearch($query, $id)
+    {
         $query->whereIn("domain_id", $id);
     }
 
@@ -95,6 +101,9 @@ class Post extends Model
         if ($type == 'pinterest') {
             $account = $this->board()->where("board_id", $id)->first();
         }
+        if ($type == 'facebook') {
+            $account = $this->page()->where("page_id", $id)->first();
+        }
         return $account;
     }
 
@@ -104,6 +113,10 @@ class Post extends Model
         if ($type == 'pinterest') {
             $mainAccount = $account->getPinterest($account->pin_id);
             $accountUrl = "https://www.pinterest.com/" . $mainAccount->username . '/' . $account->name;
+        }
+        if ($type == 'facebook') {
+            $mainAccount = $account->getPinterest($account->pin_id);
+            $accountUrl = "https://www.facebook.com/" . $account->page_id;
         }
         return $accountUrl;
     }
@@ -136,6 +149,10 @@ class Post extends Model
             if ($type == 'pinterest') {
                 $account = Board::find($account);
                 $account = $account->board_id;
+            }
+            if ($type == 'facebook') {
+                $account = Page::find($account);
+                $account = $account->page_id;
             }
             $post = $post->where("account_id", $account);
         }
