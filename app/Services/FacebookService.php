@@ -83,8 +83,6 @@ class FacebookService
         return $response;
     }
 
-    public function 
-
     public function me($access_token)
     {
         try {
