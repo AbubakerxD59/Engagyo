@@ -341,14 +341,17 @@ class AutomationController extends Controller
                         $facebook = $this->facebook->where("fb_id", $page->fb_id)->first();
                         if ($facebook) {
                             if (!$facebook->validToken()) {
-                                // $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token);
-                                // $access_token = $token["access_token"];
-                                // $pinterest->update([
-                                //     "access_token" => $token["access_token"],
-                                //     "expires_in" => $token["expires_in"],
-                                //     "refresh_token" => $token["refresh_token"],
-                                //     "refresh_token_expires_in" => $token["refresh_token_expires_in"],
-                                // ]);
+                                $token = $this->facebookService->refreshAccessToken($facebook->access_token);
+                                $data = $token["token"];
+                                $meta_data = $data["metadata"];
+                                $access_token = $data["access_token"];
+                                dd($data);
+                                $pinterest->update([
+                                    "access_token" => $token["access_token"],
+                                    "expires_in" => $token["expires_in"],
+                                    "refresh_token" => $token["refresh_token"],
+                                    "refresh_token_expires_in" => $token["refresh_token_expires_in"],
+                                ]);
                             } else {
                                 $access_token = $facebook->access_token;
                             }

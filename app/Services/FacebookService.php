@@ -72,12 +72,15 @@ class FacebookService
     {
         try {
             $getOAuth2Client = $this->facebook->getOAuth2Client();
-            $tokenMetadata = $getOAuth2Client->debugToken($access_token);
             $access_token = $getOAuth2Client->getLongLivedAccessToken($access_token);
+            $tokenMetadata = $getOAuth2Client->debugToken($access_token);
             $access_token = $access_token->getValue();
             $response = [
                 "success" => true,
-                "data" => $access_token,
+                "data" => [
+                    "metadata" => $tokenMetadata,
+                    "access_token" => $access_token
+                ],
             ];
         } catch (FacebookResponseException $e) {
             // When Graph returns an error

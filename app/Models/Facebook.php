@@ -19,6 +19,8 @@ class Facebook extends Model
         "expires_in"
     ];
 
+    protected $appends = ["type"];
+
     public function pages()
     {
         return $this->hasMany(Page::class, 'fb_id', 'fb_id');
@@ -41,6 +43,15 @@ class Facebook extends Model
         );
     }
 
+    protected function type(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                return "facebook";
+            }
+        );
+    }
+
     protected function expiresIn(): Attribute
     {
         return Attribute::make(
@@ -57,6 +68,8 @@ class Facebook extends Model
 
     public function validToken()
     {
-        return true;
+        $now = strtotime(date("Y-m-d H:i:s"));
+        $expires_in = $this->expires_in;
+        return $now > $expires_in ? true : false;
     }
 }

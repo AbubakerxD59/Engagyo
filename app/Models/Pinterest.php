@@ -92,6 +92,7 @@ class Pinterest extends Model
 
     public function validToken()
     {
+        return false;
         $now = strtotime(date("Y-m-d H:i:s"));
         $expires_in = $this->expires_in;
         return $now > $expires_in ? true : false;
