@@ -57,6 +57,7 @@ class FeedService
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
             foreach ($items as $key => $item) {
+                dd($item);
                 $nextTime = $this->post->nextTime(["user_id" => $user_id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain_id]);
                 $post = $this->post->exist(["user_id" => $user_id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain_id, "url" => $item["link"]])->notPublished()->first();
                 $rss_image = $this->dom->get_info($item["link"], $mode);
