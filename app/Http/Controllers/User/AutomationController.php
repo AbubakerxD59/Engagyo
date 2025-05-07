@@ -315,22 +315,6 @@ class AutomationController extends Controller
                                 "success" => true,
                                 "message" => "Your post is being Published!"
                             );
-                            // $publish = $this->pinterestService->create($access_token, $postData);
-                            // if (isset($publish["id"])) {
-                            //     $post->update([
-                            //         "post_id" => $publish["id"],
-                            //         "status" => 1
-                            //     ]);
-
-                            // } else {
-                            //     $post->update([
-                            //         "status" => -1
-                            //     ]);
-                            //     $response = array(
-                            //         "success" => false,
-                            //         "message" => "Failed to publish Post!"
-                            //     );
-                            // }
                         } else {
                             $response = array(
                                 "success" => false,
@@ -395,8 +379,7 @@ class AutomationController extends Controller
                         "message" => "Something went Wrong!"
                     );
                 }
-            }
-            else{
+            } else {
                 $response = array(
                     "success" => false,
                     "message" => "Something went Wrong!!"

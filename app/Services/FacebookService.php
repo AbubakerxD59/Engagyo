@@ -38,29 +38,44 @@ class FacebookService
         if (request('state')) {
             $this->helper->getPersistentDataHandler()->set('state', request('state'));
         }
-        // $params = array(
-        //     "client_id" => env("FACEBOOK_APP_ID"),
-        //     "client_secret" => env("FACEBOOK_APP_SECRET"),
-        //     "redirect_uri" => route("facebook.callback"),
-        //     "code" => request('code'),
-        // );
-        // $access_token = $this->facebook->sendRequest('GET', '/oauth/access_token/?' . http_build_query($params));
-        $access_token = $this->helper->getAccessToken();
-        $getOAuth2Client = $this->facebook->getOAuth2Client();
-        $tokenMetadata = $getOAuth2Client->debugToken($access_token);
-        $validate = $tokenMetadata->validateExpiration();
-        $getLongLivedAccessToken = $getOAuth2Client->getLongLivedAccessToken($access_token);
-        dd($access_token, $tokenMetadata, $validate, $getLongLivedAccessToken);
         try {
-            $tokenMetadata->validateExpiration();
-            if (!$access_token->isLongLived()) {
-                try {
-                    $access_token = $getOAuth2Client->getLongLivedAccessToken($access_token);
-                    $access_token = $access_token->getValue();
-                } catch (FacebookSDKException $e) {
-                    $e->getMessage();
-                }
-            }
+            $access_token = $this->helper->getAccessToken();
+            $getOAuth2Client = $this->facebook->getOAuth2Client();
+            $tokenMetadata = $getOAuth2Client->debugToken($access_token);
+            $access_token = $access_token->getValue();
+            dd($access_token, $tokenMetadata->data_access_expires_at);
+            $response = [
+                "success" => true,
+                "data" => [
+                    "metadata" => $tokenMetadata,
+                    "access_token" => $access_token
+                ],
+            ];
+        } catch (FacebookResponseException $e) {
+            // When Graph returns an error
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        } catch (FacebookSDKException $e) {
+            // When validation fails or other local issues
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        }
+        return $response;
+    }
+
+    public function refreshAccessToken($access_token)
+    {
+        try {
+            $getOAuth2Client = $this->facebook->getOAuth2Client();
+            $tokenMetadata = $getOAuth2Client->debugToken($access_token);
+            $access_token = $getOAuth2Client->getLongLivedAccessToken($access_token);
+            $access_token = $access_token->getValue();
             $response = [
                 "success" => true,
                 "data" => $access_token,

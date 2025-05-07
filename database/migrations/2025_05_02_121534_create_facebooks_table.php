@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string("username");
             $table->string("profile_image")->nullable();
             $table->string('access_token');
+            $table->longText('expires_in');
             $table->timestamps();
         });
     }

@@ -32,7 +32,9 @@ class FacebookController extends Controller
             $user = Auth::user();
             $getAccessToken = $this->facebookService->getAccessToken();
             if ($getAccessToken["success"]) {
-                $access_token = $getAccessToken["data"];
+                $data = $getAccessToken["data"];
+                $meta_data = $data["metadata"];
+                $access_token = $data["access_token"];
                 $me = $this->facebookService->me($access_token);
                 $me = $me["data"];
                 $image = $me->getPicture();
@@ -41,6 +43,7 @@ class FacebookController extends Controller
                     "username" => $me["name"],
                     "profile_image" => saveImageFromUrl($image["url"]) ? saveImageFromUrl($image["url"]) : '',
                     "access_token" => $access_token,
+                    "expires_in" => $meta_data["data_access_expires_at"]
                 ];
                 $user->facebook()->updateOrCreate(["fb_id" => $me["id"]], $data);
 
