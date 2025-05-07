@@ -214,8 +214,8 @@ class FeedService
                     if (!empty($childSitemapUrl)) {
                         $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
                         if ($childXmlContent !== false) {
-                            dd($childXmlContent, '1');
                             $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
+                            dd($childParseResult, '1');
                             if (isset($childParseResult['items']) && is_array($childParseResult['items'])) {
                                 $items = array_merge($items, $childParseResult['items']);
                             } else {
