@@ -20,10 +20,10 @@ class FeedService
         $this->dom = new HtmlParseService();
         $this->notification = new Notification();
     }
-    public function fetch($url, $domain_id, $user_id, $account_id, $type, $time, $mode = 0)
+    public function fetch($url, $domain_id, $user_id, $account_id, $type, $time, $mode = 0, $exist = true)
     {
         $websiteUrl = $url;
-        $feedUrls = $this->discoverFeedUrls($websiteUrl);
+        $feedUrls = $this->discoverFeedUrls($websiteUrl, $exist);
         if (empty($feedUrls)) {
             $body = [
                 "user_id" => $user_id,
@@ -98,16 +98,22 @@ class FeedService
      * @param string $websiteUrl
      * @return array
      */
-    private function discoverFeedUrls(string $websiteUrl): array
+    private function discoverFeedUrls(string $websiteUrl, $exist = true): array
     {
-        $potentialPaths = [
-            '/feed',
-            '/rss',
-            '/feed.xml',
-            '/rss.xml',
-            '/atom.xml',
-            '/sitemap.xml', // Check sitemap too
-        ];
+        if ($exist) {
+            $potentialPaths = [
+                '/sitemap.xml',
+            ];
+        } else {
+            $potentialPaths = [
+                '/feed',
+                '/rss',
+                '/feed.xml',
+                '/rss.xml',
+                '/atom.xml',
+                '/sitemap.xml', // Check sitemap too
+            ];
+        }
 
         $discoveredUrls = [];
 

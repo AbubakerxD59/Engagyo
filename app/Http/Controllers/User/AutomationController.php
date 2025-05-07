@@ -197,7 +197,9 @@ class AutomationController extends Controller
                 }
                 $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
                 $domain = $this->domain->exists($search)->first();
+                $exist = true;
                 if (!$domain) {
+                    $exist = false;
                     $domain = $this->domain->create([
                         "user_id" => $user->id,
                         "account_id" => $account_id,
@@ -215,6 +217,7 @@ class AutomationController extends Controller
                     "type" => $type,
                     "time" => $time,
                     "mode" => $mode,
+                    "exist" => $exist
                 ];
                 FetchPost::dispatch($data);
                 $response = array(

@@ -31,7 +31,7 @@ class FetchPost implements ShouldQueue
     public function handle(): void
     {
         $feedService = new FeedService();
-        $feedService->fetch($this->data["urlDomain"], $this->data["domain"], $this->data["user"], $this->data["account_id"], $this->data["type"], $this->data["time"], $this->data["mode"]);
+        $feedService->fetch($this->data["urlDomain"], $this->data["domain"], $this->data["user"], $this->data["account_id"], $this->data["type"], $this->data["time"], $this->data["mode"], $this->data["exist"]);
     }
 
     public function failed(\Throwable $exception)
