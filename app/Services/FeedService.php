@@ -219,7 +219,7 @@ class FeedService
                         if ($childXmlContent !== false) {
                             $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
                             if (is_array($childParseResult) && count($childParseResult) > 0) {
-                                $items = array_merge($items, $childParseResult['items']);
+                                $items = array_merge($items, $childParseResult);
                             }
                         }
                     }
