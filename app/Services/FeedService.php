@@ -226,6 +226,9 @@ class FeedService
                             }
                         }
                     }
+                    if (count($items) >= 20) {
+                        break;
+                    }
                 }
             }
             return $items;
