@@ -51,7 +51,6 @@ class FeedService
             }
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
-            dd($items);
             foreach ($items as $key => $item) {
                 $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"]]);
                 $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
