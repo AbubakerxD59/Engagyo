@@ -2,18 +2,20 @@
 
 namespace App\Http\Controllers\User;
 
-use App\Jobs\FetchPost;
-use App\Models\Domain;
+use Feed;
 use App\Models\Page;
 use App\Models\Post;
-use App\Services\FacebookService;
-use App\Services\PinterestService;
-use Illuminate\Http\Request;
-use App\Http\Controllers\Controller;
-use App\Jobs\PublishPinterestPost;
 use App\Models\Board;
+use App\Models\Domain;
+use App\Jobs\FetchPost;
 use App\Models\Facebook;
 use App\Models\Pinterest;
+use Illuminate\Http\Request;
+use App\Services\FeedService;
+use App\Services\FacebookService;
+use App\Jobs\PublishPinterestPost;
+use App\Services\PinterestService;
+use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 
 class AutomationController extends Controller
@@ -219,7 +221,11 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
-                FetchPost::dispatch($data);
+                $rss = Feed::loadRss($urlDomain);
+                dd($rss);
+                $feedService = new FeedService();
+                $feedService->fetch($data["urlDomain"], $data["domain"], $data["user"], $data["account_id"], $data["type"], $data["time"], $data["mode"], $data["exist"]);
+                // FetchPost::dispatch($data);
                 $response = array(
                     "success" => true,
                     "message" => "Your posts are being Fetched!"

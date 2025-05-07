@@ -110,8 +110,6 @@ class FeedService
                 '/rss',
                 '/feed.xml',
                 '/rss.xml',
-                '/atom.xml',
-                '/sitemap.xml', // Check sitemap too
             ];
         }
 
@@ -120,9 +118,10 @@ class FeedService
         // Basic check for common paths
         foreach ($potentialPaths as $path) {
             $urlToCheck = rtrim($websiteUrl, '/') . $path;
+            $response = Http::timeout(5)->head($urlToCheck);
+            dd($response);
             try {
                 // Use HEAD request to check existence without downloading body
-                $response = Http::timeout(5)->head($urlToCheck);
                 if ($response->successful()) {
                     // Check content type if possible (more reliable)
                     $contentType = strtolower($response->header('Content-Type') ?? '');
