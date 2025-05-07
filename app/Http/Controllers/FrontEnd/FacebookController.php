@@ -48,6 +48,7 @@ class FacebookController extends Controller
                 $user->facebook()->updateOrCreate(["fb_id" => $me["id"]], $data);
 
                 $pages = $this->facebookService->pages($access_token);
+                dd($pages);
                 if ($pages["success"]) {
                     $items = $pages["data"];
                     $pages = [];
