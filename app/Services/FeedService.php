@@ -179,7 +179,7 @@ class FeedService
                 }
             } elseif (isset($xml->entry)) { // Atom
                 foreach ($xml->entry as $key => $entry) {
-                    if ($key == 0) {
+                    if ($key == 19) {
                         break;
                     }
                     $link = '';
@@ -218,10 +218,13 @@ class FeedService
                         $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
                         if ($childXmlContent !== false) {
                             $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
-                            if (isset($childParseResult['items']) && is_array($childParseResult['items'])) {
+                            if (is_array($childParseResult) && count($childParseResult) > 0) {
                                 $items = array_merge($items, $childParseResult['items']);
                             }
                         }
+                    }
+                    if (count($items) >= 20) {
+                        break;
                     }
                 }
             }
