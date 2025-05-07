@@ -13,27 +13,28 @@ class FeedService
 {
     private $post;
     private $dom;
-    private $notification;
-    public function __construct()
+    private $data;
+    private $body;
+    public function __construct($data)
     {
         $this->post = new Post();
         $this->dom = new HtmlParseService();
-        $this->notification = new Notification();
+        $this->data = $data;
+        $this->body = [
+            "user_id" => $this->data["user_id"],
+            "account_id" => $this->data["account_id"],
+            "type" => $this->data["type"],
+            "domain_id" => $this->data["domain_id"],
+            "url" => $this->data["url"],
+        ];
     }
-    public function fetch($url, $domain_id, $user_id, $account_id, $type, $time, $mode = 0, $exist = true)
+    public function fetch()
     {
-        $websiteUrl = $url;
-        $feedUrls = $this->discoverFeedUrls($websiteUrl, $exist);
+        $websiteUrl = $this->data["url"];
+        $feedUrls = $this->discoverFeedUrls($websiteUrl, $this->data["exist"]);
         if (empty($feedUrls)) {
-            $body = [
-                "user_id" => $user_id,
-                "account_id" => $account_id,
-                "type" => $type,
-                "domain_id" => $domain_id,
-                "url" => $url,
-                "message" => "Could not find RSS feed or Sitemap URL"
-            ];
-            create_notification($user_id, $body, "Post");
+            $this->body["message"] = "Could not find RSS feed or Sitemap URL";
+            create_notification($this->data["user_id"], $this->body, "Post");
             exit;
         }
         $targetUrl = $feedUrls[0];
@@ -43,35 +44,30 @@ class FeedService
                 ->get($targetUrl);
 
             if (!$response->successful()) {
-                $body = [
-                    "user_id" => $user_id,
-                    "account_id" => $account_id,
-                    "type" => $type,
-                    "domain_id" => $domain_id,
-                    "url" => $url,
-                    "message" => "Failed to fetch feed/sitemap from {$targetUrl}. Status: " . $response->status()
-                ];
-                create_notification($user_id, $body, "Post");
+
+                $this->body["message"] = "Failed to fetch feed/sitemap from {$targetUrl}. Status: " . $response->status();
+                create_notification($this->data["user_id"], $this->body, "Post");
                 exit;
             }
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
+            dd($items);
             foreach ($items as $key => $item) {
-                $nextTime = $this->post->nextTime(["user_id" => $user_id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain_id]);
-                $post = $this->post->exist(["user_id" => $user_id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain_id, "url" => $item["link"]])->notPublished()->first();
-                $rss = $this->dom->get_info($item["link"], $mode);
+                $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"]]);
+                $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
+                $rss = $this->dom->get_info($item["link"], $this->data["mode"]);
                 $title = empty($item["title"]) ? $rss["title"] : $item["title"];
                 if (!$post) {
                     $this->post->create([
-                        "user_id" => $user_id,
-                        "account_id" => $account_id,
-                        "type" => $type,
+                        "user_id" => $this->data["user_id"],
+                        "account_id" => $this->data["account_id"],
+                        "type" => $this->data["type"],
                         "title" => $title,
                         "description" => $item["description"],
-                        "domain_id" => $domain_id,
+                        "domain_id" => $this->data["domain_id"],
                         "url" => $item["link"],
                         "image" => isset($rss["image"])  && !empty($rss["iamge"]) ? $rss["image"] : no_image(),
-                        "publish_date" => newDateTime($nextTime, $time, $key - 1),
+                        "publish_date" => newDateTime($nextTime, $this->data["time"], $key - 1),
                         "status" => 0,
                     ]);
                 }
@@ -81,15 +77,8 @@ class FeedService
                 "items" => $items
             );
         } catch (Exception $e) {
-            $body = [
-                "user_id" => $user_id,
-                "account_id" => $account_id,
-                "type" => $type,
-                "domain_id" => $domain_id,
-                "url" => $url,
-                "message" => $e->getMessage()
-            ];
-            create_notification($user_id, $body, "Post");
+            $this->body["message"] = $e->getMessage();
+            create_notification($this->data["user_id"], $this->body, "Post");
         }
     }
 
@@ -157,7 +146,6 @@ class FeedService
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($xmlContent);
             libxml_clear_errors(); // Clear errors from buffer
-
             if ($xml === false) {
                 $response = [
                     "success" => false,
@@ -169,8 +157,9 @@ class FeedService
             // Check root element or URL path to determine type (heuristic)
             if (isset($xml->channel->item)) { // RSS 2.0
                 foreach ($xml->channel->item as $key => $item) {
-                    if ($key == 19) {
-                        break;
+                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item->link])->first();
+                    if ($post) {
+                        continue;
                     }
                     $items[] = [
                         'title' => (string) $item->title,
@@ -182,9 +171,6 @@ class FeedService
                 }
             } elseif (isset($xml->entry)) { // Atom
                 foreach ($xml->entry as $key => $entry) {
-                    if ($key == 19) {
-                        break;
-                    }
                     $link = '';
                     // Find the 'alternate' link
                     foreach ($entry->link as $linkNode) {
@@ -197,7 +183,10 @@ class FeedService
                     if (empty($link) && isset($entry->link[0]['href'])) {
                         $link = (string) $entry->link[0]['href'];
                     }
-
+                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $link])->first();
+                    if ($post) {
+                        continue;
+                    }
                     $items[] = [
                         'title' => (string) $entry->title,
                         'link' => $link,
@@ -207,8 +196,9 @@ class FeedService
                 }
             } elseif (isset($xml->url)) { // Sitemap
                 foreach ($xml->url as $key => $url) {
-                    if ($key == 19) {
-                        break;
+                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
+                    if ($post) {
+                        continue;
                     }
                     $items[] = [
                         'title' => null, // Sitemaps usually don't have titles

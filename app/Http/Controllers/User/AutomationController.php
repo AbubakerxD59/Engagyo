@@ -221,8 +221,8 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
-                $feedService = new FeedService();
-                $feedService->fetch($data["urlDomain"], $data["domain"], $data["user"], $data["account_id"], $data["type"], $data["time"], $data["mode"], $data["exist"]);
+                $feedService = new FeedService($data);
+                $feedService->fetch();
                 // FetchPost::dispatch($data);
                 $response = array(
                     "success" => true,
