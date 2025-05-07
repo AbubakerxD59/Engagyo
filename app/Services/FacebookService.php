@@ -176,9 +176,27 @@ class FacebookService
         return $response;
     }
 
-    public function create($access_token, $post)
+    public function createLink($access_token, $post)
     {
-        $response = $this->facebook->post('/me/feed', $post, $access_token);
-        dd($response);
+        try {
+            $publish = $this->facebook->post('/me/feed', $post, $access_token);
+            $response = [
+                "success" => true,
+                "data" => $publish
+            ];
+        } catch (FacebookResponseException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        } catch (FacebookSDKException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        }
+        return $response;
     }
 }

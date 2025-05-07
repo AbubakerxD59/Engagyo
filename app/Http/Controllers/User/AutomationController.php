@@ -183,7 +183,7 @@ class AutomationController extends Controller
         if ($type == 'facebook') {
             $account = $this->page->find($request->account);
             $account_id = $account ? $account->page_id : '';
-            $mode = 1;
+            $mode = 0;
         }
         if ($account) {
             foreach ($domains as $domain) {
@@ -356,11 +356,30 @@ class AutomationController extends Controller
                                 'link' => $post->url,
                                 'message' => $post->title,
                             ];
-                            $this->facebookService->create($access_token, $postData);
-                            $response = array(
-                                "success" => true,
-                                "message" => "Your post is being Published!"
-                            );
+                            $createLink =  $this->facebookService->createLink($access_token, $postData);
+                            if ($createLink["success"]) {
+                                $createLink = $createLink["data"];
+                                $graphNode = $createLink->getGraphNode();
+                                $post_id = $graphNode['id'];
+                                $post->update([
+                                    "post_id" => $post_id,
+                                    "response" => "Post published Successfully!"
+                                ]);
+
+                                $response = array(
+                                    "success" => true,
+                                    "message" => "Post published Successfully!"
+                                );
+                            } else {
+                                $post->update([
+                                    "response" => $createLink["message"]
+                                ]);
+
+                                $response = array(
+                                    "success" => false,
+                                    "message" => $createLink["message"]
+                                );
+                            }
                         } else {
                             $response = array(
                                 "success" => false,
