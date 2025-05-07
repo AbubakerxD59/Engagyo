@@ -55,7 +55,7 @@ class FeedService
                 $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"]]);
                 $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
                 $rss = $this->dom->get_info($item["link"], $this->data["mode"]);
-                $title = empty($item["title"]) ? $rss["title"] : $item["title"];
+                $title = !empty($item["title"]) ?  $item["title"] : $rss["title"];
                 if (!$post) {
                     $this->post->create([
                         "user_id" => $this->data["user_id"],
@@ -65,7 +65,7 @@ class FeedService
                         "description" => $item["description"],
                         "domain_id" => $this->data["domain_id"],
                         "url" => $item["link"],
-                        "image" => isset($rss["image"])  && !empty($rss["iamge"]) ? $rss["image"] : no_image(),
+                        "image" => isset($rss["image"]) ? $rss["image"] : no_image(),
                         "publish_date" => newDateTime($nextTime, $this->data["time"], $key - 1),
                         "status" => 0,
                     ]);
