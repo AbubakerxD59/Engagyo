@@ -149,7 +149,7 @@ class FeedService
      * @param string $sourceUrl Used to determine parsing type
      * @return array
      */
-    private function parseContent(string $xmlContent, string $sourceUrl): array
+    private function parseContent(string $xmlContent, string $sourceUrl, int $depth = 0, int $maxDepth = 5): array
     {
         try {
             // Suppress errors during loading, check manually after
@@ -212,8 +212,8 @@ class FeedService
                     $childSitemapUrl = (string) $sitemapEntry->loc;
                     if (!empty($childSitemapUrl)) {
                         $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
-                        dd($childXmlContent);
                         if ($childXmlContent !== false) {
+                            dd($childXmlContent);
                             $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
                             if (isset($childParseResult['items']) && is_array($childParseResult['items'])) {
                                 $items = array_merge($items, $childParseResult['items']);
