@@ -21,11 +21,11 @@ class FeedService
         $this->dom = new HtmlParseService();
         $this->data = $data;
         $this->body = [
-            "user_id" => $this->data["user_id"],
-            "account_id" => $this->data["account_id"],
-            "type" => $this->data["type"],
-            "domain_id" => $this->data["domain_id"],
-            "url" => $this->data["url"],
+            "user_id" => $data["user_id"],
+            "account_id" => $data["account_id"],
+            "type" => $data["type"],
+            "domain_id" => $data["domain_id"],
+            "url" => $data["url"],
         ];
     }
     public function fetch()

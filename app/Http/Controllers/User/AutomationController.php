@@ -211,10 +211,10 @@ class AutomationController extends Controller
                     ]);
                 }
                 $data = [
-                    "urlDomain" => !empty($category) ? $urlDomain . $category : $urlDomain,
+                    "url" => !empty($category) ? $urlDomain . $category : $urlDomain,
                     "category" => $category,
-                    "domain" => $domain->id,
-                    "user" => $user->id,
+                    "domain_id" => $domain->id,
+                    "user_id" => $user->id,
                     "account_id" => $account_id,
                     "type" => $type,
                     "time" => $time,
