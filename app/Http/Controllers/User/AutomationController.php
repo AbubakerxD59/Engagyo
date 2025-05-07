@@ -340,17 +340,18 @@ class AutomationController extends Controller
                     if ($page) {
                         $facebook = $this->facebook->where("fb_id", $page->fb_id)->first();
                         if ($facebook) {
-                            if (!$facebook->validToken()) {
-                                $token = $this->facebookService->refreshAccessToken($facebook->access_token);
+                            if (!$page->validToken()) {
+                                $token = $this->facebookService->refreshAccessToken($page->access_token);
+                                dd($token);
                                 $data = $token["data"];
                                 $meta_data = $data["metadata"];
                                 $access_token = $data["access_token"];;
-                                $facebook->update([
+                                $page->update([
                                     "access_token" => $access_token,
                                     "expires_in" => $meta_data->getField("data_access_expires_at"),
                                 ]);
                             } else {
-                                $access_token = $facebook->access_token;
+                                $access_token = $page->access_token;
                             }
                             $postData = [
                                 'link' => $post->url,

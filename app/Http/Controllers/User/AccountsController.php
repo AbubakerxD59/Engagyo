@@ -167,7 +167,9 @@ class AccountsController extends Controller
                 "fb_id" => $facebook->fb_id,
                 "page_id" => $page["id"],
                 "name" => $page["name"],
-                "status" => 1
+                "status" => 1,
+                "access_token" => $page["access_token"],
+                "expires_in" => time()
             ]);
             return response()->json(["success" => true, "message" => "Page connected Successfully!"]);
         } else {

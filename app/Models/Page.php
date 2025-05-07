@@ -18,6 +18,8 @@ class Page extends Model
         "status",
         "last_fetch",
         "shuffle",
+        "access_token",
+        "expires_in",
     ];
 
     protected $appends = ["type"];
@@ -69,5 +71,28 @@ class Page extends Model
                 return "facebook";
             }
         );
+    }
+
+    protected function expiresIn(): Attribute
+    {
+        return Attribute::make(
+            set: function ($value) {
+                $next_time = strtotime('+3 months', $value);
+                $expires_in = date("Y-m-d H:i:s", $next_time);
+                return $expires_in;
+            },
+            get: function ($value) {
+                $expires_in = strtotime($value);
+                return $expires_in;
+            }
+        );
+    }
+
+    public function validToken()
+    {
+        return false;
+        $now = strtotime(date("Y-m-d H:i:s"));
+        $expires_in = $this->expires_in;
+        return $now > $expires_in ? true : false;
     }
 }

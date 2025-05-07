@@ -20,6 +20,8 @@ return new class extends Migration
             $table->integer('status')->default(0);
             $table->text('last_fetch')->nullable();
             $table->integer("shuffle")->default(0);
+            $table->longText("access_token");
+            $table->longText("expires_in");
             $table->timestamps();
         });
     }
