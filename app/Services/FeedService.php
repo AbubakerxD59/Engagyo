@@ -225,7 +225,9 @@ class FeedService
                         if ($childXmlContent !== false) {
                             $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
                             if (is_array($childParseResult) && count($childParseResult) > 0) {
-                                dd($childParseResult);
+                                if (count($childParseResult) > 20) {
+                                    $childParseResult = array_slice($childParseResult, 0, 20);
+                                }
                                 $items = array_merge($items, $childParseResult);
                             }
                         }
