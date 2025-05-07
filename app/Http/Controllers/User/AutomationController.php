@@ -363,6 +363,7 @@ class AutomationController extends Controller
                                 $post_id = $graphNode['id'];
                                 $post->update([
                                     "post_id" => $post_id,
+                                    "status" => 1,
                                     "response" => "Post published Successfully!"
                                 ]);
 
@@ -372,6 +373,7 @@ class AutomationController extends Controller
                                 );
                             } else {
                                 $post->update([
+                                    "status" => -1,
                                     "response" => $createLink["message"]
                                 ]);
 
