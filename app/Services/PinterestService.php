@@ -9,6 +9,7 @@ class PinterestService
 {
     private $pinterest;
     private $client;
+    private $post;
     private $auth;
     private $header;
     private $scopes;
@@ -21,6 +22,7 @@ class PinterestService
         $pinterest_secret = env("PINTEREST_SECRET");
         $this->pinterest = new Pinterest($pinterest_id, $pinterest_secret);
         $this->client = new HttpService();
+        $this->post = new Post();
         $this->auth = base64_encode("{$pinterest_id}:{$pinterest_secret}");
         $this->header = array("Content-Type" => "application/x-www-form-urlencoded", "Authorization" => "Basic " . $this->auth);
     }
@@ -67,10 +69,22 @@ class PinterestService
         return $boards;
     }
 
-    public function create($access_token, $post)
+    public function create($id, $post, $access_token)
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $publish = $this->client->postJson($this->baseUrl . "pins", $post, $this->header);
-        return $publish;
+        $post = $this->post->find($id);
+        if (isset($publish['id'])) {
+            $post->update([
+                "post_id" => $publish["id"],
+                "status" => 1,
+                "response" => "Published Successfully!"
+            ]);
+        } else {
+            $post->update([
+                "status" => -1,
+                "response" => json_encode($publish)
+            ]);
+        }
     }
 }

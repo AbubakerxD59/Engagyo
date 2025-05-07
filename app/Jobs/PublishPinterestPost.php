@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Models\Post;
 use Illuminate\Bus\Queueable;
 use App\Services\PinterestService;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -14,6 +15,7 @@ class PublishPinterestPost implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
+    public $tries = 1;
     private $id;
     private $data;
     private $post;
@@ -25,7 +27,6 @@ class PublishPinterestPost implements ShouldQueue
     {
         $this->id = $id;
         $this->data = $data;
-        $this->post = new Post();
         $this->access_token = $access_token;
     }
 
@@ -34,20 +35,14 @@ class PublishPinterestPost implements ShouldQueue
      */
     public function handle(): void
     {
-        $pinterest = new PinterestService();
-        $publish = $pinterest->create($this->access_token, $this->data);
-        $post = $this->post->find($this->id);
-        if (isset($publish['id'])) {
-            $post->update([
-                "post_id" => $publish["id"],
-                "status" => 1,
-                "response" => "Published Successfully!"
-            ]);
-        } else {
-            $post->update([
-                "status" => -1,
-                "response" => json_encode($publish)
-            ]);
-        }
+        $pinterestService = new PinterestService();
+        $publish = $pinterestService->create($this->id, $this->data, $this->access_token);
+    }
+
+    public function failed(\Throwable $exception)
+    {
+        // This method will be called if the job fails after all attempts (in this case, after the first attempt).
+        // You can log the failure, send a notification, or perform any other necessary actions here.
+        Log::error("FetchPost job failed: " . $exception->getMessage());
     }
 }
