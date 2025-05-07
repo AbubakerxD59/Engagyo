@@ -112,14 +112,13 @@ class FeedService
                 '/rss.xml',
             ];
         }
-
         $discoveredUrls = [];
-
         // Basic check for common paths
         foreach ($potentialPaths as $path) {
             $urlToCheck = rtrim($websiteUrl, '/') . $path;
             $response = Http::timeout(5)->head($urlToCheck);
-            dd($response);
+            $contentType = strtolower($response->header('Content-Type') ?? '');
+            dd($contentType);
             try {
                 // Use HEAD request to check existence without downloading body
                 if ($response->successful()) {
