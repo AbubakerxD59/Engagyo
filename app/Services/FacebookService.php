@@ -43,7 +43,6 @@ class FacebookService
             $getOAuth2Client = $this->facebook->getOAuth2Client();
             $tokenMetadata = $getOAuth2Client->debugToken($access_token);
             $access_token = $access_token->getValue();
-            dd($access_token, $tokenMetadata->getField('data_access_expires_at'));
             $response = [
                 "success" => true,
                 "data" => [

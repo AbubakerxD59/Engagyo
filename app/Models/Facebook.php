@@ -16,6 +16,7 @@ class Facebook extends Model
         "username",
         "profile_image",
         "access_token",
+        "expires_in"
     ];
 
     public function pages()
@@ -40,8 +41,22 @@ class Facebook extends Model
         );
     }
 
+    protected function expiresIn(): Attribute
+    {
+        return Attribute::make(
+            set: function ($value) {
+                $expires_in = date("Y-m-d H:i:s", $value);
+                return $expires_in;
+            },
+            get: function ($value) {
+                $expires_in = strtotime($value);
+                return $expires_in;
+            }
+        );
+    }
+
     public function validToken()
     {
-       return true;
+        return true;
     }
 }

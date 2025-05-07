@@ -43,7 +43,7 @@ class FacebookController extends Controller
                     "username" => $me["name"],
                     "profile_image" => saveImageFromUrl($image["url"]) ? saveImageFromUrl($image["url"]) : '',
                     "access_token" => $access_token,
-                    "expires_in" => $meta_data["data_access_expires_at"]
+                    "expires_in" => $meta_data->getField("data_access_expires_at")
                 ];
                 $user->facebook()->updateOrCreate(["fb_id" => $me["id"]], $data);
 
