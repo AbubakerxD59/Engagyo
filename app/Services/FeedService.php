@@ -31,15 +31,18 @@ class FeedService
                 "type" => $type,
                 "domain_id" => $domain_id,
                 "url" => $url,
-                "message" => "Could not find RSS/Atom feed or Sitemap URL"
+                "message" => "Could not find RSS feed or Sitemap URL"
             ];
             create_notification($user_id, $body, "Post");
+            exit;
         }
         $targetUrl = $feedUrls[0];
+        $response = Http::timeout(5)
+            ->withHeaders(['User-Agent' => 'Engagyo RSS bot'])
+            ->get($targetUrl);
+        $xmlContent = $response->body();
+        dd($targetUrl, $response, $xmlContent);
         try {
-            $response = Http::timeout(5) // Set a reasonable timeout
-                ->withHeaders(['User-Agent' => 'Engagyo RSS bot']) // Be polite, identify your bot
-                ->get($targetUrl);
 
             if (!$response->successful()) {
                 $body = [
@@ -51,6 +54,7 @@ class FeedService
                     "message" => "Failed to fetch feed/sitemap from {$targetUrl}. Status: " . $response->status()
                 ];
                 create_notification($user_id, $body, "Post");
+                exit;
             }
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
@@ -112,15 +116,15 @@ class FeedService
                 '/rss.xml',
             ];
         }
+
         $discoveredUrls = [];
+
         // Basic check for common paths
         foreach ($potentialPaths as $path) {
             $urlToCheck = rtrim($websiteUrl, '/') . $path;
-            $response = Http::timeout(5)->head($urlToCheck);
-            $contentType = strtolower($response->header('Content-Type') ?? '');
-            dd($contentType);
             try {
                 // Use HEAD request to check existence without downloading body
+                $response = Http::timeout(5)->head($urlToCheck);
                 if ($response->successful()) {
                     // Check content type if possible (more reliable)
                     $contentType = strtolower($response->header('Content-Type') ?? '');
