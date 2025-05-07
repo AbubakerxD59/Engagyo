@@ -221,9 +221,7 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
-                $feedService = new FeedService($data);
-                $feedService->fetch();
-                // FetchPost::dispatch($data);
+                FetchPost::dispatch($data);
                 $response = array(
                     "success" => true,
                     "message" => "Your posts are being Fetched!"
