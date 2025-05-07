@@ -39,6 +39,11 @@ class Domain extends Model
         $query->where("account_id", $id);
     }
 
+    public function scopeUserSearch($query, $id)
+    {
+        $query->where("user_id", $id);
+    }
+
     protected function name(): Attribute
     {
         return Attribute::make(

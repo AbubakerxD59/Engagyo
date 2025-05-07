@@ -70,6 +70,26 @@ class Post extends Model
         }
     }
 
+    public function scopeUserSearch($query, $id)
+    {
+        $query->where("user_id", $id);
+    }
+
+    public function scopeAccountExist($query)
+    {
+        $query->has("page")->orHas("board");
+    }
+
+    public function scopePageExist($query)
+    {
+        $query->has("page");
+    }
+
+    public function scopeBoardExist($query)
+    {
+        $query->has("board");
+    }
+
     public function scopeDomainSearch($query, $id)
     {
         $query->whereIn("domain_id", $id);
@@ -164,6 +184,17 @@ class Post extends Model
         $post = $post->first();
         return $post ? date("Y-m-d h:i A", strtotime($post->publish_date)) : '-';
     }
+
+    // public function accountExists()
+    // {
+    //     $type = $this->type;
+    //     if ($type == 'facebook') {
+    //         $post =  $this->pageExist()->first();
+    //     } elseif ($type == 'pinterest') {
+    //         $post = $this->boardExist()->first();
+    //     }
+    //     return $post ? true : false;
+    // }
 
     protected function image(): Attribute
     {

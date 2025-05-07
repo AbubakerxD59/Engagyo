@@ -54,7 +54,7 @@ class AutomationController extends Controller
         $search = $data['search_input'];
         $domain = isset($data["domain"]) ? $data["domain"] : [];
         $lastFetch = '';
-        $posts = $this->post;
+        $posts = $this->post->accountExist();
         if (!empty($search)) {
             $posts = $posts->search($search);
         }
