@@ -56,6 +56,7 @@ class FeedService
             }
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
+            dd($items, 'items');
             foreach ($items as $key => $item) {
                 $nextTime = $this->post->nextTime(["user_id" => $user_id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain_id]);
                 $post = $this->post->exist(["user_id" => $user_id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain_id, "url" => $item["link"]])->notPublished()->first();
@@ -213,7 +214,7 @@ class FeedService
                     if (!empty($childSitemapUrl)) {
                         $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
                         if ($childXmlContent !== false) {
-                            dd($childXmlContent);
+                            dd($childXmlContent, '1');
                             $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
                             if (isset($childParseResult['items']) && is_array($childParseResult['items'])) {
                                 $items = array_merge($items, $childParseResult['items']);
