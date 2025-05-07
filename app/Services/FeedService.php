@@ -168,7 +168,10 @@ class FeedService
             $items = [];
             // Check root element or URL path to determine type (heuristic)
             if (isset($xml->channel->item)) { // RSS 2.0
-                foreach ($xml->channel->item as $item) {
+                foreach ($xml->channel->item as $key => $item) {
+                    if ($key == 19) {
+                        break;
+                    }
                     $items[] = [
                         'title' => (string) $item->title,
                         'link' => (string) $item->link,
@@ -222,9 +225,6 @@ class FeedService
                                 $items = array_merge($items, $childParseResult);
                             }
                         }
-                    }
-                    if (count($items) >= 20) {
-                        break;
                     }
                 }
             }
