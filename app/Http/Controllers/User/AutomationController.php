@@ -342,7 +342,6 @@ class AutomationController extends Controller
                         if ($facebook) {
                             if (!$page->validToken()) {
                                 $token = $this->facebookService->refreshAccessToken($page->access_token);
-                                dd($token);
                                 $data = $token["data"];
                                 $meta_data = $data["metadata"];
                                 $access_token = $data["access_token"];;

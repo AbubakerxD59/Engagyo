@@ -77,6 +77,7 @@ class Page extends Model
     {
         return Attribute::make(
             set: function ($value) {
+                $value = time();
                 $next_time = strtotime('+3 months', $value);
                 $expires_in = date("Y-m-d H:i:s", $next_time);
                 return $expires_in;
@@ -90,7 +91,6 @@ class Page extends Model
 
     public function validToken()
     {
-        return false;
         $now = strtotime(date("Y-m-d H:i:s"));
         $expires_in = $this->expires_in;
         return $now > $expires_in ? true : false;
