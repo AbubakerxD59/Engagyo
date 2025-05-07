@@ -206,7 +206,10 @@ class FeedService
                     ];
                 }
             } elseif (isset($xml->url)) { // Sitemap
-                foreach ($xml->url as $url) {
+                foreach ($xml->url as $key => $url) {
+                    if ($key == 19) {
+                        break;
+                    }
                     $items[] = [
                         'title' => null, // Sitemaps usually don't have titles
                         'link' => (string) $url->loc,
@@ -222,6 +225,7 @@ class FeedService
                         if ($childXmlContent !== false) {
                             $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
                             if (is_array($childParseResult) && count($childParseResult) > 0) {
+                                dd($childParseResult);
                                 $items = array_merge($items, $childParseResult);
                             }
                         }
