@@ -57,20 +57,20 @@ class FeedService
             $xmlContent = $response->body();
             $items = $this->parseContent($xmlContent, $targetUrl);
             foreach ($items as $key => $item) {
-                dd($item);
                 $nextTime = $this->post->nextTime(["user_id" => $user_id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain_id]);
                 $post = $this->post->exist(["user_id" => $user_id, "account_id" => $account_id, "type" => $type, "domain_id" => $domain_id, "url" => $item["link"]])->notPublished()->first();
-                $rss_image = $this->dom->get_info($item["link"], $mode);
+                $rss = $this->dom->get_info($item["link"], $mode);
+                $title = empty($item["title"]) ? $rss["title"] : $item["title"];
                 if (!$post) {
                     $this->post->create([
                         "user_id" => $user_id,
                         "account_id" => $account_id,
                         "type" => $type,
-                        "title" => $item["title"],
+                        "title" => $title,
                         "description" => $item["description"],
                         "domain_id" => $domain_id,
                         "url" => $item["link"],
-                        "image" => $rss_image ? $rss_image["image"] : no_image(),
+                        "image" => isset($rss["image"])  && !empty($rss["iamge"]) ? $rss["image"] : no_image(),
                         "publish_date" => newDateTime($nextTime, $time, $key - 1),
                         "status" => 0,
                     ]);
