@@ -178,7 +178,10 @@ class FeedService
                     ];
                 }
             } elseif (isset($xml->entry)) { // Atom
-                foreach ($xml->entry as $entry) {
+                foreach ($xml->entry as $key => $entry) {
+                    if ($key == 0) {
+                        break;
+                    }
                     $link = '';
                     // Find the 'alternate' link
                     foreach ($entry->link as $linkNode) {
@@ -215,16 +218,8 @@ class FeedService
                         $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
                         if ($childXmlContent !== false) {
                             $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
-                            dd($childParseResult, '1');
                             if (isset($childParseResult['items']) && is_array($childParseResult['items'])) {
                                 $items = array_merge($items, $childParseResult['items']);
-                            } else {
-                                // Log or handle failure to parse child sitemap
-                                if (class_exists('Log')) {
-                                    Log::warning("Failed to parse child sitemap: {$childSitemapUrl}");
-                                } else {
-                                    error_log("Failed to parse child sitemap: {$childSitemapUrl}");
-                                }
                             }
                         }
                     }
