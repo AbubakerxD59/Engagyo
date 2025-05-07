@@ -37,12 +37,10 @@ class FeedService
             exit;
         }
         $targetUrl = $feedUrls[0];
-        $response = Http::timeout(5)
-            ->withHeaders(['User-Agent' => 'Engagyo RSS bot'])
-            ->get($targetUrl);
-        $xmlContent = $response->body();
-        dd($targetUrl, $response, $xmlContent);
         try {
+            $response = Http::timeout(5)
+                ->withHeaders(['User-Agent' => 'Engagyo RSS bot'])
+                ->get($targetUrl);
 
             if (!$response->successful()) {
                 $body = [
@@ -160,12 +158,13 @@ class FeedService
             libxml_clear_errors(); // Clear errors from buffer
 
             if ($xml === false) {
-                Log::warning("Failed to parse XML from {$sourceUrl}");
-                return []; // Return empty if XML is invalid
+                $response = [
+                    "success" => false,
+                    "message" => "Failed to parse XML from {$sourceUrl}"
+                ];
+                return $response;
             }
-
             $items = [];
-
             // Check root element or URL path to determine type (heuristic)
             if (isset($xml->channel->item)) { // RSS 2.0
                 foreach ($xml->channel->item as $item) {
@@ -208,17 +207,73 @@ class FeedService
                         'pubDate' => isset($url->lastmod) ? (string) $url->lastmod : null,
                     ];
                 }
-            } elseif (isset($xml->sitemap)) { // Sitemap Index File
-                // If it's a sitemap index, you might want to recursively fetch and parse the listed sitemaps
-                Log::info("Detected Sitemap Index at {$sourceUrl}. Recursive parsing not implemented in this example.");
-                // You could loop through $xml->sitemap, get the <loc>, and call fetch/parse again
+            } elseif (isset($xml->sitemap)) {
+                foreach ($xml->sitemap as $sitemapEntry) {
+                    $childSitemapUrl = (string) $sitemapEntry->loc;
+                    if (!empty($childSitemapUrl)) {
+                        $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
+                        dd($childXmlContent);
+                        if ($childXmlContent !== false) {
+                            $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
+                            if (isset($childParseResult['items']) && is_array($childParseResult['items'])) {
+                                $items = array_merge($items, $childParseResult['items']);
+                            } else {
+                                // Log or handle failure to parse child sitemap
+                                if (class_exists('Log')) {
+                                    Log::warning("Failed to parse child sitemap: {$childSitemapUrl}");
+                                } else {
+                                    error_log("Failed to parse child sitemap: {$childSitemapUrl}");
+                                }
+                            }
+                        }
+                    }
+                }
             }
-
-
             return $items;
         } catch (Exception $e) {
-            Log::error("Error parsing XML from {$sourceUrl}: " . $e->getMessage());
-            return []; // Return empty on parsing error
+            $response = [
+                "success" => false,
+                "message" => $e->getMessage()
+            ];
+            return $response;
         }
+    }
+
+    private function fetchUrlContent(string $url)
+    {
+        $context = stream_context_create([
+            'http' => ['timeout' => 30]
+        ]);
+        $content = @file_get_contents($url, false, $context);
+        if ($content === false) {
+            return false;
+        }
+
+        return $content;
+
+        // Example implementation using cURL (more robust for production)
+
+        // $ch = curl_init();
+        // curl_setopt($ch, CURLOPT_URL, $url);
+        // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        // curl_setopt($ch, CURLOPT_TIMEOUT, 30); // Set a timeout
+        // // Add other cURL options as needed (e.g., SSL verification)
+
+        // $content = curl_exec($ch);
+        // $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+
+        // if ($content === false || $httpCode >= 400) {
+        //     // Log cURL error: curl_error($ch)
+        //     if (class_exists('Log')) {
+        //         Log::error("Failed to fetch URL (cURL): {$url}. HTTP Code: {$httpCode}. Error: " . curl_error($ch));
+        //     } else {
+        //         error_log("Failed to fetch URL (cURL): {$url}. HTTP Code: {$httpCode}. Error: " . curl_error($ch));
+        //     }
+        //     curl_close($ch);
+        //     return false;
+        // }
+
+        // curl_close($ch);
+        // return $content;
     }
 }
