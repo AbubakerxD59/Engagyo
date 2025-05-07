@@ -70,7 +70,7 @@ class PinterestService
     public function create($access_token, $post)
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
-        $publish = $this->client->postJson($this->sandbox_baseUrl . "pins", $post, $this->header);
+        $publish = $this->client->postJson($this->baseUrl . "pins", $post, $this->header);
         return $publish;
     }
 }
