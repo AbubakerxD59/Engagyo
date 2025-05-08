@@ -51,7 +51,6 @@ class PinterestController extends Controller
                     $user->pinterest()->updateOrCreate(["pin_id" => $me["id"]], $data);
 
                     $boards = $this->pinterestService->getBoards($token["access_token"]);
-                    dd($boards);
                     if (isset($boards['items'])) {
                         foreach ($boards["items"] as $key => $board) {
                             $connected = $this->board->connected(['user_id' => $user->id, 'pin_id' => $me["id"], 'board_id' => $board["id"]])->first() ? true : false;

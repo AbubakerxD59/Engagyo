@@ -97,11 +97,11 @@
         </section>
     </div>
     @if (!empty(session_get('items')))
-        @if (session_get('account') == 'pinterest')
+        @if (session_get('account') == 'Pinterest')
             @include('user.accounts.modals.pinterest_boards_modal', [
                 'pinterest' => $user->pinterest()->latest()->first(),
             ])
-        @elseif(session_get('account') == 'facebook')
+        @elseif(session_get('account') == 'Facebook')
             @include('user.accounts.modals.facebook_pages_modal', [
                 'facebook' => $user->facebook()->latest()->first(),
             ])
