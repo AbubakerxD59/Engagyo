@@ -50,12 +50,14 @@ class FeedCron extends Command
                         "category" => $value->category,
                         "domain_id" => $value->id,
                         "user_id" => $user->id,
-                        "account_id" => $sub_account->id,
+                        "account_id" => $sub_account->page_id,
                         "time" => $value->time,
                         "type" => $type,
                         "mode" => $mode,
                         "exist" => false
                     ];
+                    // Log::info(json_encode($data));
+                    // exit;
                     $feedService = new FeedService($data);
                     $feedService->fetch();
                 }
