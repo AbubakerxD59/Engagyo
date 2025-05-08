@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <title>
-        @yield('page_title') {{ ' - ' . getCompanyName() }}
+        @yield('page_title') {{ ' - ' . env("APP_NAME") }}
     </title>
     <!--favicon-->
     <link rel="icon" href="{{ site_logo() }}" type="image/png" />

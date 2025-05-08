@@ -6,7 +6,7 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
     <meta content="{{ csrf_token() }}" name="csrf-token">
     <title>
-        @yield('page_title') {{ ' - ' . getCompanyName() }}
+        @yield('page_title') {{ ' - ' . env("APP_NAME") }}
     </title>
     <!--favicon-->
     <link class="rounded-pill" rel="icon" href="{{ site_logo() }}" type="image/png" />

@@ -3,7 +3,7 @@
     <a href="{{ route('dashboard') }}" class="brand-link">
         <img src="{{ site_logo() }}" alt="{{ env('APP_NAME', 'Engagyo') }}" class="brand-image"
             style="width: 220px;">
-        <span class="brand-text font-weight-light">{{ getCompanyName() }}</span>
+        <span class="brand-text font-weight-light">{{ env("APP_NAME") }}</span>
     </a>
     <!-- Sidebar -->
     <div class="sidebar">
