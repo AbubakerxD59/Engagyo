@@ -2,8 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Post;
 use Facebook\Facebook;
-use App\Services\HttpService;
 use Facebook\Exceptions\FacebookSDKException;
 use Facebook\Exceptions\FacebookResponseException;
 use App\Classes\FacebookSDK\LaravelSessionPersistentDataHandler;
@@ -11,7 +11,7 @@ use App\Classes\FacebookSDK\LaravelSessionPersistentDataHandler;
 class FacebookService
 {
     private $facebook;
-    private $client;
+    private $post;
     private $helper;
     private $scopes;
     public function __construct()
@@ -24,7 +24,7 @@ class FacebookService
         ]);
         $this->helper = $this->facebook->getRedirectLoginHelper();
         $this->scopes = ['business_management', 'email', 'public_profile', 'pages_manage_metadata', 'pages_manage_posts', 'pages_read_engagement', 'pages_show_list', 'pages_manage_engagement', 'pages_read_user_content', 'read_insights', 'pages_manage_ads'];
-        $this->client = new HttpService();
+        $this->post = new Post();
     }
 
     public function getLoginUrl()
@@ -176,7 +176,7 @@ class FacebookService
         return $response;
     }
 
-    public function createLink($access_token, $post)
+    public function createLink($id, $access_token, $post)
     {
         try {
             $publish = $this->facebook->post('/me/feed', $post, $access_token);
@@ -197,6 +197,21 @@ class FacebookService
                 "message" => $error
             ];
         }
-        return $response;
+        $post = $this->post->find($id);
+        if ($response["success"]) {
+            $createLink = $response["data"];
+            $graphNode = $createLink->getGraphNode();
+            $post_id = $graphNode['id'];
+            $post->update([
+                "post_id" => $post_id,
+                "status" => 1,
+                "response" => "Post published Successfully!"
+            ]);
+        } else {
+            $post->update([
+                "status" => -1,
+                "response" => $response["message"]
+            ]);
+        }
     }
 }

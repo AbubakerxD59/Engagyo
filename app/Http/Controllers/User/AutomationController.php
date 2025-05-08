@@ -364,32 +364,11 @@ class AutomationController extends Controller
                                 'link' => $post->url,
                                 'message' => $post->title,
                             ];
-                            $createLink =  $this->facebookService->createLink($access_token, $postData);
-                            if ($createLink["success"]) {
-                                $createLink = $createLink["data"];
-                                $graphNode = $createLink->getGraphNode();
-                                $post_id = $graphNode['id'];
-                                $post->update([
-                                    "post_id" => $post_id,
-                                    "status" => 1,
-                                    "response" => "Post published Successfully!"
-                                ]);
-
-                                $response = array(
-                                    "success" => true,
-                                    "message" => "Post published Successfully!"
-                                );
-                            } else {
-                                $post->update([
-                                    "status" => -1,
-                                    "response" => $createLink["message"]
-                                ]);
-
-                                $response = array(
-                                    "success" => false,
-                                    "message" => $createLink["message"]
-                                );
-                            }
+                            $response = array(
+                                "success" => true,
+                                "message" => "Your post is being Published!"
+                            );
+                            // $this->facebookService->createLink($post->id, $access_token, $postData);
                         } else {
                             $response = array(
                                 "success" => false,
