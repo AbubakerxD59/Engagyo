@@ -28,21 +28,22 @@ class FeedCron extends Command
      */
     public function handle(Domain $domain)
     {
-        Log::info("cronjob running".now());
+        Log::info("cronjob running" . now());
         $domains = $domain->get();
         foreach ($domains as $key => $value) {
             $user = $value->user()->where("status", 1)->first();
             if ($user) {
                 $type = $value->type;
-                Log::info("type: " . $type);
                 if ($type == 'pinterest') {
                     $sub_account = $value->board()->first();
                     $account = $sub_account->pinterest()->first();
+                    $account_id = $sub_account->board_id;
                     $mode = 1;
                 } elseif ($type == 'facebook') {
                     $sub_account = $value->page()->first();
                     $account = $sub_account->facebook()->first();
-                $mode = 0;
+                    $account_id = $sub_account->page_id;
+                    $mode = 0;
                 }
                 if ($sub_account && $account) {
                     $data = [
@@ -50,14 +51,12 @@ class FeedCron extends Command
                         "category" => $value->category,
                         "domain_id" => $value->id,
                         "user_id" => $user->id,
-                        "account_id" => $sub_account->page_id,
+                        "account_id" => $account_id,
                         "time" => $value->time,
                         "type" => $type,
                         "mode" => $mode,
                         "exist" => false
                     ];
-                    // Log::info(json_encode($data));
-                    // exit;
                     $feedService = new FeedService($data);
                     $feedService->fetch();
                 }
