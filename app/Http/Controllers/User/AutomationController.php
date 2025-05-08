@@ -207,6 +207,7 @@ class AutomationController extends Controller
                         "type" => $type,
                         "name" => $urlDomain,
                         "category" => $category,
+                        "time" => $time
                     ]);
                 } else {
                     $domain->update([
