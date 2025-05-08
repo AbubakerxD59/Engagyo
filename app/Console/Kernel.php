@@ -16,8 +16,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        $schedule->command('rss:feed')->everyMinute();
-        // $schedule->command('rss:feed')->dailyAt('03:58');
+        $schedule->command('rss:feed')->everyFourHours();
     }
 
     /**
