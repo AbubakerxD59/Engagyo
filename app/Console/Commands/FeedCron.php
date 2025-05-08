@@ -50,7 +50,7 @@ class FeedCron extends Command
                         "category" => $value->category,
                         "domain_id" => $value->id,
                         "user_id" => $user->id,
-                        "account_id" => $account->id,
+                        "account_id" => $sub_account->id,
                         "time" => $value->time,
                         "type" => $type,
                         "mode" => $mode,
