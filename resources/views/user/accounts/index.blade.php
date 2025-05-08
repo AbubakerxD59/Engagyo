@@ -97,12 +97,15 @@
         </section>
     </div>
     @if (!empty(session_get('items')))
-        @include('user.accounts.modals.pinterest_boards_modal', [
-            'pinterest' => $user->pinterest()->latest()->first(),
-        ])
-        @include('user.accounts.modals.facebook_pages_modal', [
-            'facebook' => $user->facebook()->latest()->first(),
-        ])
+        @if (session_get('account') == 'pinterest')
+            @include('user.accounts.modals.pinterest_boards_modal', [
+                'pinterest' => $user->pinterest()->latest()->first(),
+            ])
+        @elseif(session_get('account') == 'facebook')
+            @include('user.accounts.modals.facebook_pages_modal', [
+                'facebook' => $user->facebook()->latest()->first(),
+            ])
+        @endif
     @endif
 @endsection
 @push('styles')
