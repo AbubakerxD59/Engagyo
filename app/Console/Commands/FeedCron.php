@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Domain;
-use App\Services\FeedService;
+use App\Jobs\FetchPost;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -54,11 +54,16 @@ class FeedCron extends Command
                         "mode" => $mode,
                         "exist" => false
                     ];
-                    $feedService = new FeedService($data);
-                    $feedService->fetch();
+                    FetchPost::dispatch($data);
+                } else {
+                    Log::info("something went wrong");
+                    Log::info($value);
+                    Log::info($user);
+                    Log::info($type);
+                    Log::info($sub_account);
+                    Log::info($account);
                 }
             }
-            break;
         }
     }
 }
