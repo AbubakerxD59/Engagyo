@@ -115,6 +115,11 @@ class Post extends Model
         $query->where("type", "like", "%pinterest%");
     }
 
+    public function scopePast($query, $date_time)
+    {
+        $query->where("publish_date", "<=", $date_time);
+    }
+
     public function getDomain()
     {
         $domain = $this->domain()->first();

@@ -18,6 +18,8 @@ class Kernel extends ConsoleKernel
     {
         // Command to fetch latest posts for each domain
         $schedule->command('rss:feed')->everyFourHours();
+        // Command to publish Pinterest posts
+        $schedule->command('pinterest:publish')->everyFiveMinutes();
     }
 
     /**
