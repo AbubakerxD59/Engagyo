@@ -26,7 +26,7 @@ class PinterestPublishCron extends Command
     /**
      * Execute the console command.
      */
-    public function handle(Post  $post)
+    public function handle(Post $post, PinterestService $pinterestService)
     {
         $now = date("Y-m-d H:i");
         $posts = $post->notPublished()->past($now)->get();
@@ -39,6 +39,18 @@ class PinterestPublishCron extends Command
                     if ($board) {
                         $pinterest = $board->pinterest()->userSearch($user->id)->first();
                         if ($pinterest) {
+                            if (!$pinterest->validToken()) {
+                                $token = $pinterestService->refreshAccessToken($pinterest->refresh_token);
+                                $access_token = $token["access_token"];
+                                $pinterest->update([
+                                    "access_token" => $token["access_token"],
+                                    "expires_in" => $token["expires_in"],
+                                    "refresh_token" => $token["refresh_token"],
+                                    "refresh_token_expires_in" => $token["refresh_token_expires_in"],
+                                ]);
+                            } else {
+                                $access_token = $pinterest->access_token;
+                            }
                             $postData = array(
                                 "title" => $post->title,
                                 "link" => $post->url,
@@ -48,8 +60,7 @@ class PinterestPublishCron extends Command
                                     "url" => $post->image
                                 )
                             );
-                            $pinterestService = new PinterestService();
-                            $pinterestService->create($post->id, $postData, $board->access_token);
+                            $pinterestService->create($post->id, $postData, $access_token);
                         }
                     }
                 }
