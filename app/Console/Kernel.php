@@ -16,6 +16,7 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
+        // Command to fetch latest posts for each domain
         $schedule->command('rss:feed')->everyFourHours();
     }
 
