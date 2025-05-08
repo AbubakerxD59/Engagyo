@@ -31,7 +31,7 @@ class Domain extends Model
 
     public function page()
     {
-        return $this->belongsTo(Facebook::class, 'account_id', 'page_id');
+        return $this->belongsTo(Page::class, 'account_id', 'page_id');
     }
 
     public function scopeSearch($query, $search)
