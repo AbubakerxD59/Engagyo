@@ -11,7 +11,6 @@ use App\Jobs\FetchPost;
 use App\Models\Facebook;
 use App\Models\Pinterest;
 use Illuminate\Http\Request;
-use App\Services\FeedService;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
 use App\Services\PinterestService;
@@ -207,7 +206,11 @@ class AutomationController extends Controller
                         "account_id" => $account_id,
                         "type" => $type,
                         "name" => $urlDomain,
-                        "category" => $category
+                        "category" => $category,
+                    ]);
+                } else {
+                    $domain->update([
+                        "time" => $time
                     ]);
                 }
                 $data = [
@@ -285,7 +288,6 @@ class AutomationController extends Controller
     public function postPublish(Request $request, $id = null)
     {
         if (!empty($id)) {
-            $user = Auth::user();
             $type = $request->type;
             if ($type == "pinterest") {
                 $post = $this->post->notPublished()->where("id", $id)->first();

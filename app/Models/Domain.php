@@ -16,7 +16,23 @@ class Domain extends Model
         "type",
         "name",
         "category",
+        "time"
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function board()
+    {
+        return $this->belongsTo(Board::class, 'account_id', 'board_id');
+    }
+
+    public function page()
+    {
+        return $this->belongsTo(Facebook::class, 'account_id', 'page_id');
+    }
 
     public function scopeSearch($query, $search)
     {
@@ -42,6 +58,16 @@ class Domain extends Model
     public function scopeUserSearch($query, $id)
     {
         $query->where("user_id", $id);
+    }
+
+    public function scopeBoards($query, $id)
+    {
+        $query->whereIn("board_id", $id);
+    }
+
+    public function scopePages($query, $id)
+    {
+        $query->whereIn("page_id", $id);
     }
 
     protected function name(): Attribute

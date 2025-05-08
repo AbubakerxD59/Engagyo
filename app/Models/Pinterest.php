@@ -29,9 +29,13 @@ class Pinterest extends Model
 
     protected $appends = ["type"];
 
+    public function user(){
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
     public function boards()
     {
-        return $this->hasMany(Board::class, 'pin_id', 'pin_id')->where('user_id', auth()->id());
+        return $this->hasMany(Board::class, 'pin_id', 'pin_id');
     }
 
     public function scopeSearch($query, $search)
@@ -39,7 +43,7 @@ class Pinterest extends Model
         $query->where('pin_id', $search)->orWhere("username", "%{$search}%");
     }
 
-    public function scopeUser($query, $id)
+    public function scopeUserSearch($query, $id)
     {
         $query->where('user_id', $id);
     }
@@ -92,7 +96,6 @@ class Pinterest extends Model
 
     public function validToken()
     {
-        return false;
         $now = strtotime(date("Y-m-d H:i:s"));
         $expires_in = $this->expires_in;
         return $now > $expires_in ? true : false;

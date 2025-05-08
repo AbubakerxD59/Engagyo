@@ -21,6 +21,10 @@ class Facebook extends Model
 
     protected $appends = ["type"];
 
+    public function user(){
+        return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
     public function pages()
     {
         return $this->hasMany(Page::class, 'fb_id', 'fb_id');
@@ -31,7 +35,7 @@ class Facebook extends Model
         $query->where('fb_id', $search)->orWhere("username", "%{$search}%");
     }
 
-    public function scopeUser($query, $id)
+    public function scopeUserSearch($query, $id)
     {
         $query->where('user_id', $id);
     }

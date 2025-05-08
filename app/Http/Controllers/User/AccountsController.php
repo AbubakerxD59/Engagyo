@@ -47,15 +47,15 @@ class AccountsController extends Controller
     {
         if (!empty($id)) {
             $user = Auth::user();
-            $pinterest = $this->pinterest->search($id)->user($user->id)->first();
+            $pinterest = $this->pinterest->search($id)->userSearch($user->id)->first();
             if ($pinterest) {
-                $board_ids = $pinterest->boards()->where("user_id", $user->id)->pluck('board_id')->toArray();
+                $board_ids = $pinterest->boards()->userSearch($user->id)->get()->pluck("board_id")->toArray();
                 // posts
-                $this->post->whereIn("account_id", $board_ids)->where("user_id", $user->id)->delete();
+                $this->post->boards($board_ids)->userSearch($user->id)->delete();
                 // domains
-                $this->domain->whereIn("account_id", $board_ids)->where("user_id", $user->id)->delete();
+                $this->domain->boards($board_ids)->userSearch($user->id)->delete();
                 // boards
-                $pinterest->boards()->where("user_id", $user->id)->delete();
+                $pinterest->boards()->userSearch($user->id)->delete();
                 // pinterest account
                 $pinterest->delete();
                 return back()->with("success", "Pinterest Account deleted Successfully!");
@@ -87,7 +87,7 @@ class AccountsController extends Controller
         $board = $request->board_data;
         if ($board) {
             $user = Auth::user();
-            $pinterest = $this->pinterest->search($request->pin_id)->where('user_id', $user->id)->first();
+            $pinterest = $this->pinterest->search($request->pin_id)->userSearch($user->id)->first();
             $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "pin_id" => $pinterest->pin_id, "board_id" => $board["id"]], [
                 "user_id" => $user->id,
                 "pin_id" => $pinterest->pin_id,
@@ -121,16 +121,16 @@ class AccountsController extends Controller
     {
         if (!empty($id)) {
             $user = Auth::user();
-            $facebook = $this->facebook->search($id)->user($user->id)->first();
+            $facebook = $this->facebook->search($id)->userSearch($user->id)->first();
             if ($facebook) {
-                $fb_ids = $facebook->pages()->where("user_id", $user->id)->pluck('fb_id')->toArray();
+                $page_ids = $facebook->pages()->userSearch($user->id)->get()->pluck("page_id")->toArray();
                 // posts
-                $this->post->whereIn("account_id", $fb_ids)->where("user_id", $user->id)->delete();
+                $this->post->pages($page_ids)->userSearch($user->id)->delete();
                 // domains
-                $this->domain->whereIn("account_id", $fb_ids)->where("user_id", $user->id)->delete();
-                // boards
-                $facebook->pages()->where("user_id", $user->id)->delete();
-                // pinterest account
+                $this->domain->pages($page_ids)->userSearch($user->id)->delete();
+                // pages
+                $facebook->pages()->userSearch($user->id)->delete();
+                // facebook account
                 $facebook->delete();
                 return back()->with("success", "Facebook Account deleted Successfully!");
             } else {
@@ -161,7 +161,7 @@ class AccountsController extends Controller
         $page = $request->page_data;
         if ($page) {
             $user = Auth::user();
-            $facebook = $this->facebook->search($request->fb_id)->user($user->id)->first();
+            $facebook = $this->facebook->search($request->fb_id)->userSearch($user->id)->first();
             $facebook->pages()->updateOrCreate(["user_id" => $user->id, "fb_id" => $facebook->fb_id, "page_id" => $page["id"]], [
                 "user_id" => $user->id,
                 "fb_id" => $facebook->fb_id,

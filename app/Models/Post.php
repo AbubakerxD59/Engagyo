@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Post extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory;
 
     protected $fillable = [
         "user_id",
@@ -93,6 +93,16 @@ class Post extends Model
     public function scopeDomainSearch($query, $id)
     {
         $query->whereIn("domain_id", $id);
+    }
+
+    public function scopeBoards($query, $id)
+    {
+        $query->whereIn("board_id", $id);
+    }
+
+    public function scopePages($query, $id)
+    {
+        $query->whereIn("page_id", $id);
     }
 
     public function scopePublished($query)
@@ -184,17 +194,6 @@ class Post extends Model
         $post = $post->first();
         return $post ? date("Y-m-d h:i A", strtotime($post->publish_date)) : '-';
     }
-
-    // public function accountExists()
-    // {
-    //     $type = $this->type;
-    //     if ($type == 'facebook') {
-    //         $post =  $this->pageExist()->first();
-    //     } elseif ($type == 'pinterest') {
-    //         $post = $this->boardExist()->first();
-    //     }
-    //     return $post ? true : false;
-    // }
 
     protected function image(): Attribute
     {

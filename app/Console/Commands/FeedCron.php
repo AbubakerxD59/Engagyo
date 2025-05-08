@@ -2,7 +2,10 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Domain;
+use App\Services\FeedService;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Log;
 
 class FeedCron extends Command
 {
@@ -11,7 +14,7 @@ class FeedCron extends Command
      *
      * @var string
      */
-    protected $signature = 'rssfeed';
+    protected $signature = 'rss:feed';
 
     /**
      * The console command description.
@@ -23,8 +26,39 @@ class FeedCron extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(Domain $domain)
     {
-        //
+        $domains = $domain->get();
+        foreach ($domains as $key => $value) {
+            $user = $value->user()->where("status", 1)->first();
+            if ($user) {
+                $type = $value->type;
+                if ($type == 'pinterest') {
+                    $sub_account = $value->board()->first();
+                    $account = $sub_account->pinterest()->first();
+                    $mode = 1;
+                } elseif ($type == 'facebook') {
+                    $sub_account = $value->page()->first();
+                    $account = $sub_account->facebook()->first();
+                    $mode = 0;
+                }
+                if ($sub_account && $account) {
+                    $data = [
+                        "url" => !empty($value->category) ? $value->name . $value->category : $value->name,
+                        "category" => $value->category,
+                        "domain_id" => $value->id,
+                        "user_id" => $user->id,
+                        "account_id" => $account->id,
+                        "time" => $value->time,
+                        "type" => $type,
+                        "mode" => $mode,
+                        "exist" => false
+                    ];
+                    $feedService = new FeedService($data);
+                    $feedService->fetch();
+                }
+            }
+            break;
+        }
     }
 }
