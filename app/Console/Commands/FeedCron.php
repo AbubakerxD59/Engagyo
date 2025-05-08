@@ -60,7 +60,6 @@ class FeedCron extends Command
                         "mode" => $mode,
                         "exist" => false
                     ];
-                    Log::info("data: " . $data);
                     FetchPost::dispatch($data);
                 }
             }
