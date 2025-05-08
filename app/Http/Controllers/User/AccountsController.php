@@ -51,9 +51,9 @@ class AccountsController extends Controller
             if ($pinterest) {
                 $board_ids = $pinterest->boards()->userSearch($user->id)->get()->pluck("board_id")->toArray();
                 // posts
-                $this->post->boards($board_ids)->userSearch($user->id)->delete();
+                $this->post->accounts($board_ids)->userSearch($user->id)->delete();
                 // domains
-                $this->domain->boards($board_ids)->userSearch($user->id)->delete();
+                $this->domain->accounts($board_ids)->userSearch($user->id)->delete();
                 // boards
                 $pinterest->boards()->userSearch($user->id)->delete();
                 // pinterest account
@@ -125,9 +125,9 @@ class AccountsController extends Controller
             if ($facebook) {
                 $page_ids = $facebook->pages()->userSearch($user->id)->get()->pluck("page_id")->toArray();
                 // posts
-                $this->post->pages($page_ids)->userSearch($user->id)->delete();
+                $this->post->accounts($page_ids)->userSearch($user->id)->delete();
                 // domains
-                $this->domain->pages($page_ids)->userSearch($user->id)->delete();
+                $this->domain->accounts($page_ids)->userSearch($user->id)->delete();
                 // pages
                 $facebook->pages()->userSearch($user->id)->delete();
                 // facebook account

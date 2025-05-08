@@ -95,14 +95,9 @@ class Post extends Model
         $query->whereIn("domain_id", $id);
     }
 
-    public function scopeBoards($query, $id)
+    public function scopeAccounts($query, $id)
     {
-        $query->whereIn("board_id", $id);
-    }
-
-    public function scopePages($query, $id)
-    {
-        $query->whereIn("page_id", $id);
+        $query->whereIn("account_id", $id);
     }
 
     public function scopePublished($query)

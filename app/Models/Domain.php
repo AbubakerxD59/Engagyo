@@ -60,14 +60,9 @@ class Domain extends Model
         $query->where("user_id", $id);
     }
 
-    public function scopeBoards($query, $id)
+    public function scopeAccounts($query, $id)
     {
-        $query->whereIn("board_id", $id);
-    }
-
-    public function scopePages($query, $id)
-    {
-        $query->whereIn("page_id", $id);
+        $query->whereIn("account_id", $id);
     }
 
     protected function name(): Attribute
