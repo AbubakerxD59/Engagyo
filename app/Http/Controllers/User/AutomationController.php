@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Jobs\PublishFacebookPost;
 use Feed;
 use App\Models\Page;
 use App\Models\Post;
@@ -364,11 +365,11 @@ class AutomationController extends Controller
                                 'link' => $post->url,
                                 'message' => $post->title,
                             ];
+                            PublishFacebookPost::dispatch($post->id, $postData, $access_token);
                             $response = array(
                                 "success" => true,
                                 "message" => "Your post is being Published!"
                             );
-                            // $this->facebookService->createLink($post->id, $access_token, $postData);
                         } else {
                             $response = array(
                                 "success" => false,
