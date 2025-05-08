@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Domain;
-use App\Jobs\FetchPost;
+use App\Services\FeedService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -32,8 +32,6 @@ class FeedCron extends Command
         $domains = $domain->get();
         foreach ($domains as $key => $value) {
             $user = $value->user()->where("status", 1)->first();
-            Log::info("domain: " . $value);
-            Log::info("user: " . $user);
             if ($user) {
                 $type = $value->type;
                 Log::info("type: " . $type);
@@ -46,8 +44,6 @@ class FeedCron extends Command
                     $account = $sub_account->facebook()->first();
                     $mode = 0;
                 }
-                Log::info("sub_account: " . $sub_account);
-                Log::info("account: " . $account);
                 if ($sub_account && $account) {
                     $data = [
                         "url" => !empty($value->category) ? $value->name . $value->category : $value->name,
@@ -60,7 +56,8 @@ class FeedCron extends Command
                         "mode" => $mode,
                         "exist" => false
                     ];
-                    FetchPost::dispatch($data);
+                    $feedService = new FeedService($data);
+                    $feedService->fetch();
                 }
             }
         }
