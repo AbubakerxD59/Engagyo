@@ -28,7 +28,7 @@ class FeedCron extends Command
      */
     public function handle(Domain $domain)
     {
-        clearLogFile();
+        Log::info("cronjob running".now());
         $domains = $domain->get();
         foreach ($domains as $key => $value) {
             $user = $value->user()->where("status", 1)->first();
