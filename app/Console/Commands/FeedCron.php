@@ -42,7 +42,7 @@ class FeedCron extends Command
                 } elseif ($type == 'facebook') {
                     $sub_account = $value->page()->first();
                     $account = $sub_account->facebook()->first();
-                    $mode = 0;
+                $mode = 0;
                 }
                 if ($sub_account && $account) {
                     $data = [
