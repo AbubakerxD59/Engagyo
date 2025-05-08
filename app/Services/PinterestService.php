@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Post;
+use Illuminate\Support\Facades\Log;
 use DirkGroenen\Pinterest\Pinterest;
 
 class PinterestService
@@ -71,9 +72,11 @@ class PinterestService
 
     public function create($id, $post, $access_token)
     {
+        Log::info("service running");
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $publish = $this->client->postJson($this->baseUrl . "pins", $post, $this->header);
         $post = $this->post->find($id);
+        Log::info(json_encode($post));
         if (isset($publish['id'])) {
             $post->update([
                 "post_id" => $publish["id"],
