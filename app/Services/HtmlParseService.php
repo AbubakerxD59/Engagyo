@@ -44,7 +44,7 @@ class HtmlParseService
             $image = $html->find("meta[property='og:image']", 0)->content ? $html->find("meta[property='og:image']", 0)->content : $html->find("meta[name='twitter:image']", 0)->content;
             if ($pinterest) {
                 $pinterest_image = $this->fetch_pinterest_image($tags);
-                if ($pinterest_image != '' && $pinterest_image != null) {
+                if (!empty($pinterest_image)) {
                     $image = $pinterest_image;
                 }
             }
@@ -100,6 +100,7 @@ class HtmlParseService
             return false;
         }
     }
+
     private function get_string_between($string, $start, $end)
     {
         $string = ' ' . $string;
@@ -110,10 +111,33 @@ class HtmlParseService
         $len = strpos($string, $end, $ini) - $ini;
         return substr($string, $ini, $len);
     }
+
+    private function fetch_pinterest_image($tags)
+    {
+        $image = '';
+        $pin_image = false;
+        $pinterest_image = '';
+        foreach ($tags as $tag) {
+            if ($this->get_aspect_ratio($tag)) {
+                $pin_image = true;
+                $image = $tag->getAttribute('src');
+                if ($tag->hasAttribute('data-lazy-src')) {
+                    $image = $tag->getAttribute("data-lazy-src");
+                }
+                $pinterest_image = $image;
+                break;
+            }
+        }
+        if ($pin_image) {
+            $image = $pinterest_image;
+        }
+        return $image;
+    }
+
     private function get_aspect_ratio($image)
     {
         $pin_image = false;
-        if ($image != '' && $image != null) {
+        if (!empty($image)) {
             $height = $image->getAttribute('height');
             $width = $image->getAttribute('width');
             if (empty($height) || empty($width)) {
@@ -128,26 +152,6 @@ class HtmlParseService
             }
         }
         return $pin_image;
-    }
-    private function fetch_pinterest_image($tags)
-    {
-        $image = '';
-        $pin_image = false;
-        foreach ($tags as $tag) {
-            if ($this->get_aspect_ratio($tag)) {
-                $pin_image = true;
-                $image = $tag->getAttribute('src');
-				if ($tag->hasAttribute('data-lazy-src')) {
-					$image = $tag->getAttribute("data-lazy-src");
-				}
-                $pinterest_image = $image;
-                break;
-            }
-        }
-        if ($pin_image && !empty($pinterest_image)) {
-            $image = $pinterest_image;
-        }
-        return $image;
     }
 
     private function user_agent()
