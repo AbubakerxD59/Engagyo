@@ -155,14 +155,21 @@ class Post extends Model
         return $accountUrl;
     }
 
-    public function nextTime($search)
+    public function nextTime($search, $time)
     {
         $lastPost = $this->exist($search)->latest()->first();
         if ($lastPost) {
             $lastPublisDate = $lastPost->publish_date;
             $nextDate = date("Y-m-d", strtotime($lastPublisDate . " +1 days"));
         } else {
-            $nextDate = date("Y-m-d");
+            $hour = strtotime(date("H:i"));
+            $time = strtotime($time);
+            if ($time > $hour) {
+                $nextDate = date("Y-m-d");
+            } else {
+                $now = date("Y-m-d");
+                $nextDate = date("Y-m-d", strtotime($now . ' +1 days'));
+            }
         }
         return $nextDate;
     }
