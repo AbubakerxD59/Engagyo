@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Domain;
-use App\Jobs\FetchPost;
+use App\Services\FeedService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -28,7 +28,6 @@ class FeedCron extends Command
      */
     public function handle(Domain $domain)
     {
-        clearLogFile();
         $domains = $domain->get();
         foreach ($domains as $key => $value) {
             $user = $value->user()->where("status", 1)->first();
@@ -55,14 +54,8 @@ class FeedCron extends Command
                         "mode" => $mode,
                         "exist" => false
                     ];
-                    FetchPost::dispatch($data);
-                } else {
-                    Log::info("something went wrong");
-                    Log::info($value);
-                    Log::info($user);
-                    Log::info($type);
-                    Log::info($sub_account);
-                    Log::info($account);
+                    $feedService = new FeedService($data);
+                    $feedService->fetch();
                 }
             }
         }
