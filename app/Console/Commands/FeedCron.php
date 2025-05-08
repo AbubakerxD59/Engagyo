@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Domain;
-use App\Services\FeedService;
+use App\Jobs\FetchPost;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -28,11 +28,15 @@ class FeedCron extends Command
      */
     public function handle(Domain $domain)
     {
+        clearLogFile();
         $domains = $domain->get();
         foreach ($domains as $key => $value) {
             $user = $value->user()->where("status", 1)->first();
+            Log::info("domain: " . $value);
+            Log::info("user: " . $user);
             if ($user) {
                 $type = $value->type;
+                Log::info("type: " . $type);
                 if ($type == 'pinterest') {
                     $sub_account = $value->board()->first();
                     $account = $sub_account->pinterest()->first();
@@ -42,6 +46,8 @@ class FeedCron extends Command
                     $account = $sub_account->facebook()->first();
                     $mode = 0;
                 }
+                Log::info("sub_account: " . $sub_account);
+                Log::info("account: " . $account);
                 if ($sub_account && $account) {
                     $data = [
                         "url" => !empty($value->category) ? $value->name . $value->category : $value->name,
@@ -54,8 +60,8 @@ class FeedCron extends Command
                         "mode" => $mode,
                         "exist" => false
                     ];
-                    $feedService = new FeedService($data);
-                    $feedService->fetch();
+                    Log::info("data: " . $data);
+                    FetchPost::dispatch($data);
                 }
             }
         }
