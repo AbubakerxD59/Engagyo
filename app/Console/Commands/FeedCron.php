@@ -46,6 +46,9 @@ class FeedCron extends Command
                     $mode = 0;
                 }
                 if ($sub_account && $account) {
+                    $sub_account->update([
+                        "last_fetch" => date("Y-m-d H:i A")
+                    ]);
                     $data = [
                         "url" => !empty($value->category) ? $value->name . $value->category : $value->name,
                         "category" => $value->category,
