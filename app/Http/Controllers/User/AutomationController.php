@@ -241,10 +241,10 @@ class AutomationController extends Controller
                 ];
 
                 try {
-                    if (!$exist) {
-                        Feed::$userAgent = $this->dom->user_agent();
-                        Feed::loadRss($data["url"]);
-                    }
+                    // if (!$exist) {
+                    //     Feed::$userAgent = $this->dom->user_agent();
+                    //     Feed::loadRss($data["url"]);
+                    // }
                     $response = array(
                         "success" => true,
                         "message" => "Your posts are being Fetched!"
