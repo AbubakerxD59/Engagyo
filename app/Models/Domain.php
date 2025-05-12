@@ -19,6 +19,8 @@ class Domain extends Model
         "time"
     ];
 
+    protected $appends = ["url"];
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
@@ -70,6 +72,16 @@ class Domain extends Model
         return Attribute::make(
             get: function ($value) {
                 $name = empty($this->category) ? $value : $value . $this->category;
+                return "https://" . $name;
+            }
+        );
+    }
+
+    protected function url(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $name = $this->name;
                 return "https://" . $name;
             }
         );
