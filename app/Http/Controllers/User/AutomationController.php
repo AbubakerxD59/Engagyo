@@ -237,7 +237,7 @@ class AutomationController extends Controller
                     "exist" => $exist
                 ];
 
-                try {
+                // try {
                     if (!$exist) {
                         Feed::loadRss($data["url"]);
                     }
@@ -256,13 +256,12 @@ class AutomationController extends Controller
                     //     FetchPost::dispatch($data);
                     // }
                     FetchPost::dispatch($data);
-                } catch (Exception $e) {
-                    // $domain->delete();
-                    $response = [
-                        "success" => false,
-                        "message" => $e->getMessage()
-                    ];
-                }
+                // } catch (Exception $e) {
+                //     $response = [
+                //         "success" => false,
+                //         "message" => $e->getMessage()
+                //     ];
+                // }
             }
         } else {
             $response = array(
