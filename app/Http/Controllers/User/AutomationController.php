@@ -216,7 +216,7 @@ class AutomationController extends Controller
                     $domain->update([
                         "time" => $time
                     ]);
-                    $link = $domain->url;
+                    $link = $urlDomain;
                     $exist = true;
                 }
                 $data = [
