@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\Notification;
-use App\Models\Post;
+use Feed;
 use Exception;
+use App\Models\Post;
+use App\Models\Notification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 
@@ -31,54 +32,64 @@ class FeedService
     public function fetch()
     {
         $websiteUrl = $this->data["url"];
-        $feedUrls = $this->discoverFeedUrls($websiteUrl, $this->data["exist"]);
-        if (empty($feedUrls)) {
-            $this->body["message"] = "Could not find RSS feed or Sitemap URL";
+        if ($this->data["exist"]) {
+            $feedUrls = $this->fetchRss($websiteUrl);
+        } else {
+            $feedUrls = $this->fetchSitemap($websiteUrl);
+        }
+        if ($feedUrls["success"]) {
+            try {
+                $items = $feedUrls["data"];
+                foreach ($items as $key => $item) {
+                    $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"]], $this->data["time"]);
+                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
+                    $rss = $this->dom->get_info($item["link"], $this->data["mode"]);
+                    $title = !empty($item["title"]) ?  $item["title"] : $rss["title"];
+                    if (!$post) {
+                        $this->post->create([
+                            "user_id" => $this->data["user_id"],
+                            "account_id" => $this->data["account_id"],
+                            "type" => $this->data["type"],
+                            "title" => $title,
+                            "description" => $item["description"],
+                            "domain_id" => $this->data["domain_id"],
+                            "url" => $item["link"],
+                            "image" => isset($rss["image"]) ? $rss["image"] : no_image(),
+                            "publish_date" => newDateTime($nextTime, $this->data["time"], $key - 1),
+                            "status" => 0,
+                        ]);
+                    }
+                }
+                return array(
+                    "success" => true,
+                    "items" => $items
+                );
+            } catch (Exception $e) {
+                $this->body["message"] = $e->getMessage();
+                create_notification($this->data["user_id"], $this->body, "Post");
+            }
+        } else {
+            $this->body["message"] = $feedUrls["message"];
             create_notification($this->data["user_id"], $this->body, "Post");
             exit;
         }
-        $targetUrl = $feedUrls[0];
-        try {
-            $response = Http::timeout(5)
-                ->withHeaders(['User-Agent' => 'Engagyo RSS bot'])
-                ->get($targetUrl);
+    }
 
-            if (!$response->successful()) {
-
-                $this->body["message"] = "Failed to fetch feed/sitemap from {$targetUrl}. Status: " . $response->status();
-                create_notification($this->data["user_id"], $this->body, "Post");
-                exit;
-            }
-            $xmlContent = $response->body();
-            $items = $this->parseContent($xmlContent, $targetUrl);
-            foreach ($items as $key => $item) {
-                $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"]], $this->data["time"]);
-                $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
-                $rss = $this->dom->get_info($item["link"], $this->data["mode"]);
-                $title = !empty($item["title"]) ?  $item["title"] : $rss["title"];
-                if (!$post) {
-                    $this->post->create([
-                        "user_id" => $this->data["user_id"],
-                        "account_id" => $this->data["account_id"],
-                        "type" => $this->data["type"],
-                        "title" => $title,
-                        "description" => $item["description"],
-                        "domain_id" => $this->data["domain_id"],
-                        "url" => $item["link"],
-                        "image" => isset($rss["image"]) ? $rss["image"] : no_image(),
-                        "publish_date" => newDateTime($nextTime, $this->data["time"], $key - 1),
-                        "status" => 0,
-                    ]);
-                }
-            }
-            return array(
-                "success" => true,
-                "items" => $items
+    private function fetchRss($url)
+    {
+        $feed = Feed::loadRss($url);
+        $items = [];
+        foreach ($feed->item as $item) {
+            $items[] = array(
+                "title" => $item->title,
+                "link" => $item->link
             );
-        } catch (Exception $e) {
-            $this->body["message"] = $e->getMessage();
-            create_notification($this->data["user_id"], $this->body, "Post");
         }
+        $response = [
+            "success" => true,
+            "data" => $items
+        ];
+        return $response;
     }
 
     /**
@@ -89,44 +100,45 @@ class FeedService
      * @param string $websiteUrl
      * @return array
      */
-    private function discoverFeedUrls(string $websiteUrl, $exist = true): array
+    private function fetchSitemap(string $websiteUrl): array
     {
-        if ($exist) {
-            $potentialPaths = [
-                '/sitemap.xml',
-            ];
-        } else {
-            $potentialPaths = [
-                '/feed',
-                '/rss',
-            ];
-        }
-
-        $discoveredUrls = [];
-
-        // Basic check for common paths
-        foreach ($potentialPaths as $path) {
-            $urlToCheck = rtrim($websiteUrl, '/') . $path;
-            try {
-                // Use HEAD request to check existence without downloading body
-                $response = Http::timeout(5)->head($urlToCheck);
-                if ($response->successful()) {
-                    // Check content type if possible (more reliable)
-                    $contentType = strtolower($response->header('Content-Type') ?? '');
-                    if (str_contains($contentType, 'xml')) {
-                        $discoveredUrls[] = $urlToCheck;
-                        // Optional: Prioritize RSS/Atom over sitemap if both found
-                    }
+        $urlToCheck = rtrim($websiteUrl, '/') . '/sitemap.xml';
+        $discoveredUrls = '';
+        try {
+            $response = Http::head($urlToCheck);
+            if ($response->successful()) {
+                // Check content type if possible (more reliable)
+                $contentType = strtolower($response->header('Content-Type') ?? '');
+                if (str_contains($contentType, 'xml')) {
+                    $discoveredUrls = $urlToCheck;
                 }
-            } catch (Exception $e) {
-                // Ignore connection errors etc. for discovery
             }
+            if ($discoveredUrls) {
+                $sitemap = Http::withHeaders(['User-Agent' => 'Engagyo RSS bot'])->get($discoveredUrls);
+                if (!$sitemap->successful()) {
+                    $xmlContent = $sitemap->body();
+                    $items = $this->parseContent($xmlContent, $websiteUrl);
+                    dd($items);
+                } else {
+                    $response = [
+                        "success" => false,
+                        "message" => "Failed to fetch feed/sitemap from {$websiteUrl}"
+                    ];
+                }
+            } else {
+                $response = [
+                    "success" => false,
+                    "message" => "Couldn't find Sitemap Data!"
+                ];
+            }
+        } catch (Exception $e) {
+            $response = [
+                "success" => false,
+                "message" => $e->getMessage()
+            ];
         }
 
-        // Add HTML parsing for <link> tags
-        // Add robots.txt parsing for Sitemap: directive
-
-        return $discoveredUrls; // Return found URLs
+        return $response;
     }
 
     /**
@@ -143,95 +155,45 @@ class FeedService
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($xmlContent);
             libxml_clear_errors(); // Clear errors from buffer
-            if ($xml === false) {
+            if ($xml !== false) {
+                $items = [];
+                if (isset($xml->sitemap)) {
+                    foreach ($xml->sitemap as $sitemapEntry) {
+                        $childSitemapUrl = (string) $sitemapEntry->loc;
+                        if (!empty($childSitemapUrl)) {
+                            $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
+                            if ($childXmlContent !== false) {
+                                $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
+                                if (is_array($childParseResult) && count($childParseResult) > 0) {
+                                    if (count($childParseResult) > 20) {
+                                        $childParseResult = array_slice($childParseResult, 0, 20);
+                                    }
+                                    $items = array_merge($items, $childParseResult);
+                                }
+                            }
+                        }
+                        if (count($items) >= 20) {
+                            break;
+                        }
+                    }
+                }
+                $response = [
+                    "success" => true,
+                    "data" => $items
+                ];
+            } else {
                 $response = [
                     "success" => false,
                     "message" => "Failed to parse XML from {$sourceUrl}"
                 ];
-                return $response;
             }
-            $items = [];
-            // Check root element or URL path to determine type (heuristic)
-            if (isset($xml->channel->item)) { // RSS 2.0
-                foreach ($xml->channel->item as $key => $item) {
-                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item->link])->first();
-                    if ($post) {
-                        continue;
-                    }
-                    $items[] = [
-                        'title' => (string) $item->title,
-                        'link' => (string) $item->link,
-                        'description' => (string) $item->description,
-                        'pubDate' => isset($item->pubDate) ? (string) $item->pubDate : null,
-                        // Add other fields as needed (guid, category, etc.)
-                    ];
-                }
-            } elseif (isset($xml->entry)) { // Atom
-                foreach ($xml->entry as $key => $entry) {
-                    $link = '';
-                    // Find the 'alternate' link
-                    foreach ($entry->link as $linkNode) {
-                        if (isset($linkNode['rel']) && (string)$linkNode['rel'] == 'alternate') {
-                            $link = (string) $linkNode['href'];
-                            break;
-                        }
-                    }
-                    // Fallback to the first link if no 'alternate' found
-                    if (empty($link) && isset($entry->link[0]['href'])) {
-                        $link = (string) $entry->link[0]['href'];
-                    }
-                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $link])->first();
-                    if ($post) {
-                        continue;
-                    }
-                    $items[] = [
-                        'title' => (string) $entry->title,
-                        'link' => $link,
-                        'description' => isset($entry->summary) ? (string) $entry->summary : (isset($entry->content) ? (string) $entry->content : null),
-                        'pubDate' => isset($entry->updated) ? (string) $entry->updated : (isset($entry->published) ? (string) $entry->published : null),
-                    ];
-                }
-            } elseif (isset($xml->url)) { // Sitemap
-                foreach ($xml->url as $key => $url) {
-                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
-                    if ($post) {
-                        continue;
-                    }
-                    $items[] = [
-                        'title' => null, // Sitemaps usually don't have titles
-                        'link' => (string) $url->loc,
-                        'description' => null,
-                        'pubDate' => isset($url->lastmod) ? (string) $url->lastmod : null,
-                    ];
-                }
-            } elseif (isset($xml->sitemap)) {
-                foreach ($xml->sitemap as $sitemapEntry) {
-                    $childSitemapUrl = (string) $sitemapEntry->loc;
-                    if (!empty($childSitemapUrl)) {
-                        $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
-                        if ($childXmlContent !== false) {
-                            $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
-                            if (is_array($childParseResult) && count($childParseResult) > 0) {
-                                if (count($childParseResult) > 20) {
-                                    $childParseResult = array_slice($childParseResult, 0, 20);
-                                }
-                                $items = array_merge($items, $childParseResult);
-                            }
-                        }
-                    }
-                    if (count($items) >= 20) {
-                        break;
-                    }
-                }
-            }
-            return $items;
         } catch (Exception $e) {
             $response = [
                 "success" => false,
                 "message" => $e->getMessage()
             ];
-            return $response;
         }
+        return $response;
     }
 
     private function fetchUrlContent(string $url)
@@ -243,7 +205,6 @@ class FeedService
         if ($content === false) {
             return false;
         }
-
         return $content;
 
         // Example implementation using cURL (more robust for production)

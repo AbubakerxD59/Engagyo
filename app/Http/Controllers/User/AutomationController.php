@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\User;
 
-use App\Jobs\PublishFacebookPost;
 use Feed;
+use Exception;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\Board;
@@ -12,11 +12,12 @@ use App\Jobs\FetchPost;
 use App\Models\Facebook;
 use App\Models\Pinterest;
 use Illuminate\Http\Request;
+use App\Services\FeedService;
+use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
-use Exception;
 use Illuminate\Support\Facades\Auth;
 
 class AutomationController extends Controller
@@ -227,16 +228,29 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
-                FetchPost::dispatch($data);
-                $response = array(
-                    "success" => true,
-                    "message" => "Your posts are being Fetched!"
-                );
+                try {
+                    $feed = Feed::loadRss($domain);
+                    $response = array(
+                        "success" => true,
+                        "message" => "Your posts are being Fetched!"
+                    );
+                    // Update last fetch
+                    $account->update([
+                        "last_fetch" => date("Y-m-d H:i A")
+                    ]);
+                    if ($user->email == "abmasood5900@gmail.com") {
+                        $feedService = new FeedService($data);
+                        $feedService->fetch();
+                    } else {
+                        FetchPost::dispatch($data);
+                    }
+                } catch (Exception $e) {
+                    $response = [
+                        "success" => false,
+                        "message" => $e->getMessage()
+                    ];
+                }
             }
-            // Update last fetch
-            $account->update([
-                "last_fetch" => date("Y-m-d H:i A")
-            ]);
         } else {
             $response = array(
                 "success" => false,
@@ -472,23 +486,5 @@ class AutomationController extends Controller
             );
         }
         return response()->json($response);
-    }
-
-    public function fetchRss()
-    {
-        try{
-            $url = "https://thecelebritist.com/";
-            $feed = Feed::loadRss($url);
-            $div = '';
-            foreach ($feed->item as $item) {
-                $div .= '<div class="card">';
-                $div .= '<div class="card-header"><a href="' . $item->link . '">' . $item->title . '</a></div>';
-                $div .= '</div>';
-            }
-            echo $div;
-        }
-        catch(Exception $e){
-            dd($e->getMessage());
-        }
     }
 }
