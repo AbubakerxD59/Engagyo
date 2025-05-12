@@ -215,18 +215,21 @@ class AutomationController extends Controller
                         "category" => $category,
                         "time" => $time
                     ]);
-                    $link = !empty($category) ? $urlDomain . $category : $urlDomain;
                     $domain_id = $domain->id;
                 } else {
                     $domain_id = $domain->id;
                     $domain->update([
                         "time" => $time
                     ]);
-                    $link = $urlDomain;
                 }
 
                 $posts = $domain->posts()->userSearch($user->id)->get();
                 $exist = count($posts) > 0 ? true : false;
+                if ($exist) {
+                    $link = $urlDomain;
+                } else {
+                    $link = !empty($category) ? $urlDomain . $category : $urlDomain;
+                }
 
                 $data = [
                     "url" => $link,
