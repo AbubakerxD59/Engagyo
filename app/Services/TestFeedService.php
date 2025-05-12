@@ -252,7 +252,6 @@ class TestFeedService
                         $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item->link])->first();
                         if (!$post) {
                             $rss = $this->dom->get_info($item->link, $this->data["mode"]);
-                            dd($rss);
                             if (isset($rss["title"]) && !empty($rss["title"])) {
                                 $items[] = [
                                     'title' => (string) $item->title,
