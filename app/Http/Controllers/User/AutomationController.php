@@ -15,6 +15,7 @@ use Illuminate\Http\Request;
 use App\Services\FeedService;
 use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
+use App\Services\TestFeedService;
 use App\Jobs\PublishPinterestPost;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
@@ -249,7 +250,7 @@ class AutomationController extends Controller
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
                     if ($user->email == "abmasood5900@gmail.com") {
-                        $feedService = new FeedService($data);
+                        $feedService = new TestFeedService($data);
                         $feedService->fetch();
                     } else {
                         FetchPost::dispatch($data);
