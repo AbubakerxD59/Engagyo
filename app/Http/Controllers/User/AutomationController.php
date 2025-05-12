@@ -200,7 +200,11 @@ class AutomationController extends Controller
                 $parsedUrl = parse_url($domain);
                 if (isset($parsedUrl['host'])) {
                     $urlDomain = $parsedUrl["host"];
-                    $category = isset($parsedUrl["path"]) ? $parsedUrl["path"] : '';
+                    if (isset($parsedUrl["path"])) {
+                        $category = str_contains($parsedUrl["path"], "rss") || str_contains($parsedUrl["path"], "feed") ? null : $parsedUrl["path"];
+                    } else {
+                        $category = null;
+                    }
                 } else {
                     $urlDomain = $parsedUrl["path"];
                     $category = null;
@@ -254,11 +258,12 @@ class AutomationController extends Controller
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    // if ($user->email == "abmasood5900@gmail.com") {
-                    //     $feedService = new TestFeedService($data);
-                    //     $feedService->fetch();
-                    // } else {
-                    // }
+                    if ($user->email == "abmasood5900@gmail.com") {
+                        $feedService = new TestFeedService($data);
+                        $feedService->fetch();
+                    } else {
+                        FetchPost::dispatch($data);
+                    }
                     FetchPost::dispatch($data);
                 } catch (Exception $e) {
                     $response = [
