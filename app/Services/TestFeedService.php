@@ -121,13 +121,13 @@ class TestFeedService
                     $discoveredUrls = $urlToCheck;
                 }
             }
-            dd($response, $discoveredUrls);
             if ($discoveredUrls) {
                 $sitemap = Http::withHeaders(['User-Agent' => 'Engagyo RSS bot'])->get($discoveredUrls);
-                if (!$sitemap->successful()) {
+                if ($sitemap->successful()) {
                     $xmlContent = $sitemap->body();
                     $items = $this->parseContent($xmlContent, $websiteUrl);
                 } else {
+                    dd($sitempa);
                     $response = [
                         "success" => false,
                         "message" => "Failed to fetch feed/sitemap from {$websiteUrl}"
@@ -163,6 +163,7 @@ class TestFeedService
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($xmlContent);
             libxml_clear_errors(); // Clear errors from buffer
+            dd($xml);
             if ($xml !== false) {
                 $items = [];
                 if (isset($xml->sitemap)) {
