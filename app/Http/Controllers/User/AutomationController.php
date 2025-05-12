@@ -199,7 +199,7 @@ class AutomationController extends Controller
                     $urlDomain = $parsedUrl["path"];
                     $category = null;
                 }
-                dd($parsedUrl, $urlDomain);
+
                 $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
                 $domain = $this->domain->exists($search)->first();
                 if (!$domain) {
@@ -235,6 +235,7 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
+                dd($parsedUrl, $urlDomain, $link, $data);
 
                 try {
                     if (!$exist) {
