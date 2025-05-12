@@ -77,7 +77,7 @@ class TestFeedService
         $feed = Feed::loadRss($url);
         $items = [];
         foreach ($feed->item as $item) {
-            $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
+            $rss = $this->dom->get_info($url, $this->data["mode"]);
             $items[] = array(
                 "title" => $item->title,
                 "link" => $item->link,
