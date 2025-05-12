@@ -189,6 +189,8 @@ class TestFeedService
                                         break;
                                     }
                                     $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
+                                    echo '<pre>';
+                                    print_r($count . ' - ' . $post);
                                     if (!$post) {
                                         $items[] = [
                                             'title' => null, // Sitemaps usually don't have titles
