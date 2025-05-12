@@ -138,8 +138,8 @@ class HtmlParseService
     {
         $pin_image = false;
         if (!empty($image)) {
-            $height = $image->getAttribute('height');
-            $width = $image->getAttribute('width');
+            $height = $image->getAttribute('height') ? (float) $image->getAttribute('height') : 0;
+            $width = $image->getAttribute('width') ? (float) $image->getAttribute('width') : 0;
             // if (empty($height) || empty($width)) {
             //     ini_set('user_agent', $this->user_agent());
             //     $dimensions = getimagesize($image->getAttribute('src'));
