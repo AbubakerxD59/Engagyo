@@ -475,8 +475,9 @@ class AutomationController extends Controller
 
     public function fetchRss()
     {
-        $url = "https://ispecially.com/feed/";
+        $url = "https://thecelebritist.com/";
         $feed = Feed::loadRss($url);
+        dd($feed);
         $div = '';
         foreach ($feed->item as $item) {
             $div .= '<div class="card">';
