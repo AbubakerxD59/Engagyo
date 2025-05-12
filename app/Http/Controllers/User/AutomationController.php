@@ -237,7 +237,10 @@ class AutomationController extends Controller
                 ];
 
                 try {
-                    Feed::loadRss($data["url"]);
+                    if (!$exist) {
+                        Feed::loadRss($data["url"]);
+                    }
+                    dd($data);
                     $response = array(
                         "success" => true,
                         "message" => "Your posts are being Fetched!"
