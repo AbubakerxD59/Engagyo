@@ -198,7 +198,7 @@ class TestFeedService
      * @param string $sourceUrl Used to determine parsing type
      * @return array
      */
-    private function parseContent(string $xmlContent, string $sourceUrl, int $depth = 0, int $maxDepth = 5): array
+    private function parseContent(string $xmlContent, string $sourceUrl): array
     {
         try {
             // Suppress errors during loading, check manually after
@@ -290,30 +290,5 @@ class TestFeedService
             return false;
         }
         return $content;
-
-        // Example implementation using cURL (more robust for production)
-
-        // $ch = curl_init();
-        // curl_setopt($ch, CURLOPT_URL, $url);
-        // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        // curl_setopt($ch, CURLOPT_TIMEOUT, 30); // Set a timeout
-        // // Add other cURL options as needed (e.g., SSL verification)
-
-        // $content = curl_exec($ch);
-        // $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        // if ($content === false || $httpCode >= 400) {
-        //     // Log cURL error: curl_error($ch)
-        //     if (class_exists('Log')) {
-        //         Log::error("Failed to fetch URL (cURL): {$url}. HTTP Code: {$httpCode}. Error: " . curl_error($ch));
-        //     } else {
-        //         error_log("Failed to fetch URL (cURL): {$url}. HTTP Code: {$httpCode}. Error: " . curl_error($ch));
-        //     }
-        //     curl_close($ch);
-        //     return false;
-        // }
-
-        // curl_close($ch);
-        // return $content;
     }
 }
