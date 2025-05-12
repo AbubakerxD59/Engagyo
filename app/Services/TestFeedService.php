@@ -177,7 +177,23 @@ class TestFeedService
                         if (!empty($childSitemapUrl)) {
                             $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
                             if ($childXmlContent !== false) {
-                                $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
+                                libxml_use_internal_errors(true);
+                                $xml = simplexml_load_string($childXmlContent);
+                                libxml_clear_errors();
+                                foreach ($xml->url as $url) {
+                                    dd($xml, $url);
+                                    if (count($items) >= 20) {
+                                        break;
+                                    }
+                                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
+                                    if (!$post) {
+                                        $items[] = [
+                                            'title' => null, // Sitemaps usually don't have titles
+                                            'link' => (string) $url->loc,
+                                            'description' => null,
+                                        ];
+                                    }
+                                }
                                 if (is_array($childParseResult) && count($childParseResult) > 0) {
                                     if (count($childParseResult) > 20) {
                                         $childParseResult = array_slice($childParseResult, 0, 20);
@@ -190,20 +206,6 @@ class TestFeedService
                         }
                         if (count($items) >= 20) {
                             break;
-                        }
-                    }
-                } elseif (isset($xml->url)) {
-                    foreach ($xml->url as $url) {
-                        if (count($items) >= 20) {
-                            break;
-                        }
-                        $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
-                        if (!$post) {
-                            $items[] = [
-                                'title' => null, // Sitemaps usually don't have titles
-                                'link' => (string) $url->loc,
-                                'description' => null,
-                            ];
                         }
                     }
                 }
