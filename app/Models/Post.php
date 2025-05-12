@@ -254,8 +254,8 @@ class Post extends Model
         );
     }
 
-    protected static function booted(): void
-    {
-        static::addGlobalScope(new PostScope);
-    }
+    // protected static function booted(): void
+    // {
+    //     static::addGlobalScope(new PostScope);
+    // }
 }

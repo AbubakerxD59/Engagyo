@@ -53,8 +53,9 @@ class AutomationController extends Controller
 
     public function posts(Request $request)
     {
+        $user = Auth::user();
         $data = $request->all();
-        $iTotalRecords = $this->post;
+        $iTotalRecords = $this->post->userSearch($user->id);
         $order = $data["order"][0]["dir"];
         $account = $data["account"];
         $type = $data["account_type"];
@@ -62,7 +63,7 @@ class AutomationController extends Controller
         $search = $data['search_input'];
         $domain = isset($data["domain"]) ? $data["domain"] : [];
         $lastFetch = '';
-        $posts = $this->post->accountExist();
+        $posts = $this->post->userSearch($user->id)->accountExist();
         if (!empty($search)) {
             $posts = $posts->search($search);
         }
@@ -86,7 +87,7 @@ class AutomationController extends Controller
             $posts = $posts->where("status", $status);
         }
         $totalRecordswithFilter = clone $posts;
-        $scheduledTill = $this->post->scheduledTill($search, $type, $data["account"], $domain, $status);
+        $scheduledTill = $this->post->userSearch($user->id)->scheduledTill($search, $type, $data["account"], $domain, $status);
         $posts = $posts->orderBy('publish_date', $order);
         /*Set limit offset */
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
@@ -146,7 +147,8 @@ class AutomationController extends Controller
             'post_time' => 'required',
         ]);
         if (!empty($id)) {
-            $post = $this->post->notPublished()->where("id", $id)->first();
+            $user = Auth::user();
+            $post = $this->post->userSearch($user->id)->notPublished()->where("id", $id)->first();
             if ($post) {
                 $data = [
                     "title" => $request->post_title,
@@ -252,12 +254,12 @@ class AutomationController extends Controller
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    if ($user->email == "abmasood5900@gmail.com") {
-                        $feedService = new TestFeedService($data);
-                        $feedService->fetch();
-                    } else {
-                        FetchPost::dispatch($data);
-                    }
+                    // if ($user->email == "abmasood5900@gmail.com") {
+                    //     $feedService = new TestFeedService($data);
+                    //     $feedService->fetch();
+                    // } else {
+                    // }
+                    FetchPost::dispatch($data);
                 } catch (Exception $e) {
                     $response = [
                         "success" => false,
@@ -318,10 +320,11 @@ class AutomationController extends Controller
 
     public function postPublish(Request $request, $id = null)
     {
+        $user = Auth::user();
         if (!empty($id)) {
             $type = $request->type;
             if ($type == "pinterest") {
-                $post = $this->post->notPublished()->where("id", $id)->first();
+                $post = $this->post->userSearch($user->id)->notPublished()->where("id", $id)->first();
                 if ($post) {
                     $board = $this->board->search($post->account_id)->active()->first();
                     if ($board) {
@@ -372,7 +375,7 @@ class AutomationController extends Controller
                     );
                 }
             } elseif ($type == 'facebook') {
-                $post = $this->post->notPublished()->where("id", $id)->first();
+                $post = $this->post->userSearch($user->id)->notPublished()->where("id", $id)->first();
                 if ($post) {
                     $page = $this->page->search($post->account_id)->active()->first();
                     if ($page) {
