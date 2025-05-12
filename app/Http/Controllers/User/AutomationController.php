@@ -202,7 +202,6 @@ class AutomationController extends Controller
                 $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
                 $domain = $this->domain->exists($search)->first();
                 if (!$domain) {
-                    $exist = false;
                     $domain = $this->domain->create([
                         "user_id" => $user->id,
                         "account_id" => $account_id,
@@ -211,14 +210,17 @@ class AutomationController extends Controller
                         "category" => $category,
                         "time" => $time
                     ]);
+                    $link = !empty($category) ? $urlDomain . $category : $urlDomain;
+                    $exist = false;
                 } else {
-                    $exist = true;
                     $domain->update([
                         "time" => $time
                     ]);
+                    $link = $domain->name;
+                    $exist = true;
                 }
                 $data = [
-                    "url" => !empty($category) ? $urlDomain . $category : $urlDomain,
+                    "url" => $link,
                     "category" => $category,
                     "domain_id" => $domain->id,
                     "user_id" => $user->id,
@@ -228,6 +230,7 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
+                echo $link;
                 try {
                     $feed = Feed::loadRss($data["url"]);
                     $response = array(
@@ -245,6 +248,7 @@ class AutomationController extends Controller
                         FetchPost::dispatch($data);
                     }
                 } catch (Exception $e) {
+                    $domain->delete();
                     $response = [
                         "success" => false,
                         "message" => $e->getMessage()
