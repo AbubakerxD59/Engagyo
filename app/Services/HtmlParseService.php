@@ -167,7 +167,7 @@ class HtmlParseService
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Return the transfer as a string
         curl_setopt($ch, CURLOPT_HEADER, false); // Don't include the header in the output
         curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
-        curl_setopt($ch, CURLOPT_USERAGENT, $this->user_agent()); // Set a common User-Agent
+        curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"); // Set a common User-Agent
         curl_setopt($ch, CURLOPT_REFERER, $url); // Set Referer to the image URL itself or a relevant page
         curl_setopt($ch, CURLOPT_FAILONERROR, true); // Fail silently on HTTP errors (like 400 or 500 series)
         // We only need a small portion to get dimensions, but getimagesize on a stream needs enough header info.
