@@ -212,15 +212,16 @@ class AutomationController extends Controller
                     ]);
                     $link = !empty($category) ? $urlDomain . $category : $urlDomain;
                     $domain_id = $domain->id;
-                    $exist = false;
                 } else {
                     $domain_id = $domain->id;
                     $domain->update([
                         "time" => $time
                     ]);
                     $link = $urlDomain;
-                    $exist = true;
                 }
+                $posts = $domain->posts()->get();
+                $exist = count($posts) > 0 ? true : false;
+
                 $data = [
                     "url" => $link,
                     "category" => $category,
@@ -232,8 +233,9 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
+                
                 try {
-                    $feed = Feed::loadRss($data["url"]);
+                    Feed::loadRss($data["url"]);
                     $response = array(
                         "success" => true,
                         "message" => "Your posts are being Fetched!"

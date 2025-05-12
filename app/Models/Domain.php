@@ -34,6 +34,10 @@ class Domain extends Model
         return $this->belongsTo(Page::class, 'account_id', 'page_id');
     }
 
+    public function posts(){
+        return $this->hasMany(Post::class, 'domain_id', 'id');
+    }
+
     public function scopeSearch($query, $search)
     {
         $query->where("name", "%{$search}%");
