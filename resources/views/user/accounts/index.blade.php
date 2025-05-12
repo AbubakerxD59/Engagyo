@@ -21,9 +21,9 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="d-flex">
+                        <div class="row">
                             @foreach ($user->load('facebook')->facebook as $fb)
-                                <article class="account_box col-md-3 mx-1">
+                                <article class="account_box col-md-2 m-1">
                                     <a href="{{ route('panel.accounts.facebook', $fb->fb_id) }}">
                                         <div class="d-flex align-items-center">
                                             <picture>
@@ -65,9 +65,9 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="d-flex">
+                        <div class="row">
                             @foreach ($user->load('pinterest')->pinterest as $pin)
-                                <article class="account_box col-md-3 mx-1">
+                                <article class="account_box col-md-2 m-1">
                                     <a href="{{ route('panel.accounts.pinterest', $pin->pin_id) }}">
                                         <div class="d-flex align-items-center">
                                             <picture>

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\PostScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -249,5 +250,10 @@ class Post extends Model
                 return $time;
             }
         );
+    }
+
+    protected static function booted(): void
+    {
+        static::addGlobalScope(new PostScope);
     }
 }

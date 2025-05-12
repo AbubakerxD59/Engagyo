@@ -17,7 +17,7 @@
                         class="userimg" alt="User Image">
                 </div>
                 <div class="info">
-                    <a class="nav-link" href="{{ route('users.edit', auth()->id()) }}"
+                    <a class="nav-link" href="{{ route('admin.users.edit', auth()->id()) }}"
                         class="d-block">{{ auth()->user()->full_name }}</a>
                 </div>
             </div>

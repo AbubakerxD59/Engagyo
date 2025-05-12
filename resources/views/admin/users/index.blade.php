@@ -6,7 +6,7 @@
             <div class="content-header clearfix">
                 <h1 class="float-left">Users</h1>
                 <div class="float-right">
-                    <a class="btn btn-primary" href="{{ route('users.create') }}">
+                    <a class="btn btn-primary" href="{{ route('admin.users.create') }}">
                         <i class="fas fa-plus-square"></i> Add new</a>
                 </div>
             </div>
@@ -69,7 +69,7 @@
             "processing": true,
             "serverSide": true,
             ajax: {
-                url: "{{ route('users.dataTable') }}",
+                url: "{{ route('admin.users.dataTable') }}",
             },
             columns: [{
                     data: 'id'

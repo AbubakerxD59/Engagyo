@@ -20,7 +20,7 @@
                             <div class="icon">
                                 <i class="fas fa-users"></i>
                             </div>
-                            <a href="{{ route('users.index') }}" class="small-box-footer">More info
+                            <a href="{{ route('admin.users.index') }}" class="small-box-footer">More info
                                 <i class="fas fa-arrow-circle-right"></i>
                             </a>
                         </div>

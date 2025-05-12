@@ -69,7 +69,7 @@ class UserController extends Controller
         }
 
         if ($response['success']) {
-            return redirect(route('users.index'))->with('success', $response['message']);
+            return redirect(route('admin.users.index'))->with('success', $response['message']);
         } else {
             return back()->with('error', $response['message']);
         }
@@ -131,7 +131,7 @@ class UserController extends Controller
             ];
         }
         if ($response['success']) {
-            return redirect(route('users.index'))->with('success', $response['message']);
+            return redirect(route('admin.users.index'))->with('success', $response['message']);
         } else {
             return back()->with('error', $response['message']);
         }
@@ -181,7 +181,7 @@ class UserController extends Controller
             $email = !empty($val->email) ? $val->email : '-';
             $email_username = '<div><span>' . $email . '</span><br><span>' . $val->username . '</span></div>';
             $users[$k]['profile'] = "<img src='" . asset($profile_pic) . "' alt='Logo' width='50px'>";
-            $users[$k]['name_link'] = !empty($val->full_name) ? '<a href=' . route('users.edit', $val->id) . '>' . $val->full_name . '</a>' : '-';
+            $users[$k]['name_link'] = !empty($val->full_name) ? '<a href=' . route('admin.users.edit', $val->id) . '>' . $val->full_name . '</a>' : '-';
             $users[$k]['email_username'] = $email_username;
             $users[$k]['created'] = date('Y-m-d', strtotime($val->created_at));
             $users[$k]['role'] = $val->getRole();
