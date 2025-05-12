@@ -195,8 +195,8 @@ class TestFeedService
                                             'link' => (string) $url->loc,
                                             'description' => null,
                                         ];
+                                        $count++;
                                     }
-                                    $count++;
                                 }
                             }
                         }
