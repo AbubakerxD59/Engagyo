@@ -113,32 +113,32 @@ class TestFeedService
         $urlToCheck = rtrim($websiteUrl, '/') . '/sitemap.xml';
         $discoveredUrls = '';
         // try {
-            $response = Http::head($urlToCheck);
-            if ($response->successful()) {
-                // Check content type if possible (more reliable)
-                $contentType = strtolower($response->header('Content-Type') ?? '');
-                if (str_contains($contentType, 'xml')) {
-                    $discoveredUrls = $urlToCheck;
-                }
+        $response = Http::head($urlToCheck);
+        if ($response->successful()) {
+            // Check content type if possible (more reliable)
+            $contentType = strtolower($response->header('Content-Type') ?? '');
+            if (str_contains($contentType, 'xml')) {
+                $discoveredUrls = $urlToCheck;
             }
-            if ($discoveredUrls) {
-                $sitemap = Http::withHeaders(['User-Agent' => 'Engagyo RSS bot'])->get($discoveredUrls);
-                if ($sitemap->successful()) {
-                    $xmlContent = $sitemap->body();
-                    $items = $this->parseContent($xmlContent, $websiteUrl);
-                } else {
-                    dd($sitempa);
-                    $response = [
-                        "success" => false,
-                        "message" => "Failed to fetch feed/sitemap from {$websiteUrl}"
-                    ];
-                }
+        }
+        if ($discoveredUrls) {
+            $sitemap = Http::withHeaders(['User-Agent' => 'Engagyo RSS bot'])->get($discoveredUrls);
+            if ($sitemap->successful()) {
+                $xmlContent = $sitemap->body();
+                $items = $this->parseContent($xmlContent, $websiteUrl);
             } else {
+                dd($sitemap, $items);
                 $response = [
                     "success" => false,
-                    "message" => "Couldn't find Sitemap Data!"
+                    "message" => "Failed to fetch feed/sitemap from {$websiteUrl}"
                 ];
             }
+        } else {
+            $response = [
+                "success" => false,
+                "message" => "Couldn't find Sitemap Data!"
+            ];
+        }
         // } catch (Exception $e) {
         //     $response = [
         //         "success" => false,
@@ -175,6 +175,8 @@ class TestFeedService
                                 if (is_array($childParseResult) && count($childParseResult) > 0) {
                                     if (count($childParseResult) > 20) {
                                         $childParseResult = array_slice($childParseResult, 0, 20);
+                                        $items = array_merge($items, $childParseResult);
+                                        break;
                                     }
                                     $items = array_merge($items, $childParseResult);
                                 }
@@ -184,8 +186,21 @@ class TestFeedService
                             break;
                         }
                     }
+                } elseif (isset($xml->url)) {
+                    foreach ($xml->url as $url) {
+                        if (count($items) >= 20) {
+                            break;
+                        }
+                        $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
+                        if (!$post) {
+                            $items[] = [
+                                'title' => null, // Sitemaps usually don't have titles
+                                'link' => (string) $url->loc,
+                                'description' => null,
+                            ];
+                        }
+                    }
                 }
-                dd($xml);
                 $response = [
                     "success" => true,
                     "data" => $items
