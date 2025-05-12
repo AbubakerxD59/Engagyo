@@ -76,7 +76,7 @@ class TestFeedService
     {
         $urlToCheck = rtrim($websiteUrl, '/') . '/feed';
         $discoveredUrls = '';
-        try {
+        // try {
             $response = Http::head($urlToCheck);
             if ($response->successful()) {
                 // Check content type if possible (more reliable)
@@ -119,12 +119,12 @@ class TestFeedService
                     "message" => "Couldn't find Sitemap Data!"
                 ];
             }
-        } catch (Exception $e) {
-            $response = [
-                "success" => false,
-                "message" => $e->getMessage()
-            ];
-        }
+        // } catch (Exception $e) {
+        //     $response = [
+        //         "success" => false,
+        //         "message" => $e->getMessage()
+        //     ];
+        // }
         return $response;
     }
 
