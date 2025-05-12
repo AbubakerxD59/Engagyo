@@ -141,7 +141,7 @@ class HtmlParseService
             $height = $image->getAttribute('height') ? (float) $image->getAttribute('height') : 0;
             $width = $image->getAttribute('width') ? (float) $image->getAttribute('width') : 0;
             if (empty($height) || empty($width)) {
-                ini_set('user_agent', $this->user_agent());
+                ini_set('user_agent', "Engagyo RSS bot");
                 $dimensions = getimagesize($image->getAttribute('src'));
                 $width = $dimensions[0];
                 $height = $dimensions[1];
