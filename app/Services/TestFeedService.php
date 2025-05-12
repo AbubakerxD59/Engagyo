@@ -163,7 +163,6 @@ class TestFeedService
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($xmlContent);
             libxml_clear_errors(); // Clear errors from buffer
-            dd($xml);
             if ($xml !== false) {
                 $items = [];
                 if (isset($xml->sitemap)) {
@@ -186,6 +185,7 @@ class TestFeedService
                         }
                     }
                 }
+                dd($xml);
                 $response = [
                     "success" => true,
                     "data" => $items
