@@ -16,6 +16,7 @@ use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
+use Exception;
 use Illuminate\Support\Facades\Auth;
 
 class AutomationController extends Controller
@@ -475,15 +476,19 @@ class AutomationController extends Controller
 
     public function fetchRss()
     {
-        $url = "https://thecelebritist.com/";
-        $feed = Feed::loadRss($url);
-        dd($feed);
-        $div = '';
-        foreach ($feed->item as $item) {
-            $div .= '<div class="card">';
-            $div .= '<div class="card-header"><a href="' . $item->link . '">' . $item->title . '</a></div>';
-            $div .= '</div>';
+        try{
+            $url = "https://thecelebritist.com/";
+            $feed = Feed::loadRss($url);
+            $div = '';
+            foreach ($feed->item as $item) {
+                $div .= '<div class="card">';
+                $div .= '<div class="card-header"><a href="' . $item->link . '">' . $item->title . '</a></div>';
+                $div .= '</div>';
+            }
+            echo $div;
         }
-        echo $div;
+        catch(Exception $e){
+            dd($e->getMessage());
+        }
     }
 }
