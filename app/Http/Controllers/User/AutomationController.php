@@ -201,7 +201,6 @@ class AutomationController extends Controller
                 }
                 $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
                 $domain = $this->domain->exists($search)->first();
-                $exist = true;
                 if (!$domain) {
                     $exist = false;
                     $domain = $this->domain->create([
@@ -213,6 +212,7 @@ class AutomationController extends Controller
                         "time" => $time
                     ]);
                 } else {
+                    $exist = true;
                     $domain->update([
                         "time" => $time
                     ]);
