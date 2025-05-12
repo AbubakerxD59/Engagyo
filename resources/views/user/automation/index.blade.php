@@ -207,6 +207,7 @@
                         if (response.success) {
                             $("#fetchPostsModal").modal("toggle");
                             postsDatatable.ajax.reload();
+                            $("#fetchPostForm").trigger("reset");
                             toastr.success(response.message);
                         } else {
                             toastr.error(response.message);
