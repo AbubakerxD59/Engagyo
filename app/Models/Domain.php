@@ -70,7 +70,7 @@ class Domain extends Model
         return Attribute::make(
             get: function ($value) {
                 $name = empty($this->category) ? $value : $value . $this->category;
-                return "http://" . $name;
+                return "https://" . $name;
             }
         );
     }

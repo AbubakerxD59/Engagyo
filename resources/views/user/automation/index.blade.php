@@ -424,10 +424,6 @@
                     var selected_type = $("#account").find(":selected").data("type");
                     var domain = $("#domains").val();
                     var token = $('meta[name="csrf-token"]').attr('content');
-                    if (domain.length == 0) {
-                        toastr.error("No domain selected!");
-                        return false;
-                    }
                     $.ajax({
                         url: "{{ route('panel.automation.posts.deleteAll') }}",
                         method: "POST",

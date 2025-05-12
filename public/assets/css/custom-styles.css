@@ -489,7 +489,7 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
     left: 0;
     width: 40px;
     height: 24px;
-    background-color: #2196F3;
+    background-color: #dc3545;
     border-radius: 34px;
     cursor: pointer;
     transition: background-color 0.3s;

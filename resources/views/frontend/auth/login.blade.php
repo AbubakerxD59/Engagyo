@@ -44,12 +44,12 @@
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
-                            <button class="btn signup__btn">Sign Up</button>
+                            <button class="btn signup__btn">Sign In</button>
                         </form>
                         <div class="signup__text__content">
                             <p>
                                 Don't have an account?
-                                <a href="{{ route('frontend.showRegister') }}"> Register now</a>
+                                <a href="{{ route('frontend.showRegister') }}">Register now</a>
                             </p>
                         </div>
                     </div>

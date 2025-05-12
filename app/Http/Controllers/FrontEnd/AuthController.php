@@ -77,7 +77,7 @@ class AuthController extends Controller
             "email" => $request->email,
             "password" => $request->password,
             "agreement" => $request->agreement,
-            "status" => 2,
+            "status" => 1,
         ]);
         if ($user) {
             $user->assignRole("User");

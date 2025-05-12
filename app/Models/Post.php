@@ -93,7 +93,9 @@ class Post extends Model
 
     public function scopeDomainSearch($query, $id)
     {
-        $query->whereIn("domain_id", $id);
+        if (count($id) > 0) {
+            $query->whereIn("domain_id", $id);
+        }
     }
 
     public function scopeAccounts($query, $id)

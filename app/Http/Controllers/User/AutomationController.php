@@ -443,7 +443,7 @@ class AutomationController extends Controller
     {
         $id = $request->account;
         $type = $request->type;
-        $domain = $request->domain;
+        $domain = $request->has("domain") ? $request->domain : [];
         if (!empty($id)) {
             $user = Auth::user();
             if ($type == 'pinterest') {
@@ -471,5 +471,17 @@ class AutomationController extends Controller
             );
         }
         return response()->json($response);
+    }
+
+    public function fetchRss()
+    {
+        $url = "https://ispecially.com/feed/";
+        $feed = Feed::loadRss($url);
+        foreach ($feed->item as $item) {
+            $div = '<div class="card">';
+            $div .= '<div class="card-header"><a href="' . $item->link . '">' . $item->title . '</a></div>';
+            $div .= '</div>';
+        }
+        echo $div;
     }
 }

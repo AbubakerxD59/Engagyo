@@ -99,8 +99,6 @@ class FeedService
             $potentialPaths = [
                 '/feed',
                 '/rss',
-                '/feed.xml',
-                '/rss.xml',
             ];
         }
 
