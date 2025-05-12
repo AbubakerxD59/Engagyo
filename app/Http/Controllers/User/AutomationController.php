@@ -242,7 +242,7 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
-                dd($data);
+
                 try {
                     $response = array(
                         "success" => true,
