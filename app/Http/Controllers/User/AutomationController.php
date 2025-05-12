@@ -264,7 +264,7 @@ class AutomationController extends Controller
                     } else {
                         FetchPost::dispatch($data);
                     }
-                    FetchPost::dispatch($data);
+                    // FetchPost::dispatch($data);
                 } catch (Exception $e) {
                     $response = [
                         "success" => false,
