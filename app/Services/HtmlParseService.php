@@ -143,8 +143,12 @@ class HtmlParseService
             if (empty($height) || empty($width)) {
                 ini_set('user_agent', "Engagyo RSS bot");
                 $dimensions = $this->getImageDimensionsFromUrl($image->getAttribute('src'));
-                $width = $dimensions["width"];
-                $height = $dimensions["height"];
+                if (isset($dimensions["width"])) {
+                    $width = $dimensions["width"];
+                }
+                if (isset($dimensions["height"])) {
+                    $width = $dimensions["height"];
+                }
             }
             $heightArray = array("1128", "900", "1000", "1024", "1349");
             $widthArray = array("564", "700", "1500", "512", "513", "759");
@@ -191,8 +195,6 @@ class HtmlParseService
         $image_data = $response;
         $uri = 'data://application/octet-stream;base64,' . base64_encode($image_data);
         $image_info = getimagesize($uri);
-        dd($image_info);
-
         if ($image_info === false) {
             return ['error' => 'Could not get image size from downloaded data.'];
         }
