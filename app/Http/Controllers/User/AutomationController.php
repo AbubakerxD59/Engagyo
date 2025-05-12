@@ -477,8 +477,9 @@ class AutomationController extends Controller
     {
         $url = "https://ispecially.com/feed/";
         $feed = Feed::loadRss($url);
+        $div = '';
         foreach ($feed->item as $item) {
-            $div = '<div class="card">';
+            $div .= '<div class="card">';
             $div .= '<div class="card-header"><a href="' . $item->link . '">' . $item->title . '</a></div>';
             $div .= '</div>';
         }
