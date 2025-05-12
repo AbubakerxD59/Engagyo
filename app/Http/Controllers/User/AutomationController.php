@@ -228,7 +228,7 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
-                // try {
+                try {
                     $feed = Feed::loadRss($domain);
                     $response = array(
                         "success" => true,
@@ -244,12 +244,12 @@ class AutomationController extends Controller
                     } else {
                         FetchPost::dispatch($data);
                     }
-                // } catch (Exception $e) {
-                //     $response = [
-                //         "success" => false,
-                //         "message" => $e->getMessage()
-                //     ];
-                // }
+                } catch (Exception $e) {
+                    $response = [
+                        "success" => false,
+                        "message" => $e->getMessage()
+                    ];
+                }
             }
         } else {
             $response = array(
@@ -486,5 +486,16 @@ class AutomationController extends Controller
             );
         }
         return response()->json($response);
+    }
+
+    public function fetchRss()
+    {
+        $url = "https://ispecially.com/feed/";
+        $feed = Feed::loadRss($url);
+        $items = [];
+        foreach ($feed->item as $item) {
+            $items[] = $item;
+        }
+        dd($items);
     }
 }
