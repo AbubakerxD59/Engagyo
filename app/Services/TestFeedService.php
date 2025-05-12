@@ -186,8 +186,8 @@ class TestFeedService
                                 libxml_clear_errors();
                                 $count = 1;
                                 foreach ($xml->url as $url) {
-                                    if($count == 2){
-                                        dd($url, $items);
+                                    if (count($items) >= 20) {
+                                        break;
                                     }
                                     $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
                                     if (!$post) {
