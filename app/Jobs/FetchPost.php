@@ -3,6 +3,7 @@
 namespace App\Jobs;
 
 use App\Services\FeedService;
+use App\Services\TestFeedService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\SerializesModels;
@@ -30,7 +31,7 @@ class FetchPost implements ShouldQueue
      */
     public function handle(): void
     {
-        $feedService = new FeedService($this->data);
+        $feedService = new TestFeedService($this->data);
         $feedService->fetch();
     }
 
