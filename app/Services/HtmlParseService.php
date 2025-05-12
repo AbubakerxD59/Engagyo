@@ -191,6 +191,7 @@ class HtmlParseService
         $image_data = $response;
         $uri = 'data://application/octet-stream;base64,' . base64_encode($image_data);
         $image_info = getimagesize($uri);
+        dd($image_info);
 
         if ($image_info === false) {
             return ['error' => 'Could not get image size from downloaded data.'];
