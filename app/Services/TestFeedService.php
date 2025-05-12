@@ -186,7 +186,7 @@ class TestFeedService
                                 libxml_clear_errors();
                                 $count = 1;
                                 foreach ($xml->url as $url) {
-                                    dd($xml->url);
+                                    dd($xml->url, $xml, $url);
                                     $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
                                     if (!$post) {
                                         $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
