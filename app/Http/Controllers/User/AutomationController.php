@@ -87,7 +87,7 @@ class AutomationController extends Controller
             $posts = $posts->where("status", $status);
         }
         $totalRecordswithFilter = clone $posts;
-        $scheduledTill = $this->post->scheduledTill($search, $type, $data["account"], $domain, $status);
+        $scheduledTill = $this->post->scheduledTill($search, $type, $data["account"], $domain, $status, $user->id);
         $posts = $posts->orderBy('publish_date', $order);
         /*Set limit offset */
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));

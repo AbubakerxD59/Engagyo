@@ -183,9 +183,9 @@ class Post extends Model
         return $date_time;
     }
 
-    public function scheduledTill($search, $type, $account, $domain, $status)
+    public function scheduledTill($search, $type, $account, $domain, $status, $user_id)
     {
-        $post = $this->orderBy('publish_date', 'DESC');
+        $post = $this->userSearch($user_id)->orderBy('publish_date', 'DESC');
         if (!empty($search)) {
             $post = $post->search($search);
         }
