@@ -142,9 +142,9 @@ class HtmlParseService
             $width = $image->getAttribute('width') ? (float) $image->getAttribute('width') : 0;
             if (empty($height) || empty($width)) {
                 ini_set('user_agent', "Engagyo RSS bot");
-                $dimensions = getimagesize($image->getAttribute('src'));
-                $width = $dimensions[0];
-                $height = $dimensions[1];
+                $dimensions = $this->getImageDimensionsFromUrl($image->getAttribute('src'));
+                $width = $dimensions["width"];
+                $height = $dimensions["height"];
             }
             $heightArray = array("1128", "900", "1000", "1024", "1349");
             $widthArray = array("564", "700", "1500", "512", "513", "759");
@@ -153,6 +153,53 @@ class HtmlParseService
             }
         }
         return $pin_image;
+    }
+
+    private function getImageDimensionsFromUrl($url)
+    {
+        $ch = curl_init($url);
+
+        // Set cURL options
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Return the transfer as a string
+        curl_setopt($ch, CURLOPT_HEADER, false); // Don't include the header in the output
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
+        curl_setopt($ch, CURLOPT_USERAGENT, $this->user_agent()); // Set a common User-Agent
+        curl_setopt($ch, CURLOPT_REFERER, $url); // Set Referer to the image URL itself or a relevant page
+        curl_setopt($ch, CURLOPT_FAILONERROR, true); // Fail silently on HTTP errors (like 400 or 500 series)
+        // We only need a small portion to get dimensions, but getimagesize on a stream needs enough header info.
+        // Fetching the whole body is often necessary for getimagesize to work with the downloaded data.
+        // A better approach is to use getimagesize on a temporary local file after downloading.
+
+        $response = curl_exec($ch);
+        $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        if ($response === false) {
+            // cURL error
+            $error = curl_error($ch);
+            curl_close($ch);
+            return ['error' => "cURL error: $error"];
+        }
+        curl_close($ch);
+        if ($http_code >= 400) {
+            // HTTP error (like 403 or 406)
+            return ['error' => "HTTP error: $http_code"];
+        }
+
+        // Use getimagesize on the downloaded content
+        // We need to save the content to a temporary file or use data streams
+        // Using a data stream is generally cleaner
+
+        $image_data = $response;
+        $uri = 'data://application/octet-stream;base64,' . base64_encode($image_data);
+        $image_info = getimagesize($uri);
+
+        if ($image_info === false) {
+            return ['error' => 'Could not get image size from downloaded data.'];
+        }
+
+        return [
+            'width' => $image_info[0],
+            'height' => $image_info[1],
+        ];
     }
 
     public function user_agent()
