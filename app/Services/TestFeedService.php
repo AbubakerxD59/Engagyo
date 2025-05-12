@@ -36,25 +36,22 @@ class TestFeedService
         } else {
             $feedUrls = $this->fetchRss($websiteUrl);
         }
-        dd($feedUrls);
         if ($feedUrls["success"]) {
             try {
                 $items = $feedUrls["data"];
                 foreach ($items as $key => $item) {
                     $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"]], $this->data["time"]);
                     $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
-                    $rss = $this->dom->get_info($item["link"], $this->data["mode"]);
-                    $title = !empty($item["title"]) ?  $item["title"] : $rss["title"];
                     if (!$post) {
                         $this->post->create([
                             "user_id" => $this->data["user_id"],
                             "account_id" => $this->data["account_id"],
                             "type" => $this->data["type"],
-                            "title" => $title,
-                            "description" => $item["description"],
+                            "title" => $item["title"],
+                            "description" => "",
                             "domain_id" => $this->data["domain_id"],
                             "url" => $item["link"],
-                            "image" => isset($rss["image"]) ? $rss["image"] : no_image(),
+                            "image" => isset($item["image"]) ? $item["image"] : no_image(),
                             "publish_date" => newDateTime($nextTime, $this->data["time"], $key - 1),
                             "status" => 0,
                         ]);
