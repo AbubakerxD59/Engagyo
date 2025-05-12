@@ -131,7 +131,18 @@ class TestFeedService
             if ($sitemap->successful()) {
                 $xmlContent = $sitemap->body();
                 $items = $this->parseContent($xmlContent, $websiteUrl);
-                dd($sitemap, $items);
+                if ($items["success"]) {
+                    $response = [
+                        "success" => true,
+                        "data" => $items["data"]
+                    ];
+                } else {
+                    $response = [
+                        "success" => false,
+                        "message" => $items["message"]
+                    ];
+                }
+                dd($response);
             } else {
                 $response = [
                     "success" => false,
@@ -169,8 +180,8 @@ class TestFeedService
             libxml_use_internal_errors(true);
             $xml = simplexml_load_string($xmlContent);
             libxml_clear_errors(); // Clear errors from buffer
+            $items = [];
             if ($xml !== false) {
-                $items = [];
                 if (isset($xml->sitemap)) {
                     foreach ($xml->sitemap as $sitemapEntry) {
                         $childSitemapUrl = (string) $sitemapEntry->loc;
@@ -185,13 +196,14 @@ class TestFeedService
                                     $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
                                     if (!$post) {
                                         $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
-                                        dd($rss, $url);
-                                        $items[] = [
-                                            'title' => null, // Sitemaps usually don't have titles
-                                            'link' => (string) $url->loc,
-                                            'description' => null,
-                                        ];
-                                        $count++;
+                                        if (isset($rss["title"]) && !empty($rss["title"])) {
+                                            $items[] = [
+                                                'title' => $rss["title"],
+                                                'link' => (string) $url->loc,
+                                                'image' => $rss["image"],
+                                            ];
+                                            $count++;
+                                        }
                                     }
                                 }
                             }
@@ -200,7 +212,6 @@ class TestFeedService
                             break;
                         }
                     }
-                    dd($items);
                 }
                 $response = [
                     "success" => true,
