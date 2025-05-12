@@ -82,7 +82,8 @@ class FeedService
         foreach ($feed->item as $item) {
             $items[] = array(
                 "title" => $item->title,
-                "link" => $item->link
+                "link" => $item->link,
+                "description" => $item->description
             );
         }
         $response = [
@@ -118,7 +119,6 @@ class FeedService
                 if (!$sitemap->successful()) {
                     $xmlContent = $sitemap->body();
                     $items = $this->parseContent($xmlContent, $websiteUrl);
-                    dd($items);
                 } else {
                     $response = [
                         "success" => false,
@@ -157,6 +157,7 @@ class FeedService
             libxml_clear_errors(); // Clear errors from buffer
             if ($xml !== false) {
                 $items = [];
+                dd($xml);
                 if (isset($xml->sitemap)) {
                     foreach ($xml->sitemap as $sitemapEntry) {
                         $childSitemapUrl = (string) $sitemapEntry->loc;
