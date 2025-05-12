@@ -37,6 +37,7 @@ class TestFeedService
         } else {
             $feedUrls = $this->fetchRss($websiteUrl);
         }
+        dd($feedUrls);
         Log::info("feedUrls: " . json_encode($feedUrls));
         if ($feedUrls["success"]) {
             try {
@@ -142,7 +143,6 @@ class TestFeedService
                         "message" => $items["message"]
                     ];
                 }
-                dd($response);
             } else {
                 $response = [
                     "success" => false,
@@ -155,7 +155,6 @@ class TestFeedService
                 "message" => "Couldn't find Sitemap Data!"
             ];
         }
-        dd($response);
         // } catch (Exception $e) {
         //     $response = [
         //         "success" => false,
