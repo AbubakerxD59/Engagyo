@@ -74,6 +74,7 @@ class TestFeedService
 
     private function fetchRss($url)
     {
+        Feed::$userAgent = $this->dom->user_agent();
         $feed = Feed::loadRss($url);
         $items = [];
         foreach ($feed->item as $item) {

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Services\HtmlParseService;
 use Feed;
 use Exception;
 use App\Models\Page;
@@ -31,6 +32,7 @@ class AutomationController extends Controller
     private $page;
     private $pinterestService;
     private $facebookService;
+    private $dom;
     public function __construct(Post $post, Domain $domain, Pinterest $pinterest, Facebook $facebook, Board $board, Page $page)
     {
         $this->post = $post;
@@ -41,6 +43,7 @@ class AutomationController extends Controller
         $this->page = $page;
         $this->pinterestService = new PinterestService();
         $this->facebookService = new FacebookService();
+        $this->dom = new HtmlParseService();
     }
     public function index()
     {
@@ -237,8 +240,9 @@ class AutomationController extends Controller
                     "exist" => $exist
                 ];
 
-                // try {
+                try {
                     if (!$exist) {
+                        Feed::$userAgent = $this->dom->user_agent();
                         Feed::loadRss($data["url"]);
                     }
                     $response = array(
@@ -256,12 +260,13 @@ class AutomationController extends Controller
                     //     FetchPost::dispatch($data);
                     // }
                     FetchPost::dispatch($data);
-                // } catch (Exception $e) {
-                //     $response = [
-                //         "success" => false,
-                //         "message" => $e->getMessage()
-                //     ];
-                // }
+                } catch (Exception $e) {
+                    // $domain->delete();
+                    $response = [
+                        "success" => false,
+                        "message" => $e->getMessage()
+                    ];
+                }
             }
         } else {
             $response = array(

@@ -155,7 +155,7 @@ class HtmlParseService
         return $pin_image;
     }
 
-    private function user_agent()
+    public function user_agent()
     {
         $agent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36";
         $agent[] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:53.0) Gecko/20100101 Firefox/53.0";
