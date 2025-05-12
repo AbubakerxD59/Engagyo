@@ -141,6 +141,7 @@ class HtmlParseService
             $height = $image->getAttribute('height');
             $width = $image->getAttribute('width');
             if (empty($height) || empty($width)) {
+                ini_set('user_agent', $this->user_agent());
                 $dimensions = getimagesize($image->getAttribute('src'));
                 $width = $dimensions[0];
                 $height = $dimensions[1];
