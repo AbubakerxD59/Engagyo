@@ -87,8 +87,21 @@ class HtmlParseService
             if (empty($image)) {
                 $thumbnails = $this->dom->getElementsByTagName('img');
                 foreach ($thumbnails as $thumbnail) {
-                    if (check_for($thumbnail->getAttribute('class'), 'size-post-thumbnail')) {
-                        $image = $thumbnail->getAttribute('data-lazy-src');
+                    if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
+                        $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
+                    }
+                }
+            }
+            if (!empty($image)) {
+                foreach ($tags as $tag) {
+                    if ($this->get_aspect_ratio($tag)) {
+                        $pin_image = true;
+                        $image = $tag->getAttribute('src');
+                        if ($tag->hasAttribute('data-lazy-src')) {
+                            $image = $tag->getAttribute("data-lazy-src");
+                        }
+                        $pinterest_image = $image;
+                        break;
                     }
                 }
             }
