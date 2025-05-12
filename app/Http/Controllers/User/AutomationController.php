@@ -235,7 +235,6 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
-                dd($parsedUrl, $urlDomain, $link, $data);
 
                 try {
                     if (!$exist) {
