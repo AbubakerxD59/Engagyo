@@ -140,12 +140,12 @@ class HtmlParseService
         if (!empty($image)) {
             $height = $image->getAttribute('height');
             $width = $image->getAttribute('width');
-            if (empty($height) || empty($width)) {
-                ini_set('user_agent', $this->user_agent());
-                $dimensions = getimagesize($image->getAttribute('src'));
-                $width = $dimensions[0];
-                $height = $dimensions[1];
-            }
+            // if (empty($height) || empty($width)) {
+            //     ini_set('user_agent', $this->user_agent());
+            //     $dimensions = getimagesize($image->getAttribute('src'));
+            //     $width = $dimensions[0];
+            //     $height = $dimensions[1];
+            // }
             $heightArray = array("1128", "900", "1000", "1024", "1349");
             $widthArray = array("564", "700", "1500", "512", "513", "759");
             if (in_array(ceil($height), $heightArray) && in_array(ceil($width), $widthArray)) {

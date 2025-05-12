@@ -6,7 +6,6 @@ use Feed;
 use Exception;
 use App\Models\Post;
 use App\Models\Notification;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 
 
@@ -38,19 +37,12 @@ class TestFeedService
             $feedUrls = $this->fetchRss($websiteUrl);
         }
         dd($feedUrls);
-        Log::info("feedUrls: " . json_encode($feedUrls));
         if ($feedUrls["success"]) {
             try {
                 $items = $feedUrls["data"];
                 foreach ($items as $key => $item) {
-                    Log::info("item: " . json_encode($item));
-
                     $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"]], $this->data["time"]);
-                    Log::info("nextTime: " . json_encode($nextTime));
-
                     $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
-                    Log::info("post: " . json_encode($post));
-
                     $rss = $this->dom->get_info($item["link"], $this->data["mode"]);
                     $title = !empty($item["title"]) ?  $item["title"] : $rss["title"];
                     if (!$post) {
