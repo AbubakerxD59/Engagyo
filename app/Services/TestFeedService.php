@@ -120,14 +120,19 @@ class TestFeedService
             if (str_contains($contentType, 'xml')) {
                 $discoveredUrls = $urlToCheck;
             }
+        } else {
+            $response = array(
+                "success" => false,
+                "message" => "Something went wrong!"
+            );
         }
         if ($discoveredUrls) {
             $sitemap = Http::withHeaders(['User-Agent' => 'Engagyo RSS bot'])->get($discoveredUrls);
             if ($sitemap->successful()) {
                 $xmlContent = $sitemap->body();
                 $items = $this->parseContent($xmlContent, $websiteUrl);
-            } else {
                 dd($sitemap, $items);
+            } else {
                 $response = [
                     "success" => false,
                     "message" => "Failed to fetch feed/sitemap from {$websiteUrl}"
@@ -139,6 +144,7 @@ class TestFeedService
                 "message" => "Couldn't find Sitemap Data!"
             ];
         }
+        dd($response);
         // } catch (Exception $e) {
         //     $response = [
         //         "success" => false,
