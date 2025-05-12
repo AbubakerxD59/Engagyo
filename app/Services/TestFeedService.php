@@ -180,11 +180,11 @@ class TestFeedService
                                 libxml_use_internal_errors(true);
                                 $xml = simplexml_load_string($childXmlContent);
                                 libxml_clear_errors();
-                                foreach ($xml->url as $key => $url) { 
-                                    if($key == 0){ //do not accept domain url
+                                foreach ($xml->url as $key => $url) {
+                                    if ($key == 0) { //do not accept domain url
                                         continue;
                                     }
-                                    if ($key+1 >= 20) { //get max 20 posts
+                                    if (($key + 1) >= 20) { //get max 20 posts
                                         break;
                                     }
                                     $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
@@ -197,14 +197,6 @@ class TestFeedService
                                     }
                                 }
                                 dd($items);
-                                if (is_array($childParseResult) && count($childParseResult) > 0) {
-                                    if (count($childParseResult) > 20) {
-                                        $childParseResult = array_slice($childParseResult, 0, 20);
-                                        $items = array_merge($items, $childParseResult);
-                                        break;
-                                    }
-                                    $items = array_merge($items, $childParseResult);
-                                }
                             }
                         }
                         if (count($items) >= 20) {
