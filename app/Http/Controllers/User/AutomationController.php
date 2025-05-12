@@ -253,13 +253,13 @@ class AutomationController extends Controller
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    // if ($user->email == "abmasood5900@gmail.com") {
-                    //     $feedService = new TestFeedService($data);
-                    //     $feedService->fetch();
-                    // } else {
-                    //     FetchPost::dispatch($data);
-                    // }
-                    FetchPost::dispatch($data);
+                    if ($user->email == "abmasood5900@gmail.com") {
+                        $feedService = new TestFeedService($data);
+                        $feedService->fetch();
+                    } else {
+                        FetchPost::dispatch($data);
+                    }
+                    // FetchPost::dispatch($data);
                 } catch (Exception $e) {
                     // $domain->delete();
                     $response = [
