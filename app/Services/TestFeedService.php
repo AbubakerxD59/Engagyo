@@ -76,74 +76,55 @@ class TestFeedService
     {
         $urlToCheck = rtrim($websiteUrl, '/') . '/feed';
         $discoveredUrls = '';
-        // try {
-        $response = Http::head($urlToCheck);
-        if ($response->successful()) {
-            // Check content type if possible (more reliable)
-            $contentType = strtolower($response->header('Content-Type') ?? '');
-            if (str_contains($contentType, 'xml')) {
-                $discoveredUrls = $urlToCheck;
+        try {
+            $response = Http::head($urlToCheck);
+            if ($response->successful()) {
+                // Check content type if possible (more reliable)
+                $contentType = strtolower($response->header('Content-Type') ?? '');
+                if (str_contains($contentType, 'xml')) {
+                    $discoveredUrls = $urlToCheck;
+                }
+            } else {
+                $response = array(
+                    "success" => false,
+                    "message" => "Something went wrong!"
+                );
             }
-        } else {
-            $response = array(
-                "success" => false,
-                "message" => "Something went wrong!"
-            );
-        }
-        if ($discoveredUrls) {
-            $sitemap = Http::withHeaders(['User-Agent' => 'Engagyo RSS bot'])->get($discoveredUrls);
-            if ($sitemap->successful()) {
-                $xmlContent = $sitemap->body();
-                $items = $this->parseContent($xmlContent, $websiteUrl);
-                dd($items);
-                if ($items["success"]) {
-                    $response = [
-                        "success" => true,
-                        "data" => $items["data"]
-                    ];
+            if ($discoveredUrls) {
+                $sitemap = Http::withHeaders(['User-Agent' => 'Engagyo RSS bot'])->get($discoveredUrls);
+                if ($sitemap->successful()) {
+                    $xmlContent = $sitemap->body();
+                    $items = $this->parseContent($xmlContent, $websiteUrl);
+                    if ($items["success"]) {
+                        $response = [
+                            "success" => true,
+                            "data" => $items["data"]
+                        ];
+                    } else {
+                        $response = [
+                            "success" => false,
+                            "message" => $items["message"]
+                        ];
+                    }
                 } else {
                     $response = [
                         "success" => false,
-                        "message" => $items["message"]
+                        "message" => "Failed to fetch feed/sitemap from {$websiteUrl}"
                     ];
                 }
             } else {
                 $response = [
                     "success" => false,
-                    "message" => "Failed to fetch feed/sitemap from {$websiteUrl}"
+                    "message" => "Couldn't find Sitemap Data!"
                 ];
             }
-        } else {
+        } catch (Exception $e) {
             $response = [
                 "success" => false,
-                "message" => "Couldn't find Sitemap Data!"
+                "message" => $e->getMessage()
             ];
         }
-        // } catch (Exception $e) {
-        //     $response = [
-        //         "success" => false,
-        //         "message" => $e->getMessage()
-        //     ];
-        // }
-
         return $response;
-        // Feed::$userAgent = $this->dom->user_agent();
-        // $feed = Feed::loadRss($url);
-        // $items = [];
-        // foreach ($feed->item as $item) {
-        //     $rss = $this->dom->get_info($url, $this->data["mode"]);
-        //     $items[] = array(
-        //         "title" => $item->title,
-        //         "link" => $item->link,
-        //         "description" => $item->description,
-        //         "image" => $rss["image"]
-        //     );
-        // }
-        // $response = [
-        //     "success" => true,
-        //     "data" => $items
-        // ];
-        // return $response;
     }
 
     /**

@@ -241,10 +241,6 @@ class AutomationController extends Controller
                 ];
 
                 try {
-                    // if (!$exist) {
-                    //     Feed::$userAgent = $this->dom->user_agent();
-                    //     Feed::loadRss($data["url"]);
-                    // }
                     $response = array(
                         "success" => true,
                         "message" => "Your posts are being Fetched!"
@@ -253,13 +249,7 @@ class AutomationController extends Controller
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    if ($user->email == "abmasood5900@gmail.com") {
-                        $feedService = new TestFeedService($data);
-                        $feedService->fetch();
-                    } else {
-                        FetchPost::dispatch($data);
-                    }
-                    // FetchPost::dispatch($data);
+                    FetchPost::dispatch($data);
                 } catch (Exception $e) {
                     // $domain->delete();
                     $response = [
