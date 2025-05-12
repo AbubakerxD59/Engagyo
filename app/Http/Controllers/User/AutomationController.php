@@ -211,8 +211,10 @@ class AutomationController extends Controller
                         "time" => $time
                     ]);
                     $link = !empty($category) ? $urlDomain . $category : $urlDomain;
+                    $domain_id = $domain->id;
                     $exist = false;
                 } else {
+                    $domain_id = $domain->id;
                     $domain->update([
                         "time" => $time
                     ]);
@@ -222,7 +224,7 @@ class AutomationController extends Controller
                 $data = [
                     "url" => $link,
                     "category" => $category,
-                    "domain_id" => $domain->id,
+                    "domain_id" => $domain_id,
                     "user_id" => $user->id,
                     "account_id" => $account_id,
                     "type" => $type,
@@ -230,7 +232,6 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
-                echo $link;
                 try {
                     $feed = Feed::loadRss($data["url"]);
                     $response = array(

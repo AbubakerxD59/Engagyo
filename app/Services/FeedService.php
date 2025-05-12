@@ -42,9 +42,12 @@ class FeedService
                 $items = $feedUrls["data"];
                 foreach ($items as $key => $item) {
                     $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"]], $this->data["time"]);
+
                     $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
+
                     $rss = $this->dom->get_info($item["link"], $this->data["mode"]);
                     $title = !empty($item["title"]) ?  $item["title"] : $rss["title"];
+
                     if (!$post) {
                         $this->post->create([
                             "user_id" => $this->data["user_id"],
@@ -157,8 +160,8 @@ class FeedService
             libxml_clear_errors(); // Clear errors from buffer
             if ($xml !== false) {
                 $items = [];
-                dd($xml);
                 if (isset($xml->sitemap)) {
+                    dd('here');
                     foreach ($xml->sitemap as $sitemapEntry) {
                         $childSitemapUrl = (string) $sitemapEntry->loc;
                         if (!empty($childSitemapUrl)) {
