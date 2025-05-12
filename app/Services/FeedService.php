@@ -37,6 +37,7 @@ class FeedService
         } else {
             $feedUrls = $this->fetchRss($websiteUrl);
         }
+        dd($this->data);
         if ($feedUrls["success"]) {
             try {
                 $items = $feedUrls["data"];

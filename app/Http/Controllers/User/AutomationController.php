@@ -199,6 +199,7 @@ class AutomationController extends Controller
                     $urlDomain = $parsedUrl["path"];
                     $category = null;
                 }
+
                 $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
                 $domain = $this->domain->exists($search)->first();
                 if (!$domain) {
@@ -219,7 +220,8 @@ class AutomationController extends Controller
                     ]);
                     $link = $urlDomain;
                 }
-                $posts = $domain->posts()->get();
+
+                $posts = $domain->posts()->userSearch($user->id)->get();
                 $exist = count($posts) > 0 ? true : false;
 
                 $data = [
@@ -233,7 +235,7 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
-                
+
                 try {
                     Feed::loadRss($data["url"]);
                     $response = array(
