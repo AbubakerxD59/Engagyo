@@ -90,6 +90,7 @@ class TestFeedService
                     "message" => "Something went wrong!"
                 );
             }
+            dd($discoveredUrls);
             if ($discoveredUrls) {
                 $sitemap = Http::withHeaders(['User-Agent' => 'Engagyo RSS bot'])->get($discoveredUrls);
                 if ($sitemap->successful()) {
