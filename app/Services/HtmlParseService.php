@@ -154,6 +154,7 @@ class HtmlParseService
             $width = $image->getAttribute('width') ? (float) $image->getAttribute('width') : 0;
             if (empty($height) || empty($width)) {
                 $dimensions = $this->getImageDimensionsFromUrl($image->getAttribute('src'));
+                dd($dimensions);
                 if (isset($dimensions["width"])) {
                     $width = $dimensions["width"];
                 }
