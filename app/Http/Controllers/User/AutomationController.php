@@ -228,7 +228,6 @@ class AutomationController extends Controller
                         "time" => $time
                     ]);
                 }
-
                 $posts = $domain->posts()->userSearch($user->id)->get();
                 $exist = count($posts) > 0 ? true : false;
                 if ($exist) {
@@ -248,6 +247,10 @@ class AutomationController extends Controller
                     "mode" => $mode,
                     "exist" => $exist
                 ];
+
+                if($domain_id == '87'){
+                    dd($data);
+                }
 
                 try {
                     $response = array(

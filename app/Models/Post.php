@@ -263,9 +263,13 @@ class Post extends Model
                     $response = $this->response;
                     if (!empty($response)) {
                         $response = json_decode($response);
-                        if (!empty($response)) {
-                            $message_object = $response->message;
-                            $message = getError($message_object);
+                        if ($this->type == 'pinterest') {
+                            if (!empty($response)) {
+                                $message_object = $response->message;
+                                $message = getError($message_object);
+                            }
+                        } else {
+                            $message = $response;
                         }
                     }
                 }
