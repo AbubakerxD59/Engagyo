@@ -132,11 +132,7 @@ class HtmlParseService
         foreach ($tags as $tag) {
             if ($this->get_aspect_ratio($tag)) {
                 $pin_image = true;
-                $image = $tag->getAttribute('src');
-                if ($tag->hasAttribute('data-lazy-src')) {
-                    $image = $tag->getAttribute("data-lazy-src");
-                }
-                $pinterest_image = $image;
+                $pinterest_image = $tag->hasAttribute('data-lazy-src') ? $tag->getAttribute("data-lazy-src") : $tag->getAttribute('src');
                 break;
             }
         }
