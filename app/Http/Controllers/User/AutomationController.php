@@ -248,10 +248,6 @@ class AutomationController extends Controller
                     "exist" => $exist
                 ];
 
-                if($domain_id == '87'){
-                    dd($data);
-                }
-
                 try {
                     $response = array(
                         "success" => true,
