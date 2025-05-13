@@ -84,7 +84,7 @@ class TestFeedService
         $urlToCheck = rtrim($websiteUrl, '/') . '/feed';
         $discoveredUrls = '';
         try {
-            $response = Http::head($urlToCheck);
+            $response = Http::get($urlToCheck);
             if ($response->successful()) {
                 // Check content type if possible (more reliable)
                 $discoveredUrls = $urlToCheck;

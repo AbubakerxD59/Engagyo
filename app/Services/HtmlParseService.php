@@ -153,12 +153,6 @@ class HtmlParseService
             $height = $image->getAttribute('height') ? (float) $image->getAttribute('height') : 0;
             $width = $image->getAttribute('width') ? (float) $image->getAttribute('width') : 0;
             if (empty($height) || empty($width)) {
-                $url = $image->getAttribute('src');
-                if ($image->hasAttribute('data-lazy-src')) {
-                    $image = $image->getAttribute("data-lazy-src");
-                }
-                $image_url = saveImageFromUrl($url);
-                dd($image_url);
                 $dimensions = $this->getImageDimensionsFromUrl($image->getAttribute('src'));
                 if (isset($dimensions["width"])) {
                     $width = $dimensions["width"];
@@ -179,7 +173,6 @@ class HtmlParseService
     private function getImageDimensionsFromUrl($url)
     {
         $ch = curl_init($url);
-
         // Set cURL options
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true); // Return the transfer as a string
         curl_setopt($ch, CURLOPT_HEADER, false); // Don't include the header in the output
@@ -190,7 +183,6 @@ class HtmlParseService
         // We only need a small portion to get dimensions, but getimagesize on a stream needs enough header info.
         // Fetching the whole body is often necessary for getimagesize to work with the downloaded data.
         // A better approach is to use getimagesize on a temporary local file after downloading.
-
         $response = curl_exec($ch);
         $http_code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
         if ($response === false) {
