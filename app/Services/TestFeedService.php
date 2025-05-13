@@ -80,12 +80,7 @@ class TestFeedService
             $response = Http::head($urlToCheck);
             if ($response->successful()) {
                 // Check content type if possible (more reliable)
-                $contentType = strtolower($response->header('Content-Type') ?? '');
-                dd($response->header('Content-Type'), $response, $urlToCheck);
-
-                if (str_contains($contentType, 'xml')) {
-                    $discoveredUrls = $urlToCheck;
-                }
+                $discoveredUrls = $urlToCheck;
             } else {
                 $response = array(
                     "success" => false,
