@@ -36,6 +36,7 @@ class TestFeedService
         } else {
             $feedUrls = $this->fetchRss($websiteUrl);
         }
+        dd($feedUrls);
         if ($feedUrls["success"]) {
             try {
                 $items = $feedUrls["data"];
