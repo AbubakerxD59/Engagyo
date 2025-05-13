@@ -62,6 +62,22 @@ class HtmlParseService
                 }
             }
             if (empty($image)) {
+                $thumbnails = $this->dom->getElementsByTagName('img');
+                foreach ($thumbnails as $thumbnail) {
+                    if (str_contains($thumbnail->getAttribute('class'), 'pin')) {
+                        $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
+                    }
+                    if (empty($image)) {
+                        if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
+                            $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
+                        }
+                        if (str_contains($thumbnail->getAttribute('class'), 'featured')) {
+                            $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
+                        }
+                    }
+                }
+            }
+            if (empty($image)) {
                 $metaTags = $this->dom->getElementsByTagName('meta');
                 foreach ($metaTags as $meta) {
                     if ($meta->getAttribute('property') == 'og:image') {
@@ -78,39 +94,13 @@ class HtmlParseService
             if (empty($image)) {
                 $thumbnails = $this->dom->getElementsByTagName('div');
                 foreach ($thumbnails as $thumbnail) {
-                    if (check_for($thumbnail->getAttribute('class'), 'thumbnail')) {
+                    if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
                         $image = $thumbnail->getElementsByTagName('img')->item(0);
                         $image = $image->getAttribute('src');
                     }
-                }
-            }
-            if (empty($image)) {
-                $thumbnails = $this->dom->getElementsByTagName('img');
-                foreach ($thumbnails as $thumbnail) {
-                     if (str_contains($thumbnail->getAttribute('class'), 'pin')) {
-                        $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
-                    }
-                    if(empty($image)){
-                        if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
-                            $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
-                        }
-                        // if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
-                        //     $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
-                        // }
-                    }
-                   
-                }
-            }
-            if (!empty($image)) {
-                foreach ($tags as $tag) {
-                    if ($this->get_aspect_ratio($tag)) {
-                        $pin_image = true;
-                        $image = $tag->getAttribute('src');
-                        if ($tag->hasAttribute('data-lazy-src')) {
-                            $image = $tag->getAttribute("data-lazy-src");
-                        }
-                        $pinterest_image = $image;
-                        break;
+                    if (str_contains($thumbnail->getAttribute('class'), 'featured')) {
+                        $image = $thumbnail->getElementsByTagName('img')->item(0);
+                        $image = $image->getAttribute('src');
                     }
                 }
             }
@@ -163,7 +153,12 @@ class HtmlParseService
             $height = $image->getAttribute('height') ? (float) $image->getAttribute('height') : 0;
             $width = $image->getAttribute('width') ? (float) $image->getAttribute('width') : 0;
             if (empty($height) || empty($width)) {
-                ini_set('user_agent', "Engagyo RSS bot");
+                $url = $image->getAttribute('src');
+                if ($image->hasAttribute('data-lazy-src')) {
+                    $image = $image->getAttribute("data-lazy-src");
+                }
+                $image_url = saveImageFromUrl($url);
+                dd($image_url);
                 $dimensions = $this->getImageDimensionsFromUrl($image->getAttribute('src'));
                 if (isset($dimensions["width"])) {
                     $width = $dimensions["width"];
@@ -173,7 +168,7 @@ class HtmlParseService
                 }
             }
             $heightArray = array("1128", "900", "1000", "1024", "1349");
-            $widthArray = array("564", "700", "1500", "512", "513", "759");
+            $widthArray = array("564", "700", "1500", "512", "759");
             if (in_array(ceil($height), $heightArray) && in_array(ceil($width), $widthArray)) {
                 $pin_image = true;
             }
