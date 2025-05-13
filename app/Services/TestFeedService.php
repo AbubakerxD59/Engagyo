@@ -36,7 +36,6 @@ class TestFeedService
         } else {
             $feedUrls = $this->fetchRss($websiteUrl);
         }
-        dd($feedUrls);
         if ($feedUrls["success"]) {
             try {
                 $items = $feedUrls["data"];
@@ -65,11 +64,18 @@ class TestFeedService
             } catch (Exception $e) {
                 $this->body["message"] = $e->getMessage();
                 create_notification($this->data["user_id"], $this->body, "Post");
+                return array(
+                    "success" => false,
+                    "message" =>  $this->body["message"]
+                );
             }
         } else {
             $this->body["message"] = $feedUrls["message"];
             create_notification($this->data["user_id"], $this->body, "Post");
-            exit;
+            return array(
+                "success" => false,
+                "message" =>  $this->body["message"]
+            );
         }
     }
 
