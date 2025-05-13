@@ -32,10 +32,8 @@ class TestFeedService
     {
         $websiteUrl = $this->data["url"];
         if ($this->data["exist"]) {
-            dd('1');
             $feedUrls = $this->fetchSitemap($websiteUrl);
         } else {
-             dd('2');
             $feedUrls = $this->fetchRss($websiteUrl);
         }
         if ($feedUrls["success"]) {
@@ -112,13 +110,13 @@ class TestFeedService
                 } else {
                     $response = [
                         "success" => false,
-                        "message" => "Failed to fetch feed/sitemap from {$websiteUrl}"
+                        "message" => "Failed to fetch Feed from {$websiteUrl}"
                     ];
                 }
             } else {
                 $response = [
                     "success" => false,
-                    "message" => "Couldn't find Sitemap Data!"
+                    "message" => "No response from Site RSS!"
                 ];
             }
         } catch (Exception $e) {
