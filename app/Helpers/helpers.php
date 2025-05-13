@@ -398,3 +398,16 @@ function clearLogFile()
     }
     return "Log file not found.";
 }
+
+function getError($string)
+{
+    $start_marker = '"message":';
+    $start_pos = strpos($string, $start_marker);
+    if ($start_pos !== false) {
+        $start_of_message = $start_pos + strlen($start_marker);
+        $extracted_message = substr($string, $start_of_message);
+        return $extracted_message;
+    } else {
+        return "Start marker not found.";
+    }
+}

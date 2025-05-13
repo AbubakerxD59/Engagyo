@@ -28,7 +28,7 @@ class Post extends Model
         "response"
     ];
 
-    protected $appends = ["date", "time", "modal_time"];
+    protected $appends = ["date", "time", "modal_time", "message"];
 
     public function user()
     {
@@ -254,8 +254,23 @@ class Post extends Model
         );
     }
 
-    // protected static function booted(): void
-    // {
-    //     static::addGlobalScope(new PostScope);
-    // }
+    protected function message(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $message = '';
+                if ($this->status == -1) {
+                    $response = $this->response;
+                    if (!empty($response)) {
+                        $response = json_decode($response);
+                        if (!empty($response)) {
+                            $message_object = $response->message;
+                            $message = getError($message_object);
+                        }
+                    }
+                }
+                return $message;
+            }
+        );
+    }
 }

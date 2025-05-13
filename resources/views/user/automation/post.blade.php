@@ -22,3 +22,16 @@
         </div>
     </a>
 </div>
+@if ($post->status == -1)
+    <div class="d-flex justify-content-center">
+        <div class="col-md-6 p-3 bg-danger rounded text-center">
+            <span>
+                <i class="fa fa-exclamation"></i>
+            </span>
+            <br>
+            <span>
+                {{ $post->message }}
+            </span>
+        </div>
+    </div>
+@endif
