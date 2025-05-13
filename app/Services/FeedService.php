@@ -110,7 +110,6 @@ class FeedService
      */
     private function fetchSitemap(string $websiteUrl): array
     {
-        dd('1');
         $urlToCheck = rtrim($websiteUrl, '/') . '/sitemap.xml';
         $discoveredUrls = '';
         try {

@@ -32,8 +32,10 @@ class TestFeedService
     {
         $websiteUrl = $this->data["url"];
         if ($this->data["exist"]) {
+            dd('1');
             $feedUrls = $this->fetchSitemap($websiteUrl);
         } else {
+             dd('2');
             $feedUrls = $this->fetchRss($websiteUrl);
         }
         if ($feedUrls["success"]) {
