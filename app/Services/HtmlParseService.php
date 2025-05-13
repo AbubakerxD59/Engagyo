@@ -87,9 +87,18 @@ class HtmlParseService
             if (empty($image)) {
                 $thumbnails = $this->dom->getElementsByTagName('img');
                 foreach ($thumbnails as $thumbnail) {
-                    if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
+                     if (str_contains($thumbnail->getAttribute('class'), 'pin')) {
                         $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
                     }
+                    if(empty($image)){
+                        if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
+                            $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
+                        }
+                        // if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
+                        //     $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
+                        // }
+                    }
+                   
                 }
             }
             if (!empty($image)) {

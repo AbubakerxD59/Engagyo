@@ -81,6 +81,8 @@ class TestFeedService
             if ($response->successful()) {
                 // Check content type if possible (more reliable)
                 $contentType = strtolower($response->header('Content-Type') ?? '');
+                dd($response->header('Content-Type'), $response, $urlToCheck);
+
                 if (str_contains($contentType, 'xml')) {
                     $discoveredUrls = $urlToCheck;
                 }
