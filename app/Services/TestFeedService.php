@@ -340,10 +340,11 @@ class TestFeedService
         // We'll prioritize media:content with dimensions if available
         // Check media:content
         $pin_url = null;
+        $test = [];
         if (isset($item->children('media', true)->content)) {
             foreach ($item->children('media', true)->content as $content) {
                 $attributes = $content->attributes();
-                echo $attributes;
+                $test[] = $attributes;
                 if (isset($attributes['url']) && isset($attributes['width']) && isset($attributes['height'])) {
                     $url = (string) $attributes['url'];
                     $width = (string) $attributes['width'];
@@ -355,7 +356,7 @@ class TestFeedService
                 }
             }
         }
-        exit;
+        dd($test);
         // If no preferred size image in media:content, check other potential image locations
         // (You might need to add more specific logic here based on actual Pinterest feed structure)
 
