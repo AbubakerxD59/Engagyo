@@ -43,6 +43,7 @@ class FeedService
         } else {
             $feedUrls = $this->fetchRss($websiteUrl);
         }
+        dd($feedUrls);
         if ($feedUrls["success"]) {
             try {
                 $items = $feedUrls["data"];
@@ -86,253 +87,173 @@ class FeedService
         }
     }
 
-    private function fetchRss($url)
+    private function fetchRss(string $targetUrl, int $max = 10)
     {
-        $feed = FeedReader::read($url);
-        $items = array_slice($feed->get_items(), 0, 10);
-
-        foreach ($items as $item) {
-            $title = $item->get_title();
-            $link = $item->get_link();
-            $image = $this->extractImageFromRssItem($item);
-
-            $posts[] = [
-                'title' => $title,
-                'link' => $link,
-                'image' => $image,
-            ];
-        }
-        return [
-            "success" => true,
-            "data" => $posts
+        $contextOptions = [
+            'http' => [
+                'user_agent' => $this->dom->user_agent(),
+                'ignore_errors' => true
+            ]
         ];
+        $context = stream_context_create($contextOptions);
+        $file = file_get_contents($targetUrl, FALSE, $context);
+        $single_feed = simplexml_load_string((string) $file);
+        $feed[] = $single_feed;
+        $items = [];
+        $count = 0;
+        if (count($feed) > 0) {
+            foreach ($feed as $data) {
+                if (!empty($data)) {
+                    if (isset($data->channel->item)) {
+                        $items_count = count($data->channel->item);
+                        foreach ($data->channel->item as $item) {
+                            $items_count--;
+                            $item = $data->channel->item[$items_count];
+                            if ($count >= $max) {
+                                break;
+                            }
+                            $info = $this->dom->get_info($item->link, $this->data["mode"]);
+                            $items[] = [
+                                "link" => $item->link,
+                                "title" => $info["title"],
+                                "image" => $info["image"],
+                            ];
+                        }
+                    } else {
+                        $response = array(
+                            'success' => false,
+                            'message' => 'Your provided link has not valid RSS feed, Please fix and try again'
+                        );
+                    }
+                } else {
+                    $response = array(
+                        'success' => false,
+                        'messazge' => 'Your provided link has not valid RSS feed, Please fix and try again'
+                    );
+                }
+            }
+            // Set the flag to true after the foreach loop
+            $response = array(
+                'success' => true,
+                'data' => $items
+            );
+        } else {
+            $response = array(
+                'success' => false,
+                'message' => 'Your provided link has not valid RSS feed, Please fix and try again.'
+            );
+        }
+        return $response;
     }
 
-    /**
-     * Attempt to discover feed or sitemap URLs (Basic Example).
-     * A more robust implementation would involve fetching the HTML
-     * and parsing <link> tags or checking robots.txt.
-     *
-     * @param string $websiteUrl
-     * @return array
-     */
-    private function fetchSitemap(string $url, int $maxPosts = 20): array
+    public function fetchSitemap(string $targetUrl, int $max = 10)
     {
-        $url = $url . '/sitemap.xml';
-        $response = Http::get($url);
-        $posts = [];
-        if ($response->successful()) {
-            $xmlContent = $response->body();
-            $xml = new SimpleXMLElement($xmlContent);
-            // Namespaces can be tricky with sitemaps. Adjust if necessary.
-            $xml->registerXPathNamespace('s', 'http://www.sitemaps.org/schemas/sitemap/0.9');
+        $parsed_url = parse_url($targetUrl);
+        if (isset($parsed_url['scheme']) && isset($parsed_url['host'])) {
+            $main_domain = $parsed_url['scheme'] . '://' . $parsed_url['host'];
+            $http_domain = 'http://' . $parsed_url['host'];
+            $sitemapUrl = $main_domain . '/sitemap.xml';
+        }
+        // context options
+        $arrContextOptions = array('http' => ['method' => "GET", 'header' => "User-Agent: curl/7.68.0\r\n", 'ignore_errors' => true], "ssl" => array("verify_peer" => false, "verify_peer_name" => false,));
+        // load xml from sitemap.xml
+        $items = [];
+        $xml = simplexml_load_file($sitemapUrl);
+        if (!$xml) {
+            $sitemapContent = file_get_contents($sitemapUrl, false, stream_context_create($arrContextOptions));
+            if (!empty($sitemapContent)) {
+                $xml = simplexml_load_string($sitemapContent);
+            }
+        }
+        if (count($xml) > 0) {
+            $filteredSitemaps = [];
             $count = 0;
-            if (isset($xml->sitemap)) {
-                foreach ($xml->sitemap as $sitemapEntry) {
-                    if ($count >= $maxPosts) {
+            foreach ($xml->sitemap as $sitemap) {
+                if ($count >= $max) {
+                    break;
+                }
+                $loc = (string) $sitemap->loc;
+                // Check if the <loc> element contains "post-sitemap" or "sitemap-post"
+                if (strpos($loc, "post-sitemap") !== false || strpos($loc, "sitemap-post") !== false || strpos($loc, "sitemap-") !== false) {
+                    $filteredSitemaps[] = $sitemap;
+                }
+            }
+            usort($filteredSitemaps, function ($a, $b) {
+                $numberA = intval(preg_replace('/\D/', '', $a->loc));
+                $numberB = intval(preg_replace('/\D/', '', $b->loc));
+                return $numberB - $numberA; // Sort in descending order
+            });
+            $selectedSitemap = $filteredSitemaps[0];
+            $loc = (string) $selectedSitemap->loc;
+            if (
+                strpos($loc, "post-sitemap") !== false ||
+                strpos($loc, "sitemap-post") !== false ||
+                strpos($loc, "sitemap-") !== false
+            ) {
+                $sitemapUrl = $loc; // Use the filtered URL
+                $sitemapXml = simplexml_load_file($sitemapUrl);
+                if (!$sitemapXml) {
+                    $sitemapContent = file_get_contents($sitemapUrl, false, stream_context_create($arrContextOptions));
+                    if (!empty($sitemapContent)) {
+                        $sitemapXml = simplexml_load_string($sitemapContent);
+                    }
+                }
+                // Now here we will sort the URL in descending order based on the last modified date so we will get the latest posts first //
+                $urlLastModArray = [];
+                foreach ($sitemapXml->url as $url) {
+                    $urlString = (string) $url->loc;
+                    $lastModString = (string) $url->lastmod;
+                    $lastModTimestamp = strtotime($lastModString);
+                    // Store URLs and last modification dates in a multidimensional array
+                    $urlLastModArray[$lastModTimestamp][] = [
+                        'loc' => $urlString,
+                        'lastmod' => $lastModString
+                    ];
+                }
+                // Sort the multidimensional array by keys (last modification dates) in descending order
+                krsort($urlLastModArray);
+                // Create a new SimpleXMLElement object to mimic the original structure
+                $newSitemapXml = new SimpleXMLElement('<urlset></urlset>');
+                foreach ($urlLastModArray as $lastModTimestamp => $urls) {
+                    foreach ($urls as $urlData) {
+                        $urlNode = $newSitemapXml->addChild('url');
+                        $urlNode->addChild('loc', $urlData['loc']);
+                        $urlNode->addChild('lastmod', $urlData['lastmod']);
+                    }
+                }
+                // descending order complete with same structure as xml//
+                foreach ($newSitemapXml->url as $url) {
+                    $utmPostUrl = '';
+                    if ($count >= $max) {
                         break;
                     }
-                    $childSitemapUrl = (string) $sitemapEntry->loc;
-                    if (!empty($childSitemapUrl)) {
-                        $context = stream_context_create(['http' => ['timeout' => 30]]);
-                        $childXmlContent = @file_get_contents($childSitemapUrl, false, $context);
-                        if ($childXmlContent !== false) {
-                            libxml_use_internal_errors(true);
-                            $xml = simplexml_load_string($childXmlContent);
-                            libxml_clear_errors();
-                            foreach ($xml->url as $url) {
-                                if ($count >= $maxPosts) {
-                                    break;
-                                }
-                                $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
-                                if (!$post) {
-                                    $title = $this->fetchTitleFromUrl($url->loc) ?: '';
-                                    $image = $this->fetchImageFromUrl($url->loc);
-                                    if (isset($title) && !empty($image)) {
-                                        $items[] = [
-                                            'title' => $title,
-                                            'link' => (string) $url->loc,
-                                            'image' => $image,
-                                        ];
-                                        $count++;
-                                    }
-                                }
-                            }
-                        }
+                    $postUrl = (string) $url->loc; // Cast to string to get the URL
+                    if ($postUrl == $main_domain . '/' || $postUrl == $http_domain . '/') {
+                        continue; // Skip the first iteration
                     }
+                    $info = $this->dom->get_info($postUrl, $this->data["mode"]);
+                    $items[] = [
+                        "link" => $postUrl,
+                        "title" => $info["title"],
+                        "image" => $info["image"],
+                    ];
                 }
+                $response = [
+                    'success' => true,
+                    'data' => $items
+                ];
+            } else {
+                $response = [
+                    'success' => false,
+                    'message' => 'Sitemap Data not found!'
+                ];
             }
-            return [
-                "success" => true,
-                "data" => $posts
-            ];
         } else {
-            return [
-                "success" => false,
-                "data" => 'Failed to fetch sitemap'
+            $response = [
+                'success' => false,
+                'message' => 'Failed to fetch the RSS feed'
             ];
         }
-    }
-
-    /**
-     * Extracts image from an RSS item.
-     * Prioritizes Pinterest-specific images, then thumbnails.
-     */
-    private function extractImageFromRssItem($item): ?string
-    {
-        $potentialImages = [];
-
-        // 1. Check for media:content or enclosure tags (often higher quality)
-        $enclosures = $item->get_enclosures();
-        if ($enclosures) {
-            foreach ($enclosures as $enclosure) {
-                if (strpos($enclosure->get_type(), 'image') !== false && $enclosure->get_link()) {
-                    $potentialImages[] = $enclosure->get_link();
-                }
-                // SimplePie specific for thumbnails in enclosures
-                if ($enclosure->get_thumbnail()) {
-                    $potentialImages[] = $enclosure->get_thumbnail();
-                }
-            }
-        }
-
-        // 2. Check for media:thumbnail
-        $media_thumbnail = $item->get_item_tags('http://search.yahoo.com/mrss/', 'thumbnail');
-        if (!empty($media_thumbnail) && isset($media_thumbnail[0]['attribs']['']['url'])) {
-            $potentialImages[] = $media_thumbnail[0]['attribs']['']['url'];
-        }
-
-        // 3. Look for images in the description or content
-        $description = $item->get_description();
-        $content = $item->get_content();
-
-        if ($description) {
-            preg_match_all('/<img[^>]+src="([^">]+)"/i', $description, $matches);
-            if (!empty($matches[1])) {
-                $potentialImages = array_merge($potentialImages, $matches[1]);
-            }
-        }
-        if ($content) {
-            preg_match_all('/<img[^>]+src="([^">]+)"/i', $content, $matches);
-            if (!empty($matches[1])) {
-                $potentialImages = array_merge($potentialImages, $matches[1]);
-            }
-        }
-
-        // 4. Check image from <image> tag or <itunes:image> if available directly on item (less common for items, more for channel)
-        // The vedmant/laravel-feed-reader might expose these differently or not at all at item level.
-
-        $potentialImages = array_unique(array_filter($potentialImages));
-
-        // Check for Pinterest-specific dimensions
-        foreach ($potentialImages as $imgUrl) {
-            $dimensions = @getimagesize($imgUrl); // Use @ to suppress errors for invalid images
-            if ($dimensions && is_array($dimensions)) {
-                list($width, $height) = $dimensions;
-                if (in_array((string)$width, $this->widthArray) && in_array((string)$height, $this->heightArray)) {
-                    return $imgUrl; // Found Pinterest specific image
-                }
-            }
-        }
-
-        // If no Pinterest image, return the first valid image as a thumbnail
-        foreach ($potentialImages as $imgUrl) {
-            if (filter_var($imgUrl, FILTER_VALIDATE_URL)) {
-                // Further check if it's a real image if necessary
-                $headers = @get_headers($imgUrl, 1);
-                if ($headers && isset($headers['Content-Type']) && strpos($headers['Content-Type'], 'image/') !== false) {
-                    return $imgUrl;
-                }
-            }
-        }
-
-        return null; // No suitable image found
-    }
-
-
-    /**
-     * Fallback to fetch title from a URL (basic implementation)
-     * For sitemaps, as they usually only contain URLs.
-     */
-    private function fetchTitleFromUrl(string $url): ?string
-    {
-        try {
-            $response = Http::timeout(5)->get($url); // Set a timeout
-            if ($response->successful()) {
-                $htmlContent = $response->body();
-                if (preg_match('/<title>(.*?)<\/title>/is', $htmlContent, $matches)) {
-                    return trim($matches[1]);
-                }
-            }
-        } catch (\Throwable $e) {
-            // Log error or handle silently
-        }
-        return null;
-    }
-
-    /**
-     * Fallback to fetch image from a URL's content (basic implementation)
-     * For sitemaps or if RSS item has no direct image.
-     */
-    private function fetchImageFromUrl(string $url): ?string
-    {
-        try {
-            $response = Http::timeout(5)->get($url);
-            if ($response->successful()) {
-                $htmlContent = $response->body();
-                $potentialImages = [];
-
-                preg_match_all('/<img[^>]+src="([^">]+)"/i', $htmlContent, $matches);
-                if (!empty($matches[1])) {
-                    $potentialImages = array_map(function ($imgUrl) use ($url) {
-                        // Convert relative URLs to absolute
-                        if (strpos($imgUrl, 'http') !== 0) {
-                            $urlParts = parse_url($url);
-                            $baseUrl = $urlParts['scheme'] . '://' . $urlParts['host'];
-                            if (strpos($imgUrl, '/') === 0) { // Starts with /
-                                return $baseUrl . $imgUrl;
-                            } else { // Relative path
-                                $path = isset($urlParts['path']) ? dirname($urlParts['path']) : '';
-                                return $baseUrl . rtrim($path, '/') . '/' . $imgUrl;
-                            }
-                        }
-                        return $imgUrl;
-                    }, $matches[1]);
-                }
-
-                // Also check for OpenGraph image
-                if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^">]+)"/i', $htmlContent, $ogMatches)) {
-                    if (!empty($ogMatches[1])) {
-                        array_unshift($potentialImages, $ogMatches[1]); // Prioritize OG image
-                    }
-                }
-
-                $potentialImages = array_unique(array_filter($potentialImages));
-
-                // Check for Pinterest-specific dimensions
-                foreach ($potentialImages as $imgUrl) {
-                    if (!filter_var($imgUrl, FILTER_VALIDATE_URL)) continue;
-                    $dimensions = @getimagesize($imgUrl);
-                    if ($dimensions && is_array($dimensions)) {
-                        list($width, $height) = $dimensions;
-                        if (in_array((string)$width, $this->widthArray) && in_array((string)$height, $this->heightArray)) {
-                            return $imgUrl;
-                        }
-                    }
-                }
-
-                // If no Pinterest image, return the first valid image (e.g., OG image or first img tag)
-                foreach ($potentialImages as $imgUrl) {
-                    if (!filter_var($imgUrl, FILTER_VALIDATE_URL)) continue;
-                    $headers = @get_headers($imgUrl, 1);
-                    if ($headers && isset($headers['Content-Type']) && strpos($headers['Content-Type'], 'image/') !== false) {
-                        return $imgUrl;
-                    }
-                }
-            }
-        } catch (\Throwable $e) {
-            // Log error or handle silently
-        }
-        return null;
+        return $response;
     }
 }
