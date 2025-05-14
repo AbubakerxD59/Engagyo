@@ -210,6 +210,16 @@ class Post extends Model
         return $post ? date("Y-m-d h:i A", strtotime($post->publish_date)) : '-';
     }
 
+    protected function title(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                $title = !empty($value) ? htmlspecialchars_decode($value) : $value;
+                return $title;
+            }
+        );
+    }
+
     protected function image(): Attribute
     {
         return Attribute::make(

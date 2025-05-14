@@ -105,7 +105,7 @@ class HtmlParseService
                 }
             }
             return array(
-                "title" => htmlspecialchars($title),
+                "title" => $title,
                 "image" => $image
             );
         } else {
