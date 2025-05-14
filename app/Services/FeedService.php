@@ -146,9 +146,9 @@ class FeedService
 
             $postUrls = [];
             // Check if the root element is 'urlset' as expected for a standard sitemap
-            if ($xml->getName() === 'urlset') {
                 // 3. Extract, Filter, and Select URLs
-                foreach ($xml->url as $urlElement) {
+                foreach ($xml->sitemap as $urlElement) {
+                    dd($urlElement);
                     if (isset($urlElement->loc)) {
                         $loc = (string) $urlElement->loc;
                         // Filter URLs based on patterns
@@ -171,12 +171,6 @@ class FeedService
                         }
                     }
                 }
-            } else {
-                // Handle cases where it might be a sitemap index or a different format
-                // For simplicity, we'll just throw an error here.
-                // A more robust solution might recursively fetch index files.
-                throw new Exception("Sitemap does not appear to be a standard <urlset> format.");
-            }
 
 
             return $postUrls;
