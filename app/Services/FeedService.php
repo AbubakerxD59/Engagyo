@@ -115,100 +115,100 @@ class FeedService
         $sitemapUrl = $targetUrl . '/sitemap.xml';
         // context options
         $arrContextOptions = array('http' => ['method' => "GET", 'header' => "User-Agent: curl/7.68.0\r\n", 'ignore_errors' => true], "ssl" => array("verify_peer" => false, "verify_peer_name" => false,));
-        // load xml from sitemap.xml
         $items = [];
-        $xml = simplexml_load_file($sitemapUrl);
-        if (!$xml) {
-            $sitemapContent = file_get_contents($sitemapUrl, false, stream_context_create($arrContextOptions));
-            if (!empty($sitemapContent)) {
-                $xml = simplexml_load_string($sitemapContent);
-            }
-        }
-        if (count($xml) > 0) {
-            $filteredSitemaps = [];
-            $count = 0;
-            foreach ($xml->sitemap as $sitemap) {
-                if ($count >= $max) {
-                    break;
-                }
-                $loc = (string) $sitemap->loc;
-                // Check if the <loc> element contains "post-sitemap" or "sitemap-post"
-                if (strpos($loc, "post-sitemap") !== false || strpos($loc, "sitemap-post") !== false || strpos($loc, "sitemap-") !== false) {
-                    $filteredSitemaps[] = $sitemap;
-                }
-            }
-            usort($filteredSitemaps, function ($a, $b) {
-                $numberA = intval(preg_replace('/\D/', '', $a->loc));
-                $numberB = intval(preg_replace('/\D/', '', $b->loc));
-                return $numberB - $numberA; // Sort in descending order
-            });
-            $selectedSitemap = $filteredSitemaps[0];
-            $loc = (string) $selectedSitemap->loc;
-            if (
-                strpos($loc, "post-sitemap") !== false ||
-                strpos($loc, "sitemap-post") !== false ||
-                strpos($loc, "sitemap-") !== false
-            ) {
-                $sitemapUrl = $loc; // Use the filtered URL
-                $sitemapXml = simplexml_load_file($sitemapUrl);
-                if (!$sitemapXml) {
-                    $sitemapContent = file_get_contents($sitemapUrl, false, stream_context_create($arrContextOptions));
-                    if (!empty($sitemapContent)) {
-                        $sitemapXml = simplexml_load_string($sitemapContent);
-                    }
-                }
-                // Now here we will sort the URL in descending order based on the last modified date so we will get the latest posts first //
-                $urlLastModArray = [];
-                foreach ($sitemapXml->url as $url) {
-                    $urlString = (string) $url->loc;
-                    $lastModString = (string) $url->lastmod;
-                    $lastModTimestamp = strtotime($lastModString);
-                    // Store URLs and last modification dates in a multidimensional array
-                    $urlLastModArray[$lastModTimestamp][] = [
-                        'loc' => $urlString,
-                        'lastmod' => $lastModString
-                    ];
-                }
-                // Sort the multidimensional array by keys (last modification dates) in descending order
-                krsort($urlLastModArray);
-                // Create a new SimpleXMLElement object to mimic the original structure
-                $newSitemapXml = new SimpleXMLElement('<urlset></urlset>');
-                foreach ($urlLastModArray as $lastModTimestamp => $urls) {
-                    foreach ($urls as $urlData) {
-                        $urlNode = $newSitemapXml->addChild('url');
-                        $urlNode->addChild('loc', $urlData['loc']);
-                        $urlNode->addChild('lastmod', $urlData['lastmod']);
-                    }
-                }
-                // descending order complete with same structure as xml//
-                foreach ($newSitemapXml->url as $url) {
-                    $utmPostUrl = '';
+        // load xml from sitemap.xml
+        $sitemap = Http::withHeaders(['User-Agent' => 'Engagyo RSS bot'])->get($sitemapUrl);
+        if ($sitemap->successful()) {
+            $xmlContent = $sitemap->body();
+            libxml_use_internal_errors(true);
+            $xml = simplexml_load_string($xmlContent);
+            libxml_clear_errors(); // Clear errors from buffer
+            if (count($xml) > 0) {
+                $filteredSitemaps = [];
+                $count = 0;
+                foreach ($xml->sitemap as $sitemap) {
                     if ($count >= $max) {
                         break;
                     }
-                    $postUrl = (string) $url->loc; // Cast to string to get the URL
-                    $info = $this->dom->get_info($postUrl, $this->data["mode"]);
-                    $items[] = [
-                        "link" => $postUrl,
-                        "title" => $info["title"],
-                        "image" => $info["image"],
+                    $loc = (string) $sitemap->loc;
+                    // Check if the <loc> element contains "post-sitemap" or "sitemap-post"
+                    if (strpos($loc, "post-sitemap") !== false || strpos($loc, "sitemap-post") !== false || strpos($loc, "sitemap-") !== false) {
+                        $filteredSitemaps[] = $sitemap;
+                    }
+                }
+                usort($filteredSitemaps, function ($a, $b) {
+                    $numberA = intval(preg_replace('/\D/', '', $a->loc));
+                    $numberB = intval(preg_replace('/\D/', '', $b->loc));
+                    return $numberB - $numberA; // Sort in descending order
+                });
+                $selectedSitemap = $filteredSitemaps[0];
+                $loc = (string) $selectedSitemap->loc;
+                if (
+                    strpos($loc, "post-sitemap") !== false ||
+                    strpos($loc, "sitemap-post") !== false ||
+                    strpos($loc, "sitemap-") !== false
+                ) {
+                    $sitemapUrl = $loc; // Use the filtered URL
+                    $sitemapXml = simplexml_load_file($sitemapUrl);
+                    if (!$sitemapXml) {
+                        $sitemapContent = file_get_contents($sitemapUrl, false, stream_context_create($arrContextOptions));
+                        if (!empty($sitemapContent)) {
+                            $sitemapXml = simplexml_load_string($sitemapContent);
+                        }
+                    }
+                    // Now here we will sort the URL in descending order based on the last modified date so we will get the latest posts first //
+                    $urlLastModArray = [];
+                    foreach ($sitemapXml->url as $url) {
+                        $urlString = (string) $url->loc;
+                        $lastModString = (string) $url->lastmod;
+                        $lastModTimestamp = strtotime($lastModString);
+                        // Store URLs and last modification dates in a multidimensional array
+                        $urlLastModArray[$lastModTimestamp][] = [
+                            'loc' => $urlString,
+                            'lastmod' => $lastModString
+                        ];
+                    }
+                    // Sort the multidimensional array by keys (last modification dates) in descending order
+                    krsort($urlLastModArray);
+                    // Create a new SimpleXMLElement object to mimic the original structure
+                    $newSitemapXml = new SimpleXMLElement('<urlset></urlset>');
+                    foreach ($urlLastModArray as $lastModTimestamp => $urls) {
+                        foreach ($urls as $urlData) {
+                            $urlNode = $newSitemapXml->addChild('url');
+                            $urlNode->addChild('loc', $urlData['loc']);
+                            $urlNode->addChild('lastmod', $urlData['lastmod']);
+                        }
+                    }
+                    // descending order complete with same structure as xml//
+                    foreach ($newSitemapXml->url as $url) {
+                        $utmPostUrl = '';
+                        if ($count >= $max) {
+                            break;
+                        }
+                        $postUrl = (string) $url->loc; // Cast to string to get the URL
+                        $info = $this->dom->get_info($postUrl, $this->data["mode"]);
+                        $items[] = [
+                            "link" => $postUrl,
+                            "title" => $info["title"],
+                            "image" => $info["image"],
+                        ];
+                    }
+                    $response = [
+                        'success' => true,
+                        'data' => $items
+                    ];
+                } else {
+                    $response = [
+                        'success' => false,
+                        'message' => 'Sitemap Data not found!'
                     ];
                 }
-                $response = [
-                    'success' => true,
-                    'data' => $items
-                ];
             } else {
                 $response = [
                     'success' => false,
-                    'message' => 'Sitemap Data not found!'
+                    'message' => 'Failed to fetch the RSS feed'
                 ];
             }
-        } else {
-            $response = [
-                'success' => false,
-                'message' => 'Failed to fetch the RSS feed'
-            ];
         }
         return $response;
     }
