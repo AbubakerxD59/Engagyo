@@ -256,14 +256,7 @@ class AutomationController extends Controller
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    if ($user->email == "abmasood5900@gmail.com") {
-                        $feedService = new FeedService($data);
-                        $feed  = $feedService->fetch();
-                        return $feed;
-                    } else {
-                        FetchPost::dispatch($data);
-                    }
-                    // FetchPost::dispatch($data);
+                    FetchPost::dispatch($data);
                 } catch (Exception $e) {
                     $response = [
                         "success" => false,
@@ -536,8 +529,6 @@ class AutomationController extends Controller
 
     public function test()
     {
-        $url = "https://ispecially.com/feed/";
-        $items = $this->dom->fetchFeed($url);
-        dd($items);
+        //    
     }
 }

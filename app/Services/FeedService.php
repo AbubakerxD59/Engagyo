@@ -113,86 +113,82 @@ class FeedService
     public function fetchSitemap(string $targetUrl, int $max = 10)
     {
         $sitemapUrl = $targetUrl . '/sitemap.xml';
-        // try {
-        // 1. Fetch the sitemap content
-        $response = Http::get($sitemapUrl);
-
-        // Check for HTTP errors (4xx or 5xx)
-        $response->throw();
-
-        $xmlString = $response->body();
-        // } catch (RequestException $e) {
-        //     // Handle HTTP request errors
-        //     throw new Exception("Failed to fetch sitemap from {$sitemapUrl}: " . $e->getMessage());
-        // } catch (Exception $e) {
-        //     // Catch other potential errors during fetch
-        //     throw new Exception("An error occurred while fetching sitemap: " . $e->getMessage());
-        // }
-        // try {
-        // 2. Parse the XML
-        // Suppress errors with @ and check the return value as simplexml_load_string returns false on failure
-        $xml = @simplexml_load_string($xmlString);
-
-        if ($xml === false) {
-            // Get XML errors if parsing failed
-            $errorString = '';
-            foreach (libxml_get_errors() as $error) {
-                $errorString .= "\t" . $error->message;
-            }
-            libxml_clear_errors(); // Clear errors for subsequent XML operations
-            throw new Exception("Failed to parse sitemap XML. Errors: \n" . $errorString);
+        try {
+            $response = Http::get($sitemapUrl);
+            $response->throw();
+            $xmlString = $response->body();
+        } catch (RequestException $e) {
+            return [
+                "success" => false,
+                "message" => $e->getMessage()
+            ];
+        } catch (Exception $e) {
+            return [
+                "success" => false,
+                "message" => $e->getMessage()
+            ];
         }
+        try {
+            $xml = @simplexml_load_string($xmlString);
+            if ($xml === false) {
+                $errorString = '';
+                foreach (libxml_get_errors() as $error) {
+                    $errorString .= "\t" . $error->message;
+                }
+                libxml_clear_errors();
+                return [
+                    "success" => false,
+                    "message" => $errorString
+                ];
+            }
 
-
-        $posts = [];
-        $count = 0;
-        // Check if the root element is 'urlset' as expected for a standard sitemap
-        // 3. Extract, Filter, and Select URLs
-        foreach ($xml->sitemap as $sitemapEntry) {
-            $childSitemapUrl = (string) $sitemapEntry->loc;
-            if (!empty($childSitemapUrl)) {
-                $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
-                if ($childXmlContent !== false) {
-                    libxml_use_internal_errors(true);
-                    $xml = simplexml_load_string($childXmlContent);
-                    libxml_clear_errors();
-                    $count = 1;
-                    foreach ($xml->url as $url) {
-                        if ($count >= $max) {
-                            break;
-                        }
-                        $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
-                        if (!$post) {
-                            $invalid_titles = [
-                                "bot verification",
-                                "admin"
-                            ];
-                            $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
-                            if (!in_array($rss, $invalid_titles)) {
-                                if (isset($rss["title"]) && !empty($rss["image"])) {
-                                    $posts[] = [
-                                        'title' => $rss["title"],
-                                        'link' => (string) $url->loc,
-                                        'image' => $rss["image"],
-                                    ];
-                                    $count++;
+            $posts = [];
+            $count = 0;
+            foreach ($xml->sitemap as $sitemapEntry) {
+                $childSitemapUrl = (string) $sitemapEntry->loc;
+                if (!empty($childSitemapUrl)) {
+                    $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
+                    if ($childXmlContent !== false) {
+                        libxml_use_internal_errors(true);
+                        $xml = simplexml_load_string($childXmlContent);
+                        libxml_clear_errors();
+                        $count = 1;
+                        foreach ($xml->url as $url) {
+                            if ($count >= $max) {
+                                break;
+                            }
+                            $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
+                            if (!$post) {
+                                $invalid_titles = [
+                                    "bot verification",
+                                    "admin"
+                                ];
+                                $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
+                                if (!in_array($rss, $invalid_titles)) {
+                                    if (isset($rss["title"]) && !empty($rss["image"])) {
+                                        $posts[] = [
+                                            'title' => $rss["title"],
+                                            'link' => (string) $url->loc,
+                                            'image' => $rss["image"],
+                                        ];
+                                        $count++;
+                                    }
                                 }
                             }
                         }
                     }
                 }
             }
+            return [
+                "success" => true,
+                "data" => $posts
+            ];
+        } catch (Exception $e) {
+            return [
+                "success" => false,
+                "message" => $e->getMessage()
+            ];
         }
-
-
-        return [
-            "success" => true,
-            "data" => $posts
-        ];
-        // } catch (Exception $e) {
-        //     // Catch errors during parsing or processing
-        //     throw new Exception("An error occurred while processing sitemap XML: " . $e->getMessage());
-        // }
     }
 
     private function fetchUrlContent(string $url)
