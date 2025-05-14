@@ -288,6 +288,7 @@ class TestFeedService
                     $imageUrl = null;
                     // --- Image Extraction Logic ---
                     if ($isPinterestFeed) {
+                        dd('1');
                         // Logic for Pinterest feeds
                         $imageUrl = $this->findPinterestImage($item, $pinterestPreferredWidths, $pinterestPreferredHeights);
                         // If no preferred Pinterest image found, try finding a thumbnail
@@ -295,6 +296,7 @@ class TestFeedService
                             $imageUrl = $this->findGenericImage($item);
                         }
                     } else {
+                        dd('2');
                         // Logic for non-Pinterest feeds - look for common image tags
                         $imageUrl = $this->findGenericImage($item);
                     }
