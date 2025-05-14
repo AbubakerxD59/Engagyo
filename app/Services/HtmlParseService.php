@@ -113,6 +113,18 @@ class HtmlParseService
         }
     }
 
+    public function fix($post)
+    {
+        $type = $post->type;
+        if ($type == 'pinterest') {
+            $mode = 1;
+        } else {
+            $mode = 0;
+        }
+        $info = $this->get_info($post->url, $mode);
+        return $info;
+    }
+
     private function get_string_between($string, $start, $end)
     {
         $string = ' ' . $string;

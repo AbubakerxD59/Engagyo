@@ -419,6 +419,7 @@
                     }
                 });
             })
+            // Delete All
             $(document).on('click', '#deleteAll', function() {
                 if (confirm("Do you wish to Delete all Posts!")) {
                     var selected_account = $("#account").find(":selected").val();
@@ -445,6 +446,26 @@
                     });
                 }
             })
+            $(document).on('click', '.fix-post', function() {
+                var id = $(this).data('post-id');
+                var token = $('meta[name="csrf-token"]').attr('content');
+                $.ajax({
+                    url: "{{ route('panel.automation.posts.fix') }}",
+                    method: "POST",
+                    data: {
+                        "id": id,
+                        "_token": token
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                            postsDatatable.ajax.reload();
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    }
+                });
+            });
         });
     </script>
     </script>

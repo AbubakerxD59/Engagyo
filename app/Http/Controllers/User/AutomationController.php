@@ -509,6 +509,22 @@ class AutomationController extends Controller
         return response()->json($response);
     }
 
+    public function postFix(Request $request)
+    {
+        $id = $request->id;
+        $post = $this->post->where('id', $id)->notPublished()->first();
+        if ($post) {
+            $fix = $this->dom->fix($post);
+            dd($fix);
+        } else {
+            $response = array(
+                "success" => false,
+                "message" => "Something went Wrong!"
+            );
+        }
+        return response()->json($response);
+    }
+
     public function fetchRss()
     {
         $url = "https://ispecially.com/feed/";
