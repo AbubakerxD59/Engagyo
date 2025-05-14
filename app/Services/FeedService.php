@@ -10,6 +10,7 @@ use App\Models\Notification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Vedmant\FeedReader\Facades\FeedReader;
+use Illuminate\Http\Client\RequestException;
 
 
 class FeedService
@@ -112,47 +113,162 @@ class FeedService
     public function fetchSitemap(string $targetUrl, int $max = 10)
     {
         $sitemapUrl = $targetUrl . '/sitemap.xml';
-        $response = Http::get($sitemapUrl);
-        if ($response->successful()) {
-            $xmlContent = $response->body();
-            $xml = new SimpleXMLElement($xmlContent);
-            // Namespaces can be tricky with sitemaps. Adjust if necessary.
-            $xml->registerXPathNamespace('s', 'http://www.sitemaps.org/schemas/sitemap/0.9');
-            $items = $xml->xpath('//s:url'); // Common sitemap structure
+        try {
+            // Step 1: Fetch the Sitemap XML content
+            $response = Http::timeout(30)->get($sitemapUrl); // 30-second timeout
 
-            // If the above doesn't work, try without namespace or inspect sitemap structure
-            if (empty($items)) {
-                $items = $xml->xpath('//url');
+            if (!$response->successful()) {
+                return [
+                    "success" => false,
+                    "message" => "Failed to fetch sitemap!"
+                ];
             }
+            $xmlContent = $response->body();
+            // Step 2: Parse the XML
+            // Disable libxml errors and use internal error handling to prevent breaking the flow
+            libxml_use_internal_errors(true);
+            $xml = new SimpleXMLElement($xmlContent);
+            $xmlErrors = libxml_get_errors();
+            libxml_clear_errors();
+
+            if (!empty($xmlErrors)) {
+                foreach ($xmlErrors as $error) {
+                    return [
+                        "success" => false,
+                        "message" => $error->message
+                    ];
+                }
+                // Decide if you want to fail here or try to proceed if partially parsed
+            }
+
+            if ($xml === false) {
+                return [
+                    "success" => false,
+                    "message" => "Failed to parse sitemap XML!"
+                ];
+            }
+
+            // Sitemaps can have namespaces. Common ones are 's' or none.
+            // Register XPath namespace if needed (common for sitemaps)
+            $namespaces = $xml->getDocNamespaces();
+            $nsPrefix = ''; // Default to no namespace
+
+            // Check for the standard sitemap namespace
+            if (isset($namespaces['']) && $namespaces[''] == 'http://www.sitemaps.org/schemas/sitemap/0.9') {
+                // It's the default namespace, no prefix needed for direct children, but XPath might need it.
+                // Or, if a prefix is explicitly used in the sitemap:
+                foreach ($namespaces as $prefix => $uri) {
+                    if ($uri == 'http://www.sitemaps.org/schemas/sitemap/0.9') {
+                        if ($prefix !== '') { // If there's an explicit prefix like <s:url>
+                            $xml->registerXPathNamespace($prefix, $uri);
+                            $nsPrefix = $prefix . ':';
+                        }
+                        break;
+                    }
+                }
+            } else {
+                // Fallback: attempt to register a common 's' prefix if no default namespace matches,
+                // or if you observe 's:url' tags in your target sitemap.
+                $xml->registerXPathNamespace('s', 'http://www.sitemaps.org/schemas/sitemap/0.9');
+                // And try with 's:' prefix if direct access or non-prefixed XPath fails.
+            }
+
+
+            // Step 3: Extract URLs (typically <loc> inside <url>)
+            // Try with namespace first, then without if common sitemap structure is used.
+            $items = $xml->xpath("//{$nsPrefix}url");
+            if (empty($items) && $nsPrefix !== '') { // If prefixed search failed, try common non-prefixed if nsPrefix was derived from default
+                $items = $xml->xpath("//url");
+            } else if (empty($items) && $nsPrefix === '') { // If no namespace was detected or used, and '//url' failed, try with 's:'
+                $items = $xml->xpath("//s:url"); // Try with common 's' prefix
+                if (empty($items)) { // If still empty, try with no prefix at all
+                    $items = $xml->xpath('//url');
+                }
+            }
+
+
+            if (empty($items)) {
+                return [
+                    "success" => false,
+                    "message" => "No <url> elements found in sitemap!"
+                ];
+            }
+
             $posts = [];
             $count = 0;
             foreach ($items as $item) {
                 if ($count >= $max) {
                     break;
                 }
-                $link = (string)$item->loc;
-                // Sitemap usually doesn't contain title or direct image.
-                // You might need to fetch the page content to get these.
-                // For simplicity, we'll try to derive a title or leave it blank.
-                $info = $this->dom->get_info($link, $this->data["mode"]);
-                $posts[] = [
+
+                $locElement = $item->{$nsPrefix === '' ? 'loc' : $nsPrefix . 'loc'}; // Access <loc>
+                if (empty($locElement) && $nsPrefix !== '') { // Try without prefix if it was explicitly set
+                    $locElement = $item->loc;
+                } else if (empty($locElement) && $nsPrefix === '' && isset($namespaces['s'])) { // If we tried no prefix but 's' was registered
+                    $locElement = $item->children($namespaces['s'])->loc;
+                }
+
+
+                $url = (string)$locElement;
+
+                if (empty($url)) {
+                    // Log Linfo("Empty <loc> tag found in sitemap item: {$sitemapUrl}");
+                    continue; // Skip if URL is empty
+                }
+
+                $info = $this->dom->get_info($url, $this->data["mode"]);
+                // Sitemaps usually ONLY provide: URL, last modification, change frequency, priority.
+                // To get title, actual content, or images, you need to fetch each URL.
+                // This example focuses on getting the URLs from the sitemap itself.
+                $postData = [
+                    'url' => $url,
                     'title' => $info["title"],
-                    'link' => $link,
-                    'image' => $info["image"],
+                    'image' => $info["image"], // Placeholder: To be fetched from the URL itself
                 ];
+
+                // **IMPORTANT**: Fetching details for each URL can be slow.
+                // Uncomment and enhance the following lines if you need title/image.
+                /*
+                try {
+                    $pageResponse = Http::timeout(10)->get($url);
+                    if ($pageResponse->successful()) {
+                        $pageHtml = $pageResponse->body();
+                        // Basic title extraction
+                        if (preg_match('/<title>(.*?)<\/title>/is', $pageHtml, $titleMatches)) {
+                            $postData['title'] = trim(html_entity_decode($titleMatches[1]));
+                        }
+                        // Basic image extraction (e.g., Open Graph image)
+                        if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^">]+)"/i', $pageHtml, $imageMatches)) {
+                            $postData['image'] = $imageMatches[1];
+                        } elseif (preg_match('/<img[^>]+src="([^">]+)"/i', $pageHtml, $firstImageMatches)) {
+                            // Fallback to first image tag (needs to be made absolute if relative)
+                            // This is a very naive fallback
+                            // $postData['image'] = $this->makeAbsoluteUrl($firstImageMatches[1], $url);
+                        }
+                    }
+                } catch (\Exception $e) {
+                    Log::warning("Could not fetch details for URL {$url}: " . $e->getMessage());
+                }
+                */
+
+                $posts[] = $postData;
                 $count++;
             }
-            $response = [
+            return [
                 "success" => true,
                 "data" => $posts
             ];
-        } else {
-            $response = [
+        } catch (RequestException $e) {
+            return [
                 "success" => false,
-                "message" => "Failed to fetch sitemap!"
+                "message" => $e->getMessage()
+            ];
+        } catch (Exception $e) {
+            return [
+                "success" => false,
+                "message" => $e->getMessage()
             ];
         }
-        return $response;
     }
 
     private function extractImageFromRssItem($item, array $pinterestWidths, array $pinterestHeights): ?string
