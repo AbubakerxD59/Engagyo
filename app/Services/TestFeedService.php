@@ -288,7 +288,6 @@ class TestFeedService
                     $imageUrl = null;
                     // --- Image Extraction Logic ---
                     if ($isPinterestFeed) {
-                        dd('1');
                         // Logic for Pinterest feeds
                         $imageUrl = $this->findPinterestImage($item, $pinterestPreferredWidths, $pinterestPreferredHeights);
                         // If no preferred Pinterest image found, try finding a thumbnail
@@ -296,7 +295,6 @@ class TestFeedService
                             $imageUrl = $this->findGenericImage($item);
                         }
                     } else {
-                        dd('2');
                         // Logic for non-Pinterest feeds - look for common image tags
                         $imageUrl = $this->findGenericImage($item);
                     }
@@ -391,7 +389,6 @@ class TestFeedService
     {
         // Check media:thumbnail
         if (isset($item->children('media', true)->thumbnail)) {
-            dd($item->children('media', true)->thumbnail);
             $attributes = $item->children('media', true)->thumbnail->attributes();
             if (isset($attributes['url'])) {
                 return (string) $attributes['url'];
@@ -410,6 +407,7 @@ class TestFeedService
      */
     protected function findImageInContent(SimpleXMLElement $item): ?string
     {
+        dd('2');
         $content = null;
         // Check content:encoded (often contains full HTML)
         if (isset($item->children('content', true)->encoded)) {
