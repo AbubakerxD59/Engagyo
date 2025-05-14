@@ -40,7 +40,6 @@ class FeedService
         $websiteUrl = $this->data["url"];
         if ($this->data["exist"]) {
             $feedUrls = $this->fetchSitemap($websiteUrl);
-            dd($feedUrls);
         } else {
             $feedUrls = $this->fetchRss($websiteUrl);
         }
@@ -143,12 +142,12 @@ class FeedService
                 ];
                 $count++;
             }
-            $respnse = [
+            $response = [
                 "success" => true,
                 "data" => $posts
             ];
         } else {
-            $respnse = [
+            $response = [
                 "success" => false,
                 "message" => "Failed to fetch sitemap!"
             ];
