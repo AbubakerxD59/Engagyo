@@ -292,7 +292,7 @@ class TestFeedService
                         $imageUrl = $this->findPinterestImage($item, $pinterestPreferredWidths, $pinterestPreferredHeights);
                         // If no preferred Pinterest image found, try finding a thumbnail
                         if (!$imageUrl) {
-                            $imageUrl = $this->findThumbnail($item);
+                            $imageUrl = $this->findGenericImage($item);
                         }
                     } else {
                         // Logic for non-Pinterest feeds - look for common image tags
@@ -375,13 +375,6 @@ class TestFeedService
                 return (string) $attributes['url'];
             }
         }
-        // Check enclosure
-        if (isset($item->enclosure)) {
-            $attributes = $item->enclosure->attributes();
-            if (isset($attributes['url']) && str_starts_with($attributes['type'], 'image/')) {
-                return (string) $attributes['url'];
-            }
-        }
         return null; // No thumbnail found
     }
 
@@ -394,20 +387,11 @@ class TestFeedService
      */
     protected function findGenericImage(SimpleXMLElement $item): ?string
     {
-        // Check enclosure
-        if (isset($item->enclosure)) {
-            $attributes = $item->enclosure->attributes();
-            if (isset($attributes['url']) && str_starts_with($attributes['type'], 'image/')) {
+        // Check media:thumbnail
+        if (isset($item->children('media', true)->thumbnail)) {
+            $attributes = $item->children('media', true)->thumbnail->attributes();
+            if (isset($attributes['url'])) {
                 return (string) $attributes['url'];
-            }
-        }
-        // Check media:content (common for images)
-        if (isset($item->children('media', true)->content)) {
-            foreach ($item->children('media', true)->content as $content) {
-                $attributes = $content->attributes();
-                if (isset($attributes['url']) && str_starts_with($attributes['type'], 'image/')) {
-                    return (string) $attributes['url'];
-                }
             }
         }
         // Add more checks for other common image tags if needed (e.g., <image>)
