@@ -82,7 +82,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
     });
 });
 
-Route::get("fetch/rss", [AutomationController::class, "fetchRss"])->name("fetch.rss");
+Route::get("test", [AutomationController::class, "test"])->name("fetch.rss");
 
 // Redirects
 require __DIR__ . '/redirect.php';

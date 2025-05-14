@@ -534,14 +534,10 @@ class AutomationController extends Controller
         return response()->json($response);
     }
 
-    public function fetchRss()
+    public function test()
     {
         $url = "https://ispecially.com/feed/";
-        $feed = Feed::loadRss($url);
-        $items = [];
-        foreach ($feed->item as $item) {
-            $items[] = $item;
-        }
+        $items = $this->dom->fetchFeed($url);
         dd($items);
     }
 }
