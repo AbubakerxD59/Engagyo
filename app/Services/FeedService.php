@@ -110,7 +110,7 @@ class FeedService
         ];
     }
 
-    public function fetchSitemap(string $targetUrl, int $max = 10, array $postPatterns = ['/blog/', '/posts/', '/article/'])
+    public function fetchSitemap(string $targetUrl, int $max = 10)
     {
         $sitemapUrl = $targetUrl . '/sitemap.xml';
         // try {
@@ -163,14 +163,20 @@ class FeedService
                         }
                         $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
                         if (!$post) {
+                            $invalid_titles = [
+                                "bot verification",
+                                "admin"
+                            ];
                             $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
-                            if (isset($rss["title"]) && !empty($rss["image"])) {
-                                $posts[] = [
-                                    'title' => $rss["title"],
-                                    'link' => (string) $url->loc,
-                                    'image' => $rss["image"],
-                                ];
-                                $count++;
+                            if (!in_array($rss, $invalid_titles)) {
+                                if (isset($rss["title"]) && !empty($rss["image"])) {
+                                    $posts[] = [
+                                        'title' => $rss["title"],
+                                        'link' => (string) $url->loc,
+                                        'image' => $rss["image"],
+                                    ];
+                                    $count++;
+                                }
                             }
                         }
                     }
