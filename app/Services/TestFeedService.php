@@ -292,15 +292,15 @@ class TestFeedService
                         $imageUrl = $this->findPinterestImage($item, $pinterestPreferredWidths, $pinterestPreferredHeights);
                         // If no preferred Pinterest image found, try finding a thumbnail
                         if (!$imageUrl) {
-                            $imageUrl = $this->findThumbnail($item);
+                            $imageUrl = $this->findImageInContent($item);
                         }
                     } else {
                         // Logic for non-Pinterest feeds - look for common image tags
-                        $imageUrl = $this->findGenericImage($item);
+                        $imageUrl = $this->findImageInContent($item);
                     }
                     // If no image found at all, maybe look in description/content (more complex parsing needed)
                     if (!$imageUrl) {
-                        $imageUrl = $this->findImagesInContent($item);
+                        $imageUrl = $this->findImageInContent($feedUrl);
                     }
                     $items[] = [
                         'title' => $title,
@@ -416,31 +416,11 @@ class TestFeedService
      * @param SimpleXMLElement $item The RSS item element.
      * @return string|null The image URL if found, otherwise null.
      */
-    protected function findImagesInContent(SimpleXMLElement $item): ?string
+    protected function findImageInContent(string $feedUrl): ?string
     {
-        $content = null;
-        $imageUrls = [];
-
-        // Check content:encoded (often contains full HTML)
-        if (isset($item->children('content', true)->encoded)) {
-            $content = (string) $item->children('content', true)->encoded;
-        }
-        // Fallback to description if content:encoded is not available
-        else if (isset($item->description)) {
-            $content = (string) $item->description;
-        }
-
-        if ($content) {
-            // Use regular expressions to find all <img> tags and extract their src attributes
-            // Using regex is simpler but less robust than a DOM parser for complex HTML
-            if (preg_match_all('/<img.*?src=["\'](.*?)["\'].*?>/i', $content, $matches)) {
-                // $matches[1] will contain an array of all captured src attributes
-                $imageUrls = $matches[1];
-                $image = $imageUrls[0];
-            }
-        }
-
-        return $image; // Return the array of image URLs
+        $rss = $this->dom->get_info($feedUrl, $this->data["mode"]);
+        $image = $rss["image"];
+        return $image;
     }
 
     /**
