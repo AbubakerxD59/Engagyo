@@ -129,6 +129,9 @@ class FeedService
             $count = 0;
             if (isset($xml->sitemap)) {
                 foreach ($xml->sitemap as $sitemapEntry) {
+                    if ($count >= $maxPosts) {
+                        break;
+                    }
                     $childSitemapUrl = (string) $sitemapEntry->loc;
                     if (!empty($childSitemapUrl)) {
                         $context = stream_context_create(['http' => ['timeout' => 30]]);
