@@ -89,62 +89,25 @@ class FeedService
 
     private function fetchRss(string $targetUrl, int $max = 10)
     {
-        $targetUrl = $targetUrl . '/feed';
-        $contextOptions = [
-            'http' => [
-                'user_agent' => $this->dom->user_agent(),
-                'ignore_errors' => true
-            ]
-        ];
-        $context = stream_context_create($contextOptions);
-        $file = file_get_contents($targetUrl, FALSE, $context);
-        $single_feed = simplexml_load_string((string) $file);
-        $feed[] = $single_feed;
-        $items = [];
-        $count = 0;
-        if (count($feed) > 0) {
-            foreach ($feed as $data) {
-                if (!empty($data)) {
-                    if (isset($data->channel->item)) {
-                        $items_count = count($data->channel->item);
-                        foreach ($data->channel->item as $item) {
-                            $items_count--;
-                            $item = $data->channel->item[$items_count];
-                            if ($count >= $max) {
-                                break;
-                            }
-                            $info = $this->dom->get_info($item->link, $this->data["mode"]);
-                            $items[] = [
-                                "link" => $item->link,
-                                "title" => $info["title"],
-                                "image" => $info["image"],
-                            ];
-                        }
-                    } else {
-                        $response = array(
-                            'success' => false,
-                            'message' => 'Your provided link has not valid RSS feed, Please fix and try again'
-                        );
-                    }
-                } else {
-                    $response = array(
-                        'success' => false,
-                        'messazge' => 'Your provided link has not valid RSS feed, Please fix and try again'
-                    );
-                }
-            }
-            // Set the flag to true after the foreach loop
-            $response = array(
-                'success' => true,
-                'data' => $items
-            );
-        } else {
-            $response = array(
-                'success' => false,
-                'message' => 'Your provided link has not valid RSS feed, Please fix and try again.'
-            );
+        $url = $targetUrl . '/feed';
+        $feed = FeedReader::read($url);
+        $items = array_slice($feed->get_items(), 0, $max);
+        $posts = [];
+        foreach ($items as $item) {
+            $title = $item->get_title();
+            $link = $item->get_link();
+            $image = $this->extractImageFromRssItem($item, $this->widthArray, $this->heightArray);
+
+            $posts[] = [
+                'title' => $title,
+                'link' => $link,
+                'image' => $image,
+            ];
         }
-        return $response;
+        return [
+            "success" => true,
+            "data" => $posts
+        ];
     }
 
     public function fetchSitemap(string $targetUrl, int $max = 10)
@@ -256,5 +219,76 @@ class FeedService
             ];
         }
         return $response;
+    }
+
+    private function extractImageFromRssItem($item, array $pinterestWidths, array $pinterestHeights): ?string
+    {
+        $potentialImages = [];
+
+        // 1. Check for media:content or enclosure tags (often higher quality)
+        $enclosures = $item->get_enclosures();
+        if ($enclosures) {
+            foreach ($enclosures as $enclosure) {
+                if (strpos($enclosure->get_type(), 'image') !== false && $enclosure->get_link()) {
+                    $potentialImages[] = $enclosure->get_link();
+                }
+                // SimplePie specific for thumbnails in enclosures
+                if ($enclosure->get_thumbnail()) {
+                    $potentialImages[] = $enclosure->get_thumbnail();
+                }
+            }
+        }
+
+        // 2. Check for media:thumbnail
+        $media_thumbnail = $item->get_item_tags('http://search.yahoo.com/mrss/', 'thumbnail');
+        if (!empty($media_thumbnail) && isset($media_thumbnail[0]['attribs']['']['url'])) {
+            $potentialImages[] = $media_thumbnail[0]['attribs']['']['url'];
+        }
+
+        // 3. Look for images in the description or content
+        $description = $item->get_description();
+        $content = $item->get_content();
+
+        if ($description) {
+            preg_match_all('/<img[^>]+src="([^">]+)"/i', $description, $matches);
+            if (!empty($matches[1])) {
+                $potentialImages = array_merge($potentialImages, $matches[1]);
+            }
+        }
+        if ($content) {
+            preg_match_all('/<img[^>]+src="([^">]+)"/i', $content, $matches);
+            if (!empty($matches[1])) {
+                $potentialImages = array_merge($potentialImages, $matches[1]);
+            }
+        }
+
+        // 4. Check image from <image> tag or <itunes:image> if available directly on item (less common for items, more for channel)
+        // The vedmant/laravel-feed-reader might expose these differently or not at all at item level.
+
+        $potentialImages = array_unique(array_filter($potentialImages));
+
+        // Check for Pinterest-specific dimensions
+        foreach ($potentialImages as $imgUrl) {
+            $dimensions = @getimagesize($imgUrl); // Use @ to suppress errors for invalid images
+            if ($dimensions && is_array($dimensions)) {
+                list($width, $height) = $dimensions;
+                if (in_array((string)$width, $pinterestWidths) && in_array((string)$height, $pinterestHeights)) {
+                    return $imgUrl; // Found Pinterest specific image
+                }
+            }
+        }
+
+        // If no Pinterest image, return the first valid image as a thumbnail
+        foreach ($potentialImages as $imgUrl) {
+            if (filter_var($imgUrl, FILTER_VALIDATE_URL)) {
+                // Further check if it's a real image if necessary
+                $headers = @get_headers($imgUrl, 1);
+                if ($headers && isset($headers['Content-Type']) && strpos($headers['Content-Type'], 'image/') !== false) {
+                    return $imgUrl;
+                }
+            }
+        }
+
+        return null; // No suitable image found
     }
 }
