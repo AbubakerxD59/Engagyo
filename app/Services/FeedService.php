@@ -89,6 +89,7 @@ class FeedService
 
     private function fetchRss(string $targetUrl, int $max = 10)
     {
+        $targetUrl = $targetUrl . '/feed';
         $contextOptions = [
             'http' => [
                 'user_agent' => $this->dom->user_agent(),
