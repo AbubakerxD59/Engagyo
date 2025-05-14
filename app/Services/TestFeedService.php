@@ -292,7 +292,7 @@ class TestFeedService
                         $imageUrl = $this->findPinterestImage($item, $pinterestPreferredWidths, $pinterestPreferredHeights);
                         // If no preferred Pinterest image found, try finding a thumbnail
                         if (!$imageUrl) {
-                            $imageUrl = $this->findGenericImage($item);
+                            $imageUrl = $this->findThumbnail($item);
                         }
                     } else {
                         // Logic for non-Pinterest feeds - look for common image tags
@@ -300,7 +300,7 @@ class TestFeedService
                     }
                     // If no image found at all, maybe look in description/content (more complex parsing needed)
                     if (!$imageUrl) {
-                        $imageUrl = $this->findImageInContent($item);
+                        $imageUrl = $this->findImagesInContent($item);
                     }
                     $items[] = [
                         'title' => $title,
@@ -394,6 +394,17 @@ class TestFeedService
                 return (string) $attributes['url'];
             }
         }
+        if (isset($item->image)) {
+            // Assuming the <image> tag has a <url> child
+            if (isset($item->image->url)) {
+                return (string) $item->image->url;
+            }
+            // Or if the <image> tag itself has a url attribute (less standard)
+            $attributes = $item->image->attributes();
+            if (isset($attributes['url'])) {
+                return (string) $attributes['url'];
+            }
+        }
         // Add more checks for other common image tags if needed (e.g., <image>)
         return null; // No generic image found in common tags
     }
@@ -405,10 +416,11 @@ class TestFeedService
      * @param SimpleXMLElement $item The RSS item element.
      * @return string|null The image URL if found, otherwise null.
      */
-    protected function findImageInContent(SimpleXMLElement $item): ?string
+    protected function findImagesInContent(SimpleXMLElement $item): ?string
     {
-        dd('2');
         $content = null;
+        $imageUrls = [];
+
         // Check content:encoded (often contains full HTML)
         if (isset($item->children('content', true)->encoded)) {
             $content = (string) $item->children('content', true)->encoded;
@@ -417,14 +429,18 @@ class TestFeedService
         else if (isset($item->description)) {
             $content = (string) $item->description;
         }
+
         if ($content) {
-            // Use regular expressions or a DOM parser to find <img> tags
-            // Using regex is simpler but less robust than a DOM parser
-            if (preg_match('/<img.*?src=["\'](.*?)["\'].*?>/i', $content, $matches)) {
-                return $matches[1]; // Return the first image src found
+            // Use regular expressions to find all <img> tags and extract their src attributes
+            // Using regex is simpler but less robust than a DOM parser for complex HTML
+            if (preg_match_all('/<img.*?src=["\'](.*?)["\'].*?>/i', $content, $matches)) {
+                // $matches[1] will contain an array of all captured src attributes
+                $imageUrls = $matches[1];
+                $image = $imageUrls[0];
             }
         }
-        return null; // No image found in content/description
+
+        return $image; // Return the array of image URLs
     }
 
     /**
