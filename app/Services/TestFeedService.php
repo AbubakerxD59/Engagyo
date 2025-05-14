@@ -339,6 +339,7 @@ class TestFeedService
         // Pinterest often uses media:content or includes images in description/content
         // We'll prioritize media:content with dimensions if available
         // Check media:content
+        $pin_url = null;
         if (isset($item->children('media', true)->content)) {
             foreach ($item->children('media', true)->content as $content) {
                 $attributes = $content->attributes();
@@ -348,7 +349,7 @@ class TestFeedService
                     $height = (string) $attributes['height'];
 
                     if (in_array($width, $preferredWidths) && in_array($height, $preferredHeights)) {
-                        return $url; // Found a preferred size image
+                        $pin_url = $url;
                     }
                 }
             }
@@ -356,7 +357,7 @@ class TestFeedService
         // If no preferred size image in media:content, check other potential image locations
         // (You might need to add more specific logic here based on actual Pinterest feed structure)
 
-        return null; // No preferred Pinterest image found
+        return $pin_url; // No preferred Pinterest image found
     }
 
     /**
