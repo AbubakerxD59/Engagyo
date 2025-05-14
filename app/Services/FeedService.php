@@ -113,7 +113,7 @@ class FeedService
     public function fetchSitemap(string $targetUrl, int $max = 10, array $postPatterns = ['/blog/', '/posts/', '/article/'])
     {
         $sitemapUrl = $targetUrl . '/sitemap.xml';
-        try {
+        // try {
             // 1. Fetch the sitemap content
             $response = Http::get($sitemapUrl);
 
@@ -121,14 +121,14 @@ class FeedService
             $response->throw();
 
             $xmlString = $response->body();
-        } catch (RequestException $e) {
-            // Handle HTTP request errors
-            throw new Exception("Failed to fetch sitemap from {$sitemapUrl}: " . $e->getMessage());
-        } catch (Exception $e) {
-            // Catch other potential errors during fetch
-            throw new Exception("An error occurred while fetching sitemap: " . $e->getMessage());
-        }
-        try {
+        // } catch (RequestException $e) {
+        //     // Handle HTTP request errors
+        //     throw new Exception("Failed to fetch sitemap from {$sitemapUrl}: " . $e->getMessage());
+        // } catch (Exception $e) {
+        //     // Catch other potential errors during fetch
+        //     throw new Exception("An error occurred while fetching sitemap: " . $e->getMessage());
+        // }
+        // try {
             // 2. Parse the XML
             // Suppress errors with @ and check the return value as simplexml_load_string returns false on failure
             $xml = @simplexml_load_string($xmlString);
@@ -180,10 +180,10 @@ class FeedService
 
 
             return $postUrls;
-        } catch (Exception $e) {
-            // Catch errors during parsing or processing
-            throw new Exception("An error occurred while processing sitemap XML: " . $e->getMessage());
-        }
+        // } catch (Exception $e) {
+        //     // Catch errors during parsing or processing
+        //     throw new Exception("An error occurred while processing sitemap XML: " . $e->getMessage());
+        // }
     }
 
     private function extractImageFromRssItem($item, array $pinterestWidths, array $pinterestHeights): ?string
