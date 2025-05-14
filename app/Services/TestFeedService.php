@@ -389,6 +389,7 @@ class TestFeedService
     {
         // Check media:thumbnail
         if (isset($item->children('media', true)->thumbnail)) {
+            dd($item->children('media', true)->thumbnail);
             $attributes = $item->children('media', true)->thumbnail->attributes();
             if (isset($attributes['url'])) {
                 return (string) $attributes['url'];
