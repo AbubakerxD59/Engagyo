@@ -118,6 +118,7 @@ class FeedService
      */
     private function fetchSitemap(string $url, int $maxPosts = 20): array
     {
+        $url = $url.'/sitemap.xml';
         $response = Http::get($url);
         if ($response->successful()) {
             $xmlContent = $response->body();
