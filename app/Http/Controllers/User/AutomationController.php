@@ -515,7 +515,16 @@ class AutomationController extends Controller
         $post = $this->post->where('id', $id)->notPublished()->first();
         if ($post) {
             $fix = $this->dom->fix($post);
-            dd($fix);
+            $title = !empty($fix["title"]) ? $fix["title"] : $post->title;
+            $image = !empty($fix["image"]) ? $fix["image"] : $post->image;
+            $post->update([
+                'title' => $title,
+                'image' => $image,
+            ]);
+            $response = array(
+                "success" => true,
+                "message" => "Post fixed Successfully!"
+            );
         } else {
             $response = array(
                 "success" => false,
