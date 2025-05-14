@@ -258,7 +258,8 @@ class AutomationController extends Controller
                     ]);
                     if ($user->email == "abmasood5900@gmail.com") {
                         $feedService = new FeedService($data);
-                        $feedService->fetch();
+                        $feed  = $feedService->fetch();
+                        return $feed;
                     } else {
                         FetchPost::dispatch($data);
                     }
