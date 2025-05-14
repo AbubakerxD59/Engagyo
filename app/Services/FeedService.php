@@ -118,16 +118,16 @@ class FeedService
      */
     private function fetchSitemap(string $url, int $maxPosts = 20): array
     {
-        $url = $url.'/sitemap.xml';
+        $url = $url . '/sitemap.xml';
         $response = Http::get($url);
         $posts = [];
         if ($response->successful()) {
             $xmlContent = $response->body();
             $xml = new SimpleXMLElement($xmlContent);
-
             // Namespaces can be tricky with sitemaps. Adjust if necessary.
             $xml->registerXPathNamespace('s', 'http://www.sitemaps.org/schemas/sitemap/0.9');
             $items = $xml->xpath('//s:url'); // Common sitemap structure
+            dd($xml, $items);
 
             // If the above doesn't work, try without namespace or inspect sitemap structure
             if (empty($items)) {
