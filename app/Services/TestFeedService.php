@@ -5,7 +5,9 @@ namespace App\Services;
 use Feed;
 use Exception;
 use App\Models\Post;
+use SimpleXMLElement;
 use App\Models\Notification;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 
 
@@ -81,55 +83,13 @@ class TestFeedService
 
     private function fetchRss($websiteUrl)
     {
-        $urlToCheck = rtrim($websiteUrl, '/') . '/feed';
-        $discoveredUrls = '';
-        try {
-            $response = Http::get($urlToCheck);
-            if ($response->successful()) {
-                // Check content type if possible (more reliable)
-                $discoveredUrls = $urlToCheck;
-            } else {
-                $response = array(
-                    "success" => false,
-                    "message" => "Something went wrong!"
-                );
-            }
-
-            if ($discoveredUrls) {
-                $sitemap = Http::withHeaders(['User-Agent' => 'Engagyo RSS bot'])->get($discoveredUrls);
-                if ($sitemap->successful()) {
-                    $xmlContent = $sitemap->body();
-                    $items = $this->parseContent($xmlContent, $websiteUrl);
-                    if ($items["success"]) {
-                        $response = [
-                            "success" => true,
-                            "data" => $items["data"]
-                        ];
-                    } else {
-                        $response = [
-                            "success" => false,
-                            "message" => $items["message"]
-                        ];
-                    }
-                } else {
-                    $response = [
-                        "success" => false,
-                        "message" => "Failed to fetch Feed from {$websiteUrl}"
-                    ];
-                }
-            } else {
-                $response = [
-                    "success" => false,
-                    "message" => "No response from Site RSS!"
-                ];
-            }
-        } catch (Exception $e) {
-            $response = [
-                "success" => false,
-                "message" => "No response from Site, please try again Later!"
-            ];
+        if (str_contains($websiteUrl, 'feed') || str_contains($websiteUrl, 'rss')) {
+            $urlToCheck = $websiteUrl;
+        } else {
+            $urlToCheck = rtrim($websiteUrl, '/') . '/feed';
         }
-        return $response;
+        $fetchFeed = $this->fetchFeed($urlToCheck);
+        return $fetchFeed;
     }
 
     /**
@@ -295,5 +255,209 @@ class TestFeedService
             return false;
         }
         return $content;
+    }
+
+    /**
+     * Fetch RSS feed and extract data including images.
+     *
+     * @param string $feedUrl The URL of the RSS feed.
+     * @return array An array of feed items with title, link, and image.
+     */
+    public function fetchFeed(string $feedUrl): array
+    {
+        $items = [];
+        try {
+            // Fetch the RSS feed content
+            $response = Http::get($feedUrl);
+            if ($response->successful()) {
+                $xml = simplexml_load_string($response->body());
+                if ($xml === false) {
+                    return [
+                        "success" => false,
+                        "message" => "Failed to parse RSS feed XML from: " . $feedUrl
+                    ];
+                }
+                // Determine if the feed is likely from Pinterest based on URL or other indicators
+                $isPinterestFeed = $this->data["mode"] ? true : false;
+                // Define preferred Pinterest image dimensions
+                $pinterestPreferredHeights = ["1128", "900", "1000", "1024", "1349"];
+                $pinterestPreferredWidths = ["564", "700", "1500", "512", "759"];
+                foreach ($xml->channel->item as $item) {
+                    $title = (string) $item->title;
+                    $link = (string) $item->link;
+                    $imageUrl = null;
+                    // --- Image Extraction Logic ---
+                    if ($isPinterestFeed) {
+                        // Logic for Pinterest feeds
+                        $imageUrl = $this->findPinterestImage($item, $pinterestPreferredWidths, $pinterestPreferredHeights);
+                        // If no preferred Pinterest image found, try finding a thumbnail
+                        if (!$imageUrl) {
+                            $imageUrl = $this->findThumbnail($item);
+                        }
+                    } else {
+                        // Logic for non-Pinterest feeds - look for common image tags
+                        $imageUrl = $this->findGenericImage($item);
+                    }
+                    // If no image found at all, maybe look in description/content (more complex parsing needed)
+                    if (!$imageUrl) {
+                        $imageUrl = $this->findImageInContent($item);
+                    }
+                    $items[] = [
+                        'title' => $title,
+                        'link' => $link,
+                        'image' => $imageUrl,
+                    ];
+                }
+            } else {
+                return [
+                    "success" => false,
+                    "message" => "Failed to fetch RSS feed from: " . $feedUrl
+                ];
+            }
+        } catch (Exception $e) {
+            return [
+                "success" => false,
+                "message" => $e->getMessage()
+            ];
+        }
+        return [
+            "success" => true,
+            "data" => $items
+        ];
+    }
+
+    /**
+     * Find a Pinterest image with preferred dimensions.
+     *
+     * @param SimpleXMLElement $item The RSS item element.
+     * @param array $preferredWidths Array of preferred widths.
+     * @param array $preferredHeights Array of preferred heights.
+     * @return string|null The image URL if found, otherwise null.
+     */
+    protected function findPinterestImage(SimpleXMLElement $item, array $preferredWidths, array $preferredHeights): ?string
+    {
+        // Pinterest often uses media:content or includes images in description/content
+        // We'll prioritize media:content with dimensions if available
+        // Check media:content
+        if (isset($item->children('media', true)->content)) {
+            foreach ($item->children('media', true)->content as $content) {
+                $attributes = $content->attributes();
+                if (isset($attributes['url']) && isset($attributes['width']) && isset($attributes['height'])) {
+                    $url = (string) $attributes['url'];
+                    $width = (string) $attributes['width'];
+                    $height = (string) $attributes['height'];
+
+                    if (in_array($width, $preferredWidths) && in_array($height, $preferredHeights)) {
+                        return $url; // Found a preferred size image
+                    }
+                }
+            }
+        }
+        // If no preferred size image in media:content, check other potential image locations
+        // (You might need to add more specific logic here based on actual Pinterest feed structure)
+
+        return null; // No preferred Pinterest image found
+    }
+
+    /**
+     * Find a thumbnail image.
+     *
+     * @param SimpleXMLElement $item The RSS item element.
+     * @return string|null The thumbnail URL if found, otherwise null.
+     */
+    protected function findThumbnail(SimpleXMLElement $item): ?string
+    {
+        // Check media:thumbnail
+        if (isset($item->children('media', true)->thumbnail)) {
+            $attributes = $item->children('media', true)->thumbnail->attributes();
+            if (isset($attributes['url'])) {
+                return (string) $attributes['url'];
+            }
+        }
+        // Check enclosure
+        if (isset($item->enclosure)) {
+            $attributes = $item->enclosure->attributes();
+            if (isset($attributes['url']) && str_starts_with($attributes['type'], 'image/')) {
+                return (string) $attributes['url'];
+            }
+        }
+        return null; // No thumbnail found
+    }
+
+
+    /**
+     * Find a generic image in common RSS tags.
+     *
+     * @param SimpleXMLElement $item The RSS item element.
+     * @return string|null The image URL if found, otherwise null.
+     */
+    protected function findGenericImage(SimpleXMLElement $item): ?string
+    {
+        // Check enclosure
+        if (isset($item->enclosure)) {
+            $attributes = $item->enclosure->attributes();
+            if (isset($attributes['url']) && str_starts_with($attributes['type'], 'image/')) {
+                return (string) $attributes['url'];
+            }
+        }
+        // Check media:content (common for images)
+        if (isset($item->children('media', true)->content)) {
+            foreach ($item->children('media', true)->content as $content) {
+                $attributes = $content->attributes();
+                if (isset($attributes['url']) && str_starts_with($attributes['type'], 'image/')) {
+                    return (string) $attributes['url'];
+                }
+            }
+        }
+        // Add more checks for other common image tags if needed (e.g., <image>)
+        return null; // No generic image found in common tags
+    }
+
+    /**
+     * Find an image within the item's description or content.
+     * This requires parsing HTML content within the XML.
+     *
+     * @param SimpleXMLElement $item The RSS item element.
+     * @return string|null The image URL if found, otherwise null.
+     */
+    protected function findImageInContent(SimpleXMLElement $item): ?string
+    {
+        $content = null;
+        // Check content:encoded (often contains full HTML)
+        if (isset($item->children('content', true)->encoded)) {
+            $content = (string) $item->children('content', true)->encoded;
+        }
+        // Fallback to description if content:encoded is not available
+        else if (isset($item->description)) {
+            $content = (string) $item->description;
+        }
+        if ($content) {
+            // Use regular expressions or a DOM parser to find <img> tags
+            // Using regex is simpler but less robust than a DOM parser
+            if (preg_match('/<img.*?src=["\'](.*?)["\'].*?>/i', $content, $matches)) {
+                return $matches[1]; // Return the first image src found
+            }
+        }
+        return null; // No image found in content/description
+    }
+
+    /**
+     * Helper function to get image dimensions from a URL.
+     * Note: This requires fetching image data and can be slow.
+     * Consider if this is necessary or if dimensions can be extracted from the feed itself.
+     *
+     * @param string $imageUrl The URL of the image.
+     * @return array|false An array [width, height] or false on failure.
+     */
+    protected function getImageDimensions(string $imageUrl): array|false
+    {
+        // Use getimagesize to get dimensions. This fetches part of the image.
+        // Be cautious with performance if calling this for many images.
+        // Ensure the URL is accessible and getimagesize is enabled in PHP config.
+        $dimensions = @getimagesize($imageUrl);
+        if ($dimensions) {
+            return ['width' => $dimensions[0], 'height' => $dimensions[1]];
+        }
+        return false;
     }
 }
