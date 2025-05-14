@@ -110,164 +110,79 @@ class FeedService
         ];
     }
 
-    public function fetchSitemap(string $targetUrl, int $max = 10)
+    public function fetchSitemap(string $targetUrl, int $max = 10, array $postPatterns = ['/blog/', '/posts/', '/article/'])
     {
         $sitemapUrl = $targetUrl . '/sitemap.xml';
         try {
-            // Step 1: Fetch the Sitemap XML content
-            $response = Http::timeout(30)->get($sitemapUrl); // 30-second timeout
+            // 1. Fetch the sitemap content
+            $response = Http::get($sitemapUrl);
 
-            if (!$response->successful()) {
-                return [
-                    "success" => false,
-                    "message" => "Failed to fetch sitemap!"
-                ];
-            }
-            $xmlContent = $response->body();
-            // Step 2: Parse the XML
-            // Disable libxml errors and use internal error handling to prevent breaking the flow
-            libxml_use_internal_errors(true);
-            $xml = new SimpleXMLElement($xmlContent);
-            $xmlErrors = libxml_get_errors();
-            libxml_clear_errors();
+            // Check for HTTP errors (4xx or 5xx)
+            $response->throw();
 
-            if (!empty($xmlErrors)) {
-                foreach ($xmlErrors as $error) {
-                    return [
-                        "success" => false,
-                        "message" => $error->message
-                    ];
-                }
-                // Decide if you want to fail here or try to proceed if partially parsed
-            }
+            $xmlString = $response->body();
+        } catch (RequestException $e) {
+            // Handle HTTP request errors
+            throw new Exception("Failed to fetch sitemap from {$sitemapUrl}: " . $e->getMessage());
+        } catch (Exception $e) {
+            // Catch other potential errors during fetch
+            throw new Exception("An error occurred while fetching sitemap: " . $e->getMessage());
+        }
+        try {
+            // 2. Parse the XML
+            // Suppress errors with @ and check the return value as simplexml_load_string returns false on failure
+            $xml = @simplexml_load_string($xmlString);
 
             if ($xml === false) {
-                return [
-                    "success" => false,
-                    "message" => "Failed to parse sitemap XML!"
-                ];
+                // Get XML errors if parsing failed
+                $errorString = '';
+                foreach (libxml_get_errors() as $error) {
+                    $errorString .= "\t" . $error->message;
+                }
+                libxml_clear_errors(); // Clear errors for subsequent XML operations
+                throw new Exception("Failed to parse sitemap XML. Errors: \n" . $errorString);
             }
 
-            // Sitemaps can have namespaces. Common ones are 's' or none.
-            // Register XPath namespace if needed (common for sitemaps)
-            $namespaces = $xml->getDocNamespaces();
-            $nsPrefix = ''; // Default to no namespace
 
-            // Check for the standard sitemap namespace
-            if (isset($namespaces['']) && $namespaces[''] == 'http://www.sitemaps.org/schemas/sitemap/0.9') {
-                // It's the default namespace, no prefix needed for direct children, but XPath might need it.
-                // Or, if a prefix is explicitly used in the sitemap:
-                foreach ($namespaces as $prefix => $uri) {
-                    if ($uri == 'http://www.sitemaps.org/schemas/sitemap/0.9') {
-                        if ($prefix !== '') { // If there's an explicit prefix like <s:url>
-                            $xml->registerXPathNamespace($prefix, $uri);
-                            $nsPrefix = $prefix . ':';
+            $postUrls = [];
+            // Check if the root element is 'urlset' as expected for a standard sitemap
+            if ($xml->getName() === 'urlset') {
+                // 3. Extract, Filter, and Select URLs
+                foreach ($xml->url as $urlElement) {
+                    if (isset($urlElement->loc)) {
+                        $loc = (string) $urlElement->loc;
+                        // Filter URLs based on patterns
+                        $isPost = false;
+                        foreach ($postPatterns as $pattern) {
+                            if (str_contains($loc, $pattern)) {
+                                $isPost = true;
+                                break; // Found a pattern, no need to check others
+                            }
                         }
-                        break;
+                        dd($loc, $isPost);
+
+                        if ($isPost) {
+                            $
+                            $postUrls[] = $loc;
+                            // Stop once we have the desired number of posts
+                            if (count($postUrls) >= $max) {
+                                break;
+                            }
+                        }
                     }
                 }
             } else {
-                // Fallback: attempt to register a common 's' prefix if no default namespace matches,
-                // or if you observe 's:url' tags in your target sitemap.
-                $xml->registerXPathNamespace('s', 'http://www.sitemaps.org/schemas/sitemap/0.9');
-                // And try with 's:' prefix if direct access or non-prefixed XPath fails.
+                // Handle cases where it might be a sitemap index or a different format
+                // For simplicity, we'll just throw an error here.
+                // A more robust solution might recursively fetch index files.
+                throw new Exception("Sitemap does not appear to be a standard <urlset> format.");
             }
 
 
-            // Step 3: Extract URLs (typically <loc> inside <url>)
-            // Try with namespace first, then without if common sitemap structure is used.
-            $items = $xml->xpath("//{$nsPrefix}url");
-            if (empty($items) && $nsPrefix !== '') { // If prefixed search failed, try common non-prefixed if nsPrefix was derived from default
-                $items = $xml->xpath("//url");
-            } else if (empty($items) && $nsPrefix === '') { // If no namespace was detected or used, and '//url' failed, try with 's:'
-                $items = $xml->xpath("//s:url"); // Try with common 's' prefix
-                if (empty($items)) { // If still empty, try with no prefix at all
-                    $items = $xml->xpath('//url');
-                }
-            }
-
-
-            if (empty($items)) {
-                return [
-                    "success" => false,
-                    "message" => "No <url> elements found in sitemap!"
-                ];
-            }
-
-            $posts = [];
-            $count = 0;
-            foreach ($items as $item) {
-                if ($count >= $max) {
-                    break;
-                }
-
-                $locElement = $item->{$nsPrefix === '' ? 'loc' : $nsPrefix . 'loc'}; // Access <loc>
-                if (empty($locElement) && $nsPrefix !== '') { // Try without prefix if it was explicitly set
-                    $locElement = $item->loc;
-                } else if (empty($locElement) && $nsPrefix === '' && isset($namespaces['s'])) { // If we tried no prefix but 's' was registered
-                    $locElement = $item->children($namespaces['s'])->loc;
-                }
-
-
-                $url = (string)$locElement;
-
-                if (empty($url)) {
-                    // Log Linfo("Empty <loc> tag found in sitemap item: {$sitemapUrl}");
-                    continue; // Skip if URL is empty
-                }
-
-                $info = $this->dom->get_info($url, $this->data["mode"]);
-                // Sitemaps usually ONLY provide: URL, last modification, change frequency, priority.
-                // To get title, actual content, or images, you need to fetch each URL.
-                // This example focuses on getting the URLs from the sitemap itself.
-                $postData = [
-                    'url' => $url,
-                    'title' => $info["title"],
-                    'image' => $info["image"], // Placeholder: To be fetched from the URL itself
-                ];
-
-                // **IMPORTANT**: Fetching details for each URL can be slow.
-                // Uncomment and enhance the following lines if you need title/image.
-                /*
-                try {
-                    $pageResponse = Http::timeout(10)->get($url);
-                    if ($pageResponse->successful()) {
-                        $pageHtml = $pageResponse->body();
-                        // Basic title extraction
-                        if (preg_match('/<title>(.*?)<\/title>/is', $pageHtml, $titleMatches)) {
-                            $postData['title'] = trim(html_entity_decode($titleMatches[1]));
-                        }
-                        // Basic image extraction (e.g., Open Graph image)
-                        if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^">]+)"/i', $pageHtml, $imageMatches)) {
-                            $postData['image'] = $imageMatches[1];
-                        } elseif (preg_match('/<img[^>]+src="([^">]+)"/i', $pageHtml, $firstImageMatches)) {
-                            // Fallback to first image tag (needs to be made absolute if relative)
-                            // This is a very naive fallback
-                            // $postData['image'] = $this->makeAbsoluteUrl($firstImageMatches[1], $url);
-                        }
-                    }
-                } catch (\Exception $e) {
-                    Log::warning("Could not fetch details for URL {$url}: " . $e->getMessage());
-                }
-                */
-
-                $posts[] = $postData;
-                $count++;
-            }
-            return [
-                "success" => true,
-                "data" => $posts
-            ];
-        } catch (RequestException $e) {
-            return [
-                "success" => false,
-                "message" => $e->getMessage()
-            ];
+            return $postUrls;
         } catch (Exception $e) {
-            return [
-                "success" => false,
-                "message" => $e->getMessage()
-            ];
+            // Catch errors during parsing or processing
+            throw new Exception("An error occurred while processing sitemap XML: " . $e->getMessage());
         }
     }
 
