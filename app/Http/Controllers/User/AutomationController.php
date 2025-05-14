@@ -184,15 +184,11 @@ class AutomationController extends Controller
         $type = $request->type;
         $domains = $request->url;
         $time = $request->time;
-        $mode = 1;
+        $mode = 0;
         if ($type == 'pinterest') {
             $account = $this->board->find($request->account);
             $account_id = $account ? $account->board_id : '';
             $mode = 1;
-        }
-        if ($type == 'facebook') {
-            $account = $this->page->find($request->account);
-            $account_id = $account ? $account->page_id : '';
         }
         if ($account) {
             foreach ($domains as $domain) {
