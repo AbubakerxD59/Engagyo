@@ -292,15 +292,15 @@ class TestFeedService
                         $imageUrl = $this->findPinterestImage($item, $pinterestPreferredWidths, $pinterestPreferredHeights);
                         // If no preferred Pinterest image found, try finding a thumbnail
                         if (!$imageUrl) {
-                            $imageUrl = $this->findImageInContent($item);
+                            $imageUrl = $this->findImageInContent($link);
                         }
                     } else {
                         // Logic for non-Pinterest feeds - look for common image tags
-                        $imageUrl = $this->findImageInContent($item);
+                        $imageUrl = $this->findImageInContent($link);
                     }
                     // If no image found at all, maybe look in description/content (more complex parsing needed)
                     if (!$imageUrl) {
-                        $imageUrl = $this->findImageInContent($feedUrl);
+                        $imageUrl = $this->findImageInContent($link);
                     }
                     $items[] = [
                         'title' => $title,
