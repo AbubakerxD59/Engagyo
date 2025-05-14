@@ -89,7 +89,7 @@ class FeedService
 
     private function fetchRss(string $targetUrl, int $max = 10)
     {
-        $url = $targetUrl . '/feed';
+        $url = $targetUrl;
         $feed = FeedReader::read($url);
         $items = array_slice($feed->get_items(), 0, $max);
         $posts = [];
