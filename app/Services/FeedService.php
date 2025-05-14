@@ -40,10 +40,10 @@ class FeedService
         $websiteUrl = $this->data["url"];
         if ($this->data["exist"]) {
             $feedUrls = $this->fetchSitemap($websiteUrl);
+            dd($feedUrls);
         } else {
             $feedUrls = $this->fetchRss($websiteUrl);
         }
-        dd($feedUrls);
         if ($feedUrls["success"]) {
             try {
                 $items = $feedUrls["data"];
