@@ -144,7 +144,7 @@ class FeedService
         }
 
 
-        $postUrls = [];
+        $posts = [];
         $count = 0;
         // Check if the root element is 'urlset' as expected for a standard sitemap
         // 3. Extract, Filter, and Select URLs
@@ -158,15 +158,14 @@ class FeedService
                     libxml_clear_errors();
                     $count = 1;
                     foreach ($xml->url as $url) {
-                        dd($url);
                         if ($count >= $max) {
                             break;
                         }
                         $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
                         if (!$post) {
                             $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
-                            if (isset($rss["title"]) && !empty($rss["title"])) {
-                                $items[] = [
+                            if (isset($rss["title"]) && !empty($rss["image"])) {
+                                $posts[] = [
                                     'title' => $rss["title"],
                                     'link' => (string) $url->loc,
                                     'image' => $rss["image"],
@@ -177,30 +176,13 @@ class FeedService
                     }
                 }
             }
-            if (isset($urlElement->loc)) {
-                $loc = (string) $urlElement->loc;
-                // Filter URLs based on patterns
-                $isPost = false;
-                foreach ($postPatterns as $pattern) {
-                    if (str_contains($loc, $pattern)) {
-                        $isPost = true;
-                        break; // Found a pattern, no need to check others
-                    }
-                }
-                dd($loc, $isPost);
-
-                if ($isPost) {
-                    $$postUrls[] = $loc;
-                    // Stop once we have the desired number of posts
-                    if (count($postUrls) >= $max) {
-                        break;
-                    }
-                }
-            }
         }
 
 
-        return $postUrls;
+        return [
+            "success" => true,
+            "data" => $posts
+        ];
         // } catch (Exception $e) {
         //     // Catch errors during parsing or processing
         //     throw new Exception("An error occurred while processing sitemap XML: " . $e->getMessage());
