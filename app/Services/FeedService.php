@@ -114,13 +114,13 @@ class FeedService
     {
         $sitemapUrl = $targetUrl . '/sitemap.xml';
         // try {
-            // 1. Fetch the sitemap content
-            $response = Http::get($sitemapUrl);
+        // 1. Fetch the sitemap content
+        $response = Http::get($sitemapUrl);
 
-            // Check for HTTP errors (4xx or 5xx)
-            $response->throw();
+        // Check for HTTP errors (4xx or 5xx)
+        $response->throw();
 
-            $xmlString = $response->body();
+        $xmlString = $response->body();
         // } catch (RequestException $e) {
         //     // Handle HTTP request errors
         //     throw new Exception("Failed to fetch sitemap from {$sitemapUrl}: " . $e->getMessage());
@@ -129,55 +129,94 @@ class FeedService
         //     throw new Exception("An error occurred while fetching sitemap: " . $e->getMessage());
         // }
         // try {
-            // 2. Parse the XML
-            // Suppress errors with @ and check the return value as simplexml_load_string returns false on failure
-            $xml = @simplexml_load_string($xmlString);
+        // 2. Parse the XML
+        // Suppress errors with @ and check the return value as simplexml_load_string returns false on failure
+        $xml = @simplexml_load_string($xmlString);
 
-            if ($xml === false) {
-                // Get XML errors if parsing failed
-                $errorString = '';
-                foreach (libxml_get_errors() as $error) {
-                    $errorString .= "\t" . $error->message;
-                }
-                libxml_clear_errors(); // Clear errors for subsequent XML operations
-                throw new Exception("Failed to parse sitemap XML. Errors: \n" . $errorString);
+        if ($xml === false) {
+            // Get XML errors if parsing failed
+            $errorString = '';
+            foreach (libxml_get_errors() as $error) {
+                $errorString .= "\t" . $error->message;
             }
+            libxml_clear_errors(); // Clear errors for subsequent XML operations
+            throw new Exception("Failed to parse sitemap XML. Errors: \n" . $errorString);
+        }
 
 
-            $postUrls = [];
-            // Check if the root element is 'urlset' as expected for a standard sitemap
-                // 3. Extract, Filter, and Select URLs
-                foreach ($xml->sitemap as $urlElement) {
-                    dd($urlElement);
-                    if (isset($urlElement->loc)) {
-                        $loc = (string) $urlElement->loc;
-                        // Filter URLs based on patterns
-                        $isPost = false;
-                        foreach ($postPatterns as $pattern) {
-                            if (str_contains($loc, $pattern)) {
-                                $isPost = true;
-                                break; // Found a pattern, no need to check others
-                            }
+        $postUrls = [];
+        $count = 0;
+        // Check if the root element is 'urlset' as expected for a standard sitemap
+        // 3. Extract, Filter, and Select URLs
+        foreach ($xml->sitemap as $sitemapEntry) {
+            $childSitemapUrl = (string) $sitemapEntry->loc;
+            if (!empty($childSitemapUrl)) {
+                $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
+                if ($childXmlContent !== false) {
+                    libxml_use_internal_errors(true);
+                    $xml = simplexml_load_string($childXmlContent);
+                    libxml_clear_errors();
+                    $count = 1;
+                    foreach ($xml->url as $url) {
+                        dd($url);
+                        if ($count >= $max) {
+                            break;
                         }
-                        dd($loc, $isPost);
-
-                        if ($isPost) {
-                            $
-                            $postUrls[] = $loc;
-                            // Stop once we have the desired number of posts
-                            if (count($postUrls) >= $max) {
-                                break;
+                        $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
+                        if (!$post) {
+                            $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
+                            if (isset($rss["title"]) && !empty($rss["title"])) {
+                                $items[] = [
+                                    'title' => $rss["title"],
+                                    'link' => (string) $url->loc,
+                                    'image' => $rss["image"],
+                                ];
+                                $count++;
                             }
                         }
                     }
                 }
+            }
+            if (isset($urlElement->loc)) {
+                $loc = (string) $urlElement->loc;
+                // Filter URLs based on patterns
+                $isPost = false;
+                foreach ($postPatterns as $pattern) {
+                    if (str_contains($loc, $pattern)) {
+                        $isPost = true;
+                        break; // Found a pattern, no need to check others
+                    }
+                }
+                dd($loc, $isPost);
+
+                if ($isPost) {
+                    $$postUrls[] = $loc;
+                    // Stop once we have the desired number of posts
+                    if (count($postUrls) >= $max) {
+                        break;
+                    }
+                }
+            }
+        }
 
 
-            return $postUrls;
+        return $postUrls;
         // } catch (Exception $e) {
         //     // Catch errors during parsing or processing
         //     throw new Exception("An error occurred while processing sitemap XML: " . $e->getMessage());
         // }
+    }
+
+    private function fetchUrlContent(string $url)
+    {
+        $context = stream_context_create([
+            'http' => ['timeout' => 30]
+        ]);
+        $content = @file_get_contents($url, false, $context);
+        if ($content === false) {
+            return false;
+        }
+        return $content;
     }
 
     private function extractImageFromRssItem($item, array $pinterestWidths, array $pinterestHeights): ?string
