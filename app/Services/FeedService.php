@@ -126,30 +126,38 @@ class FeedService
             $xml = new SimpleXMLElement($xmlContent);
             // Namespaces can be tricky with sitemaps. Adjust if necessary.
             $xml->registerXPathNamespace('s', 'http://www.sitemaps.org/schemas/sitemap/0.9');
-            $items = $xml->xpath('//s:url'); // Common sitemap structure
-            dd($xml, $items);
-
-            // If the above doesn't work, try without namespace or inspect sitemap structure
-            if (empty($items)) {
-                $items = $xml->xpath('//url');
-            }
             $count = 0;
-            foreach ($items as $item) {
-                if ($count >= $maxPosts) {
-                    break;
+            if (isset($xml->sitemap)) {
+                foreach ($xml->sitemap as $sitemapEntry) {
+                    $childSitemapUrl = (string) $sitemapEntry->loc;
+                    if (!empty($childSitemapUrl)) {
+                        $context = stream_context_create(['http' => ['timeout' => 30]]);
+                        $childXmlContent = @file_get_contents($childSitemapUrl, false, $context);
+                        if ($childXmlContent !== false) {
+                            libxml_use_internal_errors(true);
+                            $xml = simplexml_load_string($childXmlContent);
+                            libxml_clear_errors();
+                            foreach ($xml->url as $url) {
+                                if ($count >= $maxPosts) {
+                                    break;
+                                }
+                                $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
+                                if (!$post) {
+                                    $title = $this->fetchTitleFromUrl($url->loc) ?: '';
+                                    $image = $this->fetchImageFromUrl($url->loc);
+                                    if (isset($title) && !empty($image)) {
+                                        $items[] = [
+                                            'title' => $title,
+                                            'link' => (string) $url->loc,
+                                            'image' => $image,
+                                        ];
+                                        $count++;
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
-                $link = (string)$item->loc;
-                // Sitemap usually doesn't contain title or direct image.
-                // You might need to fetch the page content to get these.
-                // For simplicity, we'll try to derive a title or leave it blank.
-                $title = $this->fetchTitleFromUrl($link) ?: 'Title not found';
-                $image = $this->fetchImageFromUrl($link);
-                $posts[] = [
-                    'title' => $title,
-                    'link' => $link,
-                    'image' => $image,
-                ];
-                $count++;
             }
             return [
                 "success" => true,
