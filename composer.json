@@ -20,6 +20,7 @@
         "laravel/ui": "^4.5",
         "livewire/livewire": "^3.4",
         "spatie/laravel-permission": "^6.9",
+        "vedmant/laravel-feed-reader": "^1.6",
         "voku/simple_html_dom": "^4.8"
     },
     "require-dev": {

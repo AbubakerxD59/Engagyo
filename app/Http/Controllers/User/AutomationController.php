@@ -257,7 +257,7 @@ class AutomationController extends Controller
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
                     if ($user->email == "abmasood5900@gmail.com") {
-                        $feedService = new TestFeedService($data);
+                        $feedService = new FeedService($data);
                         $feedService->fetch();
                     } else {
                         FetchPost::dispatch($data);

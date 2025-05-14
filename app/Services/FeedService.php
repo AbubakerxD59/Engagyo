@@ -5,9 +5,11 @@ namespace App\Services;
 use Feed;
 use Exception;
 use App\Models\Post;
+use SimpleXMLElement;
 use App\Models\Notification;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Vedmant\FeedReader\Facades\FeedReader;
 
 
 class FeedService
@@ -16,6 +18,8 @@ class FeedService
     private $dom;
     private $data;
     private $body;
+    private $heightArray = [];
+    private $widthArray = [];
     public function __construct($data)
     {
         $this->post = new Post();
@@ -28,6 +32,8 @@ class FeedService
             "domain_id" => $data["domain_id"],
             "url" => $data["url"],
         ];
+        $this->heightArray = array("1128", "900", "1000", "1024", "1349");
+        $this->widthArray = array("564", "700", "1500", "512", "759");
     }
     public function fetch()
     {
@@ -37,31 +43,22 @@ class FeedService
         } else {
             $feedUrls = $this->fetchRss($websiteUrl);
         }
-        Log::info("feedUrls: " . json_encode($feedUrls));
         if ($feedUrls["success"]) {
             try {
                 $items = $feedUrls["data"];
                 foreach ($items as $key => $item) {
-                    Log::info("item: " . json_encode($item));
-
                     $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"]], $this->data["time"]);
-                    Log::info("nextTime: " . json_encode($nextTime));
-
                     $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
-                    Log::info("post: " . json_encode($post));
-
-                    $rss = $this->dom->get_info($item["link"], $this->data["mode"]);
-                    $title = !empty($item["title"]) ?  $item["title"] : $rss["title"];
                     if (!$post) {
                         $this->post->create([
                             "user_id" => $this->data["user_id"],
                             "account_id" => $this->data["account_id"],
                             "type" => $this->data["type"],
-                            "title" => $title,
-                            "description" => $item["description"],
+                            "title" => $item["title"],
+                            "description" => "",
                             "domain_id" => $this->data["domain_id"],
                             "url" => $item["link"],
-                            "image" => isset($rss["image"]) ? $rss["image"] : no_image(),
+                            "image" => isset($item["image"]) ? $item["image"] : no_image(),
                             "publish_date" => newDateTime($nextTime, $this->data["time"], $key - 1),
                             "status" => 0,
                         ]);
@@ -74,30 +71,41 @@ class FeedService
             } catch (Exception $e) {
                 $this->body["message"] = $e->getMessage();
                 create_notification($this->data["user_id"], $this->body, "Post");
+                return array(
+                    "success" => false,
+                    "message" =>  $this->body["message"]
+                );
             }
         } else {
             $this->body["message"] = $feedUrls["message"];
             create_notification($this->data["user_id"], $this->body, "Post");
-            exit;
+            return array(
+                "success" => false,
+                "message" =>  $this->body["message"]
+            );
         }
     }
 
     private function fetchRss($url)
     {
-        $feed = Feed::loadRss($url);
-        $items = [];
-        foreach ($feed->item as $item) {
-            $items[] = array(
-                "title" => $item->title,
-                "link" => $item->link,
-                "description" => $item->description
-            );
+        $feed = FeedReader::read($url);
+        $items = array_slice($feed->get_items(), 0, 10);
+
+        foreach ($items as $item) {
+            $title = $item->get_title();
+            $link = $item->get_link();
+            $image = $this->extractImageFromRssItem($item);
+
+            $posts[] = [
+                'title' => $title,
+                'link' => $link,
+                'image' => $image,
+            ];
         }
-        $response = [
+        return [
             "success" => true,
-            "data" => $items
+            "data" => $posts
         ];
-        return $response;
     }
 
     /**
@@ -108,135 +116,210 @@ class FeedService
      * @param string $websiteUrl
      * @return array
      */
-    private function fetchSitemap(string $websiteUrl): array
+    private function fetchSitemap(string $url, int $maxPosts = 20): array
     {
-        $urlToCheck = rtrim($websiteUrl, '/') . '/sitemap.xml';
-        $discoveredUrls = '';
-        try {
-            $response = Http::head($urlToCheck);
-            if ($response->successful()) {
-                // Check content type if possible (more reliable)
-                $contentType = strtolower($response->header('Content-Type') ?? '');
-                if (str_contains($contentType, 'xml')) {
-                    $discoveredUrls = $urlToCheck;
-                }
+        $response = Http::get($url);
+        if ($response->successful()) {
+            $xmlContent = $response->body();
+            $xml = new SimpleXMLElement($xmlContent);
+
+            // Namespaces can be tricky with sitemaps. Adjust if necessary.
+            $xml->registerXPathNamespace('s', 'http://www.sitemaps.org/schemas/sitemap/0.9');
+            $items = $xml->xpath('//s:url'); // Common sitemap structure
+
+            // If the above doesn't work, try without namespace or inspect sitemap structure
+            if (empty($items)) {
+                $items = $xml->xpath('//url');
             }
-            if ($discoveredUrls) {
-                $sitemap = Http::withHeaders(['User-Agent' => 'Engagyo RSS bot'])->get($discoveredUrls);
-                if (!$sitemap->successful()) {
-                    $xmlContent = $sitemap->body();
-                    $items = $this->parseContent($xmlContent, $websiteUrl);
-                } else {
-                    $response = [
-                        "success" => false,
-                        "message" => "Failed to fetch feed/sitemap from {$websiteUrl}"
-                    ];
+            $count = 0;
+            foreach ($items as $item) {
+                if ($count >= $maxPosts) {
+                    break;
                 }
-            } else {
-                $response = [
-                    "success" => false,
-                    "message" => "Couldn't find Sitemap Data!"
+                $link = (string)$item->loc;
+                // Sitemap usually doesn't contain title or direct image.
+                // You might need to fetch the page content to get these.
+                // For simplicity, we'll try to derive a title or leave it blank.
+                $title = $this->fetchTitleFromUrl($link) ?: 'Title not found';
+                $image = $this->fetchImageFromUrl($link);
+                $posts[] = [
+                    'title' => $title,
+                    'link' => $link,
+                    'image' => $image,
                 ];
+                $count++;
             }
-        } catch (Exception $e) {
-            $response = [
+            return [
+                "success" => true,
+                "data" => $posts
+            ];
+        } else {
+            return [
                 "success" => false,
-                "message" => $e->getMessage()
+                "data" => 'Failed to fetch sitemap'
             ];
         }
-
-        return $response;
     }
 
     /**
-     * Parse XML content from RSS/Atom feed or Sitemap.
-     *
-     * @param string $xmlContent
-     * @param string $sourceUrl Used to determine parsing type
-     * @return array
+     * Extracts image from an RSS item.
+     * Prioritizes Pinterest-specific images, then thumbnails.
      */
-    private function parseContent(string $xmlContent, string $sourceUrl, int $depth = 0, int $maxDepth = 5): array
+    private function extractImageFromRssItem($item): ?string
+    {
+        $potentialImages = [];
+
+        // 1. Check for media:content or enclosure tags (often higher quality)
+        $enclosures = $item->get_enclosures();
+        if ($enclosures) {
+            foreach ($enclosures as $enclosure) {
+                if (strpos($enclosure->get_type(), 'image') !== false && $enclosure->get_link()) {
+                    $potentialImages[] = $enclosure->get_link();
+                }
+                // SimplePie specific for thumbnails in enclosures
+                if ($enclosure->get_thumbnail()) {
+                    $potentialImages[] = $enclosure->get_thumbnail();
+                }
+            }
+        }
+
+        // 2. Check for media:thumbnail
+        $media_thumbnail = $item->get_item_tags('http://search.yahoo.com/mrss/', 'thumbnail');
+        if (!empty($media_thumbnail) && isset($media_thumbnail[0]['attribs']['']['url'])) {
+            $potentialImages[] = $media_thumbnail[0]['attribs']['']['url'];
+        }
+
+        // 3. Look for images in the description or content
+        $description = $item->get_description();
+        $content = $item->get_content();
+
+        if ($description) {
+            preg_match_all('/<img[^>]+src="([^">]+)"/i', $description, $matches);
+            if (!empty($matches[1])) {
+                $potentialImages = array_merge($potentialImages, $matches[1]);
+            }
+        }
+        if ($content) {
+            preg_match_all('/<img[^>]+src="([^">]+)"/i', $content, $matches);
+            if (!empty($matches[1])) {
+                $potentialImages = array_merge($potentialImages, $matches[1]);
+            }
+        }
+
+        // 4. Check image from <image> tag or <itunes:image> if available directly on item (less common for items, more for channel)
+        // The vedmant/laravel-feed-reader might expose these differently or not at all at item level.
+
+        $potentialImages = array_unique(array_filter($potentialImages));
+
+        // Check for Pinterest-specific dimensions
+        foreach ($potentialImages as $imgUrl) {
+            $dimensions = @getimagesize($imgUrl); // Use @ to suppress errors for invalid images
+            if ($dimensions && is_array($dimensions)) {
+                list($width, $height) = $dimensions;
+                if (in_array((string)$width, $this->widthArray) && in_array((string)$height, $this->heightArray)) {
+                    return $imgUrl; // Found Pinterest specific image
+                }
+            }
+        }
+
+        // If no Pinterest image, return the first valid image as a thumbnail
+        foreach ($potentialImages as $imgUrl) {
+            if (filter_var($imgUrl, FILTER_VALIDATE_URL)) {
+                // Further check if it's a real image if necessary
+                $headers = @get_headers($imgUrl, 1);
+                if ($headers && isset($headers['Content-Type']) && strpos($headers['Content-Type'], 'image/') !== false) {
+                    return $imgUrl;
+                }
+            }
+        }
+
+        return null; // No suitable image found
+    }
+
+
+    /**
+     * Fallback to fetch title from a URL (basic implementation)
+     * For sitemaps, as they usually only contain URLs.
+     */
+    private function fetchTitleFromUrl(string $url): ?string
     {
         try {
-            // Suppress errors during loading, check manually after
-            libxml_use_internal_errors(true);
-            $xml = simplexml_load_string($xmlContent);
-            libxml_clear_errors(); // Clear errors from buffer
-            if ($xml !== false) {
-                $items = [];
-                if (isset($xml->sitemap)) {
-                    foreach ($xml->sitemap as $sitemapEntry) {
-                        $childSitemapUrl = (string) $sitemapEntry->loc;
-                        if (!empty($childSitemapUrl)) {
-                            $childXmlContent = $this->fetchUrlContent($childSitemapUrl);
-                            if ($childXmlContent !== false) {
-                                $childParseResult = $this->parseContent($childXmlContent, $childSitemapUrl, $depth + 1, $maxDepth);
-                                if (is_array($childParseResult) && count($childParseResult) > 0) {
-                                    if (count($childParseResult) > 20) {
-                                        $childParseResult = array_slice($childParseResult, 0, 20);
-                                    }
-                                    $items = array_merge($items, $childParseResult);
-                                }
+            $response = Http::timeout(5)->get($url); // Set a timeout
+            if ($response->successful()) {
+                $htmlContent = $response->body();
+                if (preg_match('/<title>(.*?)<\/title>/is', $htmlContent, $matches)) {
+                    return trim($matches[1]);
+                }
+            }
+        } catch (\Throwable $e) {
+            // Log error or handle silently
+        }
+        return null;
+    }
+
+    /**
+     * Fallback to fetch image from a URL's content (basic implementation)
+     * For sitemaps or if RSS item has no direct image.
+     */
+    private function fetchImageFromUrl(string $url): ?string
+    {
+        try {
+            $response = Http::timeout(5)->get($url);
+            if ($response->successful()) {
+                $htmlContent = $response->body();
+                $potentialImages = [];
+
+                preg_match_all('/<img[^>]+src="([^">]+)"/i', $htmlContent, $matches);
+                if (!empty($matches[1])) {
+                    $potentialImages = array_map(function ($imgUrl) use ($url) {
+                        // Convert relative URLs to absolute
+                        if (strpos($imgUrl, 'http') !== 0) {
+                            $urlParts = parse_url($url);
+                            $baseUrl = $urlParts['scheme'] . '://' . $urlParts['host'];
+                            if (strpos($imgUrl, '/') === 0) { // Starts with /
+                                return $baseUrl . $imgUrl;
+                            } else { // Relative path
+                                $path = isset($urlParts['path']) ? dirname($urlParts['path']) : '';
+                                return $baseUrl . rtrim($path, '/') . '/' . $imgUrl;
                             }
                         }
-                        if (count($items) >= 20) {
-                            break;
+                        return $imgUrl;
+                    }, $matches[1]);
+                }
+
+                // Also check for OpenGraph image
+                if (preg_match('/<meta[^>]+property="og:image"[^>]+content="([^">]+)"/i', $htmlContent, $ogMatches)) {
+                    if (!empty($ogMatches[1])) {
+                        array_unshift($potentialImages, $ogMatches[1]); // Prioritize OG image
+                    }
+                }
+
+                $potentialImages = array_unique(array_filter($potentialImages));
+
+                // Check for Pinterest-specific dimensions
+                foreach ($potentialImages as $imgUrl) {
+                    if (!filter_var($imgUrl, FILTER_VALIDATE_URL)) continue;
+                    $dimensions = @getimagesize($imgUrl);
+                    if ($dimensions && is_array($dimensions)) {
+                        list($width, $height) = $dimensions;
+                        if (in_array((string)$width, $this->widthArray) && in_array((string)$height, $this->heightArray)) {
+                            return $imgUrl;
                         }
                     }
                 }
-                $response = [
-                    "success" => true,
-                    "data" => $items
-                ];
-            } else {
-                $response = [
-                    "success" => false,
-                    "message" => "Failed to parse XML from {$sourceUrl}"
-                ];
+
+                // If no Pinterest image, return the first valid image (e.g., OG image or first img tag)
+                foreach ($potentialImages as $imgUrl) {
+                    if (!filter_var($imgUrl, FILTER_VALIDATE_URL)) continue;
+                    $headers = @get_headers($imgUrl, 1);
+                    if ($headers && isset($headers['Content-Type']) && strpos($headers['Content-Type'], 'image/') !== false) {
+                        return $imgUrl;
+                    }
+                }
             }
-        } catch (Exception $e) {
-            $response = [
-                "success" => false,
-                "message" => $e->getMessage()
-            ];
+        } catch (\Throwable $e) {
+            // Log error or handle silently
         }
-        return $response;
-    }
-
-    private function fetchUrlContent(string $url)
-    {
-        $context = stream_context_create([
-            'http' => ['timeout' => 30]
-        ]);
-        $content = @file_get_contents($url, false, $context);
-        if ($content === false) {
-            return false;
-        }
-        return $content;
-
-        // Example implementation using cURL (more robust for production)
-
-        // $ch = curl_init();
-        // curl_setopt($ch, CURLOPT_URL, $url);
-        // curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        // curl_setopt($ch, CURLOPT_TIMEOUT, 30); // Set a timeout
-        // // Add other cURL options as needed (e.g., SSL verification)
-
-        // $content = curl_exec($ch);
-        // $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
-
-        // if ($content === false || $httpCode >= 400) {
-        //     // Log cURL error: curl_error($ch)
-        //     if (class_exists('Log')) {
-        //         Log::error("Failed to fetch URL (cURL): {$url}. HTTP Code: {$httpCode}. Error: " . curl_error($ch));
-        //     } else {
-        //         error_log("Failed to fetch URL (cURL): {$url}. HTTP Code: {$httpCode}. Error: " . curl_error($ch));
-        //     }
-        //     curl_close($ch);
-        //     return false;
-        // }
-
-        // curl_close($ch);
-        // return $content;
+        return null;
     }
 }
