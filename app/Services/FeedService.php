@@ -112,12 +112,7 @@ class FeedService
 
     public function fetchSitemap(string $targetUrl, int $max = 10)
     {
-        $parsed_url = parse_url($targetUrl);
-        if (isset($parsed_url['scheme']) && isset($parsed_url['host'])) {
-            $main_domain = $parsed_url['scheme'] . '://' . $parsed_url['host'];
-            $http_domain = 'http://' . $parsed_url['host'];
-            $sitemapUrl = $main_domain . '/sitemap.xml';
-        }
+        $sitemapUrl = $targetUrl . '/sitemap.xml';
         // context options
         $arrContextOptions = array('http' => ['method' => "GET", 'header' => "User-Agent: curl/7.68.0\r\n", 'ignore_errors' => true], "ssl" => array("verify_peer" => false, "verify_peer_name" => false,));
         // load xml from sitemap.xml
@@ -192,9 +187,6 @@ class FeedService
                         break;
                     }
                     $postUrl = (string) $url->loc; // Cast to string to get the URL
-                    if ($postUrl == $main_domain . '/' || $postUrl == $http_domain . '/') {
-                        continue; // Skip the first iteration
-                    }
                     $info = $this->dom->get_info($postUrl, $this->data["mode"]);
                     $items[] = [
                         "link" => $postUrl,
