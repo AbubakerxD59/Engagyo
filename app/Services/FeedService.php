@@ -120,6 +120,7 @@ class FeedService
     {
         $url = $url.'/sitemap.xml';
         $response = Http::get($url);
+        $posts = [];
         if ($response->successful()) {
             $xmlContent = $response->body();
             $xml = new SimpleXMLElement($xmlContent);
