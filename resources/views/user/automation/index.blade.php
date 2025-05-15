@@ -308,6 +308,7 @@
             $(document).on("click", ".post-delete", function() {
                 var id = $(this).data('id');
                 var token = $('meta[name="csrf-token"]').attr('content');
+                $(this).closest('tr').remove();
                 $.ajax({
                     url: "{{ route('panel.automation.posts.destroy') }}",
                     type: "POST",
@@ -317,7 +318,6 @@
                     },
                     success: function(response) {
                         if (response.success) {
-                            postsDatatable.ajax.reload();
                             toastr.success(response.message);
                         } else {
                             toastr.error(response.message);
