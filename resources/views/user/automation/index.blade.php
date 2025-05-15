@@ -48,7 +48,7 @@
                                     <select name="status" id="status" class="form-control adv_filter">
                                         <option value="">All Status</option>
                                         <option value="1">Published</option>
-                                        <option value="0">Pending</option>
+                                        <option value="0" selected>Pending</option>
                                         <option value="-1">Failed</option>
                                     </select>
                                 </div>
