@@ -8,7 +8,7 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form action="{{ route('roles.assign_permissions') }}" method="POST">
+            <form action="{{ route('admin.roles.assign_permissions') }}" method="POST">
                 @csrf
                 <div class="modal-body">
                     <input type="hidden" name="role_id" value="{{ $role_id }}">
@@ -22,7 +22,7 @@
                             <div class="card col-5">
                                 <div class="card-body d-flex flex-wrap">
                                     <div class="col-12">
-                                        <h5 class="card-title col-10">{{ strtoupper($head->label) }}</h5>
+                                        <h5 class="card-title col-12">{{ strtoupper($head->label) }}</h5>
                                         @if ($role->name != 'Super Admin')
                                             <input type="checkbox" class="check-section-permissions"
                                                 data-id="{{ $key + 1 }}">

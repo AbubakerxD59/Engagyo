@@ -6,7 +6,7 @@
             <div class="content-header clearfix">
                 <h1 class="float-left">Packages</h1>
                 <div class="float-right">
-                    <a class="btn btn-primary" href="{{ route('packages.create') }}">
+                    <a class="btn btn-primary" href="{{ route('admin.packages.create') }}">
                         <i class="fas fa-plus-square"></i> Add new</a>
                 </div>
             </div>
@@ -57,7 +57,7 @@
             "processing": true,
             "serverSide": true,
             ajax: {
-                url: "{{ route('packages.dataTable') }}",
+                url: "{{ route('admin.packages.dataTable') }}",
             },
             columns: [{
                     data: 'icon_view'

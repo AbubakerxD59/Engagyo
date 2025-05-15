@@ -12,7 +12,7 @@
                         <div class="col-sm-6">
                             <ol class="breadcrumb float-sm-right">
                                 <li class="breadcrumb-item"><a
-                                        href="{{ route('dashboard') }}">{{ __('permissions.page_breadcrumb_dashboard') }}</a>
+                                        href="{{ route('admin.dashboard') }}">{{ __('permissions.page_breadcrumb_dashboard') }}</a>
                                 </li>
                                 <li class="breadcrumb-item active">{{ __('permissions.page_breadcrumb_list') }}</li>
                             </ol>
@@ -55,25 +55,30 @@
 @endsection
 @push('scripts')
     <script type="text/javascript">
-    $('#dataTable').DataTable({
-        "paging": true,
-        'iDisplayLength': 10,
-        "lengthChange": true,
-        "searching": true,
-        "ordering": true,
-        "info": true,
-        "autoWidth": false,
-        "responsive": true,
-        "processing": true,
-        "serverSide": true,
-        ajax: { 
-            url: "{{route('permissions.dataTable')}}",
-        },
-        columns: [
-            { data: 'id'},
-            { data: 'label'},
-            { data: 'name'},
-        ],
-    });
+        $('#dataTable').DataTable({
+            "paging": true,
+            'iDisplayLength': 10,
+            "lengthChange": true,
+            "searching": true,
+            "ordering": true,
+            "info": true,
+            "autoWidth": false,
+            "responsive": true,
+            "processing": true,
+            "serverSide": true,
+            ajax: {
+                url: "{{ route('admin.permissions.dataTable') }}",
+            },
+            columns: [{
+                    data: 'id'
+                },
+                {
+                    data: 'label'
+                },
+                {
+                    data: 'name'
+                },
+            ],
+        });
     </script>
 @endpush

@@ -12,7 +12,7 @@
                         <div class="col-sm-6">
                             <ol class="breadcrumb float-sm-right">
                                 <li class="breadcrumb-item"><a
-                                        href="{{ route('dashboard') }}">{{ __('permissions.page_breadcrumb_dashboard') }}</a>
+                                        href="{{ route('admin.dashboard') }}">{{ __('permissions.page_breadcrumb_dashboard') }}</a>
                                 </li>
                                 <li class="breadcrumb-item active">{{ __('permissions.page_breadcrumb_list') }}</li>
                                 <li class="breadcrumb-item active">{{ __('permissions.page_breadcrumb_edit') }}</li>
@@ -30,7 +30,8 @@
                                     <h3 class="card-title">{{ __('permissions.edit_page_sub_heading') }}</h3>
                                 </div>
                                 <div class="card-body">
-                                    <form action="{{ route('permissions.update', $permission->id) }}" method="POST"
+                                    <form action="{{ route('admin.permissions.update', $permission->id) }}" method="POST"
+                                    <form action="{{ route('admin.permissions.update', $permission->id) }}" method="POST"
                                         class="form-horizontal">
                                         @csrf
                                         @method('PUT')
@@ -173,7 +174,8 @@
                                             <div class="col-12 text-right">
                                                 <button type="submit"
                                                     class="btn btn-outline-success">{{ __('permissions.btn_submit_text') }}</button>
-                                                <a href="{{ route('permissions.index') }}"
+                                                <a href="{{ route('admin.permissions.index') }}"
+                                                <a href="{{ route('admin.permissions.index') }}"
                                                     class="btn btn-outline-dark">{{ __('permissions.btn_cancel_text') }}</a>
                                             </div>
                                         </div>

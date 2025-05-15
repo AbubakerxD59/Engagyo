@@ -3,13 +3,13 @@
 @section('page_content')
     @can('add_package')
         <div class="page-content">
-            <form method="POST" action="{{ route('packages.store') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('admin.packages.store') }}" enctype="multipart/form-data">
                 @csrf
                 <div class="content-header clearfix">
                     <h1 class="float-left"> Add Package
                         <small>
                             <i class="fas fa-arrow-circle-left"></i>
-                            <a href="{{ route('packages.index') }}">back to Packages list</a>
+                            <a href="{{ route('admin.packages.index') }}">back to Packages list</a>
                         </small>
                     </h1>
                     <div class="float-right">

@@ -6,7 +6,7 @@
             <div class="content-header clearfix">
                 <h1 class="float-left">Roles</h1>
                 <div class="float-right">
-                    <a class="btn btn-primary" href="{{ route('roles.create') }}">
+                    <a class="btn btn-primary" href="{{ route('admin.roles.create') }}">
                         <i class="fas fa-plus-square"></i> Add new</a>
                 </div>
             </div>
@@ -54,7 +54,7 @@
             "processing": true,
             "serverSide": true,
             ajax: {
-                url: "{{ route('roles.dataTable') }}",
+                url: "{{ route('admin.roles.dataTable') }}",
             },
             columns: [{
                     data: 'id'

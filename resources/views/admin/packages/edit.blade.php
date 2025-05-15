@@ -3,14 +3,14 @@
 @section('page_content')
     @can('edit_package')
         <div class="page-content">
-            <form method="POST" action="{{ route('packages.update', $package->id) }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('admin.packages.update', $package->id) }}" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
                 <div class="content-header clearfix">
                     <h1 class="float-left"> Edit Package
                         <small>
                             <i class="fas fa-arrow-circle-left"></i>
-                            <a href="{{ route('packages.index') }}">back to Packages list</a>
+                            <a href="{{ route('admin.packages.index') }}">back to Packages list</a>
                         </small>
                     </h1>
                     <div class="float-right">
@@ -256,7 +256,7 @@
             formData.append('feature_ids', feature_ids);
 
             $.ajax({
-                url: "{{ route('packages.add_facility') }}",
+                url: "{{ route('admin.packages.add_facility') }}",
                 type: 'POST',
                 cache: false,
                 contentType: false,

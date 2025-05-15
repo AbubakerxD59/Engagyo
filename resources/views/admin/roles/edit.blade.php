@@ -12,9 +12,9 @@
                         <div class="col-sm-6">
                             <ol class="breadcrumb float-sm-right">
                                 <li class="breadcrumb-item"><a
-                                        href="{{ route('dashboard') }}">{{ __('roles.page_breadcrumb_dashboard') }}</a></li>
+                                        href="{{ route('admin.dashboard') }}">{{ __('roles.page_breadcrumb_dashboard') }}</a></li>
                                 <li class="breadcrumb-item"><a
-                                        href="{{ route('roles.index') }}">{{ __('roles.page_breadcrumb_list') }}</a></li>
+                                        href="{{ route('admin.roles.index') }}">{{ __('roles.page_breadcrumb_list') }}</a></li>
                                 <li class="breadcrumb-item active">{{ __('roles.page_breadcrumb_edit') }}</li>
                             </ol>
                         </div>
@@ -30,7 +30,7 @@
                                     <h3 class="card-title">{{ __('roles.edit_page_sub_heading') }}</h3>
                                 </div>
                                 <div class="card-body">
-                                    <form action="{{ route('roles.update', $role->id) }}" method="POST"
+                                    <form action="{{ route('admin.roles.update', $role->id) }}" method="POST"
                                         class="form-horizontal">
                                         @csrf
                                         @method('PUT')
@@ -66,7 +66,7 @@
                                             <div class="col-12 text-right">
                                                 <button type="submit"
                                                     class="btn btn-outline-success">{{ __('roles.btn_submit_text') }}</button>
-                                                <a href="{{ route('roles.index') }}"
+                                                <a href="{{ route('admin.roles.index') }}"
                                                     class="btn btn-outline-dark">{{ __('roles.btn_cancel_text') }}</a>
                                             </div>
                                         </div>

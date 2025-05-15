@@ -3,13 +3,13 @@
 @section('page_content')
     @can('add_role')
         <div class="page-content">
-            <form method="POST" action="{{ route('roles.store') }}" class="form-horizontal">
+            <form method="POST" action="{{ route('admin.roles.store') }}" class="form-horizontal">
                 @csrf
                 <div class="content-header clearfix">
                     <h1 class="float-left"> Add Role
                         <small>
                             <i class="fas fa-arrow-circle-left"></i>
-                            <a href="{{ route('roles.index') }}">back to Roles list</a>
+                            <a href="{{ route('admin.roles.index') }}">back to Roles list</a>
                         </small>
                     </h1>
                     <div class="float-right">
@@ -72,7 +72,7 @@
                                             <div class="col-12 text-right">
                                                 <button type="submit"
                                                     class="btn btn-outline-success">{{ __('roles.btn_submit_text') }}</button>
-                                                <a href="{{ route('roles.index') }}"
+                                                <a href="{{ route('admin.roles.index') }}"
                                                     class="btn btn-outline-dark">{{ __('roles.btn_cancel_text') }}</a>
                                             </div>
                                         </div>
