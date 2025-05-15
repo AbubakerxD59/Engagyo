@@ -3,13 +3,13 @@
 @section('page_content')
     @can('add_user')
         <div class="page-content">
-            <form method="POST" action="{{ route('users.store') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('admin.users.store') }}" enctype="multipart/form-data">
                 @csrf
                 <div class="content-header clearfix">
                     <h1 class="float-left"> {{ __('users.add_page_heading') }}
                         <small>
                             <i class="fas fa-arrow-circle-left"></i>
-                            <a href="{{ route('users.index') }}">back to Users list</a>
+                            <a href="{{ route('admin.users.index') }}">back to Users list</a>
                         </small>
                     </h1>
                     <div class="float-right">
@@ -39,12 +39,25 @@
                                     <div class="card-body">
                                         <div class="form-group row">
                                             <div class="col-md-3">
-                                                <label for="full_name" class="form-label">Full Name</label>
+                                                <label for="first_name" class="form-label">First Name</label>
                                             </div>
                                             <div class="col-md-9">
-                                                <input type="text" class="form-control" name="full_name" id="full_name"
-                                                    value="{{ old('full_name') }}" placeholder="Enter user name" required>
-                                                @error('full_name')
+                                                <input type="text" class="form-control" name="first_name" id="first_name"
+                                                    value="{{ old('first_name') }}" placeholder="Enter first name" required>
+                                                @error('first_name')
+                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group row">
+                                            <div class="col-md-3">
+                                                <label for="last_name" class="form-label">Last Name</label>
+                                            </div>
+                                            <div class="col-md-9">
+                                                <input type="text" class="form-control" name="last_name" id="last_name"
+                                                    value="{{ old('last_name') }}" placeholder="Enter last name" required>
+                                                @error('last_name')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror
                                             </div>
@@ -119,7 +132,7 @@
                                         <div class="col-12 text-right">
                                             <button type="submit"
                                                 class="btn btn-outline-success">{{ __('users.btn_submit_text') }}</button>
-                                            <a href="{{ route('users.index') }}"
+                                            <a href="{{ route('admin.users.index') }}"
                                                 class="btn btn-outline-dark">{{ __('users.btn_cancel_text') }}</a>
                                         </div>
                                     </div>

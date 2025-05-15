@@ -22,18 +22,16 @@
                                                 <div class="table-responsive">
                                                     <table class="table table-striped table-bordered" id="dataTable">
                                                         <thead>
-                                                            <th>{{ __('users.id') }}</th>
-                                                            <th>{{ __('users.profile_pic') }}</th>
-                                                            <th>{{ __('users.full_name') }}</th>
-                                                            <th>Membership ID</th>
-                                                            <th>{{ __('users.email_username') }}</th>
-                                                            <th>Whatsapp#</th>
-                                                            <th>City</th>
+                                                            <th>Id</th>
+                                                            <th>Profile Pic</th>
+                                                            <th>Full Name</th>
+                                                            <th>Email</th>
+                                                            <th>Username</th>
                                                             <th>Country</th>
-                                                            <th>{{ __('users.role') }}</th>
-                                                            <th>{{ __('users.status') }}</th>
-                                                            <th>{{ __('users.created_at') }}</th>
-                                                            <th>{{ __('users.action') }}</th>
+                                                            <th>City</th>
+                                                            <th>Role</th>
+                                                            <th>Status</th>
+                                                            <th>Action</th>
                                                         </thead>
                                                         <tbody>
                                                             <tr>
@@ -81,28 +79,22 @@
                     data: 'name_link'
                 },
                 {
-                    data: 'membership_id'
+                    data: 'email'
                 },
                 {
-                    data: 'email_username'
-                },
-                {
-                    data: 'whatsapp_number'
-                },
-                {
-                    data: 'city'
+                    data: 'username'
                 },
                 {
                     data: 'country'
+                },
+                {
+                    data: 'city'
                 },
                 {
                     data: 'role'
                 },
                 {
                     data: 'status_span'
-                },
-                {
-                    data: 'created'
                 },
                 {
                     data: 'action'

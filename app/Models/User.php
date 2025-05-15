@@ -30,6 +30,7 @@ class User extends Authenticatable
         'country',
         'address',
         'status',
+        'rss_filters',
     ];
 
     /**
@@ -51,6 +52,7 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
+        'rss_filters' => 'array'
     ];
 
     protected $appends = ['full_name'];
@@ -119,6 +121,16 @@ class User extends Authenticatable
             get: function ($value) {
                 $full_name = $this->first_name . ' ' . $this->last_name;
                 return $full_name;
+            }
+        );
+    }
+
+    protected function profilePic(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                $profile_pic = !empty($value) ? $value : no_image();
+                return $profile_pic;
             }
         );
     }

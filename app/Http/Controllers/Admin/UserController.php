@@ -42,13 +42,15 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'full_name' => 'required|string|max:150',
+            'first_name' => 'required|string|max:150',
+            'last_name' => 'required|string|max:150',
             'email' => 'required|email|max:250|unique:users',
             'password' => 'required|min:4|confirmed',
             'role' => 'required',
         ]);
         $user = User::create([
-            'full_name' => $request->full_name,
+            'first_name' => $request->first_name,
+            'last_name' => $request->last_name,
             'email' => $request->email,
             'password' => $request->password,
         ]);
@@ -99,7 +101,8 @@ class UserController extends Controller
     public function update(Request $request, string $id)
     {
         $validated = $request->validate([
-            'full_name' => 'required|string|max:150',
+            'first_name' => 'required|string|max:150',
+            'last_name' => 'required|string|max:150',
             'email' => 'required|email|max:250|',
             'password' => 'sometimes',
             'role' => 'required',
@@ -108,7 +111,8 @@ class UserController extends Controller
         $user = User::find($id);
         if (!empty($user)) {
             $data = [
-                'full_name' => $request->full_name,
+                'first_name' => $request->first_name,
+                'last_name' => $request->last_name,
                 'email' => $request->email,
                 'status' => $request->active ? 1 : 0
             ];
@@ -174,19 +178,12 @@ class UserController extends Controller
 
         $users = $users->get();
         foreach ($users as $k => $val) {
-            $rand = rand(1, 5);
-            $path = $rand > 0 ? 'avatar' . $rand : 'avatar';
-            $path .= '.png';
-            $profile_pic = !empty($val->profile_pic) ? $val->profile_pic : url(getImage('img', $path, 'assets'));
-            $email = !empty($val->email) ? $val->email : '-';
-            $email_username = '<div><span>' . $email . '</span><br><span>' . $val->username . '</span></div>';
-            $users[$k]['profile'] = "<img src='" . asset($profile_pic) . "' alt='Logo' width='50px'>";
+
+            $users[$k]['profile'] = "<img src='" . asset($val->profile_pic) . "' alt='Logo' width='50px'>";
             $users[$k]['name_link'] = !empty($val->full_name) ? '<a href=' . route('admin.users.edit', $val->id) . '>' . $val->full_name . '</a>' : '-';
-            $users[$k]['email_username'] = $email_username;
-            $users[$k]['created'] = date('Y-m-d', strtotime($val->created_at));
             $users[$k]['role'] = $val->getRole();
             $users[$k]['status_span'] = $val->status ? "<span class='badge badge-success'>Active</span>" : "<span class='badge badge-danger'>Inactive</span>";
-            $users[$k]['action'] = view('admin.users.action')->with('user', $val)->with('role', $role)->render();
+            $users[$k]['action'] = view('admin.users.action')->with('user', $val)->render();
             $users[$k] = $val;
         }
 

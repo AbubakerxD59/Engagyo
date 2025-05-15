@@ -17,8 +17,8 @@ class RouteServiceProvider extends ServiceProvider
      *
      * @var string
      */
-    public const HOME = '/dashboard';
-    public const INV_CRED = '/login';
+    public const ADMIN_HOME = '/admin/dashboard';
+    public const INV_CRED = '/admin/login';
     public const FRONTEND_INV_CRED = 'users/sign_in';
     public const FRONTEND_AUTH_HOME = '/';
 

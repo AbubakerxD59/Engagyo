@@ -27,7 +27,8 @@
                                         <option value="">All Accounts</option>
                                         @foreach ($user->getAccounts() as $key => $account)
                                             <option value="{{ $account->id }}" data-type="{{ $account->type }}"
-                                                data-shuffle="{{ $account->shuffle }}">
+                                                data-shuffle="{{ $account->shuffle }}"
+                                                {{ @$user->rss_filters['selected_account'] == $account->id && @$user->rss_filters['selected_type'] == $account->type ? 'selected' : '' }}>
                                                 {{ strtoupper($account->name . ' - ' . $account->type) }}
                                             </option>
                                         @endforeach
@@ -39,6 +40,8 @@
                                 </div>
                                 <div class="col-md-4 form-group">
                                     <label for="domains">Domains</label>
+                                    <input type="hidden" id="saved_domains"
+                                        value="{{ isset($user->rss_filters['domain']) ? implode(',', $user->rss_filters['domain']) : '' }}">
                                     <select name="domains[]" id="domains" class="form-control adv_filter select2"
                                         multiple>
                                     </select>
@@ -260,6 +263,11 @@
             });
             // Fetch domains function
             var fetchDomains = function(account_id, selected_type, select, mode) {
+                var saved_domains = $('#saved_domains').val();
+                saved_domains = saved_domains.split(',').map(function(value) {
+                    return Number(value);
+                });
+                console.log(saved_domains);
                 $.ajax({
                     url: "{{ route('panel.automation.getDomain') }}",
                     method: "GET",
@@ -274,6 +282,9 @@
                                 var option = $("<option></option>");
                                 mode == "id" ? option.val(value.id).text(value.name) :
                                     option.val(value.name).text(value.name);
+                                if (saved_domains.includes(value.id)) {
+                                    option.attr('selected', 'selected');
+                                }
                                 select.append(option);
                             });
                         }
@@ -282,6 +293,7 @@
             }
             // Filters and Reset
             $('.adv_filter').on('change', function() {
+                save_filters();
                 postsDatatable.ajax.reload();
             });
             $('.adv_filter_search').on('keyup', function() {
@@ -446,6 +458,7 @@
                     });
                 }
             })
+            // Fix post image/title
             $(document).on('click', '.fix-post', function() {
                 var id = $(this).data('post-id');
                 var token = $('meta[name="csrf-token"]').attr('content');
@@ -466,6 +479,27 @@
                     }
                 });
             });
+            // Save filters
+            var save_filters = function() {
+                var token = $('meta[name="csrf-token"]').attr('content');
+                var selected_account = $("#account").find(":selected").val();
+                var selected_type = $("#account").find(":selected").data("type");
+                var domain = $("#domains").val();
+                if (selected_account && selected_type && domain) {
+                    $.ajax({
+                        url: "{{ route('panel.automation.saveFilters') }}",
+                        method: "POST",
+                        data: {
+                            "_token": token,
+                            "selected_account": selected_account,
+                            "selected_type": selected_type,
+                            "domain": domain,
+                        }
+                    });
+                }
+            }
+            // Trigger change acocunt
+            $('#account').trigger('change');
         });
     </script>
     </script>

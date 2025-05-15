@@ -20,10 +20,7 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-
-Route::get('/', function () {
-    return redirect(route('login'));
-});
+Route::get("/admin", [AuthController::class, 'redirect']);
 // Admin Routes
 Route::prefix("admin/")->name("admin.")->group(function () {
     //    Auth Routes

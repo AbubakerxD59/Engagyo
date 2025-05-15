@@ -1,5 +1,5 @@
 <div class="d-flex">
-    @if ($role != 'Super Admin')
+    @if ($user->getRole() != 'Super Admin')
         @can('edit_user')
             <div>
                 <a href="{{ route('admin.users.edit', $user->id) }}" class="btn btn-outline-primary btn-sm">Edit</a>

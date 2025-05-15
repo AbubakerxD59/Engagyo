@@ -1,8 +1,7 @@
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
     <!-- Brand Logo -->
-    <a href="{{ route('admin.dashboard') }}" class="brand-link">
-        <img src="{{ site_logo() }}" alt="{{ env('APP_NAME', 'Engagyo') }}" class="brand-image" style="width: 220px;">
-        <span class="brand-text font-weight-light">{{ env('APP_NAME') }}</span>
+    <a href="{{ route('admin.dashboard') }}" class="brand-link d-flex justify-content-center">
+        <img src="{{ panel_logo() }}" alt="{{ env('APP_NAME', 'Engagyo') }}" class="brand-image" style="width: 100px;">
     </a>
     <!-- Sidebar -->
     <div class="sidebar">
@@ -25,7 +24,7 @@
                 data-accordion="false">
                 <li class="nav-item">
                     <a href="{{ route('admin.dashboard') }}"
-                        class="nav-link {{ request()->route()->getName() == 'dashboard' ? 'active' : '' }}">
+                        class="nav-link {{ request()->route()->getName() == 'admin.dashboard' ? 'active' : '' }}">
                         <i class="nav-icon fas fa-list-alt"></i>
                         <p>{{ __('partials.left_menu_dashboard') }}</p>
                     </a>

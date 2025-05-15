@@ -68,6 +68,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
         Route::name("automation.")->group(function () {
             Route::post("feed-url", "feedUrl")->name("feedUrl");
             Route::get("get-domain", "getDomain")->name("getDomain");
+            Route::post("save-filters", "saveFilters")->name("saveFilters");
             // Posts Routes
             Route::name("posts.")->group(function () {
                 Route::get("posts-dataTable", "posts")->name("dataTable");

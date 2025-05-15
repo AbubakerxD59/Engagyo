@@ -531,4 +531,26 @@ class AutomationController extends Controller
     {
         //    
     }
+
+    public function saveFilters(Request $request)
+    {
+        $user = Auth::user();
+        $selected_account = $request->selected_account;
+        $selected_type = $request->selected_type;
+        $domain = $request->has("domain") ? $request->domain : [];
+        if ($selected_account && $selected_type) {
+            $data = array(
+                "selected_account" => $selected_account,
+                "selected_type" => $selected_type,
+                "domain" => $domain,
+            );
+            $user->update([
+                "rss_filters" => $data
+            ]);
+        }
+        $response = [
+            "success" => true,
+        ];
+        return response()->json($response);
+    }
 }

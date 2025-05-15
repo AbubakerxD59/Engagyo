@@ -10,6 +10,10 @@ use App\Providers\RouteServiceProvider;
 
 class AuthController extends Controller
 {
+    public function redirect()
+    {
+        return redirect()->route("admin.showLogin");
+    }
     public function showLogin()
     {
         return view('auth.login');
@@ -34,7 +38,7 @@ class AuthController extends Controller
         }
 
         if ($response['success']) {
-            return redirect()->intended(RouteServiceProvider::HOME)->with('success', $response['message']);
+            return redirect()->intended(RouteServiceProvider::ADMIN_HOME)->with('success', $response['message']);
         } else {
             return redirect()->intended(RouteServiceProvider::INV_CRED)->with('error', $response['message']);
         }
@@ -44,6 +48,6 @@ class AuthController extends Controller
     {
         Auth::logout();
         session()->flash('success', 'auth.logout_success');
-        return redirect()->route('login');
+        return redirect()->route('admin.login');
     }
 }
