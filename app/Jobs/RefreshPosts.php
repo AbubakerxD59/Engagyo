@@ -21,7 +21,6 @@ class RefreshPosts implements ShouldQueue
      */
     public function __construct($data, $user_id)
     {
-        $this->post = new Post();
         $this->data = $data;
         $this->user_id = $user_id;
     }

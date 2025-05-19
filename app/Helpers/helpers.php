@@ -421,7 +421,7 @@ function timeslots()
     for ($i = 1; $i <= $hours; $i++) {
         for ($j = 0; $j < $minutes; $j += 10) {
             $j = $j ? $j : '0' . $j;
-            $time = $i > 10 ? $i . ':' . $j : "0" . $i . ':' . $j;
+            $time = $i >= 10 ? $i . ':' . $j : "0" . $i . ':' . $j;
             $timeslots[] = $time;
         }
     }
