@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Post;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Package;
@@ -354,7 +355,7 @@ function social_icon($type = null)
     return $logo;
 }
 
-function newDateTime($nextDate, $time, $day = 0)
+function newDateTime($nextDate, $time)
 {
     // if ($day) {
     //     $nextDate = date("Y-m-d", strtotime($nextDate . ' +' . $day . ' days'));
@@ -410,4 +411,18 @@ function getError($string)
     } else {
         return "Start marker not found.";
     }
+}
+
+function timeslots()
+{
+    $hours = 24;
+    $minutes = 60;
+    $timeslots = [];
+    for ($i = 1; $i <= $hours; $i++) {
+        for ($j = 10; $j <= $minutes; $j += 10) {
+            $time = $i > 10 ? $i . ':' . $j : "0" . $i . ':' . $j;
+            $timeslots[] = $time;
+        }
+    }
+    return $timeslots;
 }

@@ -24,12 +24,15 @@
                         </div>
                         <div class="col-md-4 form-group">
                             <label for="time">Time</label>
-                            <input type="time" name="time" id="time" class="form-control"
-                                onfocus="this.showPicker()" required>
+                            <select name="time[]" id="time"class="form-control select2" multiple>
+                                @foreach ($timeslots as $timeslot)
+                                    <option value="{{ $timeslot }}">{{ $timeslot }}</option>
+                                @endforeach
+                            </select>
                         </div>
                         <div class="col-md-4 form-group">
                             <label for="feed_url">Feed Url</label>
-                            <select name="feed_url[]" id="feed_url" class="form-control select2"multiple></select>
+                            <select name="feed_url[]" id="feed_url" class="form-control select2" multiple></select>
                             <div class="d-flex">
                             </div>
                         </div>

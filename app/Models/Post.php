@@ -93,14 +93,20 @@ class Post extends Model
 
     public function scopeDomainSearch($query, $id)
     {
-        if (count($id) > 0) {
+        if (is_array($id) && count($id) > 0) {
             $query->whereIn("domain_id", $id);
+        } else {
+            $query->where("domain_id", $id);
         }
     }
 
     public function scopeAccounts($query, $id)
     {
-        $query->whereIn("account_id", $id);
+        if (is_array($id) && count($id) > 0) {
+            $query->whereIn("account_id", $id);
+        } else {
+            $query->where("account_id", $id);
+        }
     }
 
     public function scopePublished($query)
@@ -126,6 +132,11 @@ class Post extends Model
     public function scopePast($query, $date_time)
     {
         $query->where("publish_date", "<=", $date_time);
+    }
+
+    public function scopeNext($query, $date_time)
+    {
+        $query->where("publish_date", ">=", $date_time);
     }
 
     public function getDomain()
@@ -160,7 +171,7 @@ class Post extends Model
 
     public function nextTime($search, $time)
     {
-        $lastPost = $this->exist($search)->latest()->first();
+        $lastPost = $this->exist($search)->orderByDesc('publish_date')->first();
         if ($lastPost) {
             $lastPublisDate = $lastPost->publish_date;
             $nextDate = date("Y-m-d", strtotime($lastPublisDate . " +1 days"));

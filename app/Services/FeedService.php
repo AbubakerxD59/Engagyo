@@ -60,7 +60,7 @@ class FeedService
                             "domain_id" => $this->data["domain_id"],
                             "url" => $item["link"],
                             "image" => isset($item["image"]) ? $item["image"] : no_image(),
-                            "publish_date" => newDateTime($nextTime, $this->data["time"], $key - 1),
+                            "publish_date" => newDateTime($nextTime, $this->data["time"]),
                             "status" => 0,
                         ]);
                     }

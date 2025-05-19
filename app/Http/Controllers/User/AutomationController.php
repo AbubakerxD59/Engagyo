@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\User;
 
-use App\Services\HtmlParseService;
 use Feed;
 use Exception;
 use App\Models\Page;
@@ -18,9 +17,12 @@ use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use App\Services\TestFeedService;
 use App\Jobs\PublishPinterestPost;
+use App\Services\HtmlParseService;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
+use App\Jobs\RefreshPosts;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\File;
 
 class AutomationController extends Controller
 {
@@ -48,7 +50,8 @@ class AutomationController extends Controller
     public function index()
     {
         $user = Auth::user();
-        return view("user.automation.index", compact("user"));
+        $timeslots = timeslots();
+        return view("user.automation.index", compact("user", "timeslots"));
     }
 
     public function posts(Request $request)
@@ -116,9 +119,13 @@ class AutomationController extends Controller
     {
         $id = $request->id;
         if ($id) {
+            $user = Auth::user();
             $post = $this->post->find($id);
             if ($post) {
-                $post->delete();
+                $postData = $post->toArray();
+                if ($post->delete()) {
+                    RefreshPosts::dispatch($postData, $user->id);
+                }
                 $response = array(
                     "success" => true,
                     "message" => "Post deleted Successfully!"
@@ -183,7 +190,7 @@ class AutomationController extends Controller
         $user = Auth::user();
         $type = $request->type;
         $domains = $request->url;
-        $time = $request->time;
+        $times = $request->time;
         $mode = 0;
         if ($type == 'pinterest') {
             $account = $this->board->find($request->account);
@@ -195,73 +202,75 @@ class AutomationController extends Controller
             $account_id = $account ? $account->page_id : '';
         }
         if ($account) {
-            foreach ($domains as $domain) {
-                $parsedUrl = parse_url($domain);
-                if (isset($parsedUrl['host'])) {
-                    $urlDomain = $parsedUrl["host"];
-                    if (isset($parsedUrl["path"])) {
-                        $category = str_contains($parsedUrl["path"], "rss") || str_contains($parsedUrl["path"], "feed") ? null : $parsedUrl["path"];
+            foreach ($times as $time) {
+                foreach ($domains as $domain) {
+                    $parsedUrl = parse_url($domain);
+                    if (isset($parsedUrl['host'])) {
+                        $urlDomain = $parsedUrl["host"];
+                        if (isset($parsedUrl["path"])) {
+                            $category = str_contains($parsedUrl["path"], "rss") || str_contains($parsedUrl["path"], "feed") ? null : $parsedUrl["path"];
+                        } else {
+                            $category = null;
+                        }
                     } else {
+                        $urlDomain = $parsedUrl["path"];
                         $category = null;
                     }
-                } else {
-                    $urlDomain = $parsedUrl["path"];
-                    $category = null;
-                }
 
-                $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
-                $domain = $this->domain->exists($search)->first();
-                if (!$domain) {
-                    $domain = $this->domain->create([
+                    $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
+                    $domain = $this->domain->exists($search)->first();
+                    if (!$domain) {
+                        $domain = $this->domain->create([
+                            "user_id" => $user->id,
+                            "account_id" => $account_id,
+                            "type" => $type,
+                            "name" => $urlDomain,
+                            "category" => $category,
+                            "time" => $time
+                        ]);
+                        $domain_id = $domain->id;
+                    } else {
+                        $domain_id = $domain->id;
+                        $domain->update([
+                            "time" => $time
+                        ]);
+                    }
+                    $posts = $domain->posts()->userSearch($user->id)->get();
+                    $exist = count($posts) > 0 ? true : false;
+                    if ($exist) {
+                        $link = $urlDomain;
+                    } else {
+                        $link = !empty($category) ? $urlDomain . $category : $urlDomain;
+                    }
+
+                    $data = [
+                        "url" => $link,
+                        "category" => $category,
+                        "domain_id" => $domain_id,
                         "user_id" => $user->id,
                         "account_id" => $account_id,
                         "type" => $type,
-                        "name" => $urlDomain,
-                        "category" => $category,
-                        "time" => $time
-                    ]);
-                    $domain_id = $domain->id;
-                } else {
-                    $domain_id = $domain->id;
-                    $domain->update([
-                        "time" => $time
-                    ]);
-                }
-                $posts = $domain->posts()->userSearch($user->id)->get();
-                $exist = count($posts) > 0 ? true : false;
-                if ($exist) {
-                    $link = $urlDomain;
-                } else {
-                    $link = !empty($category) ? $urlDomain . $category : $urlDomain;
-                }
-
-                $data = [
-                    "url" => $link,
-                    "category" => $category,
-                    "domain_id" => $domain_id,
-                    "user_id" => $user->id,
-                    "account_id" => $account_id,
-                    "type" => $type,
-                    "time" => $time,
-                    "mode" => $mode,
-                    "exist" => $exist
-                ];
-
-                try {
-                    $response = array(
-                        "success" => true,
-                        "message" => "Your posts are being Fetched!"
-                    );
-                    // Update last fetch
-                    $account->update([
-                        "last_fetch" => date("Y-m-d H:i A")
-                    ]);
-                    FetchPost::dispatch($data);
-                } catch (Exception $e) {
-                    $response = [
-                        "success" => false,
-                        "message" => $e->getMessage()
+                        "time" => $time,
+                        "mode" => $mode,
+                        "exist" => $exist
                     ];
+
+                    try {
+                        $response = array(
+                            "success" => true,
+                            "message" => "Your posts are being Fetched!"
+                        );
+                        // Update last fetch
+                        $account->update([
+                            "last_fetch" => date("Y-m-d H:i A")
+                        ]);
+                        FetchPost::dispatch($data);
+                    } catch (Exception $e) {
+                        $response = [
+                            "success" => false,
+                            "message" => $e->getMessage()
+                        ];
+                    }
                 }
             }
         } else {
