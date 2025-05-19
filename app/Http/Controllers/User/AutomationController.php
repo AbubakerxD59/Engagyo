@@ -491,7 +491,11 @@ class AutomationController extends Controller
                 $account = $this->page->userSearch($user->id)->where("id", $id)->first();
             }
             if ($account) {
-                $account->posts()->domainSearch($domain)->delete();
+                $accounts = $account->posts();
+                if (count($domain) > 0) {
+                    $accounts = $accounts->domainSearch($domain);
+                }
+                $accounts->delete();
                 $response = array(
                     "success" => true,
                     "message" => "Posts deleted Successfully!!"
