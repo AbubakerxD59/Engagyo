@@ -64,8 +64,10 @@ class Post extends Model
     {
         $query->where("user_id", $search["user_id"])
             ->where("account_id", $search["account_id"])
-            ->where("type", $search["type"])
-            ->where("domain_id", $search["domain_id"]);
+            ->where("type", $search["type"]);
+        if (isset($search["domain_id"])) {
+            $query->where("domain_id", $search["domain_id"]);
+        }
         if (isset($search["url"])) {
             $query->where("url", "like", "%" . $search["url"] . "%");
         }

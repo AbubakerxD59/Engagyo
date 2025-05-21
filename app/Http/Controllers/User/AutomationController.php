@@ -226,13 +226,13 @@ class AutomationController extends Controller
                             "type" => $type,
                             "name" => $urlDomain,
                             "category" => $category,
-                            "time" => $time
+                            "time" => $times
                         ]);
                         $domain_id = $domain->id;
                     } else {
                         $domain_id = $domain->id;
                         $domain->update([
-                            "time" => $time
+                            "time" => $times
                         ]);
                     }
                     $posts = $domain->posts()->userSearch($user->id)->get();
@@ -491,7 +491,7 @@ class AutomationController extends Controller
                 $account = $this->page->userSearch($user->id)->where("id", $id)->first();
             }
             if ($account) {
-                $accounts = $account->posts();
+                $accounts = $account->posts()->notPublished();
                 if (count($domain) > 0) {
                     $accounts = $accounts->domainSearch($domain);
                 }

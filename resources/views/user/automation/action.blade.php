@@ -6,16 +6,16 @@
                 Publish
             </button>
         </div>
+        <div>
+            <a class="btn btn-outline-primary btn-sm post_edit" data-toggle="modal" data-target="#editPostModal"
+                data-body="{{ $post }}">
+                Edit
+            </a>
+        </div>
+        <div>
+            <button type="submit" class="btn btn-outline-danger btn-sm post-delete" data-id="{{ $post->id }}">
+                Delete
+            </button>
+        </div>
     @endif
-    <div>
-        <a class="btn btn-outline-primary btn-sm post_edit" data-toggle="modal" data-target="#editPostModal"
-            data-body="{{ $post }}">
-            Edit
-        </a>
-    </div>
-    <div>
-        <button type="submit" class="btn btn-outline-danger btn-sm post-delete" data-id="{{ $post->id }}">
-            Delete
-        </button>
-    </div>
 </div>
