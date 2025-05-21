@@ -16,6 +16,7 @@ class FetchPost implements ShouldQueue
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $tries = 1;
+    public $timeout = 120;
     protected $data;
 
     /**
