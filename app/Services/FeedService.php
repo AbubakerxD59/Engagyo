@@ -152,7 +152,6 @@ class FeedService
                         libxml_use_internal_errors(true);
                         $xml = simplexml_load_string($childXmlContent);
                         libxml_clear_errors();
-                        $count = 1;
                         foreach ($xml->url as $url) {
                             if ($count >= $max) {
                                 break;
