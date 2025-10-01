@@ -210,6 +210,7 @@
             // process dropzone queue
             function processQueueWithDelay(filesCopy) {
                 if (current_file < filesCopy.length) {
+                    console.log('here');
                     var file = filesCopy[current_file];
                     dropZone.processFile(file);
                 } else {
