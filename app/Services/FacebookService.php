@@ -262,10 +262,53 @@ class FacebookService
         return $response;
     }
 
+    public function photo($id, $access_token, $post)
+    {
+        try {
+            $publish = $this->facebook->post('/me/photos', $post, $access_token);
+            info(json_encode($publish));
+            $response = [
+                "success" => true,
+                "data" => $publish
+            ];
+        } catch (FacebookResponseException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        } catch (FacebookSDKException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        }
+        $post = $this->post->find($id);
+        if ($response["success"]) {
+            $contentOnly = $response["data"];
+            $graphNode = $contentOnly->getGraphNode();
+            $post_id = $graphNode['id'];
+            $post->update([
+                "post_id" => $post_id,
+                "status" => 1,
+                "response" => "Post published Successfully!"
+            ]);
+        } else {
+            $post->update([
+                "status" => -1,
+                "response" => $response["message"]
+            ]);
+        }
+        return $response;
+    }
+
     public function postComment($post_id, $access_token, $comment)
     {
         try {
             $publish = $this->facebook->post('/' . $post_id . '/comments', ["message" => $comment], $access_token);
+            info($post_id);
+            info(json_encode($publish));
             $response = [
                 "success" => true,
                 "data" => $publish

@@ -43,12 +43,13 @@ class PublishFacebookPost implements ShouldQueue
             $publish_response = $facebookService->createLink($this->id, $this->access_token, $this->data);
         } elseif ($this->type == "content_only") {
             $publish_response = $facebookService->contentOnly($this->id, $this->access_token, $this->data);
+        } elseif ($this->type == "photo") {
+            $publish_response = $facebookService->photo($this->id, $this->access_token, $this->data);
         }
         if ($publish_response["success"]) {
             $post_id = $publish_response["data"]->getGraphNode() ? $publish_response["data"]->getGraphNode()["id"] : null;
             if ($post_id) {
-                $comment_response = $facebookService->postComment($post_id, $this->access_token, $this->comment);
-                dd($comment_response);
+                $facebookService->postComment($post_id, $this->access_token, $this->comment);
             }
         }
     }

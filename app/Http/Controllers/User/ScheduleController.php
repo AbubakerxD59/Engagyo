@@ -83,6 +83,10 @@ class ScheduleController extends Controller
         $content = $request->get("content") ?? null;
         $comment = $request->get("comment") ?? null;
         $file = $request->hasFile("files") ? true : false;
+        $image = null;
+        if ($file) {
+            $image = saveImage($request->file("files"));
+        }
         foreach ($accounts as $account) {
             if ($account->type == "facebook") {
                 $facebook = Facebook::where("fb_id", $account->fb_id)->first();
@@ -94,6 +98,7 @@ class ScheduleController extends Controller
                         "type" => "facebook_schedule",
                         "title" => $content,
                         "comment" => $comment,
+                        "image" => $image,
                         "publish_date" => date("Y-m-d H:i:s"),
                         "status" => 0,
                     ]);
@@ -106,14 +111,19 @@ class ScheduleController extends Controller
                     $postData = array();
                     if ($file) {
                         $type = "photo";
-                        $postData = [];
+                        $postData = ["message" => $content, "source" => $post->image];
                     } else {
                         $type = "content_only";
                         $postData = ["message" => $content];
                     }
-                    $publish_response = PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type);
+                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                 }
             }
         }
+        $response = array(
+            "success" => true,
+            "message" => "Your posts are being Published!"
+        );
+        return response()->json($response);
     }
 }
