@@ -219,6 +219,7 @@ class FacebookService
                 "response" => $response["message"]
             ]);
         }
+        return $response;
     }
 
     public function contentOnly($id, $access_token, $post)
@@ -244,8 +245,8 @@ class FacebookService
         }
         $post = $this->post->find($id);
         if ($response["success"]) {
-            $createLink = $response["data"];
-            $graphNode = $createLink->getGraphNode();
+            $contentOnly = $response["data"];
+            $graphNode = $contentOnly->getGraphNode();
             $post_id = $graphNode['id'];
             $post->update([
                 "post_id" => $post_id,
@@ -258,5 +259,30 @@ class FacebookService
                 "response" => $response["message"]
             ]);
         }
+        return $response;
+    }
+
+    public function postComment($post_id, $access_token, $comment)
+    {
+        try {
+            $publish = $this->facebook->post('/' . $post_id . '/comments', ["message" => $comment], $access_token);
+            $response = [
+                "success" => true,
+                "data" => $publish
+            ];
+        } catch (FacebookResponseException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        } catch (FacebookSDKException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        }
+        return $response;
     }
 }

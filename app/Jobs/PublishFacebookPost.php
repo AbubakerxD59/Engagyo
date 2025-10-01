@@ -20,15 +20,17 @@ class PublishFacebookPost implements ShouldQueue
     private $post;
     private $access_token;
     private $type;
+    private $comment;
     /**
      * Create a new job instance.
      */
-    public function __construct($id, $data, $access_token, $type)
+    public function __construct($id, $data, $access_token, $type, $comment = null)
     {
         $this->id = $id;
         $this->data = $data;
         $this->access_token = $access_token;
         $this->type = $type;
+        $this->comment = $comment;
     }
 
     /**
@@ -37,11 +39,17 @@ class PublishFacebookPost implements ShouldQueue
     public function handle(): void
     {
         $facebookService = new facebookService();
-        if($this->type == "link"){
-            $facebookService->createLink($this->id, $this->access_token, $this->data);
+        if ($this->type == "link") {
+            $publish_response = $facebookService->createLink($this->id, $this->access_token, $this->data);
+        } elseif ($this->type == "content_only") {
+            $publish_response = $facebookService->contentOnly($this->id, $this->access_token, $this->data);
         }
-        elseif($this->type == "content_only"){
-            $facebookService->contentOnly($this->id, $this->access_token, $this->data);
+        if ($publish_response["success"]) {
+            $post_id = $publish_response["data"]->getGraphNode() ? $publish_response["data"]->getGraphNode()["id"] : null;
+            if ($post_id) {
+                $comment_response = $facebookService->postComment($post_id, $this->access_token, $this->comment);
+                dd($comment_response);
+            }
         }
     }
 

@@ -112,7 +112,6 @@ class ScheduleController extends Controller
                         $postData = ["message" => $content];
                     }
                     $publish_response = PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type);
-                    dd($publish_response);
                 }
             }
         }
