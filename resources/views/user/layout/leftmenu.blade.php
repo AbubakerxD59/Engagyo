@@ -20,6 +20,17 @@
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column py-2" data-widget="treeview" role="menu"
                 data-accordion="false">
+                {{-- Schedule --}}
+                <?php
+                $schedule = ['panel.schedule'];
+                ?>
+                <li class="nav-item">
+                    <a href="{{ route('panel.schedule') }}"
+                        class="nav-link {{ in_array(request()->route()->getName(), $schedule) ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-calendar"></i>
+                        <p>Schedule</p>
+                    </a>
+                </li>
                 {{-- Automation --}}
                 <?php
                 $automation = ['panel.automation'];

@@ -64,6 +64,11 @@ class Page extends Model
         $query->where('status', '1');
     }
 
+    public function scopewhereScheduledActive($query)
+    {
+        $query->where("schedule_status", "active");
+    }
+
     protected function type(): Attribute
     {
         return Attribute::make(

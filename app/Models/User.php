@@ -144,9 +144,9 @@ class User extends Authenticatable
     public function getAccounts()
     {
         // Pinterest Boards
-        $boards = $this->boards()->get();
+        $boards = $this->boards()->with("pinterest")->get();
         // Facebook Pages
-        $pages = $this->pages()->get();
+        $pages = $this->pages()->with("facebook")->get();
 
         $accounts = $boards->merge($pages);
         return $accounts;
@@ -156,5 +156,16 @@ class User extends Authenticatable
     {
         $domains = $this->domains()->where("account_id", $id)->get();
         return count($domains) > 0 ? $domains : [];
+    }
+
+    public function getScheduledActiveAccounts()
+    {
+        // Pinterest Boards
+        $boards = $this->boards()->with("pinterest")->whereScheduledActive()->get();
+        // Facebook Pages
+        $pages = $this->pages()->with("facebook")->whereScheduledActive()->get();
+
+        $accounts = $boards->merge($pages);
+        return $accounts;
     }
 }

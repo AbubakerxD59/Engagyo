@@ -387,23 +387,17 @@ class AutomationController extends Controller
                     if ($page) {
                         $facebook = $this->facebook->where("fb_id", $page->fb_id)->first();
                         if ($facebook) {
+                            $access_token = $page->access_token;
                             if (!$page->validToken()) {
-                                $token = $this->facebookService->refreshAccessToken($page->access_token);
+                                $token = $this->facebookService->refreshAccessToken($page->access_token, $page->id);
                                 $data = $token["data"];
-                                $meta_data = $data["metadata"];
-                                $access_token = $data["access_token"];;
-                                $page->update([
-                                    "access_token" => $access_token,
-                                    "expires_in" => $meta_data->getField("data_access_expires_at"),
-                                ]);
-                            } else {
-                                $access_token = $page->access_token;
+                                $access_token = $data["access_token"];
                             }
                             $postData = [
                                 'link' => $post->url,
                                 'message' => $post->title,
                             ];
-                            PublishFacebookPost::dispatch($post->id, $postData, $access_token);
+                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link");
                             $response = array(
                                 "success" => true,
                                 "message" => "Your post is being Published!"

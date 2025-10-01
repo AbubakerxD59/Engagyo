@@ -329,11 +329,11 @@ function social_logo($type = null)
 {
     $type = strtolower($type);
     if ($type == 'facebook') {
-        $logo = asset("assets/frontend/images/Icons/facebook-circle.svg");
+        $logo = asset("assets/img/icons/facebook-circle.svg");
     } elseif ($type == 'instagram') {
-        $logo = asset("assets/frontend/images/Icons/instagram.png");
+        $logo = asset("assets/img/icons/instagram.png");
     } elseif ($type == 'pinterest') {
-        $logo = asset("assets/frontend/images/Icons/pinterest-circle.svg");
+        $logo = asset("assets/img/icons/pinterest-circle.svg");
     } else {
         $logo = "";
     }

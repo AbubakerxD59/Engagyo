@@ -20,6 +20,7 @@ use Illuminate\Support\Facades\Route;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
 Route::get("/admin", [AuthController::class, 'redirect']);
 // Admin Routes
 Route::prefix("admin/")->name("admin.")->group(function () {
@@ -75,3 +76,7 @@ Route::prefix("admin/")->name("admin.")->group(function () {
 
 // Frontend routes
 require __DIR__ . '/frontend.php';
+
+// User Panel routes
+require __DIR__ . '/user.php';
+

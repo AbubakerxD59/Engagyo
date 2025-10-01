@@ -545,3 +545,9 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
 }
 
 /* Toggle button CSS */
+
+/* dropzone css */
+.dropzone {
+    border: 2px dashed #d9d9d9 !important;
+}
+/* dropzone css */

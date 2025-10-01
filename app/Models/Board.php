@@ -17,7 +17,8 @@ class Board extends Model
         "name",
         "status",
         "last_fetch",
-        "shuffle"
+        "shuffle",
+        "schedule_status"
     ];
 
     protected $appends = ["type"];
@@ -32,11 +33,13 @@ class Board extends Model
         return $this->belongsTo(Pinterest::class, 'pin_id', 'pin_id');
     }
 
-    public function posts(){
+    public function posts()
+    {
         return $this->hasMany(Post::class, 'account_id', 'board_id');
     }
 
-    public function domains(){
+    public function domains()
+    {
         return $this->hasMany(Domain::class, 'account_id', 'board_id');
     }
 
@@ -53,6 +56,11 @@ class Board extends Model
     public function scopeActive($query)
     {
         $query->where('status', '1');
+    }
+
+    public function scopewhereScheduledActive($query)
+    {
+        $query->where("schedule_status", "active");
     }
 
     public function scopeConnected($query, $search)

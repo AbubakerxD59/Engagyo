@@ -19,14 +19,16 @@ class PublishFacebookPost implements ShouldQueue
     private $data;
     private $post;
     private $access_token;
+    private $type;
     /**
      * Create a new job instance.
      */
-    public function __construct($id, $data, $access_token)
+    public function __construct($id, $data, $access_token, $type)
     {
         $this->id = $id;
         $this->data = $data;
         $this->access_token = $access_token;
+        $this->type = $type;
     }
 
     /**
@@ -35,7 +37,12 @@ class PublishFacebookPost implements ShouldQueue
     public function handle(): void
     {
         $facebookService = new facebookService();
-        $facebookService->createLink($this->id, $this->access_token, $this->data);
+        if($this->type == "link"){
+            $facebookService->createLink($this->id, $this->access_token, $this->data);
+        }
+        elseif($this->type == "content_only"){
+            $facebookService->contentOnly($this->id, $this->access_token, $this->data);
+        }
     }
 
     public function failed(\Throwable $exception)

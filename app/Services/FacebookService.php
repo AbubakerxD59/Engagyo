@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Page;
 use App\Models\Post;
 use Facebook\Facebook;
 use Facebook\Exceptions\FacebookSDKException;
@@ -68,13 +69,18 @@ class FacebookService
         return $response;
     }
 
-    public function refreshAccessToken($access_token)
+    public function refreshAccessToken($access_token, $page_id)
     {
         try {
             $getOAuth2Client = $this->facebook->getOAuth2Client();
             $access_token = $getOAuth2Client->getLongLivedAccessToken($access_token);
             $tokenMetadata = $getOAuth2Client->debugToken($access_token);
             $access_token = $access_token->getValue();
+            $page = Page::search($page_id)->first();
+            $page->update([
+                "access_token" => $access_token,
+                "expires_in" => $tokenMetadata->getField("data_access_expires_at"),
+            ]);
             $response = [
                 "success" => true,
                 "data" => [
@@ -177,6 +183,45 @@ class FacebookService
     }
 
     public function createLink($id, $access_token, $post)
+    {
+        try {
+            $publish = $this->facebook->post('/me/feed', $post, $access_token);
+            $response = [
+                "success" => true,
+                "data" => $publish
+            ];
+        } catch (FacebookResponseException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        } catch (FacebookSDKException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        }
+        $post = $this->post->find($id);
+        if ($response["success"]) {
+            $createLink = $response["data"];
+            $graphNode = $createLink->getGraphNode();
+            $post_id = $graphNode['id'];
+            $post->update([
+                "post_id" => $post_id,
+                "status" => 1,
+                "response" => "Post published Successfully!"
+            ]);
+        } else {
+            $post->update([
+                "status" => -1,
+                "response" => $response["message"]
+            ]);
+        }
+    }
+
+    public function contentOnly($id, $access_token, $post)
     {
         try {
             $publish = $this->facebook->post('/me/feed', $post, $access_token);

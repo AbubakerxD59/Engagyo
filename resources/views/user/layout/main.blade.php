@@ -36,6 +36,8 @@
     <!-- Theme style -->
     <link rel="stylesheet" href="{{ asset('assets/css/adminlte.min.css') }}">
     <link rel="stylesheet" href="{{ asset('assets/css/custom-styles.css') }}">
+    <!-- dropzonejs -->
+    <link href="https://unpkg.com/dropzone@6.0.0-beta.1/dist/dropzone.css" rel="stylesheet" type="text/css" />
     @stack('styles')
 </head>
 
@@ -97,6 +99,8 @@
     <script src="{{ asset('assets/js/adminlte.js') }}"></script>
     {{-- Select 2 --}}
     <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+    <!-- dropzonejs -->
+    <script src="https://unpkg.com/dropzone@6.0.0-beta.1/dist/dropzone-min.js"></script>
     <!--app JS-->
     <script src="{{ asset('assets/js/app.js') }}"></script>
     <script type="text/javascript">
@@ -158,8 +162,15 @@
             }
             // Select2
             $('.select2').select2();
+            // loader for ajax calls
+            var loaderHtml = function() {
+                var ajax_loader = '<span class="ajax_loader" data-title="loader"></span>';
+                return ajax_loader;
+            }
         });
     </script>
+    {{-- custom js --}}
+    <script src="{{ asset('assets/js/custom.js') }}"></script>
 </body>
 
 </html>

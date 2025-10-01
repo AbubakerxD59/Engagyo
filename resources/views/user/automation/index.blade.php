@@ -1,10 +1,8 @@
 @extends('user.layout.main')
-@section('title', 'Accounts')
+@section('title', 'Automation')
 @section('page_content')
     <div class="page-content">
-        <div class="content-header clearfix">
-            <h1 class="float-left">Automation</h1>
-        </div>
+        <div class="content-header clearfix"></div>
         <section class="content">
             <div class="container-fluid">
                 <div class="card">

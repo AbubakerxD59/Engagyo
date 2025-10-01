@@ -27,8 +27,8 @@
                                     <a href="{{ route('panel.accounts.facebook', $fb->fb_id) }}">
                                         <div class="d-flex align-items-center">
                                             <picture>
-                                                <img src="{{ $fb->profile_image }}" alt="{{ no_image() }}"
-                                                    class="rounded-pill logo">
+                                                <img src="{{ $fb->profile_image }}" class="rounded-pill logo"
+                                                    onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
                                             </picture>
                                             <div class="account_name">{{ $fb->username }}</div>
                                         </div>
@@ -71,8 +71,8 @@
                                     <a href="{{ route('panel.accounts.pinterest', $pin->pin_id) }}">
                                         <div class="d-flex align-items-center">
                                             <picture>
-                                                <img src="{{ $pin->profile_image }}" alt="{{ no_image() }}"
-                                                    class="rounded-pill logo">
+                                                <img src="{{ $pin->profile_image }}" class="rounded-pill logo"
+                                                    onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
                                             </picture>
                                             <div class="account_name">{{ $pin->username }}</div>
                                         </div>
