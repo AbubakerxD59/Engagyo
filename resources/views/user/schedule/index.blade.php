@@ -167,8 +167,7 @@
                         this.removeFile(file);
                         if (this.getUploadingFiles().length === 0 &&
                             this.getQueuedFiles().length === 0) {
-                            $("#content").val('');
-                            $("#comment").val('');
+                            resetPostArea();
                         }
                     });
                 }
@@ -176,6 +175,7 @@
             // publish post
             $('.publish_btn').on('click', function() {
                 var isValid = false;
+                action_name = "publish";
                 // check accounts
                 $('.account').each(function() {
                     if ($(this).hasClass("shadow border-success")) {
@@ -190,13 +190,18 @@
                         if (empty(content)) {
                             isValid = false;
                         }
-                    }
-                    if (isValid) {
-                        action_name = "publish";
-                        var filesCopy = [...dropZone.files];
-                        processQueueWithDelay(filesCopy);
+                        if (isValid) {
+                            processContentOnly();
+                        } else {
+                            toastr.error("Please provide Post title!");
+                        }
                     } else {
-                        toastr.error("Please provide Post title!");
+                        if (isValid) {
+                            var filesCopy = [...dropZone.files];
+                            processQueueWithDelay(filesCopy);
+                        } else {
+                            toastr.error("Please provide Post title!");
+                        }
                     }
                 } else {
                     toastr.error("Please select atleast one channel!");
@@ -209,10 +214,37 @@
                     dropZone.processFile(file);
                 } else {
                     // All files processed
-                    $("#content").val('');
-                    $("#comment").val('');
+                    resetPostArea
                     current_file = 0;
                 }
+            }
+            // process content only
+            var processContentOnly = function() {
+                var content = $('#content').val();
+                var comment = $('#comment').val();
+                $.ajax({
+                    url: "{{ route('panel.schedule.process.post') }}",
+                    type: "POST",
+                    data: {
+                        "_token": "{{ csrf_token() }}",
+                        "content": content,
+                        "comment": comment,
+                        "action": action_name
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            resetPostArea();
+                            toastr.success(response.message);
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    }
+                })
+            }
+            // reset post area
+            var resetPostArea = function() {
+                $('#content').val('');
+                $('#comment').val('');
             }
         });
     </script>
