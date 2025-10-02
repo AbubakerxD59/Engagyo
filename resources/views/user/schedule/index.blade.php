@@ -160,19 +160,16 @@
                     });
                     // request success
                     this.on("success", function(file, response) {
-                        console.log(dropZone.files);
-                        console.log(response);
-                        processQueueWithDelay(dropZone.files);
+                        response = response.original;
                         if (response.success) {
                             toastr.success(response.message);
                         } else {
                             toastr.error(response.message);
                         }
+                        processQueueWithDelay(dropZone.files);
                     });
                     // request complete
                     this.on("complete", function(file) {
-                        console.log(file);
-                        console.log(response);
                         this.removeFile(file);
                         if (this.getUploadingFiles().length === 0 &&
                             this.getQueuedFiles().length === 0) {
@@ -218,8 +215,8 @@
             });
             // process dropzone queue
             function processQueueWithDelay(filesCopy) {
-                if (current_file < filesCopy.length) {
-                    console.log('here');
+                console.log(filesCopy);
+                if (filesCopy.length > current_file) {
                     var file = filesCopy[current_file];
                     dropZone.processFile(file);
                 } else {

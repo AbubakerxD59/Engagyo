@@ -124,6 +124,7 @@ class ScheduleController extends Controller
             "success" => true,
             "message" => "Your posts are being Published!"
         );
+        sleep(1);
         return response()->json($response);
     }
 }
