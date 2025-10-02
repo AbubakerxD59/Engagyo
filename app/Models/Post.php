@@ -141,6 +141,10 @@ class Post extends Model
         $query->where("publish_date", ">=", $date_time);
     }
 
+    public function scopeIsRss($query){
+        $query->whereIn("type", ["pinterest", "facebook"]);
+    }
+
     public function getDomain()
     {
         $domain = $this->domain()->first();
