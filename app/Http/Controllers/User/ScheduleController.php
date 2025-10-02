@@ -94,7 +94,7 @@ class ScheduleController extends Controller
                     // store in db
                     $post = Post::create([
                         "user_id" => $user->id,
-                        "account_id" => $account->id,
+                        "account_id" => $account->page_id,
                         "type" => "facebook_schedule",
                         "title" => $content,
                         "comment" => $comment,

@@ -117,7 +117,7 @@
                 paramName: "files",
                 maxFilesize: 256,
                 acceptedFiles: 'image/*, video/*',
-                parallelUploads: 1,
+                parallelUploads: 100,
                 addRemoveLinks: true,
                 dictRemoveFile: "×",
                 dictCancelUpload: "X",
@@ -166,11 +166,11 @@
                         } else {
                             toastr.error(response.message);
                         }
+                        this.removeFile(file);
                         processQueueWithDelay(dropZone.files);
                     });
                     // request complete
                     this.on("complete", function(file) {
-                        this.removeFile(file);
                         if (this.getUploadingFiles().length === 0 &&
                             this.getQueuedFiles().length === 0) {
                             resetPostArea();
