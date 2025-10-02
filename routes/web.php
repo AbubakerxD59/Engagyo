@@ -80,3 +80,8 @@ require __DIR__ . '/frontend.php';
 // User Panel routes
 require __DIR__ . '/user.php';
 
+// clear log file
+Route::get("clear/log", function(){
+    clearLogFile();
+});
+

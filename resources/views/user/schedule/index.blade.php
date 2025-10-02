@@ -161,6 +161,11 @@
                     // request success
                     this.on("success", function(file, response) {
                         processQueueWithDelay(dropZone.files);
+                        if (response.success) {
+                            toastr.success(response.message);
+                        } else {
+                            toastr.error(response.message);
+                        }
                     });
                     // request complete
                     this.on("complete", function(file) {
