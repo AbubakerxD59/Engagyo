@@ -9,6 +9,7 @@ use App\Models\Facebook;
 use Illuminate\Http\Request;
 use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
+use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 
@@ -83,9 +84,10 @@ class ScheduleController extends Controller
         $content = $request->get("content") ?? null;
         $comment = $request->get("comment") ?? null;
         $file = $request->hasFile("files") ? true : false;
-        $image = null;
         if ($file) {
             $image = saveImage($request->file("files"));
+        } else {
+            $image = null;
         }
         foreach ($accounts as $account) {
             if ($account->type == "facebook") {
@@ -112,7 +114,7 @@ class ScheduleController extends Controller
                     if ($file) {
                         $type = "photo";
                         $postData = ["caption" => $content, "url" => $post->image];
-                        info(json_encode($postData));
+                        Log::info(json_encode($postData));
                     } else {
                         $type = "content_only";
                         $postData = ["message" => $content];
