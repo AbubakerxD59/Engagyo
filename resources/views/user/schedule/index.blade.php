@@ -160,7 +160,7 @@
                     });
                     // request success
                     this.on("success", function(file, response) {
-                        response = JSON.parse(response);
+                        response = response.original;
                         if (response.success) {
                             toastr.success(response.message);
                         } else {
