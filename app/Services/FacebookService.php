@@ -266,7 +266,6 @@ class FacebookService
     {
         try {
             $publish = $this->facebook->post('/me/photos', $post, $access_token);
-            info(json_encode($publish));
             $response = [
                 "success" => true,
                 "data" => $publish
@@ -307,8 +306,6 @@ class FacebookService
     {
         try {
             $publish = $this->facebook->post('/' . $post_id . '/comments', ["message" => $comment], $access_token);
-            info($post_id);
-            info(json_encode($publish));
             $response = [
                 "success" => true,
                 "data" => $publish

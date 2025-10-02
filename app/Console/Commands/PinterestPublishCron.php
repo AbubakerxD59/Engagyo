@@ -31,7 +31,6 @@ class PinterestPublishCron extends Command
         $now = date("Y-m-d H:i");
         $posts = $post->notPublished()->past($now)->pinterest()->get();
         foreach ($posts as $key => $post) {
-            Log::info("post: " . json_encode($post));
             if ($post->status == "0") {
                 $user = $post->user()->first();
                 if ($user) {

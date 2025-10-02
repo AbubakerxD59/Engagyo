@@ -31,7 +31,6 @@ class FacebookPublishCron extends Command
         $now = date("Y-m-d H:i");
         $posts = $post->notPublished()->past($now)->facebook()->get();
         foreach ($posts as $key => $post) {
-            Log::info("post: " . json_encode($post));
             if ($post->status == "0") {
                 $user = $post->user()->first();
                 if ($user) {
@@ -55,7 +54,6 @@ class FacebookPublishCron extends Command
                                 'link' => $post->url,
                                 'message' => $post->title,
                             ];
-                            Log::info("data: " . json_encode($postData));
                             $facebookService->createLink($post->id, $access_token, $postData);
                         }
                     }

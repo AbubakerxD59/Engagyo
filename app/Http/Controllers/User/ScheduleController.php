@@ -89,6 +89,7 @@ class ScheduleController extends Controller
         } else {
             $image = null;
         }
+        dd($file, $image, $request->file("files"));
         foreach ($accounts as $account) {
             if ($account->type == "facebook") {
                 $facebook = Facebook::where("fb_id", $account->fb_id)->first();
