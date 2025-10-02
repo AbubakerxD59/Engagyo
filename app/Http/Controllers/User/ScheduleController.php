@@ -84,6 +84,7 @@ class ScheduleController extends Controller
         $content = $request->get("content") ?? null;
         $comment = $request->get("comment") ?? null;
         $file = $request->file("files") ? true : false;
+        dd($file, $request->file("files"));
         if ($file) {
             $image = saveImage($request->file("files"));
         } else {
