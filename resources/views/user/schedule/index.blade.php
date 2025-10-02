@@ -160,7 +160,7 @@
                     });
                     // request success
                     this.on("success", function(file, response) {
-                        response = response.original;
+                        response = JSON.parse(response);
                         if (response.success) {
                             toastr.success(response.message);
                         } else {
@@ -175,6 +175,10 @@
                             this.getQueuedFiles().length === 0) {
                             resetPostArea();
                         }
+                    });
+                    // request error
+                    this.on("error", function(file, response) {
+                        toastr.error(response.message);
                     });
                 }
             });

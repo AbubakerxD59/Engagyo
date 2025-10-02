@@ -11,6 +11,7 @@ use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use Exception;
 use Illuminate\Support\Facades\Auth;
 
 class ScheduleController extends Controller
@@ -78,57 +79,63 @@ class ScheduleController extends Controller
     }
     private function publishPost($request)
     {
-        $user = Auth::user();
-        // get scheduled active
-        $accounts = $user->getScheduledActiveAccounts();
-        $content = $request->get("content") ?? null;
-        $comment = $request->get("comment") ?? null;
-        $file = $request->file("files") ? true : false;
-        $image = $request->file("files");
-        dd($image, $image->extension(), $image->getClientOriginalName());
-        if ($file) {
-            $image = saveImage($request->file("files"));
-        } else {
-            $image = null;
-        }
-        foreach ($accounts as $account) {
-            if ($account->type == "facebook") {
-                $facebook = Facebook::where("fb_id", $account->fb_id)->first();
-                if ($facebook) {
-                    // store in db
-                    $post = Post::create([
-                        "user_id" => $user->id,
-                        "account_id" => $account->page_id,
-                        "type" => "facebook_schedule",
-                        "title" => $content,
-                        "comment" => $comment,
-                        "image" => $image,
-                        "publish_date" => date("Y-m-d H:i:s"),
-                        "status" => 0,
-                    ]);
-                    $access_token = $account->access_token;
-                    if (!$account->validToken()) {
-                        $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                        $data = $token["data"];
-                        $access_token = $data["access_token"];
+        try {
+            $user = Auth::user();
+            // get scheduled active
+            $accounts = $user->getScheduledActiveAccounts();
+            $content = $request->get("content") ?? null;
+            $comment = $request->get("comment") ?? null;
+            $file = $request->file("files") ? true : false;
+            $image = $request->file("files");
+            if ($file) {
+                $image = saveImage($request->file("files"));
+            } else {
+                $image = null;
+            }
+            foreach ($accounts as $account) {
+                if ($account->type == "facebook") {
+                    $facebook = Facebook::where("fb_id", $account->fb_id)->first();
+                    if ($facebook) {
+                        // store in db
+                        $post = Post::create([
+                            "user_id" => $user->id,
+                            "account_id" => $account->page_id,
+                            "type" => "facebook_schedule",
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "publish_date" => date("Y-m-d H:i:s"),
+                            "status" => 0,
+                        ]);
+                        $access_token = $account->access_token;
+                        if (!$account->validToken()) {
+                            $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
+                            $data = $token["data"];
+                            $access_token = $data["access_token"];
+                        }
+                        $postData = array();
+                        if ($file) {
+                            $type = "photo";
+                            $postData = ["caption" => $content, "url" => $post->image];
+                            Log::info(json_encode($postData));
+                        } else {
+                            $type = "content_only";
+                            $postData = ["message" => $content];
+                        }
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                     }
-                    $postData = array();
-                    if ($file) {
-                        $type = "photo";
-                        $postData = ["caption" => $content, "url" => $post->image];
-                        Log::info(json_encode($postData));
-                    } else {
-                        $type = "content_only";
-                        $postData = ["message" => $content];
-                    }
-                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                 }
             }
+            $response = array(
+                "success" => true,
+                "message" => "Your posts are being Published!"
+            );
+        } catch (Exception $e) {
+            $response = array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
         }
-        $response = array(
-            "success" => true,
-            "message" => "Your posts are being Published!"
-        );
         sleep(1);
         return response()->json($response);
     }
