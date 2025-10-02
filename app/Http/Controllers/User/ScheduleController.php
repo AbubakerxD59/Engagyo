@@ -112,6 +112,7 @@ class ScheduleController extends Controller
                     if ($file) {
                         $type = "photo";
                         $postData = ["caption" => $content, "url" => $post->image];
+                        info(json_encode($postData));
                     } else {
                         $type = "content_only";
                         $postData = ["message" => $content];
