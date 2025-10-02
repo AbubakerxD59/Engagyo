@@ -83,13 +83,12 @@ class ScheduleController extends Controller
         $accounts = $user->getScheduledActiveAccounts();
         $content = $request->get("content") ?? null;
         $comment = $request->get("comment") ?? null;
-        $file = $request->hasFile("files") ? true : false;
+        $file = $request->file("files") ? true : false;
         if ($file) {
             $image = saveImage($request->file("files"));
         } else {
             $image = null;
         }
-        dd($file, $image, $request->file("files"));
         foreach ($accounts as $account) {
             if ($account->type == "facebook") {
                 $facebook = Facebook::where("fb_id", $account->fb_id)->first();
