@@ -22,9 +22,9 @@ class HtmlParseService
         try {
             $response = $this->client->get($url, [], ['User-Agent' => $this->user_agent()]);
             if ($response["status"] == "200") {
-                if ($mode == 1) {
+                if ($mode == 1) { //for pinterest images
                     $pinterest = true;
-                } else { //for pinterest images
+                } else {
                     $pinterest = false;
                 }
                 $response = $response["body"];
@@ -113,8 +113,9 @@ class HtmlParseService
                 return false;
             }
         } catch (Exception $e) {
-            info("Error for url: " . $url . " message: " . $e->getMessage());
-            return false;
+            return array(
+                "message" => $e->getMessage()
+            );
         }
     }
 
