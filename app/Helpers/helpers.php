@@ -427,3 +427,12 @@ function timeslots()
     }
     return $timeslots;
 }
+
+function pinterestDimensions()
+{
+    $response = array(
+        "height" => array("1128", "900", "1000", "1024", "1349"),
+        "width" => array("564", "700", "1500", "512", "759"),
+    );
+    return $response;
+}

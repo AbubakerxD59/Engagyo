@@ -2,12 +2,8 @@
 
 namespace App\Services;
 
-use Feed;
 use Exception;
 use App\Models\Post;
-use SimpleXMLElement;
-use App\Models\Notification;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use Vedmant\FeedReader\Facades\FeedReader;
 use Illuminate\Http\Client\RequestException;
@@ -33,8 +29,9 @@ class FeedService
             "domain_id" => isset($data["domain_id"]) ? $data["domain_id"] : '',
             "url" => isset($data["url"]) ? $data["url"] : '',
         ];
-        $this->heightArray = array("1128", "900", "1000", "1024", "1349");
-        $this->widthArray = array("564", "700", "1500", "512", "759");
+        $pinterestDimensions = pinterestDimensions();
+        $this->heightArray = $pinterestDimensions["height"];
+        $this->widthArray = $pinterestDimensions["width"];
     }
     public function fetch()
     {
