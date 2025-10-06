@@ -27,11 +27,11 @@ class FeedService
         $this->dom = new HtmlParseService();
         $this->data = $data;
         $this->body = [
-            "user_id" => $data["user_id"],
-            "account_id" => $data["account_id"],
-            "type" => $data["type"],
-            "domain_id" => $data["domain_id"],
-            "url" => $data["url"],
+            "user_id" => isset($data["user_id"]) ? $data["user_id"] : '',
+            "account_id" => isset($data["account_id"]) ? $data["account_id"] : '',
+            "type" => isset($data["type"]) ? $data["type"] : '',
+            "domain_id" => isset($data["domain_id"]) ? $data["domain_id"] : '',
+            "url" => isset($data["url"]) ? $data["url"] : '',
         ];
         $this->heightArray = array("1128", "900", "1000", "1024", "1349");
         $this->widthArray = array("564", "700", "1500", "512", "759");
@@ -190,7 +190,7 @@ class FeedService
         }
     }
 
-    private function fetchUrlContent(string $url)
+    public function fetchUrlContent(string $url)
     {
         $context = stream_context_create([
             'http' => ['timeout' => 30]

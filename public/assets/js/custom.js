@@ -1,3 +1,4 @@
+// character count
 function getCharacterCount(inputElement) {
     var max = inputElement.data("max");
     var characterCount = 0;
@@ -9,6 +10,7 @@ function getCharacterCount(inputElement) {
     var text = characterCount + "/" + max + " characters";
     inputElement.next().html(text);
 }
+// check empty
 function empty(value) {
     if (value == "" || value == null || value == undefined) {
         return true;
@@ -16,6 +18,14 @@ function empty(value) {
     else {
         return false;
     }
+}
+// check link
+function checkLink(value) {
+    const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+    if (urlRegex.test(value)) {
+        return true;
+    }
+    return false;
 }
 $(document).ready(function () {
     // check counts

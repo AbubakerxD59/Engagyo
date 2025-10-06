@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\PromoCodeController;
 use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\FeatureController;
+use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\PackageController;
 use Illuminate\Support\Facades\Route;
 
@@ -74,6 +75,11 @@ Route::prefix("admin/")->name("admin.")->group(function () {
     });
 });
 
+// General Routes
+Route::name("general.")->controller(GeneralController::class)->group(function () {
+    Route::get('preview/link', 'previewLink')->name("previewLink");
+});
+
 // Frontend routes
 require __DIR__ . '/frontend.php';
 
@@ -81,7 +87,6 @@ require __DIR__ . '/frontend.php';
 require __DIR__ . '/user.php';
 
 // clear log file
-Route::get("clear/log", function(){
+Route::get("clear/log", function () {
     clearLogFile();
 });
-
