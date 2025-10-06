@@ -27,6 +27,8 @@
                                         <img style="width:35px;height:35px;" src="{{ $account->facebook?->profile_image }}"
                                             class="rounded-circle mr-2" alt="{{ social_logo('facebook') }}"
                                             onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
+                                        <img src="{{ social_logo('facebook') }}" alt=""
+                                            style="width: 20px; position:relative; right: 15%; top: 50%;">
                                         <b>{{ $account->name }}</b>
                                     </button>
                                 @elseif($account->type == 'pinterest')
@@ -37,6 +39,8 @@
                                         <img style="width:35px;height:35px;" src="{{ $account->pinterest?->profile_image }}"
                                             class="rounded-circle mr-2" alt="{{ social_logo('pinterest') }}"
                                             onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
+                                        <img src="{{ social_logo('pinterest') }}" alt=""
+                                            style="width: 20px; position:relative; right: 15%; top: 50%;">
                                         <b>{{ $account->name }}</b>
                                     </button>
                                 @endif
