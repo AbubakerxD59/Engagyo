@@ -206,13 +206,10 @@
                     },
                     success: function(response) {
                         if (response.success) {
-                            var data = response;
-                            var image =
-                                "https://upload.wikimedia.org/wikipedia/commons/b/b6/Image_created_with_a_mobile_phone.png";
+                            var image = response.image
                             // var image = response.image;
-                            console.log(data.title);
-                            $("#content").html(data.title);
-                            if (image) {
+                            $("#content").html(response.title);
+                            if (!empty(image)) {
                                 var mock_image = {
                                     name: "sample.png",
                                     size: 54321,
