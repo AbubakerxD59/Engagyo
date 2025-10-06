@@ -206,12 +206,15 @@
                     },
                     success: function(response) {
                         if (response.success) {
+                            var title = response.title;
                             var image = response.image
-                            // var image = response.image;
-                            $("#content").html(response.title);
+                            if (!empty(title)) {
+                                $("#content").val(response.title);
+                                $("#content").trigger("input");
+                            }
                             if (!empty(image)) {
                                 var mock_image = {
-                                    name: "sample.png",
+                                    name: "",
                                     size: 54321,
                                     url: image
                                 };
