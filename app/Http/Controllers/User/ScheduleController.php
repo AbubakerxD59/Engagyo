@@ -132,7 +132,7 @@ class ScheduleController extends Controller
                 }
                 if ($account->type == "pinterest") {
                     $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
-                    if ($pinterest) {
+                    if ($pinterest && $file) {
                         // store in db
                         $post = Post::create([
                             "user_id" => $user->id,
