@@ -133,6 +133,22 @@ class ScheduleController extends Controller
                 if ($account->type == "pinterest") {
                     $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
                     if ($pinterest) {
+                        // store in db
+                        $post = Post::create([
+                            "user_id" => $user->id,
+                            "account_id" => $account->board_id,
+                            "type" => "pinterest_schedule",
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "publish_date" => date("Y-m-d H:i:s"),
+                            "status" => 0,
+                        ]);
+                        $access_token = $pinterest->access_token;
+                        if (!$pinterest->validToken()) {
+                            $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
+                            $access_token = $token["access_token"];
+                        }
                         $postData = array(
                             'title' => $content,
                             'description' => $content,
@@ -142,11 +158,6 @@ class ScheduleController extends Controller
                             'content_type' => 'image_path',
                             'access_token' => $pinterest->access_token,
                         );
-                        $access_token = $pinterest->access_token;
-                        if (!$pinterest->validToken()) {
-                            $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                            $access_token = $token["access_token"];
-                        }
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token);
                     }
                 }
