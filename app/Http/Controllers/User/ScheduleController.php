@@ -151,7 +151,6 @@ class ScheduleController extends Controller
                         }
                         $encoded_image = file_get_contents($post->image);
                         $encoded_image = base64_encode($encoded_image);
-                        dd($encoded_image);
                         $postData = array(
                             "title" => $content,
                             "board_id" => (string) $account->board_id,
