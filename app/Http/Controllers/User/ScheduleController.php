@@ -136,7 +136,7 @@ class ScheduleController extends Controller
                         // store in db
                         $post = Post::create([
                             "user_id" => $user->id,
-                            "account_id" => (string) $account->board_id,
+                            "account_id" => $account->board_id,
                             "type" => "pinterest_schedule",
                             "title" => $content,
                             "comment" => $comment,
@@ -152,7 +152,7 @@ class ScheduleController extends Controller
                         $postData = array(
                             'title' => $content,
                             'description' => $content,
-                            'board_id' => $account->board_id,
+                            'board_id' => (string) $account->board_id,
                             'link' => "",
                             'image' => $image,
                             'content_type' => 'image_path',
