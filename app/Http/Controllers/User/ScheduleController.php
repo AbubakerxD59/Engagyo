@@ -149,15 +149,18 @@ class ScheduleController extends Controller
                             $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
                             $access_token = $token["access_token"];
                         }
+                        $encoded_image = file_get_contents($data['image']);
+                        $encoded_image = base64_encode($encoded_image);
                         $postData = array(
-                            'title' => $content,
-                            'description' => $content,
-                            'board_id' => (string) $account->board_id,
-                            'link' => "",
-                            'image' => $image,
-                            'content_type' => 'image_path',
-                            'access_token' => $pinterest->access_token,
+                            "title" => $content,
+                            "board_id" => (string) $account->board_id,
+                            "media_source" => array(
+                                "source_type" => "image_base64",
+                                "content_type" => "image/jpeg",
+                                "data" => $encoded_image
+                            )
                         );
+                        info(json_encode($postData));
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token);
                     }
                 }
