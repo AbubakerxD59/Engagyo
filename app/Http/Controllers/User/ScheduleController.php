@@ -2,24 +2,29 @@
 
 namespace App\Http\Controllers\User;
 
+use App\Services\PinterestService;
+use Exception;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\Board;
 use App\Models\Facebook;
+use App\Models\Pinterest;
 use Illuminate\Http\Request;
 use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
+use App\Jobs\PublishPinterestPost;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
-use Exception;
 use Illuminate\Support\Facades\Auth;
 
 class ScheduleController extends Controller
 {
     protected $facebookService;
-    public function __construct(FacebookService $facebookService)
+    protected $pinterestService;
+    public function __construct()
     {
         $this->facebookService = new FacebookService();
+        $this->pinterestService = new PinterestService();
     }
     public function index()
     {
@@ -123,6 +128,26 @@ class ScheduleController extends Controller
                             $postData = ["message" => $content];
                         }
                         PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
+                    }
+                }
+                if ($account->type == "pinterest") {
+                    $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
+                    if ($pinterest) {
+                        $postData = array(
+                            'title' => $content,
+                            'description' => $content,
+                            'board_id' => $account->board_id,
+                            'link' => "",
+                            'image' => $image,
+                            'content_type' => 'image_path',
+                            'access_token' => $pinterest->access_token,
+                        );
+                        $access_token = $pinterest->access_token;
+                        if (!$pinterest->validToken()) {
+                            $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
+                            $access_token = $token["access_token"];
+                        }
+                        PublishPinterestPost::dispatch($post->id, $postData, $access_token);
                     }
                 }
             }
