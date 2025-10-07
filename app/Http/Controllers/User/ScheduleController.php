@@ -149,7 +149,7 @@ class ScheduleController extends Controller
                             $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
                             $access_token = $token["access_token"];
                         }
-                        $encoded_image = file_get_contents($data['image']);
+                        $encoded_image = file_get_contents($image);
                         $encoded_image = base64_encode($encoded_image);
                         $postData = array(
                             "title" => $content,
