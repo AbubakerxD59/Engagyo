@@ -172,6 +172,7 @@
                     "action": action_name
                 },
                 success: function(response) {
+                    response = response.original;
                     if (response.success) {
                         resetPostArea();
                         toastr.success(response.message);
