@@ -39,14 +39,8 @@ class PinterestPublishCron extends Command
                         $pinterest = $board->pinterest()->userSearch($user->id)->first();
                         if ($pinterest) {
                             if (!$pinterest->validToken()) {
-                                $token = $pinterestService->refreshAccessToken($pinterest->refresh_token);
+                                $token = $pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
                                 $access_token = $token["access_token"];
-                                $pinterest->update([
-                                    "access_token" => $token["access_token"],
-                                    "expires_in" => $token["expires_in"],
-                                    "refresh_token" => $token["refresh_token"],
-                                    "refresh_token_expires_in" => $token["refresh_token_expires_in"],
-                                ]);
                             } else {
                                 $access_token = $pinterest->access_token;
                             }
