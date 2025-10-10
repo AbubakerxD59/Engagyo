@@ -144,9 +144,9 @@ class User extends Authenticatable
     public function getAccounts()
     {
         // Pinterest Boards
-        $boards = $this->boards()->with("pinterest")->get();
+        $boards = $this->boards()->with("pinterest", "timeslots")->get();
         // Facebook Pages
-        $pages = $this->pages()->with("facebook")->get();
+        $pages = $this->pages()->with("facebook", "timeslots")->get();
 
         $accounts = $boards->merge($pages);
         return $accounts;

@@ -15,6 +15,7 @@ use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use App\Models\Timeslot;
 use Illuminate\Support\Facades\Auth;
 
 class ScheduleController extends Controller
@@ -74,11 +75,16 @@ class ScheduleController extends Controller
     public function processPost(Request $request)
     {
         $action = $request->get("action");
+        $link = $request->link;
         if ($action == "publish") {
-            $response = $this->publishPost($request);
+            if ($link != "false") {
+                $response = $this->publishLink($request);
+            } else {
+                $response = $this->publishPost($request);
+            }
         }
-        if ($action == "schedule") {
-            $response = '';
+        if ($action == "queue") {
+            $response = $this->queuePost($request);
         }
         return response()->json($response);
     }
@@ -105,12 +111,12 @@ class ScheduleController extends Controller
                         $post = Post::create([
                             "user_id" => $user->id,
                             "account_id" => $account->page_id,
-                            "type" => "facebook_schedule",
+                            "type" => "facebook_publish",
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
-                            "publish_date" => date("Y-m-d H:i:s"),
                             "status" => 0,
+                            "publish_date" => date("Y-m-d H:i"),
                         ]);
                         $access_token = $account->access_token;
                         if (!$account->validToken()) {
@@ -137,12 +143,12 @@ class ScheduleController extends Controller
                         $post = Post::create([
                             "user_id" => $user->id,
                             "account_id" => $account->board_id,
-                            "type" => "pinterest_schedule",
+                            "type" => "pinterest_publish",
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
-                            "publish_date" => date("Y-m-d H:i:s"),
                             "status" => 0,
+                            "publish_date" => date("Y-m-d H:i"),
                         ]);
                         $access_token = $pinterest->access_token;
                         if (!$pinterest->validToken()) {
@@ -176,6 +182,135 @@ class ScheduleController extends Controller
             );
         }
         sleep(1);
+        return $response;
+    }
+    private function queuePost($request)
+    {
+        try {
+            $user = Auth::user();
+            // get scheduled active
+            $accounts = $user->getScheduledActiveAccounts();
+            $content = $request->get("content") ?? null;
+            $comment = $request->get("comment") ?? null;
+            $file = $request->file("files") ? true : false;
+            $image = $request->file("files");
+            if ($file) {
+                $image = saveImage($request->file("files"));
+            } else {
+                $image = null;
+            }
+            foreach ($accounts as $account) {
+                if (count($account->timeslots) > 0) {
+                    if ($account->type == "facebook") {
+                        $facebook = Facebook::where("fb_id", $account->fb_id)->first();
+                        if ($facebook) {
+                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->page_id, "type" => "facebook_schedule"], $accounts->timeslots);
+                            // store in db
+                            $post = Post::create([
+                                "user_id" => $user->id,
+                                "account_id" => $account->page_id,
+                                "type" => "facebook_schedule",
+                                "title" => $content,
+                                "comment" => $comment,
+                                "image" => $image,
+                                "status" => 0,
+                                "publish_date" => $nextTime,
+                            ]);
+                        }
+                    }
+                    if ($account->type == "pinterest") {
+                        $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
+                        if ($pinterest && $file) {
+                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->board_id, "type" => "pinterest_schedule"], $account->timeslots);
+                            // store in db
+                            $post = Post::create([
+                                "user_id" => $user->id,
+                                "account_id" => $account->board_id,
+                                "type" => "pinterest_schedule",
+                                "title" => $content,
+                                "comment" => $comment,
+                                "image" => $image,
+                                "status" => 0,
+                                "publish_date" => $nextTime,
+                            ]);
+                        }
+                    }
+                    $response = array(
+                        "success" => true,
+                        "message" => "Your posts are scheduled for Later!"
+                    );
+                } else {
+                    $response = array(
+                        "success" => false,
+                        "message" => "Please select atleast 1 posting hour from Setting!"
+                    );
+                }
+            }
+        } catch (Exception $e) {
+            $response = array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
+        }
+        return $response;
+    }
+    public function getSetting(Request $request)
+    {
+        $user = Auth::user();
+        $accounts = $user->getAccounts();
+        $view = view("user.schedule.ajax.settings", compact("accounts"));
+        $response = [
+            "success" => true,
+            "data" => $view->render()
+        ];
+        return response()->json($response);
+    }
+    public function timeslotSetting(Request $request)
+    {
+        $user = Auth::user();
+        try {
+            $type = $request->type;
+            $id = $request->id;
+            $timeslots = $request->timeslots;
+            $account = null;
+            if ($type == "facebook") {
+                $account = Page::with("timeslots")->where("id", $id)->first();
+                $account_id = $account->page_id;
+            } else if ($type == "pinterest") {
+                $account = Board::with("timeslots")->where("id", $id)->first();
+                $account_id = $account->board_id;
+            }
+            if ($account) {
+                // remove previous
+                Timeslot::where("user_id", $user->id)->where("account_id", $account_id)->where("account_type", $type)->where("type", "schedule")->delete();
+                // create new timeslots
+                if (is_array($timeslots)) {
+                    foreach ($timeslots as $timeslot) {
+                        Timeslot::create([
+                            "user_id" => $user->id,
+                            "account_id" => $account_id,
+                            "account_type" => $type,
+                            "timeslot" => $timeslot,
+                            "type" => "schedule",
+                        ]);
+                    }
+                }
+                $response = array(
+                    "success" => true,
+                    "message" => "Timeslot updated Successfully!"
+                );
+            } else {
+                $response = array(
+                    "success" => false,
+                    "message" => "Something went Wrong!"
+                );
+            }
+        } catch (Exception $e) {
+            $response = array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
+        }
         return response()->json($response);
     }
 }

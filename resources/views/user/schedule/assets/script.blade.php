@@ -29,7 +29,6 @@
                     }
                 },
                 error: function(response) {
-
                     $(this).toggleClass("shadow border-success");
                     toastr.error("Something went Wrong!");
                 }
@@ -85,11 +84,12 @@
 
                     data.append("content", content);
                     data.append("comment", comment);
+                    data.append("link", is_link);
                     data.append("action", action);
                 });
                 // request success
                 this.on("success", function(file, response) {
-                    response = response.original;
+                    console.log(response);
                     if (response.success) {
                         toastr.success(response.message);
                     } else {
@@ -111,10 +111,10 @@
                 });
             }
         });
-        // publish post
-        $('.publish_btn').on('click', function() {
+        // publish/queue/schedule post
+        $('.action_btn').on('click', function() {
             var isValid = false;
-            action_name = "publish";
+            action_name = $(this).attr("href");
             // check accounts
             $('.account').each(function() {
                 if ($(this).hasClass("shadow border-success")) {
@@ -148,7 +148,7 @@
         });
         // process dropzone queue
         function processQueueWithDelay(filesCopy) {
-            console.log(filesCopy);
+            disableActionButton();
             if (filesCopy.length > current_file) {
                 var file = filesCopy[current_file];
                 dropZone.processFile(file);
@@ -160,6 +160,7 @@
         }
         // process content only
         var processContentOnly = function() {
+            disableActionButton();
             var content = $('#content').val();
             var comment = $('#comment').val();
             $.ajax({
@@ -169,10 +170,10 @@
                     "_token": "{{ csrf_token() }}",
                     "content": content,
                     "comment": comment,
+                    "link": is_link,
                     "action": action_name
                 },
                 success: function(response) {
-                    response = response.original;
                     if (response.success) {
                         resetPostArea();
                         toastr.success(response.message);
@@ -184,16 +185,16 @@
         }
         // reset post area
         var resetPostArea = function() {
+            is_link = false;
             $('#content').val('');
             $('#comment').val('');
+            enableActionButton();
         }
         // check link for content
         $('#content').on('input', function() {
             var value = $(this).val();
             if (checkLink(value)) {
-                is_link = true;
                 var link_data = fetchFromLink(value);
-                console.log(link_data);
             }
         });
         // fetch from link
@@ -208,11 +209,7 @@
                     success: function(response) {
                         if (response.success) {
                             var title = response.title;
-                            var image = response.image
-                            if (!empty(title)) {
-                                $("#content").val(response.title);
-                                $("#content").trigger("input");
-                            }
+                            var image = response.image;
                             if (!empty(image)) {
                                 var mock_image = {
                                     name: "",
@@ -225,8 +222,13 @@
                                 dropZone.emit("complete", mock_image);
                                 // Push file to dropZone
                                 dropZone.files.push(mock_image);
+                                is_link = true;
                             } else {
                                 toastr.error("Unable to fetch Image!");
+                            }
+                            if (!empty(title)) {
+                                $("#content").val(response.title);
+                                $("#content").trigger("input");
                             }
 
                         } else {
@@ -236,5 +238,57 @@
                 });
             }
         };
+        // disable action buttons
+        var disableActionButton = function() {
+            $('.action_btn').attr("disabled", true);
+        };
+        // enable action buttons
+        var enableActionButton = function() {
+            $('.action_btn').attr("disabled", false);
+        };
+        // settings modal
+        $('.setting_btn').on("click", function() {
+            var modal = $('.settings-modal');
+            modal.find(".modal-body").empty();
+            $.ajax({
+                url: "{{ route('panel.schedule.get.setting') }}",
+                type: "GET",
+                success: function(response) {
+                    if (response.success) {
+                        modal.find(".modal-body").html(response.data);
+                        modal.modal("toggle");
+                        // select2
+                        $('.select2').select2({
+                            closeOnSelect: false
+                        });
+                    } else {
+                        toastr.error("Something went Wrong!");
+                    }
+                }
+            });
+        });
+        // update timeslots
+        $(document).on("change", ".timeslot", function() {
+            var id = $(this).data("id");
+            var type = $(this).data("type");
+            var timeslots = $(this).val();
+            $.ajax({
+                url: "{{ route('panel.schedule.timeslot.setting') }}",
+                type: "POST",
+                data: {
+                    "_token": "{{ csrf_token() }}",
+                    "id": id,
+                    "type": type,
+                    "timeslots": timeslots,
+                },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                }
+            });
+        });
     });
 </script>

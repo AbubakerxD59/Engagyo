@@ -141,7 +141,8 @@ class Post extends Model
         $query->where("publish_date", ">=", $date_time);
     }
 
-    public function scopeIsRss($query){
+    public function scopeIsRss($query)
+    {
         $query->whereIn("type", ["pinterest", "facebook"]);
     }
 
@@ -192,6 +193,83 @@ class Post extends Model
             }
         }
         return $nextDate;
+    }
+    public function nextScheduleTime($search, $timeslots)
+    {
+        $current_hour = strtotime(date("H:i"));
+        $lastPost = $this->exist($search)->orderByDesc('publish_date')->exists();
+        if (!$lastPost) { //if no post exists
+            foreach ($timeslots as $timeslot) {
+                $posting_hour = strtotime($timeslot->timeslot);
+                //if current hour is greater or equal to posting hour, skip it
+                if ($current_hour > $posting_hour)
+                    continue;
+                // if posting hour is greater than current hour, create a post for current day
+                if ($posting_hour >= $current_hour) {
+                    $selectedDate = date("Y-m-d");
+                    break;
+                }
+            }
+            if (!isset($selectedDate)) {
+                $selectedDate = date("Y-m-d", strtotime("+1 days"));
+                $timeslot = $timeslots->first();
+                $posting_hour = strtotime($timeslot->timeslot);
+            }
+            $timeslotDateTime = $selectedDate . " " . date("H:i", $posting_hour);
+            return $timeslotDateTime;
+        }
+        if ($lastPost) { //if post exists
+            $checkPost = true;
+            $offset = 0;
+            foreach ($timeslots as $timeslot) {
+                $checkPost = $this->exist($search)->where("publish_date", "like", "%$timeslot->timeslot%")->exists();
+                if ($checkPost) { //continue if post exists
+                    $offset++;
+                    continue;
+                }
+                if (!$checkPost) { //if no post exists
+                    $posting_hour = strtotime($timeslot->timeslot);
+                    //if current hour is greater or equal to posting hour, skip it
+                    if ($current_hour > $posting_hour)
+                        continue;
+                    // if posting hour is greater than current hour, create a post for current day
+                    if ($posting_hour >= $current_hour) {
+                        $selectedDate = date("Y-m-d");
+                    }
+                    break;
+                }
+            }
+            if (!$checkPost) {
+                if (!isset($selectedDate)) {
+                    $selectedDate = date("Y-m-d", strtotime("+1 days"));
+                    $timeslot = $timeslots->skip($offset)->first();
+                    $posting_hour = strtotime($timeslot->timeslot);
+                }
+                $timeslotDateTime = $selectedDate . " " . date("H:i", $posting_hour);
+                return $timeslotDateTime;
+            }
+            if ($checkPost) {
+                $lastPost = $this->exist($search)->latest()->first();
+                $lastPostDate = date("Y-m-d", strtotime($lastPost->publish_date));
+                $nextPostDate = date("Y-m-d", strtotime($lastPostDate . ' +1 day'));
+                $lastPostTime = date("H:i", strtotime($lastPost->publish_date));
+                $offset = 0;
+                foreach ($timeslots as $timeslot) {
+                    $posting_hour = $timeslot->timeslot;
+                    if ($lastPostTime == $posting_hour) {
+                        $nextPostingHour = isset($timeslots[$offset + 1]) ? $timeslots[$offset + 1] : $timeslots[0];
+                    }
+                    $offset++;
+                }
+                if (!isset($nextPostingHour)) {
+                    $nextPostingHour = $timeslots[0];
+                }
+                $posting_hour = $nextPostingHour->timeslot;
+                $selectedDate = $nextPostDate;
+                $timeslotDateTime = $selectedDate . " " . $posting_hour;
+                return $timeslotDateTime;
+            }
+        }
     }
 
     public function publishDate($date, $time)

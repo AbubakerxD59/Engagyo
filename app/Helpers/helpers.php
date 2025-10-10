@@ -357,9 +357,6 @@ function social_icon($type = null)
 
 function newDateTime($nextDate, $time)
 {
-    // if ($day) {
-    //     $nextDate = date("Y-m-d", strtotime($nextDate . ' +' . $day . ' days'));
-    // }
     $nextDate = $nextDate . " " . $time;
     return $nextDate;
 }

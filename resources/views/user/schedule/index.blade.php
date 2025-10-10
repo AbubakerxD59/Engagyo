@@ -21,26 +21,26 @@
                             @foreach ($accounts as $account)
                                 @if ($account->type == 'facebook')
                                     <button
-                                        class="btn btn-sm btn-rounded p-1 pr-3 m-1 border-right rounded-lg account 
+                                        class="btn btn-sm btn-rounded border-right rounded-lg mr-1 account 
                                         @if ($account->schedule_status == 'active') shadow border-success @endif"
                                         data-type="{{ $account->type }}" data-id="{{ $account->id }}">
                                         <img style="width:35px;height:35px;" src="{{ $account->facebook?->profile_image }}"
-                                            class="rounded-circle mr-2" alt="{{ social_logo('facebook') }}"
+                                            class="rounded-circle" alt="{{ social_logo('facebook') }}"
                                             onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
                                         <img src="{{ social_logo('facebook') }}" alt=""
-                                            style="width: 20px; position:relative; right: 15%; top: 50%;">
+                                            style="width: 15px; position:relative;">
                                         <b>{{ $account->name }}</b>
                                     </button>
                                 @elseif($account->type == 'pinterest')
                                     <button
-                                        class="btn btn-sm btn-rounded p-1 pr-3 m-1 border-right rounded-lg account 
+                                        class="btn btn-sm btn-rounded border-right rounded-lg mr-1 account 
                                     @if ($account->schedule_status == 'active') shadow border-success @endif"
                                         data-type="{{ $account->type }}" data-id="{{ $account->id }}">
                                         <img style="width:35px;height:35px;" src="{{ $account->pinterest?->profile_image }}"
-                                            class="rounded-circle mr-2" alt="{{ social_logo('pinterest') }}"
+                                            class="rounded-circle" alt="{{ social_logo('pinterest') }}"
                                             onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
                                         <img src="{{ social_logo('pinterest') }}" alt=""
-                                            style="width: 20px; position:relative; right: 15%; top: 50%;">
+                                            style="width: 15px; position:relative;">
                                         <b>{{ $account->name }}</b>
                                     </button>
                                 @endif
@@ -60,10 +60,21 @@
                                 <textarea name="comment" id="comment" class="form-control col-md-12" placeholder="Comment here!" rows="1"
                                     data-max="100"></textarea>
                             </div>
-                            <div class="row justify-content-end mt-2">
-                                <button type="button" class="btn btn-outline-success btn-sm publish_btn">
-                                    PUBLISH
-                                </button>
+                            <div class="row justify-content-between mt-2">
+                                <div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm setting_btn">
+                                        SETTINGS
+                                    </button>
+                                </div>
+                                <div class="d-flex">
+                                    <button type="button" class="btn btn-outline-info btn-sm action_btn mx-1"
+                                        href="queue">
+                                        QUEUE
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success btn-sm action_btn" href="publish">
+                                        PUBLISH
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -71,6 +82,7 @@
             </div>
         </section>
     </div>
+    @include('user.schedule.modals.settings-modal')
 @endsection
 
 @push('scripts')

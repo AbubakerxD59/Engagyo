@@ -43,6 +43,10 @@ class Page extends Model
     {
         return $this->hasMany(Domain::class, 'account_id', 'page_id');
     }
+    public function timeslots()
+    {
+        return $this->hasMany(Timeslot::class, "account_id", "page_id")->where("account_type", "facebook");
+    }
 
     public function scopeConnected($query, $search)
     {

@@ -12,6 +12,8 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
         Route::controller(ScheduleController::class)->prefix("schedule/")->name("schedule.")->group(function () {
             Route::get("account/status", "accountStatus")->name("account.status");
             Route::post("process/post", "processPost")->name("process.post");
+            Route::get("get/setting", "getSetting")->name("get.setting");
+            Route::post("timeslot/setting", "timeslotSetting")->name("timeslot.setting");
         });
     });
     // Accounts Routes

@@ -43,6 +43,11 @@ class Board extends Model
         return $this->hasMany(Domain::class, 'account_id', 'board_id');
     }
 
+    public function timeslots()
+    {
+        return $this->hasMany(Timeslot::class, "account_id", "board_id")->where("account_type", "pinterest");
+    }
+
     public function scopeSearch($query, $search)
     {
         $query->where('pin_id', $search)->orWhere('board_id', $search)->orWhere('name', $search);
