@@ -147,8 +147,8 @@ class User extends Authenticatable
         $boards = $this->boards()->with("pinterest", "timeslots")->get();
         // Facebook Pages
         $pages = $this->pages()->with("facebook", "timeslots")->get();
-
-        $accounts = $boards->merge($pages);
+        $accounts = collect();
+        $accounts = $boards->concat($pages);
         return $accounts;
     }
 
