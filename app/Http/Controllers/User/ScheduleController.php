@@ -86,6 +86,9 @@ class ScheduleController extends Controller
         if ($action == "queue") {
             $response = $this->queuePost($request);
         }
+        if ($action == "schedule") {
+            $response = $this->schedulePost($request);
+        }
         return response()->json($response);
     }
     private function publishPost($request)
@@ -243,7 +246,7 @@ class ScheduleController extends Controller
                     }
                     $response = array(
                         "success" => true,
-                        "message" => "Your posts are scheduled for Later!"
+                        "message" => "Your posts are queued for Later!"
                     );
                 } else {
                     $response = array(
@@ -251,6 +254,74 @@ class ScheduleController extends Controller
                         "message" => "Please select atleast 1 posting hour from Setting!"
                     );
                 }
+            }
+        } catch (Exception $e) {
+            $response = array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
+        }
+        return $response;
+    }
+    private function schedulePost($request)
+    {
+        try {
+            $user = Auth::user();
+            // get scheduled active
+            $accounts = $user->getScheduledActiveAccounts();
+            $content = $request->get("content") ?? null;
+            $comment = $request->get("comment") ?? null;
+            $schedule_date = $request->schedule_date;
+            $schedule_time = $request->schedule_time;
+            $file = $request->file("files") ? true : false;
+            $image = $request->file("files");
+            if ($file) {
+                $image = saveImage($request->file("files"));
+            } else {
+                $image = null;
+            }
+            foreach ($accounts as $account) {
+                $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
+                if ($account->type == "facebook") {
+                    $facebook = Facebook::where("fb_id", $account->fb_id)->first();
+                    if ($facebook) {
+                        // store in db
+                        Post::create([
+                            "user_id" => $user->id,
+                            "account_id" => $account->page_id,
+                            "social_type" => "facebook",
+                            "type" => $file ? "photo" : "content_only",
+                            "source" => "schedule",
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "status" => 0,
+                            "publish_date" => $scheduleDateTime,
+                        ]);
+                    }
+                }
+                if ($account->type == "pinterest") {
+                    $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
+                    if ($pinterest && $file) {
+                        // store in db
+                        Post::create([
+                            "user_id" => $user->id,
+                            "account_id" => $account->board_id,
+                            "social_type" => "pinterest",
+                            "type" => "photo",
+                            "source" => "schedule",
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "status" => 0,
+                            "publish_date" => $scheduleDateTime,
+                        ]);
+                    }
+                }
+                $response = array(
+                    "success" => true,
+                    "message" => "Your posts are scheduled for Later!"
+                );
             }
         } catch (Exception $e) {
             $response = array(

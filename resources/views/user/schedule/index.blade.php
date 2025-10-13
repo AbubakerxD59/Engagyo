@@ -62,16 +62,19 @@
                             </div>
                             <div class="row justify-content-between mt-2">
                                 <div>
-                                    <button type="button" class="btn btn-outline-primary btn-sm setting_btn">
+                                    <button type="button" class="btn btn-outline-info btn-sm setting_btn">
                                         SETTINGS
                                     </button>
                                 </div>
                                 <div class="d-flex">
-                                    <button type="button" class="btn btn-outline-info btn-sm action_btn mx-1"
+                                    <button type="button" class="btn btn-outline-danger btn-sm action_btn" href="schedule">
+                                        SCHEDULE
+                                    </button>
+                                    <button type="button" class="btn btn-outline-success btn-sm action_btn mx-1"
                                         href="queue">
                                         QUEUE
                                     </button>
-                                    <button type="button" class="btn btn-outline-success btn-sm action_btn" href="publish">
+                                    <button type="button" class="btn btn-outline-primary btn-sm action_btn" href="publish">
                                         PUBLISH
                                     </button>
                                 </div>
@@ -83,6 +86,7 @@
         </section>
     </div>
     @include('user.schedule.modals.settings-modal')
+    @include('user.schedule.modals.schedule-modal')
 @endsection
 
 @push('scripts')

@@ -80,11 +80,16 @@
                 this.on("sending", function(file, xhr, data) {
                     var content = $("#content").val();
                     var comment = $("#comment").val();
-                    var action = action_name
+                    var schedule_date = $("#schedule_date").val();
+                    var schedule_time = $("#schedule_time").val();
+                    var action = action_name;
 
                     data.append("content", content);
                     data.append("comment", comment);
                     data.append("link", is_link);
+                    // for schedule action
+                    data.append("schedule_date", schedule_date);
+                    data.append("schedule_time", schedule_time);
                     data.append("action", action);
                 });
                 // request success
@@ -115,6 +120,20 @@
         $('.action_btn').on('click', function() {
             var isValid = false;
             action_name = $(this).attr("href");
+            // schedule posting
+            if (action_name == "schedule") {
+                var schedule_modal = $(".schedule-modal");
+                schedule_modal.modal("toggle");
+            } else {
+                validateAndProcess();
+            }
+        });
+        $(document).on('click', '.schedule_btn', function() {
+            validateAndProcess();
+        });
+        // validate and process post
+        var validateAndProcess = function() {
+            var isValid = false;
             // check accounts
             $('.account').each(function() {
                 if ($(this).hasClass("shadow border-success")) {
@@ -145,7 +164,7 @@
             } else {
                 toastr.error("Please select atleast one channel!");
             }
-        });
+        }
         // process dropzone queue
         function processQueueWithDelay(filesCopy) {
             disableActionButton();
@@ -241,10 +260,13 @@
         // disable action buttons
         var disableActionButton = function() {
             $('.action_btn').attr("disabled", true);
+            $('.schedule_btn').attr("disabled", true);
         };
         // enable action buttons
         var enableActionButton = function() {
             $('.action_btn').attr("disabled", false);
+            $('.schedule_btn').attr("disabled", false);
+            $('.schedule-modal').modal("hide");
         };
         // settings modal
         $('.setting_btn').on("click", function() {
