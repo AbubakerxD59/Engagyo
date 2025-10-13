@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\Pinterest as ModelsPinterest;
+use App\Models\Pinterest as PinterestModel;
 use App\Models\Post;
 use DirkGroenen\Pinterest\Pinterest;
 
@@ -54,7 +54,7 @@ class PinterestService
         );
         $token = $this->client->post($this->baseUrl . "oauth/token", $data,  $this->header);
         if ($token) {
-            $pinterest = ModelsPinterest::find($pinterest_id);
+            $pinterest = PinterestModel::find($pinterest_id);
             $pinterest->update([
                 "access_token" => $token["access_token"],
                 "expires_in" => $token["expires_in"],
@@ -84,7 +84,6 @@ class PinterestService
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $publish = $this->client->postJson($this->baseUrl . "pins", $post, $this->header);
         $post = $this->post->find($id);
-        info($post);
         if (isset($publish['id'])) {
             $post->update([
                 "post_id" => $publish["id"],

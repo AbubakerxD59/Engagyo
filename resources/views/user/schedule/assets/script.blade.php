@@ -129,6 +129,12 @@
             }
         });
         $(document).on('click', '.schedule_btn', function() {
+            var schedule_date = $('#schedule_date').val();
+            var schedule_time = $('#schedule_time').val();
+            if (empty(schedule_date) || empty(schedule_time)) {
+                toastr.error("Schedule date & time are required!");
+                return false;
+            }
             validateAndProcess();
         });
         // validate and process post
