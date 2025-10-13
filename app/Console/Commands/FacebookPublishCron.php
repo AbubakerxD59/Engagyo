@@ -31,6 +31,7 @@ class FacebookPublishCron extends Command
         $now = date("Y-m-d H:i");
         $posts = $post->notPublished()->past($now)->facebook()->get();
         foreach ($posts as $key => $post) {
+            info(json_encode($post));
             if ($post->status == "0") {
                 $user = $post->user()->first();
                 if ($user) {
