@@ -6,7 +6,6 @@ use App\Models\Post;
 use Illuminate\Console\Command;
 use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
-use Illuminate\Support\Facades\Log;
 
 class FacebookPublishCron extends Command
 {
