@@ -66,7 +66,7 @@ class Post extends Model
     {
         $query->where("user_id", $search["user_id"])
             ->where("account_id", $search["account_id"])
-            ->where("type", $search["type"]);
+            ->where("social_type", $search["type"]);
         if (isset($search["domain_id"])) {
             $query->where("domain_id", $search["domain_id"]);
         }
@@ -125,12 +125,12 @@ class Post extends Model
 
     public function scopePinterest($query)
     {
-        $query->where("source", "like", "%pinterest%");
+        $query->where("social_type", "like", "%pinterest%");
     }
 
     public function scopeFacebook($query)
     {
-        $query->where("source", "like", "%facebook%");
+        $query->where("social_type", "like", "%facebook%");
     }
 
     public function scopePast($query, $date_time)
@@ -154,25 +154,25 @@ class Post extends Model
         return $domain ? $domain->name : '';
     }
 
-    public function getAccount($source, $id)
+    public function getAccount($social_type, $id)
     {
-        if ($source == 'pinterest') {
+        if ($social_type == 'pinterest') {
             $account = $this->board()->where("board_id", $id)->first();
         }
-        if ($source == 'facebook') {
+        if ($social_type == 'facebook') {
             $account = $this->page()->where("page_id", $id)->first();
         }
         return $account;
     }
 
-    public function getAccountUrl($source, $account_id)
+    public function getAccountUrl($social_type, $account_id)
     {
-        $account = self::getAccount($source, $account_id);
-        if ($source == 'pinterest') {
+        $account = self::getAccount($social_type, $account_id);
+        if ($social_type == 'pinterest') {
             $mainAccount = $account->getPinterest($account->pin_id);
             $accountUrl = "https://www.pinterest.com/" . $mainAccount->username . '/' . $account->name;
         }
-        if ($source == 'facebook') {
+        if ($social_type == 'facebook') {
             $accountUrl = "https://www.facebook.com/" . $account->page_id;
         }
         return $accountUrl;
@@ -280,18 +280,18 @@ class Post extends Model
         return $date_time;
     }
 
-    public function scheduledTill($search, $type, $account, $domain, $status, $user_id)
+    public function scheduledTill($search, $social_type, $account, $domain, $status, $user_id)
     {
         $post = $this->userSearch($user_id)->orderBy('publish_date', 'DESC');
         if (!empty($search)) {
             $post = $post->search($search);
         }
         if ($account) {
-            if ($type == 'pinterest') {
+            if ($social_type == 'pinterest') {
                 $account = Board::find($account);
                 $account = $account->board_id;
             }
-            if ($type == 'facebook') {
+            if ($social_type == 'facebook') {
                 $account = Page::find($account);
                 $account = $account->page_id;
             }
@@ -370,7 +370,7 @@ class Post extends Model
                     $response = $this->response;
                     if (!empty($response)) {
                         $response = json_decode($response);
-                        if ($this->type == 'pinterest') {
+                        if ($this->social_type == 'pinterest') {
                             if (!empty($response)) {
                                 $message_object = $response->message;
                                 $message = getError($message_object);
