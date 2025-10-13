@@ -30,7 +30,7 @@ class PinterestPublishCron extends Command
     public function handle(Post $post, PinterestService $pinterestService)
     {
         $now = date("Y-m-d H:i");
-        $posts = $post->notPublished()->past($now)->pinterest()->get();
+        $posts = $post->notPublished()->past($now)->pinterest()->notSchedule()->get();
         foreach ($posts as $key => $post) {
             info(json_encode($post));
             if ($post->status == "0") {

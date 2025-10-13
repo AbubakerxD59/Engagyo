@@ -27,6 +27,7 @@ class Post extends Model
         "image",
         "publish_date",
         "status",
+        "scheduled",
         "response"
     ];
 
@@ -50,6 +51,16 @@ class Post extends Model
     public function domain()
     {
         return $this->belongsTo(Domain::class, 'domain_id', 'id');
+    }
+
+    public function scopeSchedule($query)
+    {
+        $query->where("scheduled", 1);
+    }
+
+    public function scopeNotSchedule($query)
+    {
+        $query->where("scheduled", 0);
     }
 
     public function scopeSearch($query, $search)

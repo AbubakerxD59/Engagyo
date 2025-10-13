@@ -297,6 +297,7 @@ class ScheduleController extends Controller
                             "image" => $image,
                             "status" => 0,
                             "publish_date" => $scheduleDateTime,
+                            "scheduled" => 1
                         ]);
                     }
                 }
@@ -315,6 +316,7 @@ class ScheduleController extends Controller
                             "image" => $image,
                             "status" => 0,
                             "publish_date" => $scheduleDateTime,
+                            "scheduled" => 1
                         ]);
                     }
                 }
