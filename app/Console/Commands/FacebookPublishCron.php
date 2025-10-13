@@ -60,6 +60,7 @@ class FacebookPublishCron extends Command
                                     "url" => $post->image
                                 ];
                             }
+                            info(json_encode($postData));
                             PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
                         }
                     }
