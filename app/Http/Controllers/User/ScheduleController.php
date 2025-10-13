@@ -111,7 +111,9 @@ class ScheduleController extends Controller
                         $post = Post::create([
                             "user_id" => $user->id,
                             "account_id" => $account->page_id,
-                            "type" => "facebook_publish",
+                            "social_type" => "facebook",
+                            "type" => $file ? "photo" : "content_only",
+                            "source" => "schedule",
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
@@ -128,7 +130,6 @@ class ScheduleController extends Controller
                         if ($file) {
                             $type = "photo";
                             $postData = ["caption" => $content, "url" => $post->image];
-                            Log::info(json_encode($postData));
                         } else {
                             $type = "content_only";
                             $postData = ["message" => $content];
@@ -143,7 +144,9 @@ class ScheduleController extends Controller
                         $post = Post::create([
                             "user_id" => $user->id,
                             "account_id" => $account->board_id,
-                            "type" => "pinterest_publish",
+                            "social_type" => "pinterest",
+                            "type" => "photo",
+                            "source" => "schedule",
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
@@ -166,7 +169,6 @@ class ScheduleController extends Controller
                                 "data" => $encoded_image
                             )
                         );
-                        info(json_encode($postData));
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token);
                     }
                 }
@@ -206,10 +208,12 @@ class ScheduleController extends Controller
                         if ($facebook) {
                             $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->page_id, "type" => "facebook_schedule"], $accounts->timeslots);
                             // store in db
-                            $post = Post::create([
+                            Post::create([
                                 "user_id" => $user->id,
                                 "account_id" => $account->page_id,
-                                "type" => "facebook_schedule",
+                                "social_type" => "facebook",
+                                "type" => $file ? "photo" : "content_only",
+                                "source" => "schedule",
                                 "title" => $content,
                                 "comment" => $comment,
                                 "image" => $image,
@@ -223,10 +227,12 @@ class ScheduleController extends Controller
                         if ($pinterest && $file) {
                             $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->board_id, "type" => "pinterest_schedule"], $account->timeslots);
                             // store in db
-                            $post = Post::create([
+                            Post::create([
                                 "user_id" => $user->id,
                                 "account_id" => $account->board_id,
-                                "type" => "pinterest_schedule",
+                                "social_type" => "pinterest",
+                                "type" => "photo",
+                                "source" => "schedule",
                                 "title" => $content,
                                 "comment" => $comment,
                                 "image" => $image,

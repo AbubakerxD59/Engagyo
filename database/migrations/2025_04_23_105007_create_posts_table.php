@@ -16,7 +16,9 @@ return new class extends Migration
             $table->integer("user_id");
             $table->bigInteger("post_id")->nullable();
             $table->bigInteger("account_id")->nullable();
-            $table->string("type")->nullable();
+            $table->string("social_type")->nullable();
+            $table->enum("type", ["content_only", "photo", "link", "video", "short", "story"])->nullable();
+            $table->string("source")->nullable();
             $table->text("title")->nullable();
             $table->longText("description")->nullable();
             $table->longText("comment")->nullable();

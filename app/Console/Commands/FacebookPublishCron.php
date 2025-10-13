@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Post;
 use Illuminate\Console\Command;
+use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use Illuminate\Support\Facades\Log;
 
@@ -38,23 +39,28 @@ class FacebookPublishCron extends Command
                     if ($page) {
                         $facebook = $page->facebook()->userSearch($user->id)->first();
                         if ($facebook) {
+                            $access_token = $page->access_token;
                             if (!$page->validToken()) {
-                                $token = $facebookService->refreshAccessToken($page->access_token);
+                                $token = $facebookService->refreshAccessToken($page->access_token, $page->id);
                                 $data = $token["data"];
-                                $meta_data = $data["metadata"];
-                                $access_token = $data["access_token"];;
-                                $page->update([
-                                    "access_token" => $access_token,
-                                    "expires_in" => $meta_data->getField("data_access_expires_at"),
-                                ]);
-                            } else {
-                                $access_token = $page->access_token;
+                                $access_token = $data["access_token"];
                             }
-                            $postData = [
-                                'link' => $post->url,
-                                'message' => $post->title,
-                            ];
-                            $facebookService->createLink($post->id, $access_token, $postData);
+                            if ($post->type == "content_only") {
+                                $postData = [
+                                    "message" => $post->title
+                                ];
+                            } elseif ($post->type == "link") {
+                                $postData = [
+                                    'link' => $post->url,
+                                    'message' => $post->title,
+                                ];
+                            } elseif ($post->type == "photo") {
+                                $postData = [
+                                    "caption" => $post->title,
+                                    "url" => $post->image
+                                ];
+                            }
+                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
                         }
                     }
                 }

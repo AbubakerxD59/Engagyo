@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\User;
 
-use Feed;
 use Exception;
 use App\Models\Page;
 use App\Models\Post;
@@ -20,7 +19,6 @@ use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
 use App\Jobs\RefreshPosts;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\File;
 
 class AutomationController extends Controller
 {

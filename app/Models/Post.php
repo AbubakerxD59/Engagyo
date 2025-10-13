@@ -16,7 +16,9 @@ class Post extends Model
         "user_id",
         "post_id",
         "account_id",
+        "social_type",
         "type",
+        "source",
         "title",
         "description",
         "comment",
@@ -123,12 +125,12 @@ class Post extends Model
 
     public function scopePinterest($query)
     {
-        $query->where("type", "like", "%pinterest%");
+        $query->where("source", "like", "%pinterest%");
     }
 
     public function scopeFacebook($query)
     {
-        $query->where("type", "like", "%facebook%");
+        $query->where("source", "like", "%facebook%");
     }
 
     public function scopePast($query, $date_time)
@@ -143,7 +145,7 @@ class Post extends Model
 
     public function scopeIsRss($query)
     {
-        $query->whereIn("type", ["pinterest", "facebook"]);
+        $query->whereIn("source", ["rss"]);
     }
 
     public function getDomain()
@@ -152,25 +154,25 @@ class Post extends Model
         return $domain ? $domain->name : '';
     }
 
-    public function getAccount($type, $id)
+    public function getAccount($source, $id)
     {
-        if ($type == 'pinterest') {
+        if ($source == 'pinterest') {
             $account = $this->board()->where("board_id", $id)->first();
         }
-        if ($type == 'facebook') {
+        if ($source == 'facebook') {
             $account = $this->page()->where("page_id", $id)->first();
         }
         return $account;
     }
 
-    public function getAccountUrl($type, $account_id)
+    public function getAccountUrl($source, $account_id)
     {
-        $account = self::getAccount($type, $account_id);
-        if ($type == 'pinterest') {
+        $account = self::getAccount($source, $account_id);
+        if ($source == 'pinterest') {
             $mainAccount = $account->getPinterest($account->pin_id);
             $accountUrl = "https://www.pinterest.com/" . $mainAccount->username . '/' . $account->name;
         }
-        if ($type == 'facebook') {
+        if ($source == 'facebook') {
             $accountUrl = "https://www.facebook.com/" . $account->page_id;
         }
         return $accountUrl;

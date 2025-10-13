@@ -41,8 +41,6 @@ class PublishPinterestPost implements ShouldQueue
 
     public function failed(\Throwable $exception)
     {
-        // This method will be called if the job fails after all attempts (in this case, after the first attempt).
-        // You can log the failure, send a notification, or perform any other necessary actions here.
         Log::error("FetchPost job failed: " . $exception->getMessage());
     }
 }
