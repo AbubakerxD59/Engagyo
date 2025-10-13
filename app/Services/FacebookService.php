@@ -76,7 +76,7 @@ class FacebookService
             $access_token = $getOAuth2Client->getLongLivedAccessToken($access_token);
             $tokenMetadata = $getOAuth2Client->debugToken($access_token);
             $access_token = $access_token->getValue();
-            $page = Page::search($page_id)->first();
+            $page = Page::find($page_id)->first();
             $page->update([
                 "access_token" => $access_token,
                 "expires_in" => $tokenMetadata->getField("data_access_expires_at"),
