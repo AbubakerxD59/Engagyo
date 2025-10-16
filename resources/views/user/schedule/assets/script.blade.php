@@ -119,16 +119,21 @@
         // publish/queue/schedule post
         $('.action_btn').on('click', function() {
             action_name = $(this).attr("href");
-            // for link posting
-            if (is_link) {
-                processLink();
-                return true;
+            // for schedule
+            if (action_name == "schedule") {
+                var schedule_modal = $(".schedule-modal");
+                schedule_modal.modal("toggle");
             } else {
-                // schedule posting
-                if (action_name == "schedule") {
-                    var schedule_modal = $(".schedule-modal");
-                    schedule_modal.modal("toggle");
+                // for link posting
+                if (is_link) {
+                    if (checkAccounts()) {
+                        processLink();
+                        return true;
+                    } else {
+                        toastr.error("Please select atleast one channel!");
+                    }
                 } else {
+                    // schedule posting
                     validateAndProcess();
                 }
             }
@@ -140,17 +145,19 @@
                 toastr.error("Schedule date & time are required!");
                 return false;
             }
-            validateAndProcess();
+            if (is_link) {
+                processLink();
+            } else {
+                validateAndProcess();
+            }
         });
         // validate and process post
         var validateAndProcess = function() {
             var isValid = false;
             // check accounts
-            $('.account').each(function() {
-                if ($(this).hasClass("shadow border-success")) {
-                    isValid = true;
-                }
-            });
+            if (checkAccounts()) {
+                isValid = true;
+            }
             if (isValid) {
                 // check content
                 var drop_files = dropZone.getAcceptedFiles().length;
@@ -175,6 +182,16 @@
             } else {
                 toastr.error("Please select atleast one channel!");
             }
+        }
+        // check accounts status
+        var checkAccounts = function() {
+            var account = false;
+            $('.account').each(function() {
+                if ($(this).hasClass("shadow border-success")) {
+                    account = true;
+                }
+            });
+            return account;
         }
         // process dropzone queue
         function processQueueWithDelay(filesCopy) {
@@ -210,6 +227,7 @@
                     } else {
                         toastr.error(response.message);
                     }
+                    enableActionButton();
                 }
             })
         }
@@ -217,8 +235,10 @@
         var processLink = function() {
             var content = $('#content').val();
             var comment = $('#comment').val();
-            var url = $('#article-container .link_url').text();
             var image = $('#link_image').attr('src');
+            var url = $('#article-container .link_url').text();
+            var schedule_date = $("#schedule_date").val();
+            var schedule_time = $("#schedule_time").val();
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",
                 type: "POST",
@@ -229,7 +249,9 @@
                     "link": 1,
                     "url": url,
                     "image": image,
-                    "action": action_name
+                    "schedule_date": schedule_date,
+                    "schedule_time": schedule_time,
+                    "action": action_name,
                 },
                 success: function(response) {
                     if (response.success) {
@@ -403,8 +425,7 @@
                         <div class="image-col" style="margin-left: 1rem;">
                             <img id="link_image" src="${data.image}" alt="Feature Icon">
                             <!-- Close Button (Functional) -->
-                            <button class="close-btn-placeholder" 
-                                onclick="$(this).closest('#real-article').remove()" 
+                            <button class="close-btn-placeholder"
                                 style="background-color: black; color: white; cursor: pointer;">
                                 X
                             </button>
@@ -415,6 +436,9 @@
                 opacity: 1
             }, 1000);
         }
+        $(document).on('click', '.close-btn-placeholder', function() {
+            resetPostArea();
+        });
         // link loading and preview
     });
 </script>
