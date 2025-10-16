@@ -76,18 +76,26 @@ class ScheduleController extends Controller
     {
         $action = $request->get("action");
         $link = $request->link;
-        if ($action == "publish") {
-            if ($link != "false") {
+        if ($link) { //link post
+            if ($action == "publish") {
                 $response = $this->publishLink($request);
-            } else {
+            }
+            if ($action == "queue") {
+                $response = $this->queueLink($request);
+            }
+            if ($action == "schedule") {
+                $response = $this->scheduleLink($request);
+            }
+        } else { //no link
+            if ($action == "publish") {
                 $response = $this->publishPost($request);
             }
-        }
-        if ($action == "queue") {
-            $response = $this->queuePost($request);
-        }
-        if ($action == "schedule") {
-            $response = $this->schedulePost($request);
+            if ($action == "queue") {
+                $response = $this->queuePost($request);
+            }
+            if ($action == "schedule") {
+                $response = $this->schedulePost($request);
+            }
         }
         return response()->json($response);
     }
@@ -339,6 +347,207 @@ class ScheduleController extends Controller
     // publish link post
     private function publishLink($request)
     {
+        dd($request->all());
+        try {
+            $user = Auth::user();
+            // get scheduled active
+            $accounts = $user->getScheduledActiveAccounts();
+            $content = $request->get("content") ?? null;
+            $comment = $request->get("comment") ?? null;
+            $file = $request->file("files") ? true : false;
+            $image = $request->file("files");
+            if ($file) {
+                $image = saveImage($request->file("files"));
+            } else {
+                $image = null;
+            }
+            foreach ($accounts as $account) {
+                if ($account->type == "facebook") {
+                    $facebook = Facebook::where("fb_id", $account->fb_id)->first();
+                    if ($facebook) {
+                        // store in db
+                        $post = Post::create([
+                            "user_id" => $user->id,
+                            "account_id" => $account->page_id,
+                            "social_type" => "facebook",
+                            "type" => $file ? "photo" : "content_only",
+                            "source" => "schedule",
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "status" => 0,
+                            "publish_date" => date("Y-m-d H:i"),
+                        ]);
+                        $access_token = $account->access_token;
+                        if (!$account->validToken()) {
+                            $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
+                            $data = $token["data"];
+                            $access_token = $data["access_token"];
+                        }
+                        $postData = array();
+                        if ($file) {
+                            $type = "photo";
+                            $postData = ["caption" => $content, "url" => $post->image];
+                        } else {
+                            $type = "content_only";
+                            $postData = ["message" => $content];
+                        }
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
+                    }
+                }
+                if ($account->type == "pinterest") {
+                    $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
+                    if ($pinterest && $file) {
+                        // store in db
+                        $post = Post::create([
+                            "user_id" => $user->id,
+                            "account_id" => $account->board_id,
+                            "social_type" => "pinterest",
+                            "type" => "photo",
+                            "source" => "schedule",
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "status" => 0,
+                            "publish_date" => date("Y-m-d H:i"),
+                        ]);
+                        $access_token = $pinterest->access_token;
+                        if (!$pinterest->validToken()) {
+                            $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
+                            $access_token = $token["access_token"];
+                        }
+                        $encoded_image = file_get_contents($post->image);
+                        $encoded_image = base64_encode($encoded_image);
+                        $postData = array(
+                            "title" => $content,
+                            "board_id" => (string) $account->board_id,
+                            "media_source" => array(
+                                "source_type" => "image_base64",
+                                "content_type" => "image/jpeg",
+                                "data" => $encoded_image
+                            )
+                        );
+                        PublishPinterestPost::dispatch($post->id, $postData, $access_token);
+                    }
+                }
+            }
+            $response = array(
+                "success" => true,
+                "message" => "Your posts are being Published!"
+            );
+        } catch (Exception $e) {
+            $response = array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
+        }
+        sleep(1);
+        return $response;
+    }
+    // publish link post
+    private function queueLink($request)
+    {
+        dd($request->all());
+        try {
+            $user = Auth::user();
+            // get scheduled active
+            $accounts = $user->getScheduledActiveAccounts();
+            $content = $request->get("content") ?? null;
+            $comment = $request->get("comment") ?? null;
+            $file = $request->file("files") ? true : false;
+            $image = $request->file("files");
+            if ($file) {
+                $image = saveImage($request->file("files"));
+            } else {
+                $image = null;
+            }
+            foreach ($accounts as $account) {
+                if ($account->type == "facebook") {
+                    $facebook = Facebook::where("fb_id", $account->fb_id)->first();
+                    if ($facebook) {
+                        // store in db
+                        $post = Post::create([
+                            "user_id" => $user->id,
+                            "account_id" => $account->page_id,
+                            "social_type" => "facebook",
+                            "type" => $file ? "photo" : "content_only",
+                            "source" => "schedule",
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "status" => 0,
+                            "publish_date" => date("Y-m-d H:i"),
+                        ]);
+                        $access_token = $account->access_token;
+                        if (!$account->validToken()) {
+                            $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
+                            $data = $token["data"];
+                            $access_token = $data["access_token"];
+                        }
+                        $postData = array();
+                        if ($file) {
+                            $type = "photo";
+                            $postData = ["caption" => $content, "url" => $post->image];
+                        } else {
+                            $type = "content_only";
+                            $postData = ["message" => $content];
+                        }
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
+                    }
+                }
+                if ($account->type == "pinterest") {
+                    $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
+                    if ($pinterest && $file) {
+                        // store in db
+                        $post = Post::create([
+                            "user_id" => $user->id,
+                            "account_id" => $account->board_id,
+                            "social_type" => "pinterest",
+                            "type" => "photo",
+                            "source" => "schedule",
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "status" => 0,
+                            "publish_date" => date("Y-m-d H:i"),
+                        ]);
+                        $access_token = $pinterest->access_token;
+                        if (!$pinterest->validToken()) {
+                            $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
+                            $access_token = $token["access_token"];
+                        }
+                        $encoded_image = file_get_contents($post->image);
+                        $encoded_image = base64_encode($encoded_image);
+                        $postData = array(
+                            "title" => $content,
+                            "board_id" => (string) $account->board_id,
+                            "media_source" => array(
+                                "source_type" => "image_base64",
+                                "content_type" => "image/jpeg",
+                                "data" => $encoded_image
+                            )
+                        );
+                        PublishPinterestPost::dispatch($post->id, $postData, $access_token);
+                    }
+                }
+            }
+            $response = array(
+                "success" => true,
+                "message" => "Your posts are being Published!"
+            );
+        } catch (Exception $e) {
+            $response = array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
+        }
+        sleep(1);
+        return $response;
+    }
+    // publish link post
+    private function scheduleLink($request)
+    {
+        dd($request->all());
         try {
             $user = Auth::user();
             // get scheduled active

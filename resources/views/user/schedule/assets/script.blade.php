@@ -118,14 +118,18 @@
         });
         // publish/queue/schedule post
         $('.action_btn').on('click', function() {
-            var isValid = false;
             action_name = $(this).attr("href");
-            // schedule posting
-            if (action_name == "schedule") {
-                var schedule_modal = $(".schedule-modal");
-                schedule_modal.modal("toggle");
+            // for link posting
+            if (is_link) {
+                processLink();
             } else {
-                validateAndProcess();
+                // schedule posting
+                if (action_name == "schedule") {
+                    var schedule_modal = $(".schedule-modal");
+                    schedule_modal.modal("toggle");
+                } else {
+                    validateAndProcess();
+                }
             }
         });
         $(document).on('click', '.schedule_btn', function() {
@@ -207,6 +211,32 @@
                     }
                 }
             })
+        }
+        // process link post
+        var processLink = function() {
+            var title = $('#content').val();
+            var comment = $('#comment').val();
+            var url = $('#article-container .link_url').text();
+            $.ajax({
+                url: "{{ route('panel.schedule.process.post') }}",
+                type: "POST",
+                data: {
+                    "_token": "{{ csrf_token() }}",
+                    "content": content,
+                    "comment": comment,
+                    "link": is_link,
+                    "url": url,
+                    "action": action_name
+                },
+                success: function(response) {
+                    if (response.success) {
+                        resetPostArea();
+                        toastr.success(response.message);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                }
+            });
         }
         // reset post area
         var resetPostArea = function() {
@@ -358,8 +388,8 @@
                     <div id="real-article" class="real-article-wrapper">  
                         <!-- Left Column (Text Content) -->
                         <div class="content-col">
-                            <h2 class="title">${data.title}</h2>
-                            <p class="summary">${data.link}</p>
+                            <h2 class="link_title">${data.title}</h2>
+                            <p class="link_url">${data.link}</p>
                         </div>
                         <!-- Right Column (Image/Sidebar) -->
                         <div class="image-col" style="margin-left: 1rem;">
