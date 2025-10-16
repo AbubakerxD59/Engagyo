@@ -12,7 +12,12 @@ class GeneralController extends Controller
 {
     public function previewLink(Request $request)
     {
-
+        return [
+            "success" => true,
+            "title" => "They were thousands of miles from home in a hospital in India. Here's how they met and fell in love | CNN",
+            "image" => "https=>\/\/media.cnn.com\/api\/v1\/images\/stellar\/prod\/img-1333-copy.jpg?c=16x9&q=w_800,c_fill",
+            "link" => $request->link,
+        ];
         $user = Auth::user();
         $accounts = $user->getAccounts();
         $check = $accounts->where("type", "!=", "pinterest");

@@ -3,7 +3,7 @@
         // global variables
         var action_name = '';
         var current_file = 0;
-        var is_link = false;
+        var is_link = 0;
         // character count
         getCharacterCount($('.check_count'));
         // account status
@@ -122,6 +122,7 @@
             // for link posting
             if (is_link) {
                 processLink();
+                return true;
             } else {
                 // schedule posting
                 if (action_name == "schedule") {
@@ -199,7 +200,7 @@
                     "_token": "{{ csrf_token() }}",
                     "content": content,
                     "comment": comment,
-                    "link": is_link,
+                    "link": 0,
                     "action": action_name
                 },
                 success: function(response) {
@@ -214,9 +215,10 @@
         }
         // process link post
         var processLink = function() {
-            var title = $('#content').val();
+            var content = $('#content').val();
             var comment = $('#comment').val();
             var url = $('#article-container .link_url').text();
+            var image = $('#link_image').attr('src');
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",
                 type: "POST",
@@ -224,8 +226,9 @@
                     "_token": "{{ csrf_token() }}",
                     "content": content,
                     "comment": comment,
-                    "link": is_link,
+                    "link": 1,
                     "url": url,
+                    "image": image,
                     "action": action_name
                 },
                 success: function(response) {
@@ -240,18 +243,21 @@
         }
         // reset post area
         var resetPostArea = function() {
-            is_link = false;
+            is_link = 0;
+            dropZone.removeAllFiles(true);
+            current_file = 0;
             $('#content').val('');
             $('#comment').val('');
+            $('#characterCount').text('');
+            $('#article-container').empty();
             enableActionButton();
         }
         // check link for content
         $('#content').on('input', function() {
             var value = $(this).val();
-            if (!is_link) {
-                if (checkLink(value)) {
-                    var link_data = fetchFromLink(value);
-                }
+            is_link = 0;
+            if (checkLink(value)) {
+                var link_data = fetchFromLink(value);
             }
         });
         // fetch from link
@@ -270,15 +276,13 @@
                         if (response.success) {
                             var title = response.title;
                             var image = response.image;
-                            is_link = true;
                             if (!empty(title)) {
                                 $("#content").val(response.title);
                                 $("#content").trigger("input");
                             }
                             if (!empty(image)) {
-                                setTimeout(function() {
-                                    renderArticleContent(response);
-                                }, 1000);
+                                renderArticleContent(response);
+                                is_link = 1;
                             } else {
                                 container.html(
                                     '<div style="padding: 1rem; color: #DC2626;">Error loading data. Please try again.</div>'
@@ -290,7 +294,9 @@
                             );
                             toastr.error(response.message);
                         }
-                        enableActionButton();
+                        setTimeout(function() {
+                            enableActionButton();
+                        }, 500);
                     }
                 });
             }
@@ -395,7 +401,7 @@
                         </div>
                         <!-- Right Column (Image/Sidebar) -->
                         <div class="image-col" style="margin-left: 1rem;">
-                            <img src="${data.image}" alt="Feature Icon">
+                            <img id="link_image" src="${data.image}" alt="Feature Icon">
                             <!-- Close Button (Functional) -->
                             <button class="close-btn-placeholder" 
                                 onclick="$(this).closest('#real-article').remove()" 
