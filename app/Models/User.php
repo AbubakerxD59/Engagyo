@@ -164,8 +164,8 @@ class User extends Authenticatable
         $boards = $this->boards()->with("pinterest")->whereScheduledActive()->get();
         // Facebook Pages
         $pages = $this->pages()->with("facebook")->whereScheduledActive()->get();
-
-        $accounts = $boards->merge($pages);
+        $accounts = collect();
+        $accounts = $boards->concat($pages);
         return $accounts;
     }
 }
