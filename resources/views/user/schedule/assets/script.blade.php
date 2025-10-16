@@ -243,9 +243,15 @@
                                 $("#content").val(response.title);
                                 $("#content").trigger("input");
                             }
-                            setTimeout(function() {
-                                renderArticleContent(response);
-                            }, 2000);
+                            if (!empty(image)) {
+                                setTimeout(function() {
+                                    renderArticleContent(response);
+                                }, 1000);
+                            } else {
+                                container.html(
+                                    '<div style="padding: 1rem; color: #DC2626;">Error loading data. Please try again.</div>'
+                                );
+                            }
                         } else {
                             container.html(
                                 '<div style="padding: 1rem; color: #DC2626;">Error loading data. Please try again.</div>'

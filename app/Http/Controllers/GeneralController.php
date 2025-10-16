@@ -31,6 +31,7 @@ class GeneralController extends Controller
                     "success" => true,
                     "title" => isset($get_info["title"]) ? $get_info["title"] : "",
                     "image" => isset($get_info["image"]) ? $get_info["image"] : "",
+                    "link" => $link,
                 );
             }
         } else {
