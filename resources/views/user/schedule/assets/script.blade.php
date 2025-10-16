@@ -248,8 +248,10 @@
         // check link for content
         $('#content').on('input', function() {
             var value = $(this).val();
-            if (checkLink(value)) {
-                var link_data = fetchFromLink(value);
+            if (!is_link) {
+                if (checkLink(value)) {
+                    var link_data = fetchFromLink(value);
+                }
             }
         });
         // fetch from link
@@ -388,7 +390,7 @@
                     <div id="real-article" class="real-article-wrapper">  
                         <!-- Left Column (Text Content) -->
                         <div class="content-col">
-                            <h2 class="link_title">${data.title}</h2>
+                            <h5 class="link_title" title="${data.title}">${data.title.substring(0, 60)}...</h5>
                             <p class="link_url">${data.link}</p>
                         </div>
                         <!-- Right Column (Image/Sidebar) -->
