@@ -225,6 +225,9 @@
         // fetch from link
         var fetchFromLink = function(link) {
             if (link) {
+                // render skeleton
+                renderSkeletonLoader();
+                disableActionButton();
                 $.ajax({
                     url: "{{ route('general.previewLink') }}",
                     type: "GET",
@@ -235,30 +238,21 @@
                         if (response.success) {
                             var title = response.title;
                             var image = response.image;
-                            if (!empty(image)) {
-                                var mock_image = {
-                                    name: "",
-                                    size: 54321,
-                                    url: image
-                                };
-                                // Emit dropZone events
-                                dropZone.emit("addedfile", mock_image);
-                                dropZone.emit("thumbnail", mock_image, image);
-                                dropZone.emit("complete", mock_image);
-                                // Push file to dropZone
-                                dropZone.files.push(mock_image);
-                                is_link = true;
-                            } else {
-                                toastr.error("Unable to fetch Image!");
-                            }
+                            is_link = true;
                             if (!empty(title)) {
                                 $("#content").val(response.title);
                                 $("#content").trigger("input");
                             }
-
+                            setTimeout(function() {
+                                renderArticleContent(response);
+                            }, 2000);
                         } else {
+                            container.html(
+                                '<div style="padding: 1rem; color: #DC2626;">Error loading data. Please try again.</div>'
+                            );
                             toastr.error(response.message);
                         }
+                        enableActionButton();
                     }
                 });
             }
@@ -318,5 +312,65 @@
                 }
             });
         });
+        // link loading and preview
+        const container = $('#article-container');
+
+        function renderSkeletonLoader() {
+            const skeletonHTML = `
+                    <div id="skeleton-loader" class="skeleton-wrapper">     
+                        <!-- Left Column (Text Content) -->
+                        <div class="content-col">
+                            <!-- Title Line -->
+                            <div class="skeleton-bar bar-title animate-pulse-slow"></div>
+
+                            <!-- Body Line 1 (Longest) -->
+                            <div class="skeleton-bar bar-full animate-pulse-slow"></div>
+                            
+                            <!-- Body Line 2 (Medium) -->
+                            <div class="skeleton-bar bar-medium animate-pulse-slow"></div>
+
+                            <!-- Body Line 3 (Shortest, like a secondary detail) -->
+                            <div class="skeleton-bar bar-short animate-pulse-slow" style="margin-bottom: 0;"></div>
+                        </div>
+                        <!-- Right Column (Image/Sidebar Block) -->
+                        <div class="image-col">
+                            <!-- Image block placeholder -->
+                            <div class="skeleton-bar image-placeholder animate-pulse-slow"></div>
+                            
+                            <!-- Close Button placeholder -->
+                            <button class="close-btn-placeholder" disabled>
+                                X
+                            </button>
+                        </div>
+                    </div>
+                `;
+            container.html(skeletonHTML);
+        }
+
+        function renderArticleContent(data) {
+            const articleHTML = `
+                    <div id="real-article" class="real-article-wrapper">  
+                        <!-- Left Column (Text Content) -->
+                        <div class="content-col">
+                            <h2 class="title">${data.title}</h2>
+                            <p class="summary">${data.link}</p>
+                        </div>
+                        <!-- Right Column (Image/Sidebar) -->
+                        <div class="image-col" style="margin-left: 1rem;">
+                            <img src="${data.image}" alt="Feature Icon">
+                            <!-- Close Button (Functional) -->
+                            <button class="close-btn-placeholder" 
+                                onclick="$(this).closest('#real-article').remove()" 
+                                style="background-color: black; color: white; cursor: pointer;">
+                                X
+                            </button>
+                        </div>
+                    </div>`;
+            container.html(articleHTML);
+            $('#real-article').animate({
+                opacity: 1
+            }, 1000);
+        }
+        // link loading and preview
     });
 </script>
