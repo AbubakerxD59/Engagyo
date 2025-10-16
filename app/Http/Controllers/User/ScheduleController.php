@@ -353,7 +353,7 @@ class ScheduleController extends Controller
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
-            $url = $request->get("link") ?? null;
+            $url = $request->get("url") ?? null;
             $image = $request->get("image") ?? null;
             if (!empty($url) && !empty($image)) {
                 foreach ($accounts as $account) {
@@ -451,7 +451,7 @@ class ScheduleController extends Controller
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
-            $url = $request->get("link") ?? null;
+            $url = $request->get("url") ?? null;
             $image = $request->get("image") ?? null;
             if (!empty($url) && !empty($image)) {
                 foreach ($accounts as $account) {
@@ -553,7 +553,7 @@ class ScheduleController extends Controller
             $comment = $request->get("comment") ?? null;
             $schedule_date = $request->schedule_date;
             $schedule_time = $request->schedule_time;
-            $url = $request->get("link") ?? null;
+            $url = $request->get("url") ?? null;
             $image = $request->get("image") ?? null;
             if (!empty($url) && !empty($image)) {
                 foreach ($accounts as $account) {
