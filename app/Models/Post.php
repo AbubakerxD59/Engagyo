@@ -343,7 +343,7 @@ class Post extends Model
         );
     }
 
-    protected function image(): Attribute
+    protected function video(): Attribute
     {
         return Attribute::make(
             get: function ($value) {
