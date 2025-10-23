@@ -159,6 +159,8 @@ class ScheduleController extends Controller
                         } else {
                             $postData = ["message" => $content];
                         }
+                        info(json_encode($postData));
+                        info($type);
                         PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                     }
                 }
