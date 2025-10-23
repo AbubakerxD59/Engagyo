@@ -90,3 +90,7 @@ require __DIR__ . '/user.php';
 Route::get("clear/log", function () {
     clearLogFile();
 });
+// php info
+Route::get("phpinfo", function () {
+    phpinfo();
+});
