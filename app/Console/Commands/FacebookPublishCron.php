@@ -59,6 +59,11 @@ class FacebookPublishCron extends Command
                                     "caption" => $post->title,
                                     "url" => $post->image
                                 ];
+                            } elseif ($post->type == "video") {
+                                $postData = [
+                                    "description" => $post->title,
+                                    "file_url" => $post->video
+                                ];
                             }
                             info(json_encode($postData));
                             PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
