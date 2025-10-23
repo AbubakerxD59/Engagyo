@@ -2,21 +2,22 @@
 
 namespace App\Http\Controllers\User;
 
-use App\Services\PinterestService;
 use Exception;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\Board;
 use App\Models\Facebook;
+use App\Models\Timeslot;
 use App\Models\Pinterest;
 use Illuminate\Http\Request;
 use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
+use App\Services\PinterestService;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
-use App\Models\Timeslot;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class ScheduleController extends Controller
 {
@@ -113,8 +114,10 @@ class ScheduleController extends Controller
             if ($file) {
                 $is_video = $request->video;
                 if ($is_video) {
+                    $file = $request->file("files");
+                    $path = Storage::disk('s3')->putFile('photos', $file);
+                    dd($path);
                     $video = saveToS3($request->file("files"), $user->id);
-                    dd($video);
                 } else {
                     $image = saveImage($request->file("files"));
                 }
