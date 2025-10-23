@@ -343,10 +343,13 @@ class Post extends Model
         );
     }
 
-    public function getVideoAttribute()
+    protected function video(): Attribute
     {
-        $video = $this->video;
-        return !empty($video) ? fetchFromS3($video) : "";
+        return Attribute::make(
+            get: function ($video) {
+                return !empty($video) ? fetchFromS3($video) : '';
+            }
+        );
     }
 
     protected function date(): Attribute
