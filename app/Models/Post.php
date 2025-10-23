@@ -25,6 +25,7 @@ class Post extends Model
         "domain_id",
         "url",
         "image",
+        "video",
         "publish_date",
         "status",
         "scheduled",
@@ -338,6 +339,16 @@ class Post extends Model
                     $image = !empty($value) ? url(getImage('', $value)) : no_image();
                     return $image;
                 }
+            }
+        );
+    }
+
+    protected function image(): Attribute
+    {
+        return Attribute::make(
+            get: function ($value) {
+                $video = fetchFromS3($value);
+                return $video;
             }
         );
     }

@@ -42,12 +42,15 @@ function saveImage($file)
     return $fileName;
 }
 
-function saveToS3($file, $user_id)
+function saveToS3($file)
 {
-    $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.' . $file->extension();
-    $path = $file->storeAs('uploads', $fileName, 's3');
-    dd('here', $fileName, $path);
+    $path = Storage::disk('s3')->putFile('videos', $file);
     return $path;
+}
+
+function fetchFromS3($path){
+    $url = Storage::disk('s3')->url($path);
+    return $url;
 }
 
 function saveImageFromUrl($url)

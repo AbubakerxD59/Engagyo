@@ -110,33 +110,35 @@ class ScheduleController extends Controller
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
             $file = $request->file("files") ? true : false;
+            $image = $video = null;
             if ($file) {
                 $is_video = $request->video;
                 if ($is_video) {
-                    $file = $request->file("files");
-                    $path = Storage::disk('s3')->putFile('photos', $file);
-                    dd($path);
-                    $video = saveToS3($request->file("files"), $user->id);
+                    $video = saveToS3($request->file("files"));
                 } else {
                     $image = saveImage($request->file("files"));
                 }
-            } else {
-                $image = null;
             }
             foreach ($accounts as $account) {
                 if ($account->type == "facebook") {
                     $facebook = Facebook::where("fb_id", $account->fb_id)->first();
                     if ($facebook) {
                         // store in db
+                        if ($file) {
+                            $type = !empty($image) ?  "photo" : "video";
+                        } else {
+                            $type = "content_only";
+                        }
                         $post = Post::create([
                             "user_id" => $user->id,
                             "account_id" => $account->page_id,
                             "social_type" => "facebook",
-                            "type" => $file ? "photo" : "content_only",
+                            "type" => $type,
                             "source" => "schedule",
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
+                            "video" => $video,
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
                         ]);
@@ -148,10 +150,13 @@ class ScheduleController extends Controller
                         }
                         $postData = array();
                         if ($file) {
-                            $type = "photo";
-                            $postData = ["caption" => $content, "url" => $post->image];
+                            if (!empty($image)) {
+                                $postData = ["caption" => $content, "url" => $post->image];
+                            }
+                            if (!empty($video)) {
+                                $postData = ["description" => $content, "file_url" => $post->video];
+                            }
                         } else {
-                            $type = "content_only";
                             $postData = ["message" => $content];
                         }
                         PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
@@ -170,6 +175,7 @@ class ScheduleController extends Controller
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
+                            "video" => $video,
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
                         ]);
@@ -178,17 +184,22 @@ class ScheduleController extends Controller
                             $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
                             $access_token = $token["access_token"];
                         }
-                        $encoded_image = file_get_contents($post->image);
-                        $encoded_image = base64_encode($encoded_image);
-                        $postData = array(
-                            "title" => $content,
-                            "board_id" => (string) $account->board_id,
-                            "media_source" => array(
-                                "source_type" => "image_base64",
-                                "content_type" => "image/jpeg",
-                                "data" => $encoded_image
-                            )
-                        );
+                        if (!empty($image)) {
+                            $encoded_image = file_get_contents($post->image);
+                            $encoded_image = base64_encode($encoded_image);
+                            $postData = array(
+                                "title" => $content,
+                                "board_id" => (string) $account->board_id,
+                                "media_source" => array(
+                                    "source_type" => "image_base64",
+                                    "content_type" => "image/jpeg",
+                                    "data" => $encoded_image
+                                )
+                            );
+                        }
+                        if (!empty($video)) {
+                            dd('here');
+                        }
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token);
                     }
                 }
