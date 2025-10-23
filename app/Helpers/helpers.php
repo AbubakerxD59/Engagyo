@@ -7,6 +7,7 @@ use App\Models\Package;
 use App\Models\Notification;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Session;
+use Illuminate\Support\Facades\Storage;
 
 function site_logo()
 {
@@ -39,6 +40,14 @@ function saveImage($file)
     $file->move($path, $fileName);
 
     return $fileName;
+}
+
+function saveToS3($file, $user_id)
+{
+    $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.' . $file->extension();
+    $path = $file->storeAs('uploads', $fileName, 's3');
+    dd('here', $fileName, $path);
+    return $path;
 }
 
 function saveImageFromUrl($url)

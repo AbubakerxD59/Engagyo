@@ -4,6 +4,7 @@
         var action_name = '';
         var current_file = 0;
         var is_link = 0;
+        var is_video = 0;
         // character count
         getCharacterCount($('.check_count'));
         // account status
@@ -52,8 +53,13 @@
             init: function() {
                 // file added
                 this.on("addedfile", function(file) {
-                    var supportedFormats = ['image/jpeg', 'image/jpg', 'image/png',
-                        'video/mp4', 'video/quicktime', 'video/mpg', 'video/webm',
+                    var supportedFormats = [
+                        'image/jpeg', 'image/jpg',
+                        'image/png',
+                        'video/mp4',
+                        'video/quicktime',
+                        'video/mpg',
+                        'video/webm',
                         'video/mov'
                     ];
                     var fileExtension = file.name.split('.').pop().toLowerCase();
@@ -75,6 +81,13 @@
                         toastr.error("This image format is not supported.");
                         this.removeFile(file);
                     }
+                    if (fileExtension == 'mp4' ||
+                        fileExtension == 'mkv' ||
+                        fileExtension == 'mov' ||
+                        fileExtension == 'mpeg' ||
+                        fileExtension == 'webm') {
+                        is_video = 1;
+                    }
                 });
                 // file sending
                 this.on("sending", function(file, xhr, data) {
@@ -87,6 +100,7 @@
                     data.append("content", content);
                     data.append("comment", comment);
                     data.append("link", is_link);
+                    data.append("video", is_video);
                     // for schedule action
                     data.append("schedule_date", schedule_date);
                     data.append("schedule_time", schedule_time);
@@ -94,7 +108,6 @@
                 });
                 // request success
                 this.on("success", function(file, response) {
-                    console.log(response);
                     if (response.success) {
                         toastr.success(response.message);
                     } else {
@@ -265,9 +278,10 @@
         }
         // reset post area
         var resetPostArea = function() {
-            is_link = 0;
             dropZone.removeAllFiles(true);
             current_file = 0;
+            is_link = 0;
+            is_video = 0;
             $('#content').val('');
             $('#comment').val('');
             $('#characterCount').text('');

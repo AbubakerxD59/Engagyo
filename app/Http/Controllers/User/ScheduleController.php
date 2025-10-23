@@ -111,7 +111,13 @@ class ScheduleController extends Controller
             $file = $request->file("files") ? true : false;
             $image = $request->file("files");
             if ($file) {
-                $image = saveImage($request->file("files"));
+                $is_video = $request->video;
+                if ($is_video) {
+                    $video = saveToS3($request->file("files"), $user->id);
+                    dd($video);
+                } else {
+                    $image = saveImage($request->file("files"));
+                }
             } else {
                 $image = null;
             }
