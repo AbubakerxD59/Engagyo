@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
-use App\Models\Pinterest as PinterestModel;
 use App\Models\Post;
+use App\Services\HttpService;
 use DirkGroenen\Pinterest\Pinterest;
+use Illuminate\Support\Facades\Http;
+use App\Models\Pinterest as PinterestModel;
 
 class PinterestService
 {
@@ -95,6 +97,29 @@ class PinterestService
                 "status" => -1,
                 "response" => json_encode($publish)
             ]);
+        }
+    }
+
+    public function video($id, $post, $access_token)
+    {
+        // Step 1
+        $response = Http::withToken($access_token)
+            ->post("{$this->baseUrl}/media", [
+                'media_type' => 'video'
+            ]);
+        if ($response->failed()) {
+            $post = $this->post->find($id);
+            $post->update([
+                "status" => -1,
+                "response" => 'Failed to register media upload: ' . json_encode($response->body())
+            ]);
+        } else {
+            $mediaData = $response->json();
+            $mediaId = $mediaData['media_id'];
+            $uploadUrl = $mediaData['upload_url'];
+            $uploadParameters = $mediaData['upload_parameters'];
+            // Step 2
+            
         }
     }
 }

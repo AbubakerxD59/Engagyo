@@ -159,8 +159,6 @@ class ScheduleController extends Controller
                         } else {
                             $postData = ["message" => $content];
                         }
-                        info(json_encode($postData));
-                        info($type);
                         PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                     }
                 }
@@ -187,6 +185,7 @@ class ScheduleController extends Controller
                             $access_token = $token["access_token"];
                         }
                         if (!empty($image)) {
+                            $type = "image";
                             $encoded_image = file_get_contents($post->image);
                             $encoded_image = base64_encode($encoded_image);
                             $postData = array(
@@ -200,9 +199,12 @@ class ScheduleController extends Controller
                             );
                         }
                         if (!empty($video)) {
-                            dd('here');
+                            $type = "video";
+                            $postData = array(
+                                "video_url" => $post->video
+                            );
                         }
-                        PublishPinterestPost::dispatch($post->id, $postData, $access_token);
+                        PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
                     }
                 }
             }
@@ -230,10 +232,14 @@ class ScheduleController extends Controller
             $comment = $request->get("comment") ?? null;
             $file = $request->file("files") ? true : false;
             $image = $request->file("files");
+            $image = $video = null;
             if ($file) {
-                $image = saveImage($request->file("files"));
-            } else {
-                $image = null;
+                $is_video = $request->video;
+                if ($is_video) {
+                    $video = saveToS3($request->file("files"));
+                } else {
+                    $image = saveImage($request->file("files"));
+                }
             }
             foreach ($accounts as $account) {
                 if (count($account->timeslots) > 0) {
@@ -242,15 +248,21 @@ class ScheduleController extends Controller
                         if ($facebook) {
                             $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->page_id, "type" => "facebook"], $account->timeslots);
                             // store in db
+                            if ($file) {
+                                $type = !empty($image) ?  "photo" : "video";
+                            } else {
+                                $type = "content_only";
+                            }
                             Post::create([
                                 "user_id" => $user->id,
                                 "account_id" => $account->page_id,
                                 "social_type" => "facebook",
-                                "type" => $file ? "photo" : "content_only",
+                                "type" => $type,
                                 "source" => "schedule",
                                 "title" => $content,
                                 "comment" => $comment,
                                 "image" => $image,
+                                "video" => $video,
                                 "status" => 0,
                                 "publish_date" => $nextTime,
                             ]);
@@ -265,11 +277,12 @@ class ScheduleController extends Controller
                                 "user_id" => $user->id,
                                 "account_id" => $account->board_id,
                                 "social_type" => "pinterest",
-                                "type" => "photo",
+                                "type" => !empty($image) ? "photo" : "video",
                                 "source" => "schedule",
                                 "title" => $content,
                                 "comment" => $comment,
                                 "image" => $image,
+                                "video" => $video,
                                 "status" => 0,
                                 "publish_date" => $nextTime,
                             ]);
@@ -307,10 +320,14 @@ class ScheduleController extends Controller
             $schedule_time = $request->schedule_time;
             $file = $request->file("files") ? true : false;
             $image = $request->file("files");
+            $image = $video = null;
             if ($file) {
-                $image = saveImage($request->file("files"));
-            } else {
-                $image = null;
+                $is_video = $request->video;
+                if ($is_video) {
+                    $video = saveToS3($request->file("files"));
+                } else {
+                    $image = saveImage($request->file("files"));
+                }
             }
             foreach ($accounts as $account) {
                 $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
@@ -318,15 +335,21 @@ class ScheduleController extends Controller
                     $facebook = Facebook::where("fb_id", $account->fb_id)->first();
                     if ($facebook) {
                         // store in db
+                        if ($file) {
+                            $type = !empty($image) ?  "photo" : "video";
+                        } else {
+                            $type = "content_only";
+                        }
                         Post::create([
                             "user_id" => $user->id,
                             "account_id" => $account->page_id,
                             "social_type" => "facebook",
-                            "type" => $file ? "photo" : "content_only",
+                            "type" => $type,
                             "source" => "schedule",
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
+                            "video" => $video,
                             "status" => 0,
                             "publish_date" => $scheduleDateTime,
                             "scheduled" => 1
@@ -346,6 +369,7 @@ class ScheduleController extends Controller
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
+                            "video" => $video,
                             "status" => 0,
                             "publish_date" => $scheduleDateTime,
                             "scheduled" => 1
