@@ -23,10 +23,12 @@ class ScheduleController extends Controller
 {
     protected $facebookService;
     protected $pinterestService;
+    protected $source;
     public function __construct()
     {
         $this->facebookService = new FacebookService();
         $this->pinterestService = new PinterestService();
+        $this->source = "schedule";
     }
     public function index()
     {
@@ -134,7 +136,7 @@ class ScheduleController extends Controller
                             "account_id" => $account->page_id,
                             "social_type" => "facebook",
                             "type" => $type,
-                            "source" => "schedule",
+                            "source" => $this->source,
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
@@ -171,7 +173,7 @@ class ScheduleController extends Controller
                             "account_id" => $account->board_id,
                             "social_type" => "pinterest",
                             "type" => "photo",
-                            "source" => "schedule",
+                            "source" => $this->source,
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
@@ -258,7 +260,7 @@ class ScheduleController extends Controller
                                 "account_id" => $account->page_id,
                                 "social_type" => "facebook",
                                 "type" => $type,
-                                "source" => "schedule",
+                                "source" => $this->source,
                                 "title" => $content,
                                 "comment" => $comment,
                                 "image" => $image,
@@ -278,7 +280,7 @@ class ScheduleController extends Controller
                                 "account_id" => $account->board_id,
                                 "social_type" => "pinterest",
                                 "type" => !empty($image) ? "photo" : "video",
-                                "source" => "schedule",
+                                "source" => $this->source,
                                 "title" => $content,
                                 "comment" => $comment,
                                 "image" => $image,
@@ -345,7 +347,7 @@ class ScheduleController extends Controller
                             "account_id" => $account->page_id,
                             "social_type" => "facebook",
                             "type" => $type,
-                            "source" => "schedule",
+                            "source" => $this->source,
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
@@ -365,7 +367,7 @@ class ScheduleController extends Controller
                             "account_id" => $account->board_id,
                             "social_type" => "pinterest",
                             "type" => "photo",
-                            "source" => "schedule",
+                            "source" => $this->source,
                             "title" => $content,
                             "comment" => $comment,
                             "image" => $image,
@@ -411,7 +413,7 @@ class ScheduleController extends Controller
                                 "account_id" => $account->page_id,
                                 "social_type" => "facebook",
                                 "type" => "link",
-                                "source" => "schedule",
+                                "source" => $this->source,
                                 "title" => $content,
                                 "comment" => $comment,
                                 "url" => $url,
@@ -442,7 +444,7 @@ class ScheduleController extends Controller
                                 "account_id" => $account->board_id,
                                 "social_type" => "pinterest",
                                 "type" => "link",
-                                "source" => "schedule",
+                                "source" => $this->source,
                                 "title" => $content,
                                 "comment" => $comment,
                                 "url" => $url,
@@ -510,7 +512,7 @@ class ScheduleController extends Controller
                                 "account_id" => $account->page_id,
                                 "social_type" => "facebook",
                                 "type" => "link",
-                                "source" => "schedule",
+                                "source" => $this->source,
                                 "title" => $content,
                                 "comment" => $comment,
                                 "url" => $url,
@@ -542,7 +544,7 @@ class ScheduleController extends Controller
                                 "account_id" => $account->board_id,
                                 "social_type" => "pinterest",
                                 "type" => "link",
-                                "source" => "schedule",
+                                "source" => $this->source,
                                 "title" => $content,
                                 "comment" => $comment,
                                 "url" => $url,
@@ -612,7 +614,7 @@ class ScheduleController extends Controller
                                 "account_id" => $account->page_id,
                                 "social_type" => "facebook",
                                 "type" => "link",
-                                "source" => "schedule",
+                                "source" => $this->source,
                                 "title" => $content,
                                 "comment" => $comment,
                                 "url" => $url,
@@ -643,7 +645,7 @@ class ScheduleController extends Controller
                                 "account_id" => $account->board_id,
                                 "social_type" => "pinterest",
                                 "type" => "link",
-                                "source" => "schedule",
+                                "source" => $this->source,
                                 "title" => $content,
                                 "comment" => $comment,
                                 "url" => $url,

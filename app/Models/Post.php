@@ -132,7 +132,7 @@ class Post extends Model
 
     public function scopeNotPublished($query)
     {
-        $query->whereIn("status", ["0", "-1"]);
+        $query->whereIn("status", ["0"]);
     }
 
     public function scopePinterest($query)
