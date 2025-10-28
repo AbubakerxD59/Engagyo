@@ -6,6 +6,7 @@ use App\Models\Post;
 use App\Services\HttpService;
 use DirkGroenen\Pinterest\Pinterest;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 use App\Models\Pinterest as PinterestModel;
 
 class PinterestService
@@ -18,6 +19,7 @@ class PinterestService
     private $scopes;
     private $baseUrl = "https://api.pinterest.com/v5/";
     private $sandbox_baseUrl = "https://api-sandbox.pinterest.com/v5/";
+    private $uploadUrl = "https://pinterest-media-upload.s3-accelerate.amazonaws.com/";
     public function __construct()
     {
         $this->scopes = ['user_accounts:read', 'boards:read', 'pins:read', 'boards:write', 'pins:write'];
@@ -107,6 +109,7 @@ class PinterestService
             ->post("{$this->baseUrl}/media", [
                 'media_type' => 'video'
             ]);
+        info("step 1:" . json_encode($response));
         if ($response->failed()) {
             $post = $this->post->find($id);
             $post->update([
@@ -119,7 +122,72 @@ class PinterestService
             $uploadUrl = $mediaData['upload_url'];
             $uploadParameters = $mediaData['upload_parameters'];
             // Step 2
-            
+            $s3_file = $post["media_source"]["media_id"];
+            $file_name = basename($s3_file);
+            $videoMimeType = Storage::disk("s3")->mimeType($s3_file);
+            $videoStream = Storage::disk("s3")->getDriver()->readStream($s3_file);
+            if ($videoStream === false) {
+                info('Failed to get stream for S3 file: ' . $s3_file);
+                $post->update([
+                    "status" => -1,
+                    "response" => 'Failed to get stream for S3 file: ' . $s3_file
+                ]);
+            } else {
+                $multipartFields = [];
+                foreach ($uploadParameters as $key => $value) {
+                    $multipartFields[] = [
+                        'name'     => $key,
+                        'contents' => $value
+                    ];
+                }
+                $multipartFields[] = [
+                    'name'     => 'file',
+                    'contents' => $videoStream,
+                    'filename' => $file_name,
+                    'headers'  => [
+                        'Content-Type' => $videoMimeType
+                    ]
+                ];
+                $response = Http::asMultipart()->post($uploadUrl, $multipartFields);
+                info("step 2:" . json_encode($response));
+                if ($response->failed()) {
+                    info('Video file upload failed: ' . json_encode($response->body()));
+                    $post->update([
+                        "status" => -1,
+                        "response" => 'Video file upload failed: ' . $response->body()
+                    ]);
+                }
+                if (is_resource($videoStream)) {
+                    fclose($videoStream);
+                }
+                // Step 3
+                $maxAttempts = 10;
+                $waitInterval = 5;
+                for ($i = 0; $i < $maxAttempts; $i++) {
+                    // Wait for the interval before the next check
+                    if ($i > 0) {
+                        sleep($waitInterval);
+                    }
+                    $checkResponse = Http::withToken($access_token)
+                        ->get("{$this->baseUrl}/media/{$mediaId}");
+
+                    if ($checkResponse->failed()) {
+                        info('Step 3: Failed to check media status: ' . json_encode($checkResponse->body()));
+                    }
+                    $status = $checkResponse->json()['status'] ?? 'unknown';
+                    if ($status === 'succeeded') {
+                        break;
+                    } elseif ($status === 'failed') {
+                        info("Step 3: Pinterest video processing failed for Media ID: {$mediaId}");
+                    } elseif ($i === $maxAttempts - 1) {
+                        info("Step 3: Video processing timed out after {$maxAttempts} attempts. Current status: {$status}");
+                    }
+                }
+                // Step 4
+                $post["media_source"]["media_id"] = $mediaId;
+                $response = $this->create($id, $post, $access_token);
+                info('Step 4:' . json_encode($response));
+            }
         }
     }
 }

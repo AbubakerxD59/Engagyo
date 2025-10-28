@@ -168,11 +168,12 @@ class ScheduleController extends Controller
                     $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
                     if ($pinterest && $file) {
                         // store in db
+                        $type = !empty($image) ? "photo" : "video";
                         $post = Post::create([
                             "user_id" => $user->id,
                             "account_id" => $account->board_id,
                             "social_type" => "pinterest",
-                            "type" => "photo",
+                            "type" => $type,
                             "source" => $this->source,
                             "title" => $content,
                             "comment" => $comment,
@@ -186,8 +187,7 @@ class ScheduleController extends Controller
                             $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
                             $access_token = $token["access_token"];
                         }
-                        if (!empty($image)) {
-                            $type = "image";
+                        if ($type == "image") {
                             $encoded_image = file_get_contents($post->image);
                             $encoded_image = base64_encode($encoded_image);
                             $postData = array(
@@ -200,10 +200,14 @@ class ScheduleController extends Controller
                                 )
                             );
                         }
-                        if (!empty($video)) {
-                            $type = "video";
+                        if ($type == "video") {
                             $postData = array(
-                                "video_url" => $post->video
+                                "title" => $post->title,
+                                "board_id" => (string) $post->account_id,
+                                'media_source'  => [
+                                    'source_type' => 'video_id',
+                                    'media_id'    => $post->video
+                                ]
                             );
                         }
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);

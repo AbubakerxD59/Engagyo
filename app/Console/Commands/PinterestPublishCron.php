@@ -32,7 +32,6 @@ class PinterestPublishCron extends Command
         $now = date("Y-m-d H:i");
         $posts = $post->notPublished()->past($now)->pinterest()->notSchedule()->get();
         foreach ($posts as $key => $post) {
-            info(json_encode($post));
             if ($post->status == "0") {
                 $user = $post->user()->first();
                 if ($user) {
@@ -68,7 +67,6 @@ class PinterestPublishCron extends Command
                                     )
                                 );
                             }
-                            info(json_encode($postData));
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token);
                         }
                     }
