@@ -208,7 +208,6 @@ class ScheduleController extends Controller
                                 'video_key' => $post->video
                             );
                         }
-                        dd($postData);
                         info(json_encode($postData));
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
                     }
