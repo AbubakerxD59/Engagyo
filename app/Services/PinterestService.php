@@ -110,6 +110,7 @@ class PinterestService
         $title = $post["title"];
         $description = $post["title"];
         $s3Path = $post["video_key"];
+        info($s3Path);
         $s3Url = $this->getTemporaryS3Url($s3Path);
         info($s3Url);
 
