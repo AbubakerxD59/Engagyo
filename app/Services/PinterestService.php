@@ -105,11 +105,13 @@ class PinterestService
 
     public function video($id, $post, $access_token): array
     {
+        info("video upload start");
         // 1. Get a temporary, publicly accessible URL for the S3 video
         $title = $post["title"];
         $description = $post["title"];
         $s3Path = $post["video_key"];
         $s3Url = $this->getTemporaryS3Url($s3Path);
+        info($s3Url);
 
         // 2. Register media upload with Pinterest
         $mediaData = $this->registerMediaUpload($access_token);
@@ -160,7 +162,9 @@ class PinterestService
         ];
 
         // The URI is relative to the base URL configured in HttpService's constructor
-        return $this->client->post($this->baseUrl . 'media', ['media_type' => 'video'], $headers);
+        $response = $this->client->post($this->baseUrl . 'media', ['media_type' => 'video'], $headers);
+        info("register: ".json_encode($response));
+        return $response
     }
 
     /**
