@@ -187,6 +187,7 @@ class ScheduleController extends Controller
                             $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
                             $access_token = $token["access_token"];
                         }
+                        $postData = [];
                         if ($type == "image") {
                             $encoded_image = file_get_contents($post->image);
                             $encoded_image = base64_encode($encoded_image);
@@ -207,6 +208,7 @@ class ScheduleController extends Controller
                                 'video_key' => $post->video
                             );
                         }
+                        dd($postData);
                         info(json_encode($postData));
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
                     }
@@ -221,6 +223,7 @@ class ScheduleController extends Controller
                 "success" => false,
                 "message" => $e->getMessage()
             );
+            info(__LINE__ . $e->getMessage());
         }
         sleep(1);
         return $response;
