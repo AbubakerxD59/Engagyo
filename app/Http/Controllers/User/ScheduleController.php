@@ -156,7 +156,7 @@ class ScheduleController extends Controller
                                 $postData = ["caption" => $content, "url" => $post->image];
                             }
                             if (!empty($video)) {
-                                $postData = ["description" => $content, "file_url" => $post->video];
+                                $postData = ["description" => $content, "file_url" => $post->video_key];
                             }
                         } else {
                             $postData = ["message" => $content];
@@ -204,9 +204,10 @@ class ScheduleController extends Controller
                             $postData = array(
                                 "title" => $post->title,
                                 "board_id" => (string) $post->account_id,
-                                'video_key' => $video
+                                'video_key' => $post->video
                             );
                         }
+                        info(json_encode($postData));
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
                     }
                 }

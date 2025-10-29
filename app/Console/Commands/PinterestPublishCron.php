@@ -66,6 +66,12 @@ class PinterestPublishCron extends Command
                                         "data" => $encoded_image
                                     )
                                 );
+                            } elseif ($post->type == "video") {
+                                $postData = array(
+                                    "title" => $post->title,
+                                    "board_id" => (string) $post->account_id,
+                                    'video_key' => $post->video
+                                );
                             }
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token);
                         }
