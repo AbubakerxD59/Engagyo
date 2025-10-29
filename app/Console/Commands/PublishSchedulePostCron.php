@@ -113,7 +113,7 @@ class PublishSchedulePostCron extends Command
                                     'video_key' => $post->video
                                 );
                             }
-                            PublishPinterestPost::dispatch($post->id, $postData, $access_token);
+                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
                         }
                     }
                 }
