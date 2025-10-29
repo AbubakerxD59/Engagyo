@@ -42,6 +42,7 @@ class PublishPinterestPost implements ShouldQueue
             $pinterestService->create($this->id, $this->data, $this->access_token);
         }
         if ($this->type == "video") {
+            info("pinterest video");
             $pinterestService->video($this->id, $this->data, $this->access_token);
         }
     }
