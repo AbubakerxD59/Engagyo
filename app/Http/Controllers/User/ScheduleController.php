@@ -192,6 +192,7 @@ class ScheduleController extends Controller
                         if ($type == "image") {
                             $encoded_image = file_get_contents($post->image);
                             $encoded_image = base64_encode($encoded_image);
+                            info($encoded_image);
                             $postData = array(
                                 "title" => $content,
                                 "board_id" => (string) $account->board_id,
@@ -201,6 +202,7 @@ class ScheduleController extends Controller
                                     "data" => $encoded_image
                                 )
                             );
+                            info(json_encode($postData));
                         }
                         if ($type == "video") {
                             $postData = array(
