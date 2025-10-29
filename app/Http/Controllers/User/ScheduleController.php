@@ -188,6 +188,7 @@ class ScheduleController extends Controller
                             $access_token = $token["access_token"];
                         }
                         $postData = [];
+                        info($type);
                         if ($type == "image") {
                             $encoded_image = file_get_contents($post->image);
                             $encoded_image = base64_encode($encoded_image);
@@ -208,6 +209,7 @@ class ScheduleController extends Controller
                                 'video_key' => $post->video
                             );
                         }
+                        info("here");
                         info(json_encode($postData));
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
                     }

@@ -38,7 +38,6 @@ class PublishPinterestPost implements ShouldQueue
     public function handle(): void
     {
         $pinterestService = new PinterestService();
-        info($this->type);
         if ($this->type == "image" || $this->type == "link") {
             info("pinterest not video");
             $pinterestService->create($this->id, $this->data, $this->access_token);
