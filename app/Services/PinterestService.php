@@ -163,8 +163,8 @@ class PinterestService
 
         // The URI is relative to the base URL configured in HttpService's constructor
         $response = $this->client->post($this->baseUrl . 'media', ['media_type' => 'video'], $headers);
-        info("register: ".json_encode($response));
-        return $response
+        info("register: " . json_encode($response));
+        return $response;
     }
 
     /**
