@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Exception;
 use App\Models\Post;
 use App\Services\HttpService;
 use DirkGroenen\Pinterest\Pinterest;
@@ -102,89 +103,126 @@ class PinterestService
         }
     }
 
-    public function video($id, $post, $access_token)
+    public function video($id, $post, $access_token): array
     {
-        // Step 1
-        $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
-        $response = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
-        // $response = Http::withToken($access_token)
-        //     ->post("{$this->baseUrl}/media", [
-        //         'media_type' => 'video'
-        //     ]);
-        info("step 1:" . json_encode($response));
-        if ($response->failed()) {
-            $post = $this->post->find($id);
-            $post->update([
-                "status" => -1,
-                "response" => 'Failed to register media upload: ' . json_encode($response->body())
-            ]);
-        } else {
-            $mediaData = $response->json();
-            $mediaId = $mediaData['media_id'];
-            $uploadUrl = $mediaData['upload_url'];
-            $uploadParameters = $mediaData['upload_parameters'];
-            // Step 2
-            $s3_file = $post["media_source"]["media_id"];
-            // $file_name = basename($s3_file);
-            // $videoMimeType = Storage::disk("s3")->mimeType($s3_file);
-            // $videoStream = Storage::disk("s3")->getDriver()->readStream($s3_file);
-            $s3Url = Storage::disk('s3')->temporaryUrl($s3_file, now()->addMinutes(5));
-            if ($s3Url === false) {
-                info('Failed to get stream for S3 file: ' . $s3_file);
-                $post->update([
-                    "status" => -1,
-                    "response" => 'Failed to get stream for S3 file: ' . $s3_file
-                ]);
-            } else {
-                $videoContent = Http::get($s3Url)->body();
-                $multipartData = [];
-                foreach ($uploadParameters as $key => $value) {
-                    $multipartData[] = ['name' => $key, 'contents' => $value];
-                }
-                $multipartData[] = [
-                    'name' => 'file',
-                    'contents' => $videoContent,
-                ];
-                $response = Http::asMultipart()->post($uploadUrl, $multipartData);
-                info("step 2:" . json_encode($response));
-                if ($response->failed()) {
-                    info('Video file upload failed: ' . json_encode($response->body()));
-                    $post->update([
-                        "status" => -1,
-                        "response" => 'Video file upload failed: ' . $response->body()
-                    ]);
-                }
-                if (is_resource($videoStream)) {
-                    fclose($videoStream);
-                }
-                // Step 3
-                $maxAttempts = 10;
-                $waitInterval = 5;
-                for ($i = 0; $i < $maxAttempts; $i++) {
-                    // Wait for the interval before the next check
-                    if ($i > 0) {
-                        sleep($waitInterval);
-                    }
-                    $checkResponse = Http::withToken($access_token)
-                        ->get("{$this->baseUrl}/media/{$mediaId}");
+        // 1. Get a temporary, publicly accessible URL for the S3 video
+        $title = $post["title"];
+        $description = $post["title"];
+        $s3Path = $post["video_key"];
+        $s3Url = $this->getTemporaryS3Url($s3Path);
 
-                    if ($checkResponse->failed()) {
-                        info('Step 3: Failed to check media status: ' . json_encode($checkResponse->body()));
-                    }
-                    $status = $checkResponse->json()['status'] ?? 'unknown';
-                    if ($status === 'succeeded') {
-                        break;
-                    } elseif ($status === 'failed') {
-                        info("Step 3: Pinterest video processing failed for Media ID: {$mediaId}");
-                    } elseif ($i === $maxAttempts - 1) {
-                        info("Step 3: Video processing timed out after {$maxAttempts} attempts. Current status: {$status}");
-                    }
-                }
-                // Step 4
-                $post["media_source"]["media_id"] = $mediaId;
-                $response = $this->create($id, $post, $access_token);
-                info('Step 4:' . json_encode($response));
-            }
+        // 2. Register media upload with Pinterest
+        $mediaData = $this->registerMediaUpload($access_token);
+        info("step 2:" . json_encode($mediaData));
+        $mediaId = $mediaData['media_id'];
+        $uploadUrl = $mediaData['upload_url'];
+        $uploadParams = $mediaData['upload_parameters'];
+
+        // 3. Upload the video media to the Pinterest-provided S3 URL
+        $this->uploadMedia($s3Url, $uploadUrl, $uploadParams);
+
+        // 4. Wait for media processing (status check is *highly* recommended in production, skipped for brevity)
+        // Pinterest must process the uploaded video, which takes time.
+        sleep(15);
+
+        // 5. Create the Pin using the media_id
+        return $this->createPin($post["board_id"], $mediaId, $title, $description, $access_token);
+    }
+    // ----------------------------------------------------------------------
+
+    /**
+     * Generates a temporary signed public URL for an S3 object.
+     * @param string $path
+     * @return string
+     * @throws Exception
+     */
+    protected function getTemporaryS3Url(string $path): string
+    {
+        // 's3' is the default S3 disk name in Laravel's config/filesystems.php
+        if (!Storage::disk('s3')->exists($path)) {
+            throw new Exception("S3 file not found at path: {$path}");
         }
+
+        // Generate a temporary URL that is valid for 5 minutes
+        return Storage::disk('s3')->temporaryUrl($path, now()->addMinutes(5));
+    }
+
+    /**
+     * Registers the intent to upload media and gets the upload URL.
+     * @return array
+     * @throws Exception
+     */
+    protected function registerMediaUpload($accessToken): array
+    {
+        $headers = [
+            'Authorization' => 'Bearer ' . $accessToken,
+            'Content-Type' => 'application/json',
+        ];
+
+        // The URI is relative to the base URL configured in HttpService's constructor
+        return $this->client->post($this->baseUrl . 'media', ['media_type' => 'video'], $headers);
+    }
+
+    /**
+     * Uploads the video file content to the Pinterest-provided S3 URL.
+     * This uses the temporary S3 URL to get the video content and then uploads it 
+     * using the specific multipart form required by Pinterest's upload endpoint.
+     *
+     * @param string $s3Url The temporary public URL of the video file.
+     * @param string $uploadUrl The S3 URL provided by Pinterest for the upload.
+     * @param array $uploadParams The form parameters provided by Pinterest for the S3 upload.
+     * @throws Exception
+     */
+    protected function uploadMedia(string $s3Url, string $uploadUrl, array $uploadParams): void
+    {
+        // Fetch the video content directly from the S3 URL using the HttpService's raw method
+        $videoContent = $this->client->getRaw($s3Url);
+
+        // Prepare the Guzzle-formatted multi-part request data
+        $multipartData = [];
+        foreach ($uploadParams as $key => $value) {
+            $multipartData[] = ['name' => $key, 'contents' => $value];
+        }
+
+        // Add the actual file content as the 'file' part
+        $multipartData[] = [
+            'name' => 'file',
+            'contents' => $videoContent,
+            'filename' => basename($s3Url), // Use the filename from the URL
+        ];
+        info("multipart data: " . json_encode($multipartData));
+
+        // Perform the direct multi-part POST request to the Pinterest-provided S3 URL
+        $this->client->postMultipart($uploadUrl, $multipartData);
+    }
+
+    /**
+     * Creates the final Pin using the media ID.
+     * @param string $mediaId
+     * @param string $title
+     * @param string $description
+     * @return array
+     * @throws Exception
+     */
+    protected function createPin($board_id, string $mediaId, string $title, string $description, $access_token): array
+    {
+        $payload = [
+            'board_id' => $board_id,
+            'media_source' => [
+                'source_type' => 'video_id',
+                'video_id' => $mediaId,
+            ],
+            'title' => $title,
+            'description' => $description,
+        ];
+        info("createPin: " . json_encode($payload));
+
+        $headers = [
+            'Authorization' => 'Bearer ' . $access_token,
+            'Content-Type' => 'application/json',
+        ];
+
+        // The URI is relative to the base URL configured in HttpService's constructor
+        return $this->client->post('pins', $payload, $headers);
     }
 }

@@ -204,10 +204,7 @@ class ScheduleController extends Controller
                             $postData = array(
                                 "title" => $post->title,
                                 "board_id" => (string) $post->account_id,
-                                'media_source'  => [
-                                    'source_type' => 'video_id',
-                                    'media_id'    => $post->video
-                                ]
+                                'video_key' => $video
                             );
                         }
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
