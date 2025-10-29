@@ -106,6 +106,7 @@ class PinterestService
         info("pinterest service video function");
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);;
         $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
+        info(json_encode($registerResponse));
         dd($registerResponse);
     }
 }
