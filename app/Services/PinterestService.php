@@ -123,32 +123,27 @@ class PinterestService
             $uploadParameters = $mediaData['upload_parameters'];
             // Step 2
             $s3_file = $post["media_source"]["media_id"];
-            $file_name = basename($s3_file);
-            $videoMimeType = Storage::disk("s3")->mimeType($s3_file);
-            $videoStream = Storage::disk("s3")->getDriver()->readStream($s3_file);
-            if ($videoStream === false) {
+            // $file_name = basename($s3_file);
+            // $videoMimeType = Storage::disk("s3")->mimeType($s3_file);
+            // $videoStream = Storage::disk("s3")->getDriver()->readStream($s3_file);
+            $s3Url = Storage::disk('s3')->temporaryUrl($s3_file, now()->addMinutes(5));
+            if ($s3Url === false) {
                 info('Failed to get stream for S3 file: ' . $s3_file);
                 $post->update([
                     "status" => -1,
                     "response" => 'Failed to get stream for S3 file: ' . $s3_file
                 ]);
             } else {
-                $multipartFields = [];
+                $videoContent = Http::get($s3Url)->body();
+                $multipartData = [];
                 foreach ($uploadParameters as $key => $value) {
-                    $multipartFields[] = [
-                        'name'     => $key,
-                        'contents' => $value
-                    ];
+                    $multipartData[] = ['name' => $key, 'contents' => $value];
                 }
-                $multipartFields[] = [
-                    'name'     => 'file',
-                    'contents' => $videoStream,
-                    'filename' => $file_name,
-                    'headers'  => [
-                        'Content-Type' => $videoMimeType
-                    ]
+                $multipartData[] = [
+                    'name' => 'file',
+                    'contents' => $videoContent,
                 ];
-                $response = Http::asMultipart()->post($uploadUrl, $multipartFields);
+                $response = Http::asMultipart()->post($uploadUrl, $multipartData);
                 info("step 2:" . json_encode($response));
                 if ($response->failed()) {
                     info('Video file upload failed: ' . json_encode($response->body()));
