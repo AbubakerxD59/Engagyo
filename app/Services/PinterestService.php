@@ -105,10 +105,12 @@ class PinterestService
     public function video($id, $post, $access_token)
     {
         // Step 1
-        $response = Http::withToken($access_token)
-            ->post("{$this->baseUrl}/media", [
-                'media_type' => 'video'
-            ]);
+        $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
+        $response = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
+        // $response = Http::withToken($access_token)
+        //     ->post("{$this->baseUrl}/media", [
+        //         'media_type' => 'video'
+        //     ]);
         info("step 1:" . json_encode($response));
         if ($response->failed()) {
             $post = $this->post->find($id);
