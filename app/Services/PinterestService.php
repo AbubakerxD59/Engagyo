@@ -107,6 +107,7 @@ class PinterestService
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         // step 1
         $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
+        info(json_encode($registerResponse));
         $uploadUrl = $registerResponse['upload_url'];
         $uploadParameters = $registerResponse['upload_parameters'];
         $mediaId = $registerResponse['media_id'];
@@ -130,20 +131,5 @@ class PinterestService
             info("publicUrl: " . $bytesWritten);
             dd($bytesWritten, $publicUrl);
         }
-    }
-    private function saveS3File($s3Key, $fileContents)
-    {
-        $localPublicPath = 'uploads/videos/' . basename($s3Key);
-        $fullPath = public_path($localPublicPath);
-        $directory = dirname($fullPath);
-        if (!file_exists($directory)) {
-            mkdir($directory, 0755, true);
-        }
-        $bytesWritten = file_put_contents($fullPath, $fileContents);
-        $publicUrl = asset($localPublicPath);
-        info("bytesWritten: " . $bytesWritten);
-        info("publicUrl: " . $bytesWritten);
-        dd($bytesWritten, $publicUrl);
-        return $bytesWritten;
     }
 }
