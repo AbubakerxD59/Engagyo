@@ -110,6 +110,8 @@ class PinterestService
         $uploadUrl = $registerResponse['upload_url'];
         $uploadParameters = $registerResponse['upload_parameters'];
         $mediaId = $registerResponse['media_id'];
-        info($uploadUrl);
+        $fileContents = Storage::disk("s3")->get($post["video_key"]);
+        info($fileContents);
+        dd($fileContents);
     }
 }
