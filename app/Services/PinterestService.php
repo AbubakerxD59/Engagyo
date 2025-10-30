@@ -131,18 +131,19 @@ class PinterestService
             $videoPath = public_path($localPublicPath);
             $multipart = [];
             foreach ($uploadParameters as $name => $contents) {
-                $multipart[] = ['name' => $name, 'contents' => $contents];
+                // $multipart[] = ['name' => $name, 'contents' => $contents];
+                $multipart[$name] = $contents;
             }
             $multipart[] = [
                 'name' => 'file', // Key required by Pinterest for the file contents
                 'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
                 'filename' => basename($videoPath),
             ];
-            dd($multipart);
+            
             info("multipart: " . json_encode($multipart));
-            info($uploadUrl);
             $uploadResponse = $this->client->postMultipart($uploadUrl, $multipart);
             // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
+            dd($multipart, $uploadResponse);
             info("uploadResponse: " . json_encode($uploadResponse));
             // step 3
             $mediaReady = false;
