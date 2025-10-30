@@ -111,63 +111,63 @@ class PinterestService
         // step 2
         $file = $this->saveFileFromAws($post["video_key"]);
         dd($file);
-        $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
-        $uploadUrl = $registerResponse['upload_url'];
-        $uploadParameters = $registerResponse['upload_parameters'];
-        $mediaId = $registerResponse['media_id'];
-        if ($fileContents === false) {
-            info("File not found on S3");
-        } else {
-            // step 2
-            $multipart = [];
-            foreach ($uploadParameters as $name => $contents) {
-                $multipart[$name] = $contents;
-            }
-            $multipart["file"] = new CURLFile($videoPath);
-            // $multipart[] = [
-            //     'name' => 'file', // Key required by Pinterest for the file contents
-            //     'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
-            //     'filename' => basename($videoPath),
-            //     'headers'  => [
-            //         'Content-Type' => 'video/mp4',
-            //     ],
-            // ];
-            dd($multipart);
-            $uploadResponse = $this->uploadVideoToPinterestAws($uploadUrl, $multipart);
-            // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
-            // step 3
-            $mediaReady = false;
-            $maxAttempts = 10;
-            $attempt = 0;
-            while (!$mediaReady && $attempt < $maxAttempts) {
-                $attempt++;
-                sleep(2);
-                $statusResponse = $this->client->get($this->baseUrl . 'media/' . $mediaId, [], $this->header);
-                $status = $statusResponse['status'] ?? 'unknown';
-                info("current status: " . $statusResponse['status']);
-                if ($status === 'succeeded') {
-                    $mediaReady = true;
-                } elseif ($status === 'failed') {
-                    throw new \Exception("Video processing failed on Pinterest side. Status: " . $statusResponse['details']);
-                }
-                info("Pinterest Media Status for $mediaId: $status (Attempt $attempt)");
-            }
-            // step 4
-            if ($mediaReady) {
-                $pinPayload = [
-                    "board_id" => (string) $post["board_id"],
-                    'media_id' => $mediaId,
-                ];
-                if (!empty($post["title"])) {
-                    $pinPayload["title"] = $post["title"];
-                }
-                info(message: json_encode($pinPayload));
-                $pinResponse = $this->client->postJson($this->baseUrl . "pins", $pinPayload, $this->header);
-                dd($pinResponse);
-            } else {
-                dd("Media upload failed");
-            }
-        }
+        // $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
+        // $uploadUrl = $registerResponse['upload_url'];
+        // $uploadParameters = $registerResponse['upload_parameters'];
+        // $mediaId = $registerResponse['media_id'];
+        // if ($fileContents === false) {
+        //     info("File not found on S3");
+        // } else {
+        //     // step 2
+        //     $multipart = [];
+        //     foreach ($uploadParameters as $name => $contents) {
+        //         $multipart[$name] = $contents;
+        //     }
+        //     $multipart["file"] = new CURLFile($videoPath);
+        //     // $multipart[] = [
+        //     //     'name' => 'file', // Key required by Pinterest for the file contents
+        //     //     'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
+        //     //     'filename' => basename($videoPath),
+        //     //     'headers'  => [
+        //     //         'Content-Type' => 'video/mp4',
+        //     //     ],
+        //     // ];
+        //     dd($multipart);
+        //     $uploadResponse = $this->uploadVideoToPinterestAws($uploadUrl, $multipart);
+        //     // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
+        //     // step 3
+        //     $mediaReady = false;
+        //     $maxAttempts = 10;
+        //     $attempt = 0;
+        //     while (!$mediaReady && $attempt < $maxAttempts) {
+        //         $attempt++;
+        //         sleep(2);
+        //         $statusResponse = $this->client->get($this->baseUrl . 'media/' . $mediaId, [], $this->header);
+        //         $status = $statusResponse['status'] ?? 'unknown';
+        //         info("current status: " . $statusResponse['status']);
+        //         if ($status === 'succeeded') {
+        //             $mediaReady = true;
+        //         } elseif ($status === 'failed') {
+        //             throw new \Exception("Video processing failed on Pinterest side. Status: " . $statusResponse['details']);
+        //         }
+        //         info("Pinterest Media Status for $mediaId: $status (Attempt $attempt)");
+        //     }
+        //     // step 4
+        //     if ($mediaReady) {
+        //         $pinPayload = [
+        //             "board_id" => (string) $post["board_id"],
+        //             'media_id' => $mediaId,
+        //         ];
+        //         if (!empty($post["title"])) {
+        //             $pinPayload["title"] = $post["title"];
+        //         }
+        //         info(message: json_encode($pinPayload));
+        //         $pinResponse = $this->client->postJson($this->baseUrl . "pins", $pinPayload, $this->header);
+        //         dd($pinResponse);
+        //     } else {
+        //         dd("Media upload failed");
+        //     }
+        // }
     }
     private function postIntent()
     {
@@ -185,7 +185,7 @@ class PinterestService
     private function saveFileFromAws($video_key)
     {
         $fileContents = Storage::disk("s3")->get($video_key);
-        $localPublicPath = 'uploads/videos/' . basename($post["video_key"]);
+        $localPublicPath = 'uploads/videos/' . basename($video_key);
         $fullPath = public_path($localPublicPath);
         $directory = dirname($fullPath);
         if (!file_exists($directory)) {
