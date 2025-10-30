@@ -111,7 +111,13 @@ class PinterestService
         $uploadParameters = $registerResponse['upload_parameters'];
         $mediaId = $registerResponse['media_id'];
         $fileContents = Storage::disk("s3")->get($post["video_key"]);
-        info($fileContents);
-        dd($fileContents);
+        if ($fileContents === false) {
+            $post->update([
+                "status" => -1,
+                "response" => "File not found on S3"
+            ]);
+        } else {
+            $fileUrl = saveS3File($post["video_key"], $fileContents);
+        }
     }
 }
