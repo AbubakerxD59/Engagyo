@@ -246,6 +246,7 @@ class PinterestService
                 throw new \Exception("Video processing failed on Pinterest side. Status: " . $response['details']);
             }
         }
+        dd($response);
         return $mediaReady;
     }
 }
