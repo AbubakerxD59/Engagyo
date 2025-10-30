@@ -105,6 +105,7 @@ class PinterestService
     public function video($id, $post, $access_token)
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
+        $post_row = Post::find($id);
         // step 1
         try {
             $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
@@ -113,7 +114,7 @@ class PinterestService
             $mediaId = $registerResponse['media_id'];
             $fileContents = Storage::disk("s3")->get($post["video_key"]);
             if ($fileContents === false) {
-                $post->update([
+                $post_row->update([
                     "status" => -1,
                     "response" => "File not found on S3"
                 ]);
@@ -138,8 +139,9 @@ class PinterestService
                     'filename' => basename($videoPath),
                 ];
                 $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
+                info("uploadResponse: " . json_encode($uploadResponse));
                 if (!($uploadResponse->successful() || $uploadResponse->status() == 204)) {
-                    $post->update([
+                    $post_row->update([
                         "status" => -1,
                         "response" => "Video upload failed. Status: " . $uploadResponse->status()
                     ]);
@@ -154,9 +156,7 @@ class PinterestService
                 info("pinResponse: " . json_encode($pinResponse));
             }
         } catch (Exception $e) {
-            $post = Post::find($id);
-            info("post: " . json_encode($post));
-            $post->update([
+            $post_row->update([
                 "status" => -1,
                 "response" => $e->getMessage()
             ]);
