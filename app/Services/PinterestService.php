@@ -139,7 +139,6 @@ class PinterestService
                 // $multipart[] = ['name' => $name, 'contents' => $contents];
                 $multipart[$name] = $contents;
             }
-            dd($multipart);
             $uploadResponse = $this->client->postMultipart($uploadUrl, $multipart);
             // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
             info("uploadResponse: " . json_encode($uploadResponse));

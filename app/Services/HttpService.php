@@ -258,7 +258,7 @@ class HttpService
      * @return array
      * @throws Exception
      */
-    public function postMultipart(string $uri, array $multipartData): array
+    public function postMultipart(string $uri, $multipartData): array
     {
         try {
             $response = $this->client->post($uri, [
