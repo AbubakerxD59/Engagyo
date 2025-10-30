@@ -117,6 +117,8 @@ class PinterestService
             // step 4
             $media_status = $this->getUploadedMedia($media_id);
             if ($media_status == "succeeded") {
+                // step 5
+                $upload_video = $this->uploadVideo($post, $media_upload);
             }
         }
         // $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
@@ -262,5 +264,6 @@ class PinterestService
         ];
         $response = $this->client->postJson($this->baseUrl . "pins", $payload, $this->header);
         dd($response);
+        return $response;
     }
 }
