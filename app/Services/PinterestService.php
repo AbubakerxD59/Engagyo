@@ -105,53 +105,53 @@ class PinterestService
     public function video($id, $post, $access_token)
     {
         info("video function start");
-        info("postdata: ". json_encode($post));
+        info("postdata: " . json_encode($post));
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $post_row = Post::find($id);
         // step 1
         // try {
-            info("here");
-            $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
-            $uploadUrl = $registerResponse['upload_url'];
-            $uploadParameters = $registerResponse['upload_parameters'];
-            $mediaId = $registerResponse['media_id'];
-            $fileContents = Storage::disk("s3")->get($post["video_key"]);
-            if ($fileContents === false) {
-                info("File not found on S3");
-            } else {
-                // save aws file to local storage
-                $localPublicPath = 'uploads/videos/' . basename($post["video_key"]);
-                $fullPath = public_path($localPublicPath);
-                $directory = dirname($fullPath);
-                if (!file_exists($directory)) {
-                    mkdir($directory, 0755, true);
-                }
-                $bytesWritten = file_put_contents($fullPath, $fileContents);
-                // step 2
-                $videoPath = public_path($localPublicPath);
-                $multipart = [];
-                foreach ($uploadParameters as $name => $contents) {
-                    $multipart[] = ['name' => $name, 'contents' => $contents];
-                }
-                $multipart[] = [
-                    'name' => 'file', // Key required by Pinterest for the file contents
-                    'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
-                    'filename' => basename($videoPath),
-                ];
-                info("multipart: ". json_encode($multipart));
-                info($uploadUrl);
-                $uploadResponse = $this->client->postMultipart($uploadUrl, $multipart);
-                // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
-                info("uploadResponse: " . json_encode($uploadResponse));
-                // step 3
-                $pinPayload = [
-                    'board_id' => $post["board_id"],
-                    'media_id' => $mediaId,
-                    'title' => $post["tite"],
-                ];
-                $pinResponse = $this->client->postJson($this->baseUrl . "pins", ['json' => $pinPayload], $this->header);
-                info("pinResponse: " . json_encode($pinResponse));
+        info("here");
+        $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
+        $uploadUrl = $registerResponse['upload_url'];
+        $uploadParameters = $registerResponse['upload_parameters'];
+        $mediaId = $registerResponse['media_id'];
+        $fileContents = Storage::disk("s3")->get($post["video_key"]);
+        if ($fileContents === false) {
+            info("File not found on S3");
+        } else {
+            // save aws file to local storage
+            $localPublicPath = 'uploads/videos/' . basename($post["video_key"]);
+            $fullPath = public_path($localPublicPath);
+            $directory = dirname($fullPath);
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
             }
+            $bytesWritten = file_put_contents($fullPath, $fileContents);
+            // step 2
+            $videoPath = public_path($localPublicPath);
+            $multipart = [];
+            foreach ($uploadParameters as $name => $contents) {
+                $multipart[] = ['name' => $name, 'contents' => $contents];
+            }
+            $multipart[] = [
+                'name' => 'file', // Key required by Pinterest for the file contents
+                'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
+                'filename' => basename($videoPath),
+            ];
+            info("multipart: " . json_encode($multipart));
+            info($uploadUrl);
+            $uploadResponse = $this->client->postMultipart($uploadUrl, $multipart);
+            // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
+            info("uploadResponse: " . json_encode($uploadResponse));
+            // step 3
+            $pinPayload = [
+                'board_id' => $post["board_id"],
+                'media_id' => $mediaId,
+                'title' => $post["tite"],
+            ];
+            $pinResponse = $this->client->postJson($this->baseUrl . "pins", ['json' => $pinPayload], $this->header);
+            info("pinResponse: " . json_encode($pinResponse));
+        }
         // } catch (Exception $e) {
         //     info($e->getMessage());
         // }

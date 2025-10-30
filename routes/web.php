@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\FeatureController;
 use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\PackageController;
+use App\Models\Post;
+use App\Services\PinterestService;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -93,4 +95,60 @@ Route::get("clear/log", function () {
 // php info
 Route::get("phpinfo", function () {
     phpinfo();
+});
+
+Route::get("pinterest/publish", function (PinterestService $pinterestService, Post $post) {
+
+    info("pinterest:publish");
+    $now = date("Y-m-d H:i");
+    $posts = $post->notPublished()->past($now)->pinterest()->notSchedule()->get();
+    foreach ($posts as $key => $post) {
+        if ($post->status == "0") {
+            $user = $post->user()->first();
+            if ($user) {
+                $board = $post->board()->userSearch($user->id)->first();
+                if ($board) {
+                    $pinterest = $board->pinterest()->userSearch($user->id)->first();
+                    if ($pinterest) {
+                        $access_token = $pinterest->access_token;
+                        if (!$pinterest->validToken()) {
+                            $token = $pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
+                            $access_token = $token["access_token"];
+                        }
+                        if ($post->type == "link") {
+                            $postData = array(
+                                "title" => $post->title,
+                                "link" => $post->url,
+                                "board_id" => (string) $post->account_id,
+                                "media_source" => array(
+                                    "source_type" => str_contains($post->image, "http") ? "image_url" : "image_base64",
+                                    "url" => $post->image
+                                )
+                            );
+                        } elseif ($post->type == "photo") {
+                            $encoded_image = file_get_contents($post->image);
+                            $encoded_image = base64_encode($encoded_image);
+                            $postData = array(
+                                "title" => $post->title,
+                                "board_id" => (string) $post->account_id,
+                                "media_source" => array(
+                                    "source_type" => "image_base64",
+                                    "content_type" => "image/jpeg",
+                                    "data" => $encoded_image
+                                )
+                            );
+                        } elseif ($post->type == "video") {
+                            $postData = array(
+                                "title" => $post->title,
+                                "board_id" => (string) $post->account_id,
+                                'video_key' => $post->video
+                            );
+                        }
+                        info("cron type: " . $post->type);
+                     $pinterestService->video($post->id, $postData, $access_token);
+                    }
+                }
+            }
+        }
+    }
 });
