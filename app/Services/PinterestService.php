@@ -108,25 +108,17 @@ class PinterestService
         $post_row = Post::find($id);
         // step 1
         $response = $this->postIntent();
-        dd($response);
+        // step 2
+        $file = $this->saveFileFromAws($post["video_key"]);
+        dd($file);
         $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
         $uploadUrl = $registerResponse['upload_url'];
         $uploadParameters = $registerResponse['upload_parameters'];
         $mediaId = $registerResponse['media_id'];
-        $fileContents = Storage::disk("s3")->get($post["video_key"]);
         if ($fileContents === false) {
             info("File not found on S3");
         } else {
-            // save aws file to local storage
-            $localPublicPath = 'uploads/videos/' . basename($post["video_key"]);
-            $fullPath = public_path($localPublicPath);
-            $directory = dirname($fullPath);
-            if (!file_exists($directory)) {
-                mkdir($directory, 0755, true);
-            }
-            $bytesWritten = file_put_contents($fullPath, $fileContents);
             // step 2
-            $videoPath = public_path($localPublicPath);
             $multipart = [];
             foreach ($uploadParameters as $name => $contents) {
                 $multipart[$name] = $contents;
@@ -190,25 +182,19 @@ class PinterestService
             }
         }
     }
-    public function uploadVideoToPinterestAws($uploadUrl, $multipartData)
+    private function saveFileFromAws($video_key)
     {
-        $curl = curl_init();
-
-        curl_setopt_array($curl, array(
-            CURLOPT_URL => $uploadUrl,
-            CURLOPT_RETURNTRANSFER => true,
-            CURLOPT_ENCODING => '',
-            CURLOPT_MAXREDIRS => 10,
-            CURLOPT_TIMEOUT => 0,
-            CURLOPT_FOLLOWLOCATION => true,
-            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
-            CURLOPT_CUSTOMREQUEST => 'POST',
-            CURLOPT_POSTFIELDS => $multipartData
-        ));
-
-        $response = curl_exec($curl);
-        curl_close($curl);
-        $response = json_decode($response, true);
-        return $response;
+        $fileContents = Storage::disk("s3")->get($video_key);
+        $localPublicPath = 'uploads/videos/' . basename($post["video_key"]);
+        $fullPath = public_path($localPublicPath);
+        $directory = dirname($fullPath);
+        if (!file_exists($directory)) {
+            mkdir($directory, 0755, true);
+        }
+        $bytesWritten = file_put_contents($fullPath, $fileContents);
+        return array(
+            "directory" => $directory,
+            "fullPath" => $fullPath
+        );
     }
 }
