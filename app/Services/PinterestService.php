@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Exception;
 use App\Models\Post;
+use GuzzleHttp\Psr7\Utils;
 use App\Services\HttpService;
 use DirkGroenen\Pinterest\Pinterest;
 use Illuminate\Support\Facades\Http;
@@ -103,38 +104,60 @@ class PinterestService
 
     public function video($id, $post, $access_token)
     {
-        info("pinterest service video function");
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
-        info(json_encode($this->header));
         // step 1
-        // $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
-        // info(json_encode($registerResponse));
-        // $uploadUrl = $registerResponse['upload_url'];
-        // $uploadParameters = $registerResponse['upload_parameters'];
-        // $mediaId = $registerResponse['media_id'];
-        info("aws key: " . $post["video_key"]);
-        $fileContents = Storage::disk("s3")->get($post["video_key"]);
-        if ($fileContents === false) {
+        try {
+            $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
+            $uploadUrl = $registerResponse['upload_url'];
+            $uploadParameters = $registerResponse['upload_parameters'];
+            $mediaId = $registerResponse['media_id'];
+            $fileContents = Storage::disk("s3")->get($post["video_key"]);
+            if ($fileContents === false) {
+                $post->update([
+                    "status" => -1,
+                    "response" => "File not found on S3"
+                ]);
+            } else {
+                // save aws file to local storage
+                $localPublicPath = 'uploads/videos/' . basename($post["video_key"]);
+                $fullPath = public_path($localPublicPath);
+                $directory = dirname($fullPath);
+                if (!file_exists($directory)) {
+                    mkdir($directory, 0755, true);
+                }
+                $bytesWritten = file_put_contents($fullPath, $fileContents);
+                // step 2
+                $videoPath = public_path($localPublicPath);
+                $multipart = [];
+                foreach ($uploadParameters as $name => $contents) {
+                    $multipart[] = ['name' => $name, 'contents' => $contents];
+                }
+                $multipart[] = [
+                    'name' => 'file', // Key required by Pinterest for the file contents
+                    'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
+                    'filename' => basename($videoPath),
+                ];
+                $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
+                if (!($uploadResponse->successful() || $uploadResponse->status() == 204)) {
+                    $post->update([
+                        "status" => -1,
+                        "response" => "Video upload failed. Status: " . $uploadResponse->status()
+                    ]);
+                }
+                // step 3
+                $pinPayload = [
+                    'board_id' => $post["board_id"],
+                    'media_id' => $mediaId,
+                    'title' => $post["tite"],
+                ];
+                $pinResponse = $this->client->postJson($this->baseUrl . "pins", ['json' => $pinPayload], $this->header);
+                info("pinResponse: " . json_encode($pinResponse));
+            }
+        } catch (Exception $e) {
             $post->update([
                 "status" => -1,
-                "response" => "File not found on S3"
+                "response" => $e->getMessage()
             ]);
-        } else {
-            info("save aws file to local storage");
-            // save aws file to local storage
-            $localPublicPath = 'uploads/videos/' . basename($post["video_key"]);
-            info("localPublicPath: " . $localPublicPath);
-            $fullPath = public_path($localPublicPath);
-            info("fullPath: " . $fullPath);
-            $directory = dirname($fullPath);
-            if (!file_exists($directory)) {
-                mkdir($directory, 0755, true);
-            }
-            $bytesWritten = file_put_contents($fullPath, $fileContents);
-            info("bytesWritten: " . $bytesWritten);
-            $publicUrl = asset($localPublicPath);
-            info("publicUrl: " . $bytesWritten);
-            dd($bytesWritten, $publicUrl);
         }
     }
 }
