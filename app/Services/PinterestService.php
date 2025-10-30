@@ -148,16 +148,8 @@ class PinterestService
     }
     private function postIntent()
     {
-        try {
-            $response = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
-            return $response;
-        } catch (RequestException $e) {
-            if ($e->hasResponse()) {
-                dd($e->getResponse()->getBody()->getContents());
-            } else {
-                dd($e->getMessage());
-            }
-        }
+        $response = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
+        return $response;
     }
     private function saveFileFromAws($video_key)
     {
@@ -247,7 +239,6 @@ class PinterestService
             ]
         ];
         $response = $this->client->postJson($this->baseUrl . "pins", $payload, $this->header);
-        dd($response, $payload);
         return $response;
     }
 }
