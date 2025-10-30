@@ -32,7 +32,6 @@ class PinterestPublishCron extends Command
         info("pinterest:publish");
         $now = date("Y-m-d H:i");
         $posts = $post->notPublished()->past($now)->pinterest()->notSchedule()->get();
-        info(json_encode($posts));
         foreach ($posts as $key => $post) {
             if ($post->status == "0") {
                 $user = $post->user()->first();
@@ -75,7 +74,7 @@ class PinterestPublishCron extends Command
                                     'video_key' => $post->video
                                 );
                             }
-                            info($post->type);
+                            info("cron type: " . $post->type);
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
                         }
                     }

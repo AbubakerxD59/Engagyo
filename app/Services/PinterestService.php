@@ -106,11 +106,11 @@ class PinterestService
         info("pinterest service video function");
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         // step 1
-        $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
-        info(json_encode($registerResponse));
-        $uploadUrl = $registerResponse['upload_url'];
-        $uploadParameters = $registerResponse['upload_parameters'];
-        $mediaId = $registerResponse['media_id'];
+        // $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
+        // info(json_encode($registerResponse));
+        // $uploadUrl = $registerResponse['upload_url'];
+        // $uploadParameters = $registerResponse['upload_parameters'];
+        // $mediaId = $registerResponse['media_id'];
         $fileContents = Storage::disk("s3")->get($post["video_key"]);
         if ($fileContents === false) {
             $post->update([
