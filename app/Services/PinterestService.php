@@ -106,7 +106,6 @@ class PinterestService
     {
         info("video function start");
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
-        $post_row = Post::find($id);
         // step 1
         try {
             $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
