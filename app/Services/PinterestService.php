@@ -103,6 +103,7 @@ class PinterestService
 
     public function video($id, $post, $access_token)
     {
+        dd('here');
         info("pinterest service video function");
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         // step 1
