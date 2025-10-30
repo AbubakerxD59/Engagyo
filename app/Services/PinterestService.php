@@ -129,7 +129,6 @@ class PinterestService
             $bytesWritten = file_put_contents($fullPath, $fileContents);
             // step 2
             $videoPath = public_path($localPublicPath);
-            $multipart = [];
             $multipart = [
                 'name' => 'file', // Key required by Pinterest for the file contents
                 'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
