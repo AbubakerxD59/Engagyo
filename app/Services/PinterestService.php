@@ -145,13 +145,15 @@ class PinterestService
             info("uploadResponse: " . json_encode($uploadResponse));
             // step 3
             $pinPayload = [
-                'board_id' => $post["board_id"],
+                "board_id" => (string) $post["board_id"],
                 'media_id' => $mediaId,
-                'title' => $post["title"],
             ];
-            info(json_encode($pinPayload));
+            if (!empty($post["title"])) {
+                $pinPayload["title"] = $post["title"];
+            }
+            info(message: json_encode($pinPayload));
             $pinResponse = $this->client->postJson($this->baseUrl . "pins", $pinPayload, $this->header);
-            info("pinResponse: " . json_encode($pinResponse));
+            dd($pinResponse);
         }
         // } catch (Exception $e) {
         //     info($e->getMessage());
