@@ -168,7 +168,7 @@ class ScheduleController extends Controller
                     $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
                     if ($pinterest && $file) {
                         // store in db
-                        $type = !empty($image) ? "image" : "video";
+                        $type = !empty($image) ? "photo" : "video";
                         $post = Post::create([
                             "user_id" => $user->id,
                             "account_id" => $account->board_id,
@@ -188,11 +188,9 @@ class ScheduleController extends Controller
                             $access_token = $token["access_token"];
                         }
                         $postData = [];
-                        info($type);
-                        if ($type == "image") {
+                        if ($type == "photo") {
                             $encoded_image = file_get_contents($post->image);
                             $encoded_image = base64_encode($encoded_image);
-                            info($encoded_image);
                             $postData = array(
                                 "title" => $content,
                                 "board_id" => (string) $account->board_id,
@@ -202,7 +200,6 @@ class ScheduleController extends Controller
                                     "data" => $encoded_image
                                 )
                             );
-                            info(json_encode($postData));
                         }
                         if ($type == "video") {
                             $postData = array(
@@ -211,8 +208,6 @@ class ScheduleController extends Controller
                                 'video_key' => $post->video
                             );
                         }
-                        info("here");
-                        info(json_encode($postData));
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
                     }
                 }
@@ -226,7 +221,6 @@ class ScheduleController extends Controller
                 "success" => false,
                 "message" => $e->getMessage()
             );
-            info(__LINE__ . $e->getMessage());
         }
         sleep(1);
         return $response;
@@ -283,11 +277,12 @@ class ScheduleController extends Controller
                         if ($pinterest && $file) {
                             $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->board_id, "type" => "pinterest"], $account->timeslots);
                             // store in db
+                            $type = !empty($image) ? "photo" : "video";
                             Post::create([
                                 "user_id" => $user->id,
                                 "account_id" => $account->board_id,
                                 "social_type" => "pinterest",
-                                "type" => !empty($image) ? "photo" : "video",
+                                "type" => $type,
                                 "source" => $this->source,
                                 "title" => $content,
                                 "comment" => $comment,
@@ -370,11 +365,12 @@ class ScheduleController extends Controller
                     $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
                     if ($pinterest && $file) {
                         // store in db
+                        $type = !empty($image) ? "photo" : "video";
                         Post::create([
                             "user_id" => $user->id,
                             "account_id" => $account->board_id,
                             "social_type" => "pinterest",
-                            "type" => "photo",
+                            "type" => $type,
                             "source" => $this->source,
                             "title" => $content,
                             "comment" => $comment,
@@ -474,7 +470,7 @@ class ScheduleController extends Controller
                                     "url" => $post->image
                                 )
                             );
-                            PublishPinterestPost::dispatch($post->id, $postData, $access_token);
+                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                         }
                     }
                 }
@@ -574,7 +570,7 @@ class ScheduleController extends Controller
                                     "url" => $post->image
                                 )
                             );
-                            PublishPinterestPost::dispatch($post->id, $postData, $access_token);
+                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                         }
                     }
                 }
@@ -675,7 +671,7 @@ class ScheduleController extends Controller
                                     "url" => $post->image
                                 )
                             );
-                            PublishPinterestPost::dispatch($post->id, $postData, $access_token);
+                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                         }
                     }
                 }

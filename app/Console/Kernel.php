@@ -23,7 +23,7 @@ class Kernel extends ConsoleKernel
         // Command to publish Facebook posts
         $schedule->command('facebook:publish')->everyFiveMinutes();
         // Command to publish Scheduled posts
-        $schedule->command('schedule:publish')->everyFiveMinutes();
+        $schedule->command('schedule:publish')->everyMinute();
     }
 
     /**

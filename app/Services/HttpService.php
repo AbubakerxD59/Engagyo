@@ -290,7 +290,6 @@ class HttpService
             $response = $this->client->get($uri);
             return $response->getBody()->getContents();
         } catch (RequestException $e) {
-            info("getRaw fn:" . $e->getMessage());
             throw new Exception("Failed to fetch raw content from {$uri}: " . $e->getMessage(), $e->getCode());
         }
     }

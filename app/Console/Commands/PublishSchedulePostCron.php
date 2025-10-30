@@ -30,10 +30,9 @@ class PublishSchedulePostCron extends Command
      */
     public function handle(Post $post, PinterestService $pinterestService, FacebookService $facebookService)
     {
-        info('schedule cron run');
+        info("schedule:publish");
         $now = date("Y-m-d H:i");
         $posts = $post->notPublished()->past($now)->schedule()->get();
-        info(json_encode($posts));
         foreach ($posts as $key => $post) {
             $user = $post->user()->first();
             if ($user) {
@@ -113,7 +112,6 @@ class PublishSchedulePostCron extends Command
                                     'video_key' => $post->video
                                 );
                             }
-                            info(json_encode($postData));
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
                         }
                     }

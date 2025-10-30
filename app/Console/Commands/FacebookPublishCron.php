@@ -28,10 +28,10 @@ class FacebookPublishCron extends Command
      */
     public function handle(Post $post, FacebookService $facebookService)
     {
+        info("facebook:publish");
         $now = date("Y-m-d H:i");
         $posts = $post->notPublished()->past($now)->facebook()->notSchedule()->get();
         foreach ($posts as $key => $post) {
-            info(json_encode($post));
             if ($post->status == "0") {
                 $user = $post->user()->first();
                 if ($user) {
@@ -65,7 +65,6 @@ class FacebookPublishCron extends Command
                                     "file_url" => $post->video
                                 ];
                             }
-                            info(json_encode($postData));
                             PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
                         }
                     }

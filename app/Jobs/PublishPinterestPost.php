@@ -24,7 +24,7 @@ class PublishPinterestPost implements ShouldQueue
     /**
      * Create a new job instance.
      */
-    public function __construct($id, $data, $access_token, $type = "image")
+    public function __construct($id, $data, $access_token, $type)
     {
         $this->id = $id;
         $this->data = $data;
@@ -38,7 +38,7 @@ class PublishPinterestPost implements ShouldQueue
     public function handle(): void
     {
         $pinterestService = new PinterestService();
-        if ($this->type == "image" || $this->type == "link") {
+        if ($this->type == "photo" || $this->type == "link") {
             $pinterestService->create($this->id, $this->data, $this->access_token);
         }
         if ($this->type == "video") {

@@ -74,7 +74,6 @@ class PinterestPublishCron extends Command
                                     'video_key' => $post->video
                                 );
                             }
-                            info("cron type: " . $post->type);
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
                         }
                     }

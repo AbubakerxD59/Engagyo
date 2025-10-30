@@ -347,7 +347,8 @@ class AutomationController extends Controller
                                     "url" => $post->image
                                 )
                             );
-                            PublishPinterestPost::dispatch($post->id, $postData, $access_token);
+                            $type = str_contains($post->image, "http") ? "link" : "photo";
+                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
                             $response = array(
                                 "success" => true,
                                 "message" => "Your post is being Published!"
