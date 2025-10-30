@@ -138,6 +138,7 @@ class PinterestService
                 'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
                 'filename' => basename($videoPath),
             ];
+            dd($multipart);
             info("multipart: " . json_encode($multipart));
             info($uploadUrl);
             $uploadResponse = $this->client->postMultipart($uploadUrl, $multipart);
@@ -161,7 +162,7 @@ class PinterestService
                 info("Pinterest Media Status for $mediaId: $status (Attempt $attempt)");
             }
             // step 4
-            if($mediaReady){
+            if ($mediaReady) {
                 $pinPayload = [
                     "board_id" => (string) $post["board_id"],
                     'media_id' => $mediaId,
@@ -172,8 +173,7 @@ class PinterestService
                 info(message: json_encode($pinPayload));
                 $pinResponse = $this->client->postJson($this->baseUrl . "pins", $pinPayload, $this->header);
                 dd($pinResponse);
-            }
-            else{
+            } else {
                 dd("Media upload failed");
             }
         }
