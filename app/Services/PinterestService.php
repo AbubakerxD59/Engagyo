@@ -107,7 +107,8 @@ class PinterestService
         info("video function start");
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         // step 1
-        try {
+        // try {
+            info("here");
             $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
             $uploadUrl = $registerResponse['upload_url'];
             $uploadParameters = $registerResponse['upload_parameters'];
@@ -149,8 +150,8 @@ class PinterestService
                 $pinResponse = $this->client->postJson($this->baseUrl . "pins", ['json' => $pinPayload], $this->header);
                 info("pinResponse: " . json_encode($pinResponse));
             }
-        } catch (Exception $e) {
-            info($e->getMessage());
-        }
+        // } catch (Exception $e) {
+        //     info($e->getMessage());
+        // }
     }
 }
