@@ -151,13 +151,11 @@ class PinterestService
                 $attempt++;
                 sleep(2);
                 $statusResponse = $this->client->get($this->baseUrl . 'media/' . $mediaId, [], $this->header);
-                info("statusResponse: " . json_encode($statusResponse));
-                $status = $statusData['status'] ?? 'unknown';
-
+                $status = $statusResponse['status'] ?? 'unknown';
                 if ($status === 'succeeded') {
                     $mediaReady = true;
                 } elseif ($status === 'failed') {
-                    throw new \Exception("Video processing failed on Pinterest side. Status: " . $statusData['details']);
+                    throw new \Exception("Video processing failed on Pinterest side. Status: " . $statusResponse['details']);
                 }
                 info("Pinterest Media Status for $mediaId: $status (Attempt $attempt)");
             }
