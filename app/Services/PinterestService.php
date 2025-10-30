@@ -178,7 +178,7 @@ class PinterestService
     private function getUploadedMedia($mediaId)
     {
         $mediaReady = false;
-        $maxAttempts = 10;
+        $maxAttempts = 15;
         $attempt = 0;
         while (!$mediaReady && $attempt < $maxAttempts) {
             $attempt++;
