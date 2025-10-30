@@ -139,7 +139,7 @@ class PinterestService
                 'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
                 'filename' => basename($videoPath),
             ];
-            
+            dd($multipart);
             info("multipart: " . json_encode($multipart));
             $uploadResponse = $this->client->postMultipart($uploadUrl, $multipart);
             // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
