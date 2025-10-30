@@ -152,6 +152,7 @@ class PinterestService
                 sleep(2);
                 $statusResponse = $this->client->get($this->baseUrl . 'media/' . $mediaId, [], $this->header);
                 $status = $statusResponse['status'] ?? 'unknown';
+                info("current status: " . $statusResponse['status']);
                 if ($status === 'succeeded') {
                     $mediaReady = true;
                 } elseif ($status === 'failed') {
@@ -160,16 +161,21 @@ class PinterestService
                 info("Pinterest Media Status for $mediaId: $status (Attempt $attempt)");
             }
             // step 4
-            $pinPayload = [
-                "board_id" => (string) $post["board_id"],
-                'media_id' => $mediaId,
-            ];
-            if (!empty($post["title"])) {
-                $pinPayload["title"] = $post["title"];
+            if($mediaReady){
+                $pinPayload = [
+                    "board_id" => (string) $post["board_id"],
+                    'media_id' => $mediaId,
+                ];
+                if (!empty($post["title"])) {
+                    $pinPayload["title"] = $post["title"];
+                }
+                info(message: json_encode($pinPayload));
+                $pinResponse = $this->client->postJson($this->baseUrl . "pins", $pinPayload, $this->header);
+                dd($pinResponse);
             }
-            info(message: json_encode($pinPayload));
-            $pinResponse = $this->client->postJson($this->baseUrl . "pins", $pinPayload, $this->header);
-            dd($pinResponse);
+            else{
+                dd("Media upload failed");
+            }
         }
         // } catch (Exception $e) {
         //     info($e->getMessage());
