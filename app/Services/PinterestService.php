@@ -116,6 +116,8 @@ class PinterestService
             $media_upload = $this->uploadToUrl($response, $file["fullPath"]);
             // step 4
             $media_status = $this->getUploadedMedia($media_id);
+            if ($media_status == "succeeded") {
+            }
         }
         // $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
         // $uploadUrl = $registerResponse['upload_url'];
@@ -246,7 +248,19 @@ class PinterestService
                 throw new \Exception("Video processing failed on Pinterest side. Status: " . $response['details']);
             }
         }
-        dd($response);
         return $mediaReady;
+    }
+    private function uploadVideo($postData, $media_id)
+    {
+        $payload = [
+            "title" => $postData["title"],
+            "board_id" => $postData["board_id"],
+            "media_source" => [
+                "source_type" => "video_id",
+                "media_id" => $media_id
+            ]
+        ];
+        $response = $this->client->postJson($this->baseUrl . "pins", $payload, $this->header);
+        dd($response);
     }
 }
