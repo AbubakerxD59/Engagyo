@@ -108,9 +108,15 @@ class PinterestService
         $post_row = Post::find($id);
         // step 1
         $response = $this->postIntent();
-        // step 2
-        $file = $this->saveFileFromAws($post["video_key"]);
-        dd($file);
+        if (isset($response["media_id"])) {
+            $media_id = $response["media_id"];
+            // step 2
+            $file = $this->saveFileFromAws($post["video_key"]);
+            // step 3
+            $media_upload = $this->uploadToUrl($response, $file["fullPath"]);
+            // step 4
+            $media_status = $this->getUploadedMedia($media_id);
+        }
         // $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
         // $uploadUrl = $registerResponse['upload_url'];
         // $uploadParameters = $registerResponse['upload_parameters'];
@@ -196,5 +202,50 @@ class PinterestService
             "directory" => $directory,
             "fullPath" => $fullPath
         );
+    }
+    private function uploadToUrl($parameters, $file)
+    {
+        $uploadUrl = $parameters["upload_url"];
+        $multipartData = array();
+        foreach ($parameters["upload_parameters"] as $name => $contents) {
+            $multipartData[] = [
+                'name' => $name,
+                'contents' => $contents,
+            ];
+        }
+        if (file_exists($file)) {
+            $multipartData[] = [
+                'name' => 'file',
+                'contents' => fopen($file, 'r'),
+                'filename' => basename($file),
+                'headers' => [
+                    'Content-Type' => mime_content_type($file) ?: 'video/mp4',
+                ],
+            ];
+        } else {
+            throw new \Exception("File not found at path: {$file}");
+        }
+        $response = $this->client->postMultipart($uploadUrl, $multipartData);
+        return true;
+    }
+    private function getUploadedMedia($mediaId)
+    {
+        $mediaReady = false;
+        $maxAttempts = 10;
+        $attempt = 0;
+        while (!$mediaReady && $attempt < $maxAttempts) {
+            $attempt++;
+            sleep(2);
+            $response = $this->client->get($this->baseUrl . 'media/' . $mediaId, [], $this->header);
+            $status = $response['status'] ?? 'unknown';
+            echo "current status: " . $status;
+            echo "attemp#" . $attempt;
+            if ($status === 'succeeded') {
+                $mediaReady = true;
+            } elseif ($status === 'failed') {
+                throw new \Exception("Video processing failed on Pinterest side. Status: " . $response['details']);
+            }
+        }
+        return $mediaReady;
     }
 }
