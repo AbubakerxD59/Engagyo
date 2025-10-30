@@ -144,9 +144,7 @@ class PinterestService
             //     ],
             // ];
             $uploadResponse = $this->uploadVideoToPinterestAws($uploadUrl, $multipart);
-            $uploadResponse = $this->client->postMultipart($uploadUrl, $multipart);
             // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
-            info("uploadResponse: " . json_encode($uploadResponse));
             // step 3
             $mediaReady = false;
             $maxAttempts = 10;
@@ -202,7 +200,7 @@ class PinterestService
 
         $response = curl_exec($curl);
         curl_close($curl);
-        dd(json_decode($response, true));
-        echo $response;
+        $response = json_decode($response, true);
+        return $response;
     }
 }
