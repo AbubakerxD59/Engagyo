@@ -155,6 +155,7 @@ class PinterestService
             }
         } catch (Exception $e) {
             $post = Post::find($id);
+            info("post: " . json_encode($post));
             $post->update([
                 "status" => -1,
                 "response" => $e->getMessage()
