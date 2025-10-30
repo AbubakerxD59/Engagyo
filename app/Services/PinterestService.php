@@ -147,7 +147,7 @@ class PinterestService
             $pinPayload = [
                 'board_id' => $post["board_id"],
                 'media_id' => $mediaId,
-                'title' => $post["tite"],
+                'title' => $post["title"],
             ];
             $pinResponse = $this->client->postJson($this->baseUrl . "pins", ['json' => $pinPayload], $this->header);
             info("pinResponse: " . json_encode($pinResponse));
