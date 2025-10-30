@@ -54,21 +54,6 @@ function fetchFromS3($path)
     return $url;
 }
 
-function saveS3File($s3Key, $fileContents)
-{
-    $localPublicPath = 'uploads/videos/' . basename($s3Key);
-    $fullPath = public_path($localPublicPath);
-    $directory = dirname($fullPath);
-    if (!file_exists($directory)) {
-        mkdir($directory, 0755, true);
-    }
-    $bytesWritten = file_put_contents($fullPath, $fileContents);
-    $publicUrl = asset($localPublicPath);
-    info("bytesWritten: " . $bytesWritten);
-    info("publicUrl: " . $bytesWritten);
-    dd($bytesWritten, $publicUrl);
-    return $bytesWritten;
-}
 function saveImageFromUrl($url)
 {
     $image_info = pathinfo($url);
