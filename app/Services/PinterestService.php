@@ -112,13 +112,37 @@ class PinterestService
             $media_id = $response["media_id"];
             // step 2
             $file = $this->saveFileFromAws($post["video_key"]);
-            // step 3
-            $media_upload = $this->uploadToUrl($response, $file["fullPath"]);
-            // step 4
-            $media_status = $this->getUploadedMedia($media_id);
-            if ($media_status == "succeeded") {
-                // step 5
-                $upload_video = $this->uploadVideo($post, $media_id);
+            if ($file["success"]) {
+                // step 3
+                $media_upload = $this->uploadToUrl($response, $file["fullPath"]);
+                // step 4
+                $media_status = $this->getUploadedMedia($media_id);
+                if ($media_status["success"]) {
+                    // step 5
+                    $upload_video = $this->uploadVideo($post, $media_id);
+                    if (isset($upload_video["id"])) {
+                        $post_row->update([
+                            "post_id" => $upload_video["id"],
+                            "status" => 1,
+                            "message" => "Published Successfully!"
+                        ]);
+                    } else {
+                        $post_row->update([
+                            "status" => -1,
+                            "message" => json_encode($upload_video)
+                        ]);
+                    }
+                } else {
+                    $post_row->update([
+                        "status" => -1,
+                        "message" => $media_status["message"]
+                    ]);
+                }
+            } else {
+                $post_row->update([
+                    "status" => -1,
+                    "message" => $file["message"]
+                ]);
             }
         }
     }
@@ -137,18 +161,26 @@ class PinterestService
     }
     private function saveFileFromAws($video_key)
     {
-        $fileContents = Storage::disk("s3")->get($video_key);
-        $localPublicPath = 'uploads/videos/' . basename($video_key);
-        $fullPath = public_path($localPublicPath);
-        $directory = dirname($fullPath);
-        if (!file_exists($directory)) {
-            mkdir($directory, 0755, true);
+        try {
+            $fileContents = Storage::disk("s3")->get($video_key);
+            $localPublicPath = 'uploads/videos/' . basename($video_key);
+            $fullPath = public_path($localPublicPath);
+            $directory = dirname($fullPath);
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            $bytesWritten = file_put_contents($fullPath, $fileContents);
+            return array(
+                "success" => true,
+                "directory" => $directory,
+                "fullPath" => $fullPath
+            );
+        } catch (Exception $e) {
+            return array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
         }
-        $bytesWritten = file_put_contents($fullPath, $fileContents);
-        return array(
-            "directory" => $directory,
-            "fullPath" => $fullPath
-        );
     }
     private function uploadToUrl($parameters, $file)
     {
@@ -185,15 +217,23 @@ class PinterestService
             sleep(2);
             $response = $this->client->get($this->baseUrl . 'media/' . $mediaId, [], $this->header);
             $status = $response['status'] ?? 'unknown';
-            echo "current status: " . $status;
-            echo "attemp#" . $attempt;
             if ($status === 'succeeded') {
                 $mediaReady = true;
             } elseif ($status === 'failed') {
-                throw new \Exception("Video processing failed on Pinterest side. Status: " . $response['details']);
+                $error =  "Video processing failed on Pinterest side. Status: " . $response['details'];
             }
         }
-        return $mediaReady;
+        if ($mediaReady) {
+            $response =  [
+                "success" => true
+            ];
+        } else {
+            $response = [
+                "success" => false,
+                "message" => isset($error) ? $error : "Video processing failed on Pinterest side."
+            ];
+        }
+        return $response;
     }
     private function uploadVideo($postData, $media_id)
     {
