@@ -104,6 +104,7 @@ class PinterestService
 
     public function video($id, $post, $access_token)
     {
+        info("video function start");
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $post_row = Post::find($id);
         info(json_decode($post_row));
@@ -115,10 +116,7 @@ class PinterestService
             $mediaId = $registerResponse['media_id'];
             $fileContents = Storage::disk("s3")->get($post["video_key"]);
             if ($fileContents === false) {
-                $post_row->update([
-                    "status" => -1,
-                    "response" => "File not found on S3"
-                ]);
+                info("File not found on S3");
             } else {
                 // save aws file to local storage
                 $localPublicPath = 'uploads/videos/' . basename($post["video_key"]);
@@ -142,10 +140,7 @@ class PinterestService
                 $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
                 info("uploadResponse: " . json_encode($uploadResponse));
                 if (!($uploadResponse->successful() || $uploadResponse->status() == 204)) {
-                    $post_row->update([
-                        "status" => -1,
-                        "response" => "Video upload failed. Status: " . $uploadResponse->status()
-                    ]);
+                    info("Video upload failed. Status: " . $uploadResponse->status());
                 }
                 // step 3
                 $pinPayload = [
@@ -157,10 +152,7 @@ class PinterestService
                 info("pinResponse: " . json_encode($pinResponse));
             }
         } catch (Exception $e) {
-            $post_row->update([
-                "status" => -1,
-                "response" => $e->getMessage()
-            ]);
+            info($e->getMessage());
         }
     }
 }
