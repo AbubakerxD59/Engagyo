@@ -106,6 +106,7 @@ class PinterestService
     {
         info("video function start");
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
+        $post_row = Post::find($id);
         // step 1
         // try {
             info("here");
@@ -136,11 +137,11 @@ class PinterestService
                     'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
                     'filename' => basename($videoPath),
                 ];
-                $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
+                info("multipart: ". json_encode($multipart));
+                info($uploadUrl);
+                $uploadResponse = $this->client->postMultipart($uploadUrl, $multipart);
+                // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
                 info("uploadResponse: " . json_encode($uploadResponse));
-                if (!($uploadResponse->successful() || $uploadResponse->status() == 204)) {
-                    info("Video upload failed. Status: " . $uploadResponse->status());
-                }
                 // step 3
                 $pinPayload = [
                     'board_id' => $post["board_id"],
