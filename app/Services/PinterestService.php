@@ -144,6 +144,24 @@ class PinterestService
             // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
             info("uploadResponse: " . json_encode($uploadResponse));
             // step 3
+            $mediaReady = false;
+            $maxAttempts = 10;
+            $attempt = 0;
+            while (!$mediaReady && $attempt < $maxAttempts) {
+                $attempt++;
+                sleep(5);
+                $statusResponse = $this->client->get($this->baseUrl . 'media/' . $mediaId, [], $this->header);
+                info("statusResponse: " . json_encode($statusResponse));
+                $status = $statusData['status'] ?? 'unknown';
+
+                if ($status === 'succeeded') {
+                    $mediaReady = true;
+                } elseif ($status === 'failed') {
+                    throw new \Exception("Video processing failed on Pinterest side. Status: " . $statusData['details']);
+                }
+                info("Pinterest Media Status for $mediaId: $status (Attempt $attempt)");
+            }
+            // step 4
             $pinPayload = [
                 "board_id" => (string) $post["board_id"],
                 'media_id' => $mediaId,
