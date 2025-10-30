@@ -120,16 +120,19 @@ class PinterestService
                 "response" => "File not found on S3"
             ]);
         } else {
+            info("save aws file to local storage");
             // save aws file to local storage
             $localPublicPath = 'uploads/videos/' . basename($post["video_key"]);
+            info("localPublicPath: " . $localPublicPath);
             $fullPath = public_path($localPublicPath);
+            info("fullPath: " . $fullPath);
             $directory = dirname($fullPath);
             if (!file_exists($directory)) {
                 mkdir($directory, 0755, true);
             }
             $bytesWritten = file_put_contents($fullPath, $fileContents);
-            $publicUrl = asset($localPublicPath);
             info("bytesWritten: " . $bytesWritten);
+            $publicUrl = asset($localPublicPath);
             info("publicUrl: " . $bytesWritten);
             dd($bytesWritten, $publicUrl);
         }
