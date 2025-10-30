@@ -118,7 +118,7 @@ class PinterestService
             $media_status = $this->getUploadedMedia($media_id);
             if ($media_status == "succeeded") {
                 // step 5
-                $upload_video = $this->uploadVideo($post, $media_upload);
+                $upload_video = $this->uploadVideo($post, $media_id);
             }
         }
     }
