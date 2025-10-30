@@ -105,6 +105,7 @@ class PinterestService
     public function video($id, $post, $access_token)
     {
         info("video function start");
+        info("postdata: ". json_encode($post));
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $post_row = Post::find($id);
         // step 1
