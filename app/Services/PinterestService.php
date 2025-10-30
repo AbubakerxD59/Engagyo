@@ -5,11 +5,10 @@ namespace App\Services;
 use CURLFile;
 use Exception;
 use App\Models\Post;
-use GuzzleHttp\Psr7\Utils;
 use App\Services\HttpService;
 use DirkGroenen\Pinterest\Pinterest;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
+use GuzzleHttp\Exception\RequestException;
 use App\Models\Pinterest as PinterestModel;
 
 class PinterestService
@@ -105,13 +104,11 @@ class PinterestService
 
     public function video($id, $post, $access_token)
     {
-        info("video function start");
-        info("postdata: " . json_encode($post));
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $post_row = Post::find($id);
         // step 1
-        // try {
-        info("here");
+        $response = $this->postIntent();
+        dd($response);
         $registerResponse = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
         $uploadUrl = $registerResponse['upload_url'];
         $uploadParameters = $registerResponse['upload_parameters'];
@@ -179,9 +176,19 @@ class PinterestService
                 dd("Media upload failed");
             }
         }
-        // } catch (Exception $e) {
-        //     info($e->getMessage());
-        // }
+    }
+    private function postIntent()
+    {
+        try {
+            $response = $this->client->postJson($this->baseUrl . "media", ['media_type' => 'video'], $this->header);
+            return $response;
+        } catch (RequestException $e) {
+            if ($e->hasResponse()) {
+                dd($e->getResponse()->getBody()->getContents());
+            } else {
+                dd($e->getMessage());
+            }
+        }
     }
     public function uploadVideoToPinterestAws($uploadUrl, $multipartData)
     {
