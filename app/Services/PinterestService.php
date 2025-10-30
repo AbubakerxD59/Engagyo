@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use CURLFile;
 use Exception;
 use App\Models\Post;
 use GuzzleHttp\Psr7\Utils;
@@ -131,17 +132,18 @@ class PinterestService
             $videoPath = public_path($localPublicPath);
             $multipart = [];
             foreach ($uploadParameters as $name => $contents) {
-                $multipart[] = ['name' => $name, 'contents' => $contents];
+                $multipart[$name] = $contents;
             }
-            $multipart[] = [
-                'name' => 'file', // Key required by Pinterest for the file contents
-                'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
-                'filename' => basename($videoPath),
-                'headers'  => [
-                    'Content-Type' => 'video/mp4',
-                ],
-            ];
-            info($uploadUrl);
+            $multipart["file"] = new CURLFile($videoPath);
+            // $multipart[] = [
+            //     'name' => 'file', // Key required by Pinterest for the file contents
+            //     'contents' => Utils::tryFopen($videoPath, 'r'), // Read file content
+            //     'filename' => basename($videoPath),
+            //     'headers'  => [
+            //         'Content-Type' => 'video/mp4',
+            //     ],
+            // ];
+            $uploadResponse = $this->uploadVideoToPinterestAws();
             $uploadResponse = $this->client->postMultipart($uploadUrl, $multipart);
             // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
             info("uploadResponse: " . json_encode($uploadResponse));
@@ -181,5 +183,26 @@ class PinterestService
         // } catch (Exception $e) {
         //     info($e->getMessage());
         // }
+    }
+    public function uploadVideoToPinterestAws($uploadUrl, $multipartData)
+    {
+        $curl = curl_init();
+
+        curl_setopt_array($curl, array(
+            CURLOPT_URL => $uploadUrl,
+            CURLOPT_RETURNTRANSFER => true,
+            CURLOPT_ENCODING => '',
+            CURLOPT_MAXREDIRS => 10,
+            CURLOPT_TIMEOUT => 0,
+            CURLOPT_FOLLOWLOCATION => true,
+            CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+            CURLOPT_CUSTOMREQUEST => 'POST',
+            CURLOPT_POSTFIELDS => $multipartData
+        ));
+
+        $response = curl_exec($curl);
+        curl_close($curl);
+        dd(json_decode($response, true));
+        echo $response;
     }
 }
