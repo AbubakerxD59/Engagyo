@@ -149,7 +149,7 @@ class PinterestService
             $attempt = 0;
             while (!$mediaReady && $attempt < $maxAttempts) {
                 $attempt++;
-                sleep(5);
+                sleep(2);
                 $statusResponse = $this->client->get($this->baseUrl . 'media/' . $mediaId, [], $this->header);
                 info("statusResponse: " . json_encode($statusResponse));
                 $status = $statusData['status'] ?? 'unknown';
