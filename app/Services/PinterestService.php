@@ -144,7 +144,14 @@ class PinterestService
                     "message" => $file["message"]
                 ]);
             }
+        } else {
+            $post_row->update([
+                "status" => -1,
+                "message" => $response["message"]
+            ]);
         }
+        removeFromS3($post["video_key"]);
+        removeFile($post["video_key"]);
     }
     private function postIntent()
     {

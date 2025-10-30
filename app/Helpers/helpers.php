@@ -48,6 +48,14 @@ function saveToS3($file)
     return $path;
 }
 
+function removeFromS3($file)
+{
+    $disk = Storage::disk('s3');
+    if ($disk->exists($file)) {
+        $disk->delete($file);
+    }
+}
+
 function fetchFromS3($path)
 {
     $url = Storage::disk('s3')->url($path);
@@ -108,6 +116,15 @@ function getImage($folderName = null, $fileName, $parentFolder = 'uploads')
 function getVideo($folderName, $fileName)
 {
     return asset('uploads/' . $folderName . '/' . $fileName);
+}
+function removeFile($file)
+{
+    $filePath = $file;
+    if (Storage::disk('public')->exists($filePath)) {
+        Storage::disk('public')->delete($filePath);
+        dd('File ' . $file . ' successfully deleted.');
+    }
+    dd('File ' . $file . ' not found.');
 }
 function check_permission($permission)
 {
