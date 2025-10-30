@@ -117,7 +117,18 @@ class PinterestService
                 "response" => "File not found on S3"
             ]);
         } else {
-            $fileUrl = $this->saveS3File($post["video_key"], $fileContents);
+            // save aws file to local storage
+            $localPublicPath = 'uploads/videos/' . basename($post["video_key"]);
+            $fullPath = public_path($localPublicPath);
+            $directory = dirname($fullPath);
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+            $bytesWritten = file_put_contents($fullPath, $fileContents);
+            $publicUrl = asset($localPublicPath);
+            info("bytesWritten: " . $bytesWritten);
+            info("publicUrl: " . $bytesWritten);
+            dd($bytesWritten, $publicUrl);
         }
     }
     private function saveS3File($s3Key, $fileContents)
