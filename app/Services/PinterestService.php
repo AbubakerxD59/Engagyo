@@ -143,6 +143,7 @@ class PinterestService
             //         'Content-Type' => 'video/mp4',
             //     ],
             // ];
+            dd($multipart);
             $uploadResponse = $this->uploadVideoToPinterestAws($uploadUrl, $multipart);
             // $uploadResponse = Http::asMultipart()->post($uploadUrl, $multipart);
             // step 3
