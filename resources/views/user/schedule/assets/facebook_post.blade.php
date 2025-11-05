@@ -157,7 +157,7 @@
 
     .facebook_card .social_profile {
         height: 35px !important;
-        widows: 35px !important;
+        width: 35px !important;
     }
 
     /* facebook post */

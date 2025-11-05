@@ -79,7 +79,7 @@
 
     .pinterest_card .social_profile {
         height: 35px !important;
-        widows: 35px !important;
+        width: 35px !important;
     }
 
     .pinterest_card .post-image {
