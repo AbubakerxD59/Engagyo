@@ -24,7 +24,7 @@
         @endif
     </div>
     <div class="card-body p-0">
-        @if (!empty($post->image))
+        @if ($post->type == 'photo')
             <div class="col-12 content-block">
                 <div class="content-block-inner text-center">
                     <div class="pronunciation-image-container">
