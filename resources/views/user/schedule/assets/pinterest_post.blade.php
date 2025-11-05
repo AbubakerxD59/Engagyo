@@ -86,7 +86,7 @@
         width: 100%;
         height: auto;
         display: block;
-        border-radius: 0;
+        border-radius: 20px 20px 0px 0px;
     }
 
     .pinterest_card .image-overlay-buttons {
