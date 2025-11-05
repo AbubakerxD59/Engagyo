@@ -453,6 +453,56 @@
         $(document).on('click', '.close-btn-placeholder', function() {
             resetPostArea();
         });
-        // link loading and preview
+        // posts datatable
+        var postsdataTable = $('#postsTable').DataTable({
+            "paging": true,
+            "lengthChange": true,
+            "searching": false,
+            "ordering": false,
+            "info": true,
+            "autoWidth": true,
+            "responsive": true,
+            "processing": true,
+            "serverSide": true,
+            "pageLength": 10,
+            "ajax": {
+                "url": "{{ route('panel.schedule.posts.listing') }}",
+                data: function(d) {
+                    d.account_id = $('#account').val();
+                    d.type = $('#type').val();
+                    d.post_type = $('#post_type').val();
+                    d.status = $('#status').val();
+                    return d;
+                },
+            },
+            columns: [{
+                    data: 'post_details',
+                    name: 'post_details'
+                },
+                {
+                    data: 'account_detail',
+                    name: 'account_detail'
+                },
+                {
+                    data: 'publish_datetime',
+                    name: 'publish_datetime'
+                },
+                {
+                    data: 'status_view',
+                    name: 'status_view'
+                },
+                {
+                    data: 'response',
+                    name: 'response'
+                },
+                {
+                    data: 'action',
+                    name: 'action'
+                },
+            ],
+        });
+        $(document).on('change', '.filter', function() {
+            postsdataTable.ajax.reload();
+        });
     });
 </script>

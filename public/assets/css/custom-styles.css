@@ -365,6 +365,10 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
     padding: 4px;
 }
 
+.dataTable {
+    width: 100% !important;
+}
+
 @media (min-width: 992px) {
     .page-content {
         padding-inline: 0.7rem;

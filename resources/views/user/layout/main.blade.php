@@ -130,6 +130,12 @@
     @stack('scripts')
     <script>
         $(document).ready(function() {
+            // csrf token
+            $.ajaxSetup({
+                headers: {
+                    'X-CSRF-TOKEN': "{{ csrf_token() }}"
+                }
+            });
             // Logout button
             $('.sign-out').on('click', function() {
                 if (confirm('Do you wish to Signout?')) {

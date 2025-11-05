@@ -104,4 +104,8 @@ class Page extends Model
         $expires_in = $this->expires_in;
         return $now > $expires_in ? true : false;
     }
+
+    public function getAccountIdAttribute(){
+        return $this->page_id;
+    }
 }

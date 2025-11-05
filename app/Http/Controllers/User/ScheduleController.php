@@ -753,4 +753,35 @@ class ScheduleController extends Controller
         }
         return response()->json($response);
     }
+
+    public function postsListing(Request $request)
+    {
+        $data = $request->all();
+        $posts = Post::with("page.facebook", "board.pinterest")->isScheduled();
+        // filters
+        if (!empty($request->account_id)) {
+            $posts = $posts->whereIn("account_id", $request->account_id);
+        }
+        if (!empty($request->type)) {
+            $posts = $posts->whereIn("social_type", $request->type);
+        }
+        if (!empty($request->post_type)) {
+            $posts = $posts->whereIn("type", $request->post_type);
+        }
+        if (!empty($request->status)) {
+            $posts = $posts->whereIn("status", $request->status);
+        }
+        $totalRecordswithFilter = clone $posts;
+        $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
+        $posts = $posts->latest()->get();
+        // $posts->append(["post_details"]);
+        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action"]);
+        $response = [
+            "draw" => intval($data['draw']),
+            "iTotalRecords" => Post::count(),
+            "iTotalDisplayRecords" => $totalRecordswithFilter->count(),
+            "data" => $posts
+        ];
+        return response()->json($response);
+    }
 }

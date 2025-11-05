@@ -160,6 +160,11 @@ class Post extends Model
         $query->whereIn("source", ["rss"]);
     }
 
+    public function scopeIsScheduled($query)
+    {
+        $query->whereIn("source", ["schedule"]);
+    }
+
     public function getDomain()
     {
         $domain = $this->domain()->first();
@@ -343,7 +348,8 @@ class Post extends Model
         );
     }
 
-    public function getVideKeyAttribute(){
+    public function getVideKeyAttribute()
+    {
         $video_key = $this->video;
         return !empty($video_key) ? fetchFromS3($video_key) : '';
     }
@@ -400,5 +406,66 @@ class Post extends Model
                 return $message;
             }
         );
+    }
+
+    public function getAccountNameAttribute()
+    {
+        $social_type = $this->social_type;
+        $account_name = '';
+        if ($social_type == "facebook") {
+            $account_name = $this->page->facebook->name;
+        }
+        if ($social_type == "pinterest") {
+            $account_name = $this->board->pinterest->name;
+        }
+        return $account_name;
+    }
+
+    public function getAccountProfileAttribute()
+    {
+        $social_type = $this->social_type;
+        $profile_image = '';
+        if ($social_type == "facebook") {
+            $profile_image = $this->page->facebook->profile_image;
+        }
+        if ($social_type == "pinterest") {
+            $profile_image = $this->board->pinterest->profile_image;
+        }
+        return $profile_image;
+    }
+
+    public function getPostDetailsAttribute()
+    {
+        if ($this->social_type == "facebook") {
+            $view = view("user.schedule.dataTable.facebook_post_details")->with("post", $this);
+        }
+        if ($this->social_type == "pinterest") {
+            $view = view("user.schedule.dataTable.pinterest_post_details")->with("post", $this);
+        }
+        return $view->render();
+    }
+
+    public function getAccountDetailAttribute()
+    {
+        $view = view("user.schedule.dataTable.account_detail")->with("post", $this);
+        return $view->render();
+    }
+
+    public function getPublishDateTimeAttribute()
+    {
+        $publish_datetime = $this->publish_date;
+        return date("Y-m-d H:i A", strtotime($publish_datetime));
+    }
+
+    public function getStatusViewAttribute()
+    {
+        $view = view("user.schedule.dataTable.status_view")->with("post", $this);
+        return $view->render();
+    }
+
+    public function getActionAttribute()
+    {
+        $view = view("user.schedule.dataTable.action")->with("post", $this);
+        return $view->render();
     }
 }

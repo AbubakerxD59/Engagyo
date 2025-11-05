@@ -1,5 +1,5 @@
-  <div class="modal fade" id="connectPinterestModal" tabindex="-1" role="dialog" aria-labelledby="connectPinterestModal"
-      aria-hidden="true">
+  <div class="modal fade" id="connectPinterestModal" tabindex="-1" data-backdrop="static" role="dialog"
+      aria-labelledby="connectPinterestModal" aria-hidden="true">
       <div class="modal-dialog modal-dialog-centered" role="document">
           <div class="modal-content">
               <div class="modal-header">

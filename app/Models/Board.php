@@ -87,4 +87,8 @@ class Board extends Model
         $pinterest = $this->pinterest()->where("pin_id", $pin_id)->first();
         return $pinterest;
     }
+
+    public function getAccountIdAttribute(){
+        return $this->board_id;
+    }
 }
