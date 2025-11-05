@@ -757,7 +757,7 @@ class ScheduleController extends Controller
     public function postsListing(Request $request)
     {
         $data = $request->all();
-        $posts = Post::with("page.facebook", "board.pinterest")->isScheduled();
+        $posts = Post::with("page.facebook", "board.pinterest")->isScheduled()->userSearch(auth()->id());
         // filters
         if (!empty($request->account_id)) {
             $posts = $posts->whereIn("account_id", $request->account_id);
