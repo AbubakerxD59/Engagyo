@@ -3,8 +3,8 @@
     <div class="card-header bg-white border-0 p-3 d-flex justify-content-between align-items-start">
         <div class="d-flex">
             <!-- Profile Picture -->
-            <img src="{{ $post->account_profile }}" class="rounded-circle me-2" style="object-fit: cover;"
-                onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';" width="15%">
+            <img src="{{ $post->account_profile }}" class="rounded-circle social_profile me-2" style="object-fit: cover;"
+                onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';">
             <div class="post-header-text ml-2">
                 <div class="post-author">
                     {{ $post->account_name ?? ucfirst($post->social_type) }}
@@ -47,9 +47,9 @@
         </div>
         <!-- Comment Box -->
         <div class="d-flex align-items-center mt-2">
-            <img src="{{ $post->account_profile }}" class="rounded-circle me-2" alt="Comment Profile"
+            <img src="{{ $post->account_profile }}" class="rounded-circle social_profile me-2" alt="Comment Profile"
                 style="object-fit: cover;"
-                onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';" width="8%">
+                onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';">
             <div class="flex-grow-1 p-2 rounded-pill bg-light text-muted" style="font-size: 12px;">
                 @if (!empty($post->comment))
                     {{ $post->comment }}

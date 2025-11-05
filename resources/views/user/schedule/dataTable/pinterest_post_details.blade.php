@@ -9,10 +9,13 @@
      <div class="card-content">
          <h4 class="title-text">{{ $post->title }}</h4>
          <div class="mb-2">
-             <img src="{{ $post->account_profile }}" class="rounded-circle me-2" style="object-fit: cover;"
-                 onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';" width="15%">
-             <span class="btn">
-                 {{ $post->account_name ?? ucfirst($post->social_type) }}
+             <img src="{{ $post->account_profile }}" class="rounded-circle me-2 social_profile"
+                 style="object-fit: cover;"
+                 onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';">
+             <span>
+                 <strong>
+                     {{ $post->account_name ?? ucfirst($post->social_type) }}
+                 </strong>
              </span>
          </div>
          <!-- COMMENTS SECTION -->

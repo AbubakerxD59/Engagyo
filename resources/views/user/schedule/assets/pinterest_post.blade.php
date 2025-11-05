@@ -74,6 +74,12 @@
         border-radius: 0 0 0 0;
         /* Keep top corners sharp for header */
         overflow: hidden;
+
+    }
+
+    .pinterest_card .social_profile {
+        height: 35px !important;
+        widows: 35px !important;
     }
 
     .pinterest_card .post-image {
