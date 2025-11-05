@@ -12,9 +12,6 @@
     /* --- Top Header Styles --- */
     .pinterest_card .card-header-custom {
         padding: 15px 20px;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
         border-bottom: none;
     }
 
