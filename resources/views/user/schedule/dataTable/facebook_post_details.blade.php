@@ -54,7 +54,7 @@
                 @if (!empty($post->comment))
                     {{ $post->comment }}
                 @else
-                    Comment as Muhammad Abubaker...
+                    Comment as {{ $post->account_name ?? ucfirst($post->social_type) }}
                 @endif
             </div>
         </div>
