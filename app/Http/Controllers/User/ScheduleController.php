@@ -258,7 +258,7 @@ class  ScheduleController extends Controller
                     if ($account->type == "facebook") {
                         $facebook = Facebook::where("fb_id", $account->fb_id)->first();
                         if ($facebook) {
-                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->page_id, "type" => "facebook"], $account->timeslots);
+                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->page_id, "social_type" => "facebook"], $account->timeslots);
                             // store in db
                             if ($file) {
                                 $type = !empty($image) ?  "photo" : "video";
@@ -283,7 +283,7 @@ class  ScheduleController extends Controller
                     if ($account->type == "pinterest") {
                         $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
                         if ($pinterest && $file) {
-                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->board_id, "type" => "pinterest"], $account->timeslots);
+                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->board_id, "social_type" => "pinterest"], $account->timeslots);
                             // store in db
                             $type = !empty($image) ? "photo" : "video";
                             Post::create([
@@ -517,7 +517,7 @@ class  ScheduleController extends Controller
                     if ($account->type == "facebook") {
                         $facebook = Facebook::where("fb_id", $account->fb_id)->first();
                         if ($facebook) {
-                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->page_id, "type" => "facebook"], $account->timeslots);
+                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->page_id, "social_type" => "facebook"], $account->timeslots);
                             // store in db
                             $post = Post::create([
                                 "user_id" => $user->id,
@@ -549,7 +549,7 @@ class  ScheduleController extends Controller
                     if ($account->type == "pinterest") {
                         $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
                         if ($pinterest) {
-                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->board_id, "type" => "pinterest"], $account->timeslots);
+                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->board_id, "social_type" => "pinterest"], $account->timeslots);
                             // store in db
                             $post = Post::create([
                                 "user_id" => $user->id,
