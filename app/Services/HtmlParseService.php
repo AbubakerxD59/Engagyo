@@ -54,7 +54,7 @@ class HtmlParseService
         }
     }
 
-    public function fetchImages($url, $mode)
+    public function fetchPhoto($url, $mode)
     {
         try {
             $social_type = $mode == 1 ? "pinterest" : "other";

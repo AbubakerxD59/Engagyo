@@ -16,6 +16,7 @@ return new class extends Migration
             $table->integer('post_id')->index();
             $table->string("mode")->nullable();
             $table->text('url')->nullable();
+            $table->integer('tries')->default(0);
             $table->enum('status', ['pending', 'fetched', 'failed'])->default('pending')->index();
             $table->longText("response")->nullable();
             $table->timestamps();
