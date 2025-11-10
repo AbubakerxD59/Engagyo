@@ -45,8 +45,10 @@ class FeedService
             info("fetchRss: " . json_encode($feedUrls));
         }
         if ($feedUrls["success"]) {
+            info('success');
             try {
                 $items = $feedUrls["data"];
+                info('items: ' . json_encode($items));
                 if (count($items) > 0) {
                     info('contains posts');
                     foreach ($items as $key => $item) {
@@ -95,6 +97,7 @@ class FeedService
                 );
             }
         } else {
+            info('failed');
             $this->body["message"] = $feedUrls["message"];
             info(json_encode($this->body));
             create_notification($this->data["user_id"], $this->body, "Automation");
