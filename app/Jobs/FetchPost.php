@@ -15,15 +15,16 @@ class FetchPost implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
-    public $tries = 1;
+    public $tries = 3;
     public $timeout = 120;
-    protected $data;
+    public $data;
 
     /**
      * Create a new job instance.
      */
     public function __construct($data)
     {
+        info('constructor');
         $this->data = $data;
     }
 
