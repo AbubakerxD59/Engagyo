@@ -12,7 +12,8 @@
          <div class="card">
              <div class="card-header with-border clearfix d-flex justify-content-center">
                  <div class="card-title">
-                     <img src="{{ $post->image }}" alt="{{ no_image() }}" width="150px">
+                     <img src="{{ $post->image }}" alt="{{ no_image() }}" width="150px"
+                         onerror="this.onerror=null; this.src='{{ no_image() }}';">
                  </div>
              </div>
              <div class="card-body p-2">
