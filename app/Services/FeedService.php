@@ -109,12 +109,12 @@ class FeedService
             $url = $targetUrl;
             $feed = FeedReader::read($url);
             $items = array_slice($feed->get_items(), 0, $max);
+            info("items: " . json_encode($items));
             $posts = [];
             foreach ($items as $item) {
                 $title = $item->get_title();
                 $link = $item->get_link();
                 // $image = $this->extractImageFromRssItem($item, $this->widthArray, $this->heightArray);
-
                 $posts[] = [
                     'title' => $title,
                     'link' => $link,
