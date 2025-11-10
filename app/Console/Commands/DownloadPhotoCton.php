@@ -2,10 +2,11 @@
 
 namespace App\Console\Commands;
 
-use App\Jobs\DownloadPhoto;
 use App\Models\Photo;
+use App\Jobs\DownloadPhoto;
+use Illuminate\Console\Command;
 
-class DownloadPhotoCton
+class DownloadPhotoCton extends Command
 {
     /**
      * The name and signature of the console command.
