@@ -17,7 +17,7 @@ class FetchPost implements ShouldQueue
 
     public $tries = 3;
     public $timeout = 120;
-    public $data;
+    private $data;
 
     /**
      * Create a new job instance.
