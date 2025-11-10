@@ -6,7 +6,7 @@ use App\Models\Photo;
 use App\Jobs\DownloadPhoto;
 use Illuminate\Console\Command;
 
-class DownloadPhotoCton extends Command
+class DownloadPhotoCron extends Command
 {
     /**
      * The name and signature of the console command.
@@ -28,10 +28,11 @@ class DownloadPhotoCton extends Command
     public $max_tries = 3;
     public function handle()
     {
-        $pending_photos = Photo::pending()->available($this->max_tries)->get();
+        $pending_photos = Photo::pending()->available($this->max_tries)->first();
         foreach ($pending_photos as $photo) {
+            info('photo:' . json_encode($photo));
             DownloadPhoto::dispatch($photo);
-            sleep(rand(120, 180));
+            // sleep(rand(120, 180));
         }
     }
 }
