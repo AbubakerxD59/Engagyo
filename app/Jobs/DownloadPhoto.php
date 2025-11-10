@@ -5,6 +5,7 @@ namespace App\Jobs;
 use App\Services\DownloadPhotoService;
 use Exception;
 use App\Models\Photo;
+use App\Models\Post;
 use Illuminate\Bus\Queueable;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Queue\InteractsWithQueue;
@@ -14,11 +15,15 @@ use Illuminate\Foundation\Bus\Dispatchable;
 class DownloadPhoto implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
-    public $max_tries = 3;
+    public $tries = 1;
+    private $data;
     /**
      * Create a new job instance.
      */
-    public function __construct() {}
+    public function __construct($data)
+    {
+        $this->data = $data;
+    }
 
     /**
      * Execute the job.
@@ -26,20 +31,24 @@ class DownloadPhoto implements ShouldQueue
     public function handle(): void
     {
         $service = new DownloadPhotoService();
-        $pending_photos = Photo::pending()->available($this->max_tries)->get();
-        foreach ($pending_photos as $photo) {
-            $response = $service->fetch($photo);
-            if ($response['success']) {
-                $photo->update([
-                    "status" => "fetched",
-                    "response" => $response['data']
-                ]);
-            } else {
-                $photo->update([
-                    "status" => "failed",
-                    "response" => $response['message']
-                ]);
-            }
+        $photo = Photo::with("post")->findOrFail($this->data['id']);
+        info('here');
+        $response = $service->fetch($this->data);
+        info('response: ' . json_encode($response));
+        if ($response['success']) {
+            $photo->post->update([
+                "image" => $response['data']
+            ]);
+            $photo->update([
+                "status" => "fetched",
+                "response" => $response['data']
+            ]);
+        } else {
+            $photo->update([
+                "status" => "failed",
+                "response" => $response['message']
+            ]);
         }
+        $service = new DownloadPhotoService();
     }
 }

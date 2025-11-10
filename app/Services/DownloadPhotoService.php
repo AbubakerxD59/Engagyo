@@ -14,6 +14,7 @@ class DownloadPhotoService
     public function fetch($data)
     {
         try {
+            info('service');
             $repsonse = $this->dom->fetchPhoto($data["url"], $data["mode"]);
         } catch (Exception $e) {
             $repsonse = [
