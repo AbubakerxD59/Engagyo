@@ -30,4 +30,10 @@ class Photo extends Model
     {
         $query->where("tries", '<=', $max_tries);
     }
+    public function scopePast($query)
+    {
+        $query->whereHas("post", function ($q) {
+            $q->where("past", "<=", date("Y-m-d", strtotime("+1 days")));
+        });
+    }
 }
