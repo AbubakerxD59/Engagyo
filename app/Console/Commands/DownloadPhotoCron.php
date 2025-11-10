@@ -29,7 +29,7 @@ class DownloadPhotoCron extends Command
     public function handle()
     {
         info("download:photo");
-        $pending_photos = Photo::with("post")->pending()->available($this->max_tries)->past()->limit(1)->get();
+        $pending_photos = Photo::with("post")->pending()->available($this->max_tries)->limit(1)->get();
         info("pending_photos: " . json_encode($pending_photos));
         foreach ($pending_photos as $photo) {
             info('photo:' . json_encode($photo));

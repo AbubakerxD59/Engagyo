@@ -33,7 +33,7 @@ class Photo extends Model
     public function scopePast($query)
     {
         $query->whereHas("post", function ($q) {
-            $q->where("publish_date", "<=", date("Y-m-d", strtotime("+1 days")));
+            $q->where("publish_date", "<=", date("Y-m-d", strtotime("+2 days")));
         });
     }
 }
