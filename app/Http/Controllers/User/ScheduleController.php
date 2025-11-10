@@ -781,7 +781,7 @@ class  ScheduleController extends Controller
         }
         $totalRecordswithFilter = clone $posts;
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
-        $posts = $posts->latest()->get();
+        $posts = $posts->orderBy("publish_date", "desc")->get();
         // $posts->append(["post_details"]);
         $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action"]);
         $response = [
