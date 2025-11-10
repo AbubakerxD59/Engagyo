@@ -31,8 +31,8 @@ class DownloadPhotoService
         try {
             // 1. Pinterest Dimension Targets (Height x Width)
             // Note: The arrays must be mapped by index to form the correct pairs.
-            $heightArray = ["1128", "900", "1000", "1024", "1349"];
-            $widthArray = ["564", "700", "1500", "512", "759"];
+            $heightArray = ["1128", "900", "1000", "1024", "1349", "640"];
+            $widthArray = ["564", "700", "1500", "512", "759", "960"];
 
             $pinterest_targets = [];
             for ($i = 0; $i < count($heightArray); $i++) {
