@@ -48,6 +48,7 @@ class FeedService
             try {
                 $items = $feedUrls["data"];
                 if (count($items) > 0) {
+                    info('contains posts');
                     foreach ($items as $key => $item) {
                         $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["soruce"], "type" => $this->data["type"]], $this->data["time"]);
                         $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["soruce"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
@@ -77,7 +78,8 @@ class FeedService
                     );
                 } else {
                     $this->body["message"] = "Posts not Fetched!";
-                    create_notification($this->data["user_id"], $this->body, "Post");
+                    info('Posts not Fetched');
+                    create_notification($this->data["user_id"], $this->body, "Automation");
                     return array(
                         "success" => false,
                         "message" =>  $this->body["message"]
@@ -85,7 +87,7 @@ class FeedService
                 }
             } catch (Exception $e) {
                 $this->body["message"] = $e->getMessage();
-                create_notification($this->data["user_id"], $this->body, "Post");
+                create_notification($this->data["user_id"], $this->body, "Automation");
                 return array(
                     "success" => false,
                     "message" =>  $this->body["message"]
@@ -93,7 +95,7 @@ class FeedService
             }
         } else {
             $this->body["message"] = $feedUrls["message"];
-            create_notification($this->data["user_id"], $this->body, "Post");
+            create_notification($this->data["user_id"], $this->body, "Automation");
             return array(
                 "success" => false,
                 "message" =>  $this->body["message"]
