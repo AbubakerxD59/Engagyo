@@ -24,7 +24,6 @@ class FetchPost implements ShouldQueue
      */
     public function __construct($data)
     {
-        info('constructor');
         $this->data = $data;
     }
 

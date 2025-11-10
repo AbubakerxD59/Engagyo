@@ -47,33 +47,42 @@ class FeedService
         if ($feedUrls["success"]) {
             try {
                 $items = $feedUrls["data"];
-                foreach ($items as $key => $item) {
-                    $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["soruce"], "type" => $this->data["type"]], $this->data["time"]);
-                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["soruce"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
-                    if (!$post) {
-                        $post_row = $this->post->create([
-                            "user_id" => $this->data["user_id"],
-                            "account_id" => $this->data["account_id"],
-                            "social_type" => $this->data["social_type"],
-                            "type" => $this->data["type"],
-                            "source" => $this->data["source"],
-                            "title" => $item["title"],
-                            "domain_id" => $this->data["domain_id"],
-                            "url" => $item["link"],
-                            "image" => isset($item["image"]) ? $item["image"] : no_image(),
-                            "publish_date" => newDateTime($nextTime, $this->data["time"]),
-                            "status" => 0,
-                        ]);
-                        $post_row->photo()->create([
-                            "mode" => $this->data['social_type'],
-                            "url" => $item["link"]
-                        ]);
+                if (count($items) > 0) {
+                    foreach ($items as $key => $item) {
+                        $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["soruce"], "type" => $this->data["type"]], $this->data["time"]);
+                        $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["soruce"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
+                        if (!$post) {
+                            $post_row = $this->post->create([
+                                "user_id" => $this->data["user_id"],
+                                "account_id" => $this->data["account_id"],
+                                "social_type" => $this->data["social_type"],
+                                "type" => $this->data["type"],
+                                "source" => $this->data["source"],
+                                "title" => $item["title"],
+                                "domain_id" => $this->data["domain_id"],
+                                "url" => $item["link"],
+                                "image" => isset($item["image"]) ? $item["image"] : no_image(),
+                                "publish_date" => newDateTime($nextTime, $this->data["time"]),
+                                "status" => 0,
+                            ]);
+                            $post_row->photo()->create([
+                                "mode" => $this->data['social_type'],
+                                "url" => $item["link"]
+                            ]);
+                        }
                     }
+                    return array(
+                        "success" => true,
+                        "items" => $items
+                    );
+                } else {
+                    $this->body["message"] = "Posts not Fetched!";
+                    create_notification($this->data["user_id"], $this->body, "Post");
+                    return array(
+                        "success" => false,
+                        "message" =>  $this->body["message"]
+                    );
                 }
-                return array(
-                    "success" => true,
-                    "items" => $items
-                );
             } catch (Exception $e) {
                 $this->body["message"] = $e->getMessage();
                 create_notification($this->data["user_id"], $this->body, "Post");
