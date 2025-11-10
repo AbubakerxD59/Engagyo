@@ -482,4 +482,16 @@ class Post extends Model
         $view = view("user.schedule.dataTable.action")->with("post", $this);
         return $view->render();
     }
+
+    public function getIsPinterestAttribute()
+    {
+        return $this->social_type == "pinterest" ? true : false;
+    }
+
+    public function getFixAttribute()
+    {
+        $title = $this->title;
+        $image = $this->image;
+        return empty($title) || empty($image) ? true : false;
+    }
 }

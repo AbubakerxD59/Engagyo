@@ -11,11 +11,13 @@ class HtmlParseService
 {
     private $client;
     private $dom;
+    private $downloadPhoto;
     // private $parser;
     public function __construct()
     {
         $this->client = new HttpService();
         $this->dom = new DOMDocument();
+        $this->downloadPhoto = new DownloadPhotoService();
     }
     public function get_info($url, $mode = null)
     {
@@ -147,7 +149,13 @@ class HtmlParseService
         } else {
             $mode = 0;
         }
-        $info = $this->get_info($post->url, $mode);
+        $info = [];
+        $title = $this->get_info($post->url, $mode);
+        $image = $this->downloadPhoto->fetchThumbnail($post->url, $post->is_pinterest);
+        $info = [
+            "title" => isset($title["title"]) ? $title["title"] : "",
+            "image" => $image,
+        ];
         return $info;
     }
 

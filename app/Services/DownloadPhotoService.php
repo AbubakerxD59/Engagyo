@@ -24,14 +24,14 @@ class DownloadPhotoService
                 "data" => $image
             ];
         } catch (Exception $e) {
-            $repsonse = [
+            $response = [
                 "success" => false,
                 "message" => $e->getMessage()
             ];
         }
-        return $repsonse;
+        return $response;
     }
-    private function fetchThumbnail(string $url, bool $is_pinterest = false): ?string
+    public function fetchThumbnail(string $url, bool $is_pinterest = false): ?string
     {
         // 1. Pinterest Dimension Targets (Height x Width)
         // Note: The arrays must be mapped by index to form the correct pairs.
