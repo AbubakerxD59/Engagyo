@@ -53,6 +53,10 @@ class Post extends Model
     {
         return $this->belongsTo(Domain::class, 'domain_id', 'id');
     }
+    public function photo()
+    {
+        return $this->hasOne(Photo::class, 'post_id', 'id');
+    }
 
     public function scopeSchedule($query)
     {
@@ -76,9 +80,19 @@ class Post extends Model
 
     public function scopeExist($query, $search)
     {
-        $query->where("user_id", $search["user_id"])
-            ->where("account_id", $search["account_id"])
-            ->where("social_type", $search["type"]);
+        $query->where("user_id", $search["user_id"]);
+        if (isset($search["account_id"])) {
+            $query->where("account_id", $search["account_id"]);
+        }
+        if (isset($search["social_type"])) {
+            $query->where("social_type", $search["social_type"]);
+        }
+        if (isset($search["type"])) {
+            $query->where("type", $search["type"]);
+        }
+        if (isset($search["source"])) {
+            $query->where("source", $search["source"]);
+        }
         if (isset($search["domain_id"])) {
             $query->where("domain_id", $search["domain_id"]);
         }

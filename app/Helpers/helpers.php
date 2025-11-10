@@ -385,14 +385,16 @@ function social_icon($type = null)
     return $logo;
 }
 
-function get_options($type){
-    if($type == "social_accounts"){
+function get_options($type)
+{
+    if ($type == "social_accounts") {
         $options = get_social_accounts();
     }
     return $options;
 }
 
-function get_social_accounts(){
+function get_social_accounts()
+{
     $social = [
         "facebook",
         "pinterest",

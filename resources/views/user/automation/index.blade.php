@@ -33,7 +33,7 @@
                                     </select>
                                     <a class="btn btn-outline-info btn-sm mt-1">
                                         Last Fetch:
-                                        <span class="last_fetch"></span>
+                                        <span class="last_fetch">-</span>
                                     </a>
                                 </div>
                                 <div class="col-md-4 form-group">
@@ -144,7 +144,7 @@
                 var api = this.api();
                 var response = api.ajax.json();
                 $('.scheduled_till').html(response.scheduled_till);
-                $('.last_fetch').html(response.last_fetch);
+                $('.last_fetch').html(!empty(response.last_fetch) ? response.last_fetch : '-');
             },
             columns: [{
                     data: 'post',

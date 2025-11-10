@@ -212,7 +212,6 @@ class AutomationController extends Controller
                         $urlDomain = $parsedUrl["path"];
                         $category = null;
                     }
-
                     $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
                     $domain = $this->domain->exists($search)->first();
                     if (!$domain) {
@@ -245,7 +244,9 @@ class AutomationController extends Controller
                         "domain_id" => $domain_id,
                         "user_id" => $user->id,
                         "account_id" => $account_id,
-                        "type" => $type,
+                        "type" => "link",
+                        "social_type" => $type,
+                        "source" => "rss",
                         "time" => $time,
                         "mode" => $mode,
                         "exist" => $exist

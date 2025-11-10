@@ -41,73 +41,8 @@ class HtmlParseService
                         $title = substr($title, 0, $colon_pos);
                     }
                 }
-                // Post image
-                $image = $html->find("meta[property='og:image']", 0)->content ? $html->find("meta[property='og:image']", 0)->content : $html->find("meta[name='twitter:image']", 0)->content;
-                if ($pinterest) {
-                    $pinterest_image = $this->fetch_pinterest_image($tags);
-                    if (!empty($pinterest_image)) {
-                        $image = $pinterest_image;
-                    }
-                }
-                if (empty($image)) {
-                    $json_ld = $this->get_string_between($response, '<script type="application/ld+json" class="yoast-schema-graph">', "</script>");
-                    if ($json_ld) {
-                        $data = json_decode($json_ld, true);
-                        if ($data) {
-                            if (isset($data['@graph'])) {
-                                if (isset($data['@graph'][0]['thumbnailUrl'])) {
-                                    $image = $data['@graph'][0]['thumbnailUrl'];
-                                }
-                            }
-                        }
-                    }
-                }
-                if (empty($image)) {
-                    $thumbnails = $this->dom->getElementsByTagName('img');
-                    foreach ($thumbnails as $thumbnail) {
-                        if (str_contains($thumbnail->getAttribute('class'), 'pin')) {
-                            $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
-                        }
-                        if (empty($image)) {
-                            if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
-                                $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
-                            }
-                            if (str_contains($thumbnail->getAttribute('class'), 'featured')) {
-                                $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
-                            }
-                        }
-                    }
-                }
-                if (empty($image)) {
-                    $metaTags = $this->dom->getElementsByTagName('meta');
-                    foreach ($metaTags as $meta) {
-                        if ($meta->getAttribute('property') == 'og:image') {
-                            $image = $meta->getAttribute('content');
-                        }
-                        if ($meta->getAttribute('property') == 'og:image:secure_url') {
-                            $image = $meta->getAttribute('content');
-                        }
-                        if (empty($image) && $meta->getAttribute('name') == 'twitter:image') {
-                            $image = $meta->getAttribute('content');
-                        }
-                    }
-                }
-                if (empty($image)) {
-                    $thumbnails = $this->dom->getElementsByTagName('div');
-                    foreach ($thumbnails as $thumbnail) {
-                        if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
-                            $image = $thumbnail->getElementsByTagName('img')->item(0);
-                            $image = $image->getAttribute('src');
-                        }
-                        if (str_contains($thumbnail->getAttribute('class'), 'featured')) {
-                            $image = $thumbnail->getElementsByTagName('img')->item(0);
-                            $image = $image->getAttribute('src');
-                        }
-                    }
-                }
                 return array(
-                    "title" => $title,
-                    "image" => $image
+                    "title" => $title
                 );
             } else {
                 return false;
@@ -117,6 +52,91 @@ class HtmlParseService
                 "message" => $e->getMessage()
             );
         }
+    }
+
+    public function fetchImages($url, $mode)
+    {
+        try {
+            $social_type = $mode == 1 ? "pinterest" : "other";
+            $response = $this->client->get($url, [], ['User-Agent' => $this->user_agent()]);
+            $response = $response["body"];
+            @$this->dom->loadHTML($response);
+            $tags = $this->dom->getElementsByTagName('img');
+            $html = HtmlDomParser::str_get_html($response);
+            $image = $html->find("meta[property='og:image']", 0)->content ? $html->find("meta[property='og:image']", 0)->content : $html->find("meta[name='twitter:image']", 0)->content;
+            if ($social_type == "pinterest") {
+                $pinterest_image = $this->fetch_pinterest_image($tags);
+                if (!empty($pinterest_image)) {
+                    $image = $pinterest_image;
+                }
+            }
+            if (empty($image)) {
+                $json_ld = $this->get_string_between($response, '<script type="application/ld+json" class="yoast-schema-graph">', "</script>");
+                if ($json_ld) {
+                    $data = json_decode($json_ld, true);
+                    if ($data) {
+                        if (isset($data['@graph'])) {
+                            if (isset($data['@graph'][0]['thumbnailUrl'])) {
+                                $image = $data['@graph'][0]['thumbnailUrl'];
+                            }
+                        }
+                    }
+                }
+            }
+            if (empty($image)) {
+                $thumbnails = $this->dom->getElementsByTagName('img');
+                foreach ($thumbnails as $thumbnail) {
+                    if (str_contains($thumbnail->getAttribute('class'), 'pin')) {
+                        $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
+                    }
+                    if (empty($image)) {
+                        if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
+                            $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
+                        }
+                        if (str_contains($thumbnail->getAttribute('class'), 'featured')) {
+                            $image = !empty($thumbnail->getAttribute('data-lazy-src')) ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
+                        }
+                    }
+                }
+            }
+            if (empty($image)) {
+                $metaTags = $this->dom->getElementsByTagName('meta');
+                foreach ($metaTags as $meta) {
+                    if ($meta->getAttribute('property') == 'og:image') {
+                        $image = $meta->getAttribute('content');
+                    }
+                    if ($meta->getAttribute('property') == 'og:image:secure_url') {
+                        $image = $meta->getAttribute('content');
+                    }
+                    if (empty($image) && $meta->getAttribute('name') == 'twitter:image') {
+                        $image = $meta->getAttribute('content');
+                    }
+                }
+            }
+            if (empty($image)) {
+                $thumbnails = $this->dom->getElementsByTagName('div');
+                foreach ($thumbnails as $thumbnail) {
+                    if (str_contains($thumbnail->getAttribute('class'), 'thumbnail')) {
+                        $image = $thumbnail->getElementsByTagName('img')->item(0);
+                        $image = $image->getAttribute('src');
+                    }
+                    if (str_contains($thumbnail->getAttribute('class'), 'featured')) {
+                        $image = $thumbnail->getElementsByTagName('img')->item(0);
+                        $image = $image->getAttribute('src');
+                    }
+                }
+            }
+            $response = array(
+                "success" => true,
+                "data" => $image
+            );
+        } catch (Exception $e) {
+            $response = array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
+        }
+        return $response;
     }
 
     public function fix($post)

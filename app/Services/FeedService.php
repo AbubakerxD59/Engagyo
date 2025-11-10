@@ -45,20 +45,25 @@ class FeedService
             try {
                 $items = $feedUrls["data"];
                 foreach ($items as $key => $item) {
-                    $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"]], $this->data["time"]);
-                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
+                    $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["soruce"], "type" => $this->data["type"]], $this->data["time"]);
+                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["soruce"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
                     if (!$post) {
-                        $this->post->create([
+                        $post_row = $this->post->create([
                             "user_id" => $this->data["user_id"],
                             "account_id" => $this->data["account_id"],
+                            "social_type" => $this->data["social_type"],
                             "type" => $this->data["type"],
-                            "source" => "rss",
+                            "source" => $this->data["source"],
                             "title" => $item["title"],
                             "domain_id" => $this->data["domain_id"],
                             "url" => $item["link"],
                             "image" => isset($item["image"]) ? $item["image"] : no_image(),
                             "publish_date" => newDateTime($nextTime, $this->data["time"]),
                             "status" => 0,
+                        ]);
+                        $post_row->photo()->create([
+                            "mode" => $this->data['social_type'],
+                            "url" => $item["link"]
                         ]);
                     }
                 }
@@ -86,25 +91,32 @@ class FeedService
 
     private function fetchRss(string $targetUrl, int $max = 10)
     {
-        $url = $targetUrl;
-        $feed = FeedReader::read($url);
-        $items = array_slice($feed->get_items(), 0, $max);
-        $posts = [];
-        foreach ($items as $item) {
-            $title = $item->get_title();
-            $link = $item->get_link();
-            $image = $this->extractImageFromRssItem($item, $this->widthArray, $this->heightArray);
+        try {
+            $url = $targetUrl;
+            $feed = FeedReader::read($url);
+            $items = array_slice($feed->get_items(), 0, $max);
+            $posts = [];
+            foreach ($items as $item) {
+                $title = $item->get_title();
+                $link = $item->get_link();
+                // $image = $this->extractImageFromRssItem($item, $this->widthArray, $this->heightArray);
 
-            $posts[] = [
-                'title' => $title,
-                'link' => $link,
-                'image' => $image,
+                $posts[] = [
+                    'title' => $title,
+                    'link' => $link,
+                ];
+            }
+            $response = [
+                "success" => true,
+                "data" => $posts
+            ];
+        } catch (Exception $e) {
+            $response = [
+                "success" => false,
+                "message" => $e->getMessage()
             ];
         }
-        return [
-            "success" => true,
-            "data" => $posts
-        ];
+        return $response;
     }
 
     public function fetchSitemap(string $targetUrl, int $max = 10)
@@ -153,21 +165,22 @@ class FeedService
                             if ($count >= $max) {
                                 break;
                             }
-                            $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
-                            if (!$post) {
-                                $invalid_titles = [
-                                    "bot verification",
-                                    "admin"
-                                ];
-                                $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
-                                if (!in_array($rss, $invalid_titles)) {
-                                    if (isset($rss["title"]) && !empty($rss["image"])) {
-                                        $posts[] = [
-                                            'title' => $rss["title"],
-                                            'link' => (string) $url->loc,
-                                            'image' => $rss["image"],
-                                        ];
-                                        $count++;
+                            if ($targetUrl != $url->loc) {
+                                $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["soruce"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $url->loc])->first();
+                                if (!$post) {
+                                    $invalid_titles = [
+                                        "bot verification",
+                                        "admin"
+                                    ];
+                                    $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
+                                    if (!in_array($rss, $invalid_titles)) {
+                                        if (isset($rss["title"])) {
+                                            $posts[] = [
+                                                'title' => $rss["title"],
+                                                'link' => (string) $url->loc,
+                                            ];
+                                            $count++;
+                                        }
                                     }
                                 }
                             }
