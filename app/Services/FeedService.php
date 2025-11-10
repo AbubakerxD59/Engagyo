@@ -36,10 +36,13 @@ class FeedService
     public function fetch()
     {
         $websiteUrl = $this->data["url"];
+        info("data: " . json_encode($this->data));
         if ($this->data["exist"]) {
             $feedUrls = $this->fetchSitemap($websiteUrl);
+            info("fetchSitemap: " . json_encode($feedUrls));
         } else {
             $feedUrls = $this->fetchRss($websiteUrl);
+            info("fetchRss: " . json_encode($feedUrls));
         }
         if ($feedUrls["success"]) {
             try {

@@ -147,21 +147,29 @@ class  ScheduleController extends Controller
                         $access_token = $account->access_token;
                         if (!$account->validToken()) {
                             $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                            $data = $token["data"];
-                            $access_token = $data["access_token"];
-                        }
-                        $postData = array();
-                        if ($file) {
-                            if (!empty($image)) {
-                                $postData = ["caption" => $content, "url" => $post->image];
+                            if ($token["success"]) {
+                                $data = $token["data"];
+                                $access_token = $data["access_token"];
+                                $postData = array();
+                                if ($file) {
+                                    if (!empty($image)) {
+                                        $postData = ["caption" => $content, "url" => $post->image];
+                                    }
+                                    if (!empty($video)) {
+                                        $postData = ["description" => $content, "file_url" => $post->video_key];
+                                    }
+                                } else {
+                                    $postData = ["message" => $content];
+                                }
+                                PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
+                            } else {
+                                $response = array(
+                                    "success" => false,
+                                    "message" => $token["message"]
+                                );
+                                return response()->json($response);
                             }
-                            if (!empty($video)) {
-                                $postData = ["description" => $content, "file_url" => $post->video_key];
-                            }
-                        } else {
-                            $postData = ["message" => $content];
                         }
-                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                     }
                 }
                 if ($account->type == "pinterest") {

@@ -382,18 +382,25 @@ class AutomationController extends Controller
                             $access_token = $page->access_token;
                             if (!$page->validToken()) {
                                 $token = $this->facebookService->refreshAccessToken($page->access_token, $page->id);
-                                $data = $token["data"];
-                                $access_token = $data["access_token"];
+                                if ($token["success"]) {
+                                    $data = $token["data"];
+                                    $access_token = $data["access_token"];
+                                    $postData = [
+                                        'link' => $post->url,
+                                        'message' => $post->title,
+                                    ];
+                                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link");
+                                    $response = array(
+                                        "success" => true,
+                                        "message" => "Your post is being Published!"
+                                    );
+                                } else {
+                                    $response = array(
+                                        "success" => false,
+                                        "message" => $token["message"]
+                                    );
+                                }
                             }
-                            $postData = [
-                                'link' => $post->url,
-                                'message' => $post->title,
-                            ];
-                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link");
-                            $response = array(
-                                "success" => true,
-                                "message" => "Your post is being Published!"
-                            );
                         } else {
                             $response = array(
                                 "success" => false,

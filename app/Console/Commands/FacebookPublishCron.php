@@ -42,8 +42,16 @@ class FacebookPublishCron extends Command
                             $access_token = $page->access_token;
                             if (!$page->validToken()) {
                                 $token = $facebookService->refreshAccessToken($page->access_token, $page->id);
-                                $data = $token["data"];
-                                $access_token = $data["access_token"];
+                                if ($token["success"]) {
+                                    $data = $token["data"];
+                                    $access_token = $data["access_token"];
+                                } else {
+                                    $post->update([
+                                        "status" => -1,
+                                        "response" => $token["message"]
+                                    ]);
+                                    continue;
+                                }
                             }
                             if ($post->type == "content_only") {
                                 $postData = [
