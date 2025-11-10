@@ -214,8 +214,8 @@
                 dropZone.processFile(file);
             } else {
                 // All files processed
-                resetPostArea
                 current_file = 0;
+                resetPostArea();
             }
         }
         // process content only
@@ -287,6 +287,7 @@
             $('#characterCount').text('');
             $('#article-container').empty();
             enableActionButton();
+            reloadDatatable();
         }
         // check link for content
         $('#content').on('input', function() {
@@ -502,7 +503,34 @@
             ],
         });
         $(document).on('change', '.filter', function() {
+            reloadDatatable();
+        });
+        // reload datatable
+        var reloadDatatable = function() {
             postsdataTable.ajax.reload();
+        }
+        // delete post
+        $(document).on('click', '.delete_btn', function() {
+            if (confirm("Do you wish to Delete this Post?")) {
+                var id = $(this).data('id');
+                $.ajax({
+                    url: "{{ route('panel.schedule.post.delete') }}",
+                    type: "GET",
+                    data: {
+                        id: id,
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            reloadDatatable();
+                            toastr.success(response.message);
+                        } else {
+                            toastr.errro(response.message);
+                        }
+                    }
+                })
+            } else {
+                return;
+            }
         });
     });
 </script>

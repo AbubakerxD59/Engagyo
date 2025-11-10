@@ -15,6 +15,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
             Route::get("get/setting", "getSetting")->name("get.setting");
             Route::post("timeslot/setting", "timeslotSetting")->name("timeslot.setting");
             Route::get("posts/listing", "postsListing")->name("posts.listing");
+            Route::get("post/delete/{id?}", "postDelete")->name('post.delete');
         });
     });
     // Accounts Routes

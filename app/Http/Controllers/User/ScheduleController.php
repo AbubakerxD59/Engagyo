@@ -19,7 +19,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
-class ScheduleController extends Controller
+class  ScheduleController extends Controller
 {
     protected $facebookService;
     protected $pinterestService;
@@ -782,6 +782,25 @@ class ScheduleController extends Controller
             "iTotalDisplayRecords" => $totalRecordswithFilter->count(),
             "data" => $posts
         ];
+        return response()->json($response);
+    }
+
+    public function postDelete(Request $request)
+    {
+        try {
+            $id = $request->id;
+            $post = Post::findOrFail($id);
+            $post->delete();
+            $response = [
+                "success" => true,
+                "message" => "Post delete Successfully!"
+            ];
+        } catch (Exception $e) {
+            $response = [
+                "success" => false,
+                "message" => $e->getMessage()
+            ];
+        }
         return response()->json($response);
     }
 }
