@@ -36,6 +36,7 @@ class DownloadPhoto implements ShouldQueue
         $response = $service->fetch($this->data);
         info('response: ' . json_encode($response));
         if ($response['success']) {
+            info('success');
             $status = empty($response['data']) ? "pending" : "fetched";
             $tries = $photo->tries + 1;
             info("status: " . $status);
