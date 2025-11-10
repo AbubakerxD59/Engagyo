@@ -183,21 +183,23 @@ class AutomationController extends Controller
 
     public function feedUrl(Request $request)
     {
-        $user = Auth::user();
-        $type = $request->type;
-        $domains = $request->url;
-        $times = $request->time;
-        $mode = 0;
-        if ($type == 'pinterest') {
-            $account = $this->board->find($request->account);
-            $account_id = $account ? $account->board_id : '';
-            $mode = 1;
-        }
-        if ($type == 'facebook') {
-            $account = $this->page->find($request->account);
-            $account_id = $account ? $account->page_id : '';
-        }
-        if ($account) {
+        try {
+            info('here');
+            $user = Auth::user();
+            $type = $request->type;
+            $domains = $request->url;
+            $times = $request->time;
+            $mode = 0;
+            if ($type == 'pinterest') {
+                $account = $this->board->findOrFail($request->account);
+                $account_id = $account ? $account->board_id : '';
+                $mode = 1;
+            }
+            if ($type == 'facebook') {
+                $account = $this->page->findOrFail($request->account);
+                $account_id = $account ? $account->page_id : '';
+            }
+            info("times: " . json_encode($times));
             foreach ($times as $time) {
                 foreach ($domains as $domain) {
                     $parsedUrl = parse_url($domain);
@@ -251,29 +253,22 @@ class AutomationController extends Controller
                         "mode" => $mode,
                         "exist" => $exist
                     ];
-
-                    try {
-                        $response = array(
-                            "success" => true,
-                            "message" => "Your posts are being Fetched!"
-                        );
-                        // Update last fetch
-                        $account->update([
-                            "last_fetch" => date("Y-m-d H:i A")
-                        ]);
-                        FetchPost::dispatch($data);
-                    } catch (Exception $e) {
-                        $response = [
-                            "success" => false,
-                            "message" => $e->getMessage()
-                        ];
-                    }
+                    info("data: " . json_encode($data));
+                    $response = array(
+                        "success" => true,
+                        "message" => "Your posts are being Fetched!"
+                    );
+                    // Update last fetch
+                    $account->update([
+                        "last_fetch" => date("Y-m-d H:i A")
+                    ]);
+                    FetchPost::dispatch($data);
                 }
             }
-        } else {
+        } catch (Exception $e) {
             $response = array(
                 "success" => false,
-                "message" => "Something went Wrong!"
+                "message" => $e->getMessage()
             );
         }
         return response()->json($response);
