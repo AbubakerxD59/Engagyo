@@ -41,6 +41,7 @@ class DownloadPhoto implements ShouldQueue
             ]);
             $photo->update([
                 "status" => "fetched",
+                "trie" => $photo->trie + 1,
                 "response" => $response['data']
             ]);
         } else {
