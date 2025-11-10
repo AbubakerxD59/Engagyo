@@ -45,6 +45,7 @@ class PublishSchedulePostCron extends Command
                             $access_token = $page->access_token;
                             if (!$page->validToken()) {
                                 $token = $facebookService->refreshAccessToken($page->access_token, $page->id);
+                                info(json_encode($token));
                                 $data = $token["data"];
                                 $access_token = $data["access_token"];
                             }
