@@ -78,7 +78,7 @@ class FeedService
                     );
                 } else {
                     $this->body["message"] = "Posts not Fetched!";
-                    info('Posts not Fetched');
+                    info(json_encode($this->body));
                     create_notification($this->data["user_id"], $this->body, "Automation");
                     return array(
                         "success" => false,
@@ -87,6 +87,7 @@ class FeedService
                 }
             } catch (Exception $e) {
                 $this->body["message"] = $e->getMessage();
+                info(json_encode($this->body));
                 create_notification($this->data["user_id"], $this->body, "Automation");
                 return array(
                     "success" => false,
@@ -95,6 +96,7 @@ class FeedService
             }
         } else {
             $this->body["message"] = $feedUrls["message"];
+            info(json_encode($this->body));
             create_notification($this->data["user_id"], $this->body, "Automation");
             return array(
                 "success" => false,
