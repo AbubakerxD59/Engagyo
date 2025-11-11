@@ -307,20 +307,8 @@ class FacebookService
     public function video($id, $access_token, $post)
     {
         $post_row = $this->post->find($id);
-        // $file = $this->saveFileFromAws($post["file_url"]);
-        // if ($file['success']) {
-        //     $post['file_url'] = $file['fullPath'];
-        // }
-        info("post: " . json_encode($post));
-        $publish = $this->facebook->post('/' . $post_row->account_id . '/videos', $post, $access_token);
-        $response = [
-            "success" => true,
-            "data" => $publish
-        ];
-        dd($response);
         try {
-            $publish = $this->facebook->post('/me/videos', $post, $access_token);
-            info('publish: ' . json_encode($publish));
+            $publish = $this->facebook->post('/' . $post_row->account_id . '/videos', $post, $access_token);
             $response = [
                 "success" => true,
                 "data" => $publish
@@ -338,46 +326,22 @@ class FacebookService
                 "message" => $error
             ];
         }
-        info("response: " . json_encode($response));
         if ($response["success"]) {
             $contentOnly = $response["data"];
             $graphNode = $contentOnly->getGraphNode();
             $post_id = $graphNode['id'];
-            $post->update([
+            $post_row->update([
                 "post_id" => $post_id,
                 "status" => 1,
                 "response" => "Post published Successfully!"
             ]);
         } else {
-            $post->update([
+            $post_row->update([
                 "status" => -1,
                 "response" => $response["message"]
             ]);
         }
         return $response;
-    }
-    private function saveFileFromAws($video_key)
-    {
-        try {
-            $fileContents = Storage::disk("s3")->get($video_key);
-            $localPublicPath = 'uploads/videos/' . basename($video_key);
-            $fullPath = public_path($localPublicPath);
-            $directory = dirname($fullPath);
-            if (!file_exists($directory)) {
-                mkdir($directory, 0755, true);
-            }
-            $bytesWritten = file_put_contents($fullPath, $fileContents);
-            return array(
-                "success" => true,
-                "directory" => $directory,
-                "fullPath" => $fullPath
-            );
-        } catch (Exception $e) {
-            return array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
-        }
     }
 
     public function postComment($post_id, $access_token, $comment)
