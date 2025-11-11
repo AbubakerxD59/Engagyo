@@ -72,7 +72,7 @@ class PublishSchedulePostCron extends Command
                             } elseif ($post->type == "video") {
                                 $postData = [
                                     "description" => $post->title,
-                                    "file_url" => $post->video
+                                    "file_url" => $post->video_key
                                 ];
                             }
                             PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
