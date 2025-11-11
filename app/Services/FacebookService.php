@@ -307,10 +307,10 @@ class FacebookService
     public function video($id, $access_token, $post)
     {
         $post_row = $this->post->find($id);
-        $file = $this->saveFileFromAws($post["file_url"]);
-        if ($file['success']) {
-            $post['file_url'] = $file['fullPath'];
-        }
+        // $file = $this->saveFileFromAws($post["file_url"]);
+        // if ($file['success']) {
+        //     $post['file_url'] = $file['fullPath'];
+        // }
         info("post: " . json_encode($post));
         $publish = $this->facebook->post('/' . $post_row->account_id . '/videos', $post, $access_token);
         $response = [

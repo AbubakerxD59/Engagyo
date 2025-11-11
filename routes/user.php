@@ -104,7 +104,6 @@ Route::get("test", function (Post $post, FacebookService $facebookService) {
                                 "file_url" => $post->video_key
                             ];
                         }
-                        dd($postData);
                         info("post: " . json_encode($postData));
                         $facebookService = new facebookService();
                         if ($post->type == "link") {
