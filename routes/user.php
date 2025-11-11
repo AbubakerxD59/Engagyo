@@ -101,9 +101,10 @@ Route::get("test", function (Post $post, FacebookService $facebookService) {
                         } elseif ($post->type == "video") {
                             $postData = [
                                 "description" => $post->title,
-                                "file_url" => $post->video
+                                "file_url" => $post->video_key
                             ];
                         }
+                        info("post: " . json_encode($postData));
                         $facebookService = new facebookService();
                         if ($post->type == "link") {
                             $publish_response = $facebookService->createLink($post->id, $access_token, $postData);
