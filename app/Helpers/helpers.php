@@ -436,17 +436,6 @@ function create_notification($user_id, $body, $modal)
     return true;
 }
 
-function clearLogFile()
-{
-    $logPath = storage_path('logs/laravel.log');
-
-    if (File::exists($logPath)) {
-        File::put($logPath, '');
-        return "Log file cleared successfully!";
-    }
-    return "Log file not found.";
-}
-
 function getError($string)
 {
     $start_marker = '"message":';
