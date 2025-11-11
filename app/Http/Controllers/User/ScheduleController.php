@@ -106,6 +106,7 @@ class  ScheduleController extends Controller
     private function publishPost($request)
     {
         try {
+            info('publish post');
             $user = Auth::user();
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
