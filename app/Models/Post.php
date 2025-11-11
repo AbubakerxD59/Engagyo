@@ -362,7 +362,7 @@ class Post extends Model
         );
     }
 
-    public function getVideKeyAttribute()
+    public function getVideoKeyAttribute()
     {
         $video_key = $this->video;
         return !empty($video_key) ? fetchFromS3($video_key) : '';
