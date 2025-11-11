@@ -1,9 +1,12 @@
 <?php
 
+use App\Jobs\PublishFacebookPost;
+use App\Services\FacebookService;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\User\AccountsController;
 use App\Http\Controllers\User\ScheduleController;
 use App\Http\Controllers\User\AutomationController;
+use App\Models\Post;
 
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(function () {
     // Schedule Routes
@@ -56,4 +59,65 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
     });
 });
 
-Route::get("test", [AutomationController::class, "test"])->name("fetch.rss");
+Route::get("test", function (Post $post, FacebookService $facebookService) {
+    $now = date("Y-m-d H:i");
+    $posts = $post->notPublished()->past($now)->facebook()->notSchedule()->get();
+    foreach ($posts as $key => $post) {
+        if ($post->status == "0") {
+            $user = $post->user()->first();
+            if ($user) {
+                $page = $post->page()->userSearch($user->id)->first();
+                if ($page) {
+                    $facebook = $page->facebook()->userSearch($user->id)->first();
+                    if ($facebook) {
+                        $access_token = $page->access_token;
+                        if (!$page->validToken()) {
+                            $token = $facebookService->refreshAccessToken($page->access_token, $page->id);
+                            if ($token["success"]) {
+                                $data = $token["data"];
+                                $access_token = $data["access_token"];
+                            } else {
+                                $post->update([
+                                    "status" => -1,
+                                    "response" => $token["message"]
+                                ]);
+                                continue;
+                            }
+                        }
+                        if ($post->type == "content_only") {
+                            $postData = [
+                                "message" => $post->title
+                            ];
+                        } elseif ($post->type == "link") {
+                            $postData = [
+                                'link' => $post->url,
+                                'message' => $post->title,
+                            ];
+                        } elseif ($post->type == "photo") {
+                            $postData = [
+                                "caption" => $post->title,
+                                "url" => $post->image
+                            ];
+                        } elseif ($post->type == "video") {
+                            $postData = [
+                                "description" => $post->title,
+                                "file_url" => $post->video
+                            ];
+                        }
+                        $facebookService = new facebookService();
+                        if ($post->type == "link") {
+                            $publish_response = $facebookService->createLink($post->id, $access_token, $postData);
+                        } elseif ($post->type == "content_only") {
+                            $publish_response = $facebookService->contentOnly($post->id, $access_token, $postData);
+                        } elseif ($post->type == "photo") {
+                            $publish_response = $facebookService->photo($post->id, $access_token, $postData);
+                        } elseif ($post->type == "video") {
+                            $publish_response = $facebookService->video($post->id, $access_token, $postData);
+                        }
+                        dd($publish_response);
+                    }
+                }
+            }
+        }
+    }
+});
