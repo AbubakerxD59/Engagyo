@@ -137,7 +137,7 @@
                                     <th>Account</th>
                                     <th>Publish Date/Time</th>
                                     <th>Status</th>
-                                    <th style="max-width:300px;">Response</th>
+                                    <th style="max-width:200px;">Response</th>
                                     <th>Action</th>
                                 </tr>
                             </thead>
