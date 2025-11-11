@@ -306,6 +306,13 @@ class FacebookService
     public function video($id, $access_token, $post)
     {
         info('video function');
+        info("post: " . json_encode($post));
+        $publish = $this->facebook->post('/me/videos', $post, $access_token);
+        info('publish: ' . json_encode($publish));
+        $response = [
+            "success" => true,
+            "data" => $publish
+        ];
         try {
             $publish = $this->facebook->post('/me/videos', $post, $access_token);
             info('publish: ' . json_encode($publish));
