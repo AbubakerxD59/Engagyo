@@ -264,6 +264,7 @@ class FacebookService
 
     public function photo($id, $access_token, $post)
     {
+        info('photo function');
         try {
             $publish = $this->facebook->post('/me/photos', $post, $access_token);
             $response = [
@@ -304,9 +305,10 @@ class FacebookService
 
     public function video($id, $access_token, $post)
     {
+        info('video function');
         try {
             $publish = $this->facebook->post('/me/videos', $post, $access_token);
-            info("publish: " . json_encode($publish));
+            info('publish: ' . json_encode($publish));
             $response = [
                 "success" => true,
                 "data" => $publish

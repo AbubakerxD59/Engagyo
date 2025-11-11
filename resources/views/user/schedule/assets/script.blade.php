@@ -286,8 +286,8 @@
             $('#comment').val('');
             $('#characterCount').text('');
             $('#article-container').empty();
-            enableActionButton();
             reloadDatatable();
+            enableActionButton();
         }
         // check link for content
         $('#content').on('input', function() {
