@@ -306,6 +306,7 @@ class FacebookService
     {
         try {
             $publish = $this->facebook->post('/me/videos', $post, $access_token);
+            info("publish: " . json_encode($publish));
             $response = [
                 "success" => true,
                 "data" => $publish

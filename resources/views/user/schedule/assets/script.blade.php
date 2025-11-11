@@ -353,13 +353,13 @@
         $('.setting_btn').on("click", function() {
             var modal = $('.settings-modal');
             modal.find(".modal-body").empty();
+            modal.modal("toggle");
             $.ajax({
                 url: "{{ route('panel.schedule.get.setting') }}",
                 type: "GET",
                 success: function(response) {
                     if (response.success) {
                         modal.find(".modal-body").html(response.data);
-                        modal.modal("toggle");
                         // select2
                         $('.select2').select2({
                             closeOnSelect: false
