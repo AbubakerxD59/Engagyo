@@ -468,7 +468,7 @@ class Post extends Model
     public function getPublishDateTimeAttribute()
     {
         $publish_datetime = $this->publish_date;
-        return date("Y-m-d H:i A", strtotime($publish_datetime));
+        return date("Y-m-d h:i A", strtotime($publish_datetime));
     }
 
     public function getStatusViewAttribute()
