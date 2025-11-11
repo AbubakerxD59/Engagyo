@@ -305,10 +305,8 @@ class FacebookService
 
     public function video($id, $access_token, $post)
     {
-        info('video function');
-        info("post: " . json_encode($post));
+        info('video function started');
         $publish = $this->facebook->post('/me/videos', $post, $access_token);
-        info('publish: ' . json_encode($publish));
         $response = [
             "success" => true,
             "data" => $publish
@@ -333,6 +331,7 @@ class FacebookService
                 "message" => $error
             ];
         }
+        info("response: " . json_encode($response));
         $post = $this->post->find($id);
         if ($response["success"]) {
             $contentOnly = $response["data"];
