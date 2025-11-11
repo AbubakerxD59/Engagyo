@@ -30,7 +30,6 @@ class PublishSchedulePostCron extends Command
      */
     public function handle(Post $post, PinterestService $pinterestService, FacebookService $facebookService)
     {
-        info("schedule:publish");
         $now = date("Y-m-d H:i");
         $posts = $post->notPublished()->past($now)->schedule()->get();
         foreach ($posts as $key => $post) {

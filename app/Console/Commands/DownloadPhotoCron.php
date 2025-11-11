@@ -28,11 +28,8 @@ class DownloadPhotoCron extends Command
     public $max_tries = 3;
     public function handle()
     {
-        info("download:photo");
         $pending_photos = Photo::with("post")->pending()->available($this->max_tries)->limit(1)->get();
-        info("pending_photos: " . json_encode($pending_photos));
         foreach ($pending_photos as $photo) {
-            info('photo:' . json_encode($photo));
             DownloadPhoto::dispatch($photo);
         }
     }

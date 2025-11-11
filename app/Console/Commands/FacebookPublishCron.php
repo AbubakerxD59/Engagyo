@@ -28,7 +28,6 @@ class FacebookPublishCron extends Command
      */
     public function handle(Post $post, FacebookService $facebookService)
     {
-        info("facebook:publish");
         $now = date("Y-m-d H:i");
         $posts = $post->notPublished()->past($now)->facebook()->notSchedule()->get();
         foreach ($posts as $key => $post) {
