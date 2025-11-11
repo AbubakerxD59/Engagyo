@@ -144,23 +144,23 @@ class  ScheduleController extends Controller
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
                         ]);
+                        $postData = array();
+                        if ($file) {
+                            if (!empty($image)) {
+                                $postData = ["caption" => $content, "url" => $post->image];
+                            }
+                            if (!empty($video)) {
+                                $postData = ["description" => $content, "file_url" => $post->video_key];
+                            }
+                        } else {
+                            $postData = ["message" => $content];
+                        }
                         $access_token = $account->access_token;
                         if (!$account->validToken()) {
                             $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
                             if ($token["success"]) {
                                 $data = $token["data"];
                                 $access_token = $data["access_token"];
-                                $postData = array();
-                                if ($file) {
-                                    if (!empty($image)) {
-                                        $postData = ["caption" => $content, "url" => $post->image];
-                                    }
-                                    if (!empty($video)) {
-                                        $postData = ["description" => $content, "file_url" => $post->video_key];
-                                    }
-                                } else {
-                                    $postData = ["message" => $content];
-                                }
                                 PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                             } else {
                                 $response = array(
@@ -169,6 +169,8 @@ class  ScheduleController extends Controller
                                 );
                                 return response()->json($response);
                             }
+                        } else {
+                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                         }
                     }
                 }

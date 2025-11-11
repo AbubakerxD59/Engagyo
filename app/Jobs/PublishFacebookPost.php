@@ -38,6 +38,7 @@ class PublishFacebookPost implements ShouldQueue
      */
     public function handle(): void
     {
+        info('publiosh facebook post job');
         $facebookService = new facebookService();
         if ($this->type == "link") {
             $publish_response = $facebookService->createLink($this->id, $this->access_token, $this->data);
