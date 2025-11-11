@@ -100,7 +100,7 @@ Route::get("test", function (Post $post, FacebookService $facebookService) {
                             ];
                         } elseif ($post->type == "video") {
                             $postData = [
-                                "description" => $post->title,
+                                "title" => $post->title,
                                 "file_url" => $post->video_key
                             ];
                         }

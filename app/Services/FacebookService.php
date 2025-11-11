@@ -305,8 +305,9 @@ class FacebookService
 
     public function video($id, $access_token, $post)
     {
+        $post_row = $this->post->find($id);
         info('video function started');
-        $publish = $this->facebook->post('/me/videos', $post, $access_token);
+        $publish = $this->facebook->post('/' . $post_row->account_id . '/videos', $post, $access_token);
         info('publish: ' . json_encode($publish));
         $response = [
             "success" => true,
@@ -334,7 +335,6 @@ class FacebookService
             ];
         }
         info("response: " . json_encode($response));
-        $post = $this->post->find($id);
         if ($response["success"]) {
             $contentOnly = $response["data"];
             $graphNode = $contentOnly->getGraphNode();
