@@ -307,7 +307,7 @@ class FacebookService
     public function video($id, $access_token, $post)
     {
         $post_row = $this->post->find($id);
-        $file = $this->saveFileFromAws($post["video_key"]);
+        $file = $this->saveFileFromAws($post["file_url"]);
         if ($file['success']) {
             $post['file_url'] = $file['fullPath'];
         }
