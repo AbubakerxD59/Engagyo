@@ -45,7 +45,8 @@ class SitemapService
     public function fetchArticles(string $baseUrl): array
     {
         // Extract the base host for comparison
-        $baseHost = parse_url($baseUrl, PHP_URL_HOST);
+        $baseHost = $baseUrl;
+        // $baseHost = parse_url($baseUrl, PHP_URL_HOST);
         if (!$baseHost) {
             return [
                 "success" => false,
