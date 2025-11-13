@@ -168,7 +168,10 @@ class SitemapService
                 sleep(self::POLITE_DELAY_SECONDS);
                 $linkedContent = $this->fetchContentWithRetry($linkedSitemapUrl, self::MAX_RETRIES);
                 // Recursively call to get URLs from the linked sitemap
-                $urls = array_merge($urls, $this->extractUrlsFromSitemap($linkedContent));
+                $extractUrls = $this->extractUrlsFromSitemap($linkedContent);
+                if ($extractUrls['success']) {
+                    $urls = array_merge($urls, $this->extractUrlsFromSitemap($linkedContent));
+                }
             }
         }
         // Check for URL set (<urlset><url><loc>...</loc></urlset>)
