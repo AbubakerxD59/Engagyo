@@ -309,16 +309,11 @@ class FeedService
             curl_close($ch);
 
             if ($content !== false && $httpCode >= 200 && $httpCode < 300) {
-                echo "Fetch successful on attempt {$attempt}.\n";
                 return $content;
             }
 
-            // Log error and prepare for retry
-            echo "Fetch failed on attempt {$attempt}: HTTP Code {$httpCode}, cURL Error: {$curlError}\n";
-
             if ($attempt < $maxRetries) {
                 $delay = self::RETRY_DELAY_SECONDS + ($attempt - 1) * 5; // Add increasing delay
-                echo "Retrying in {$delay} seconds...\n";
                 sleep($delay);
             }
         }
@@ -391,8 +386,6 @@ class FeedService
                     ];
                 }
             }
-        } else {
-            echo "Warning: Feed format is not standard RSS or Atom.\n";
         }
         return [
             'success' => true,
