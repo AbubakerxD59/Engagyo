@@ -476,17 +476,20 @@ class AutomationController extends Controller
         if (!empty($id)) {
             $user = Auth::user();
             if ($type == 'pinterest') {
-                $account = $this->board->userSearch($user->id)->where("id", $id)->first();
+                $account = $this->board->with("posts.photo")->userSearch($user->id)->where("id", $id)->first();
             }
             if ($type == 'facebook') {
-                $account = $this->page->userSearch($user->id)->where("id", $id)->first();
+                $account = $this->page->with("posts.photo")->userSearch($user->id)->where("id", $id)->first();
             }
             if ($account) {
-                $accounts = $account->posts()->notPublished();
+                $posts = $account->posts->notPublished();
                 if (count($domain) > 0) {
-                    $accounts = $accounts->domainSearch($domain);
+                    $posts = $posts->domainSearch($domain);
                 }
-                $accounts->delete();
+                foreach ($posts as $post) {
+                    $post->photo->delete();
+                }
+                $posts->delete();
                 $response = array(
                     "success" => true,
                     "message" => "Posts deleted Successfully!!"
