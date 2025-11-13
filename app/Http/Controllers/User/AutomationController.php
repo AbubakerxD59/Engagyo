@@ -264,8 +264,7 @@ class AutomationController extends Controller
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
                     $feedService = new FeedService($data);
-                    $feedService->fetch();
-                    dd($feedService);
+                    $response = $feedService->fetch();
                     // FetchPost::dispatch($data);
                 }
             }
