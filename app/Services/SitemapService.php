@@ -185,7 +185,6 @@ class SitemapService
                 "message" => "Warning: XML structure is neither Sitemap Index nor URL Set."
             ];
         }
-        dd($urls);
         $urlArray = array_unique($urls);
         return [
             "success" => true,
