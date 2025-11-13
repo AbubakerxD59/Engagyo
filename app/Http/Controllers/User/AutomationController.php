@@ -255,7 +255,7 @@ class AutomationController extends Controller
                     ];
                     $response = array(
                         "success" => true,
-                        "message" => "Your posts are being Fetched!"
+                        "message" => "Your posts are being Fetched. This process may take around 5-10 minutes!"
                     );
                     // Update last fetch
                     $account->update([
