@@ -11,7 +11,7 @@ class SitemapService
     /**
      * @var string The user agent to use for cURL requests.
      */
-    private const USER_AGENT = 'SitemapService/1.0 (PHP cURL)';
+    private const USER_AGENT = 'SitemapArticleService/1.0 (PHP cURL)';
 
     /**
      * @var int The maximum number of attempts to fetch the sitemap/linked files.
@@ -26,7 +26,7 @@ class SitemapService
     /**
      * @var int The delay in seconds between consecutive successful requests to be polite.
      */
-    private const POLITE_DELAY_SECONDS = rand(2, 5);
+    private const POLITE_DELAY_SECONDS = 2;
 
     /**
      * Fetches articles from a given base URL's sitemap.
@@ -137,6 +137,13 @@ class SitemapService
             echo "Found sitemap index. Processing linked sitemaps...\n";
             foreach ($xml->sitemap as $sitemapEntry) {
                 $linkedSitemapUrl = (string)$sitemapEntry->loc;
+
+                // **MODIFICATION: ONLY process sitemaps containing "post-sitemap"**
+                if (!str_contains($linkedSitemapUrl, 'post-sitemap')) {
+                    echo "  -> Skipping sitemap (not a post-sitemap): {$linkedSitemapUrl}\n";
+                    continue; // Skip to the next entry
+                }
+
                 echo "  -> Fetching linked sitemap: {$linkedSitemapUrl}\n";
 
                 // Polite delay before fetching next linked sitemap
