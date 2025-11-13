@@ -11,6 +11,20 @@ use Illuminate\Http\Client\RequestException;
 
 class FeedService
 {
+    /**
+     * @var string The user agent to use for cURL requests.
+     */
+    private const USER_AGENT = 'RssFeedService/1.0 (PHP cURL)';
+
+    /**
+     * @var int The maximum number of attempts to fetch the feed.
+     */
+    private const MAX_RETRIES = 3;
+
+    /**
+     * @var int The delay in seconds before retrying a failed fetch attempt.
+     */
+    private const RETRY_DELAY_SECONDS = 10;
     private $post;
     private $dom;
     private $data;
@@ -36,21 +50,16 @@ class FeedService
     public function fetch()
     {
         $websiteUrl = $this->data["url"];
-        info("data: " . json_encode($this->data));
+        $normalizedUrl = $this->normalizeUrl($websiteUrl);
         if ($this->data["exist"]) {
             $feedUrls = $this->fetchSitemap($websiteUrl);
-            info("fetchSitemap: " . json_encode($feedUrls));
         } else {
-            $feedUrls = $this->fetchRss($websiteUrl);
-            info("fetchRss: " . json_encode($feedUrls));
+            $feedUrls = $this->fetchRss($normalizedUrl);
         }
         if ($feedUrls["success"]) {
-            info('success');
             try {
                 $items = $feedUrls["data"];
-                info('items: ' . json_encode($items));
                 if (count($items) > 0) {
-                    info('contains posts');
                     foreach ($items as $key => $item) {
                         $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"]], $this->data["time"]);
                         $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
@@ -80,7 +89,6 @@ class FeedService
                     );
                 } else {
                     $this->body["message"] = "Posts not Fetched!";
-                    info(json_encode($this->body));
                     create_notification($this->data["user_id"], $this->body, "Automation");
                     return array(
                         "success" => false,
@@ -89,7 +97,6 @@ class FeedService
                 }
             } catch (Exception $e) {
                 $this->body["message"] = $e->getMessage();
-                info(json_encode($this->body));
                 create_notification($this->data["user_id"], $this->body, "Automation");
                 return array(
                     "success" => false,
@@ -97,9 +104,7 @@ class FeedService
                 );
             }
         } else {
-            info('failed');
             $this->body["message"] = $feedUrls["message"];
-            info(json_encode($this->body));
             create_notification($this->data["user_id"], $this->body, "Automation");
             return array(
                 "success" => false,
@@ -111,31 +116,52 @@ class FeedService
     private function fetchRss(string $targetUrl, int $max = 10)
     {
         try {
-            $agent = $this->dom->user_agent();
-            $options = ['curl_options' => [CURLOPT_USERAGENT => $agent]];
-            $url = $targetUrl;
-            $feed = FeedReader::read($url, "default", $options);
-            $items = array_slice($feed->get_items(), 0, $max);
-            info("items: " . json_encode($items));
-            $posts = [];
-            foreach ($items as $item) {
-                $title = $item->get_title();
-                $link = $item->get_link();
-                $posts[] = [
-                    'title' => $title,
-                    'link' => $link,
+            $xmlContent = $this->fetchContent($targetUrl, self::MAX_RETRIES);
+            $parseFeed = $this->parseFeed($xmlContent);
+            if ($parseFeed['success']) {
+                $response = [
+                    "success" => true,
+                    "data" => $parseFeed['data']
+                ];
+            } else {
+                $response = [
+                    "success" => false,
+                    "message" => $parseFeed['message']
                 ];
             }
-            $response = [
-                "success" => true,
-                "data" => $posts
-            ];
         } catch (Exception $e) {
             $response = [
                 "success" => false,
                 "message" => $e->getMessage()
             ];
         }
+
+        // try {
+        //     $agent = $this->dom->user_agent();
+        //     $options = ['curl_options' => [CURLOPT_USERAGENT => $agent]];
+        //     $url = $targetUrl;
+        //     $feed = FeedReader::read($url, "default", $options);
+        //     $items = array_slice($feed->get_items(), 0, $max);
+        //     $posts = [];
+        //     foreach ($items as $item) {
+        //         $title = $item->get_title();
+        //         $link = $item->get_link();
+        //         $posts[] = [
+        //             'title' => $title,
+        //             'link' => $link,
+        //         ];
+        //     }
+        //     $response = [
+        //         "success" => true,
+        //         "data" => $posts
+        //     ];
+        // } catch (Exception $e) {
+        //     $response = [
+        //         "success" => false,
+        //         "message" => $e->getMessage()
+        //     ];
+        // }
+
         return $response;
     }
 
@@ -230,5 +256,190 @@ class FeedService
             return false;
         }
         return $content;
+    }
+
+    /**
+     * Normalizes the URL by appending 'feed' or replacing 'rss' with 'feed'.
+     *
+     * @param string $url The input URL.
+     * @return string The normalized URL.
+     */
+    private function normalizeUrl(string $url): string
+    {
+        $url = trim($url);
+        // Remove scheme if present, to normalize paths better later
+        $base = preg_replace('/^https?:\/\//i', '', $url);
+
+        // 1. Replace trailing "rss" with "feed" (case-insensitive)
+        if (preg_match('/rss$/i', $base)) {
+            $base = substr($base, 0, -3) . 'feed';
+        }
+
+        // 2. Append "/feed" if the URL doesn't already look like a feed path.
+        // We check if it ends with /feed or any common feed path component
+        if (!preg_match('/(\/feed|\.xml|\.rss|\.atom)$/i', $base)) {
+            // Ensure no double slashes if the base URL already ended with one
+            $url = rtrim($url, '/') . '/feed';
+        }
+
+        return $url;
+    }
+
+    /**
+     * Fetches the content from the URL with a retry mechanism.
+     *
+     * @param string $url The full URL to fetch.
+     * @param int $maxRetries The maximum number of attempts.
+     * @return string The XML content of the feed.
+     * @throws \Exception If fetching fails after all retries.
+     */
+    private function fetchContent(string $url, int $maxRetries): string
+    {
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            $ch = curl_init();
+            curl_setopt($ch, CURLOPT_URL, $url);
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Follow redirects
+            curl_setopt($ch, CURLOPT_USERAGENT, self::USER_AGENT);
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15); // Set a timeout
+
+            $content = curl_exec($ch);
+            $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+            $curlError = curl_error($ch);
+            curl_close($ch);
+
+            if ($content !== false && $httpCode >= 200 && $httpCode < 300) {
+                echo "Fetch successful on attempt {$attempt}.\n";
+                return $content;
+            }
+
+            // Log error and prepare for retry
+            echo "Fetch failed on attempt {$attempt}: HTTP Code {$httpCode}, cURL Error: {$curlError}\n";
+
+            if ($attempt < $maxRetries) {
+                $delay = self::RETRY_DELAY_SECONDS + ($attempt - 1) * 5; // Add increasing delay
+                echo "Retrying in {$delay} seconds...\n";
+                sleep($delay);
+            }
+        }
+
+        throw new \Exception("Failed to fetch feed content after {$maxRetries} attempts.");
+    }
+
+    /**
+     * Parses the XML content and extracts valid titles.
+     * Supports both RSS (channel/item) and Atom (feed/entry) formats.
+     *
+     * @param string $xmlContent The raw XML feed content.
+     * @return array An array of filtered article titles.
+     */
+    private function parseFeed(string $xmlContent): array
+    {
+        try {
+            $xml = new \SimpleXMLElement($xmlContent);
+        } catch (Exception $e) {
+            return [
+                "success" => false,
+                "message" => "Failed to parse XML content: " . $e->getMessage()
+            ];
+        }
+        $titles = [];
+        // Check for RSS format (channel/item)
+        if (isset($xml->channel->item)) {
+            foreach ($xml->channel->item as $item) {
+                $title = (string)$item->title;
+                // RSS link is usually a direct child tag
+                $link = (string)$item->link;
+
+                if ($this->isValidTitle($title)) {
+                    $articles[] = [
+                        'title' => $title,
+                        'link' => $link
+                    ];
+                }
+            }
+        }
+        // Check for Atom format (feed/entry)
+        elseif (isset($xml->entry)) {
+            foreach ($xml->entry as $entry) {
+                $title = (string)$entry->title;
+                $link = '';
+
+                // Atom links are often stored as attributes on <link> tags. We look for rel="alternate".
+                if (isset($entry->link)) {
+                    foreach ($entry->link as $linkElement) {
+                        $rel = (string)$linkElement->attributes()->rel;
+                        $href = (string)$linkElement->attributes()->href;
+
+                        // Prefer the canonical "alternate" link for the article URL
+                        if ($rel === 'alternate' && $href) {
+                            $link = $href;
+                            break;
+                        }
+                    }
+                    // Fallback: If no alternate found, use the first link's href attribute or inner content
+                    if (empty($link) && isset($entry->link[0])) {
+                        $firstLink = $entry->link[0];
+                        $link = isset($firstLink->attributes()->href) ? (string)$firstLink->attributes()->href : (string)$firstLink;
+                    }
+                }
+
+                if ($this->isValidTitle($title)) {
+                    $articles[] = [
+                        'title' => $title,
+                        'link' => $link
+                    ];
+                }
+            }
+        } else {
+            echo "Warning: Feed format is not standard RSS or Atom.\n";
+        }
+        return [
+            'success' => true,
+            'data' => $articles
+        ];
+    }
+
+    /**
+     * Checks if a title is valid (non-empty and not system/admin content).
+     *
+     * @param string $title The title to validate.
+     * @return bool True if the title is valid, false otherwise.
+     */
+    private function isValidTitle(string $title): bool
+    {
+        $title = trim($title);
+        if (empty($title)) {
+            return false;
+        }
+
+        $titleLower = strtolower($title);
+
+        // Keywords that typically indicate non-article, system, or administrative content
+        $invalidKeywords = [
+            'bot verification',
+            'admin dashboard',
+            'login required',
+            'system message',
+            'comment moderation',
+            'privacy policy',
+            'terms of service',
+            'site map',
+            'error 404',
+            'page not found',
+        ];
+
+        foreach ($invalidKeywords as $keyword) {
+            if (str_contains($titleLower, $keyword)) {
+                return false;
+            }
+        }
+
+        // Filter out very short, likely non-descriptive titles
+        if (strlen($title) < 10) {
+            return false;
+        }
+
+        return true;
     }
 }
