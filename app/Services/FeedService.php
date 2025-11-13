@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use Exception;
+use SitemapService;
 use App\Models\Post;
 use Illuminate\Support\Facades\Http;
 use Vedmant\FeedReader\Facades\FeedReader;
 use Illuminate\Http\Client\RequestException;
-
 
 class FeedService
 {
@@ -29,12 +29,14 @@ class FeedService
     private $dom;
     private $data;
     private $body;
+    private $sitemap;
     private $heightArray = [];
     private $widthArray = [];
     public function __construct($data)
     {
         $this->post = new Post();
         $this->dom = new HtmlParseService();
+        $this->sitemap = new SitemapService();
         $this->data = $data;
         $this->body = [
             "user_id" => isset($data["user_id"]) ? $data["user_id"] : '',
@@ -52,7 +54,8 @@ class FeedService
         $websiteUrl = $this->data["url"];
         $normalizedUrl = $this->normalizeUrl($websiteUrl);
         if ($this->data["exist"]) {
-            $feedUrls = $this->fetchSitemap($websiteUrl);
+            // $feedUrls = $this->fetchSitemap($websiteUrl);
+            $feedUlds = $this->sitemap->fetchArticles($websiteUrl);
         } else {
             $feedUrls = $this->fetchRss($normalizedUrl);
         }
