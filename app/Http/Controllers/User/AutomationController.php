@@ -153,7 +153,7 @@ class AutomationController extends Controller
         ]);
         if (!empty($id)) {
             $user = Auth::user();
-            $post = $this->post->userSearch($user->id)->where('status', [0])->where("id", $id)->first();
+            $post = $this->post->userSearch($user->id)->notPublished()->where("id", $id)->first();
             if ($post) {
                 $data = [
                     "title" => $request->post_title,
@@ -483,7 +483,7 @@ class AutomationController extends Controller
                 $account = $this->page->with("posts.photo")->userSearch($user->id)->where("id", $id)->first();
             }
             if ($account) {
-                $posts = $account->posts->notPublished();
+                $posts = $account->posts()->notPublished();
                 if (count($domain) > 0) {
                     $posts = $posts->domainSearch($domain);
                 }
