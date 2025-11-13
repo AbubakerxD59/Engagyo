@@ -261,9 +261,9 @@ class AutomationController extends Controller
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    // $feedService = new FeedService($data);
-                    // $response = $feedService->fetch();
-                    FetchPost::dispatch($data);
+                    $feedService = new FeedService($data);
+                    $response = $feedService->fetch();
+                    // FetchPost::dispatch($data);
                 }
             }
         } catch (Exception $e) {
