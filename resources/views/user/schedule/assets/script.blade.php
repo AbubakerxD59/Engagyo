@@ -354,21 +354,21 @@
             var modal = $('.settings-modal');
             modal.find(".modal-body").empty();
             modal.modal("toggle");
-            $.ajax({
-                url: "{{ route('panel.schedule.get.setting') }}",
-                type: "GET",
-                success: function(response) {
-                    if (response.success) {
-                        modal.find(".modal-body").html(response.data);
-                        // select2
-                        $('.select2').select2({
-                            closeOnSelect: false
-                        });
-                    } else {
-                        toastr.error("Something went Wrong!");
-                    }
-                }
-            });
+            // $.ajax({
+            //     url: "{{ route('panel.schedule.get.setting') }}",
+            //     type: "GET",
+            //     success: function(response) {
+            //         if (response.success) {
+            //             modal.find(".modal-body").html(response.data);
+            //             // select2
+            //             $('.select2').select2({
+            //                 closeOnSelect: false
+            //             });
+            //         } else {
+            //             toastr.error("Something went Wrong!");
+            //         }
+            //     }
+            // });
         });
         // update timeslots
         $(document).on("change", ".timeslot", function() {

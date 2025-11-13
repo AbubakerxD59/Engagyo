@@ -30,6 +30,7 @@ class User extends Authenticatable
         'country',
         'address',
         'status',
+        'timezone_id',
         'rss_filters',
     ];
 

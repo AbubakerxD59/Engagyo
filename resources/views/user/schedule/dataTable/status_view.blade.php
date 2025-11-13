@@ -6,4 +6,9 @@
     @elseif ($post->status == '-1')
         <span class="badge badge-danger">Failed</span>
     @endif
+    @if ($post->published_at)
+        <br>
+        Published At:
+        <span class="text-muted">{{ date('Y-m-d h:i A', strtotime($post->published_at)) }}</span>
+    @endif
 </div>

@@ -127,7 +127,7 @@
 
             <div class="d-block d-lg-flex">
                 @if (Auth::check())
-                    <a href="{{ route('panel.accounts') }}">
+                    <a href="{{ route('panel.schedule') }}">
                         <button class="btn nav-btn btn-colored" type="button">
                             DASHBOARD
                         </button>

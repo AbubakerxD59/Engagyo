@@ -44,7 +44,7 @@
 <body class="hold-transition sidebar-mini layout-fixed">
     <div class="wrapper">
         <!-- Preloader -->
-        <div class="preloader flex-column justify-content-center align-items-center">
+        <div class="preloader flex-column justify-content-center align-items-center d-none">
             <img class="animation__shake rounded-pill" src="{{ site_logo() }}"
                 alt="{{ env('APP_NAME', 'Engagyo') }}" width="100px">
         </div>

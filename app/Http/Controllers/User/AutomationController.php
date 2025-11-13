@@ -10,14 +10,15 @@ use App\Models\Domain;
 use App\Jobs\FetchPost;
 use App\Models\Facebook;
 use App\Models\Pinterest;
+use App\Jobs\RefreshPosts;
 use Illuminate\Http\Request;
+use App\Services\FeedService;
 use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
 use App\Services\HtmlParseService;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
-use App\Jobs\RefreshPosts;
 use Illuminate\Support\Facades\Auth;
 
 class AutomationController extends Controller
@@ -262,7 +263,10 @@ class AutomationController extends Controller
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    FetchPost::dispatch($data);
+                    $feedService = new FeedService($data);
+                    $feedService->fetch();
+                    dd($feedService);
+                    // FetchPost::dispatch($data);
                 }
             }
         } catch (Exception $e) {

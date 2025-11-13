@@ -92,11 +92,13 @@ class PinterestService
             $post->update([
                 "post_id" => $publish["id"],
                 "status" => 1,
+                "published_at" => date("Y-m-d H:i:s"),
                 "response" => "Published Successfully!"
             ]);
         } else {
             $post->update([
                 "status" => -1,
+                "published_at" => date("Y-m-d H:i:s"),
                 "response" => json_encode($publish)
             ]);
         }
@@ -124,29 +126,34 @@ class PinterestService
                         $post_row->update([
                             "post_id" => $upload_video["id"],
                             "status" => 1,
+                            "published_at" => date("Y-m-d H:i:s"),
                             "message" => "Published Successfully!"
                         ]);
                     } else {
                         $post_row->update([
                             "status" => -1,
+                            "published_at" => date("Y-m-d H:i:s"),
                             "message" => json_encode($upload_video)
                         ]);
                     }
                 } else {
                     $post_row->update([
                         "status" => -1,
+                        "published_at" => date("Y-m-d H:i:s"),
                         "message" => $media_status["message"]
                     ]);
                 }
             } else {
                 $post_row->update([
                     "status" => -1,
+                    "published_at" => date("Y-m-d H:i:s"),
                     "message" => $file["message"]
                 ]);
             }
         } else {
             $post_row->update([
                 "status" => -1,
+                "published_at" => date("Y-m-d H:i:s"),
                 "message" => $response["message"]
             ]);
         }
