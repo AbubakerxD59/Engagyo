@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use Exception;
-use SitemapService;
 use App\Models\Post;
+use App\Services\SitemapService;
 use Illuminate\Support\Facades\Http;
 use Vedmant\FeedReader\Facades\FeedReader;
 use Illuminate\Http\Client\RequestException;
