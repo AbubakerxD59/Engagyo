@@ -32,15 +32,10 @@ class DownloadPhoto implements ShouldQueue
     {
         $service = new DownloadPhotoService();
         $photo = Photo::with("post")->findOrFail($this->data['id']);
-        info('here');
         $response = $service->fetch($this->data);
-        info('response: ' . json_encode($response));
         if ($response['success']) {
-            info('success');
             $status = empty($response['data']) ? "pending" : "fetched";
             $tries = $photo->tries + 1;
-            info("status: " . $status);
-            info("tries: " . $tries);
             if ($status == "fetched") {
                 $photo->post->update([
                     "image" => $response['data']

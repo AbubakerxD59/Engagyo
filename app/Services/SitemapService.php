@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Services;
+
 /**
  * Class SitemapService
  *
@@ -42,42 +44,56 @@ class SitemapService
      */
     public function fetchArticles(string $baseUrl): array
     {
-        $sitemapUrl = rtrim($baseUrl, '/') . '/sitemap.xml';
-        echo "Starting sitemap processing from: " . $sitemapUrl . "\n";
+        // Extract the base host for comparison
+        $baseHost = parse_url($baseUrl, PHP_URL_HOST);
+        if (!$baseHost) {
+            return [
+                "success" => false,
+                "message" => "Error: Invalid base URL provided."
+            ];
+        }
 
+        $sitemapUrl = rtrim($baseUrl, '/') . '/sitemap.xml';
         try {
             // 1. Fetch the main sitemap XML content with retries
             $sitemapContent = $this->fetchContentWithRetry($sitemapUrl, self::MAX_RETRIES);
 
             // 2. Extract all unique article URLs (handles sitemap indexes recursively)
-            $allUrls = $this->extractUrlsFromSitemap($sitemapContent);
-
-            // 3. Fetch titles and filter with polite delays, stopping after MAX_ARTICLES_LIMIT
-            $validArticles = [];
-
-            foreach ($allUrls as $url) {
-                // Stop processing and return if the limit is reached
-                if (count($validArticles) >= self::MAX_ARTICLES_LIMIT) {
-                    echo "Stopping process. Reached maximum limit of " . self::MAX_ARTICLES_LIMIT . " valid articles.\n";
-                    break;
+            $extractUrlsFromSitemap = $this->extractUrlsFromSitemap($sitemapContent);
+            if ($extractUrlsFromSitemap['success']) {
+                // 3. Fetch titles and filter with polite delays, stopping after MAX_ARTICLES_LIMIT
+                $allUrls = $extractUrlsFromSitemap['data'];
+                $validArticles = [];
+                foreach ($allUrls as $url) {
+                    // Stop processing and return if the limit is reached
+                    if (count($validArticles) >= self::MAX_ARTICLES_LIMIT) {
+                        break;
+                    }
+                    // IMPORTANT: Apply polite delay between article URL fetches to prevent spam detection
+                    sleep(self::POLITE_DELAY_SECONDS);
+                    // Pass the base host to the function for homepage filtering
+                    $articleData = $this->fetchArticleTitle($url, $baseHost);
+                    if ($articleData) {
+                        $validArticles[] = $articleData;
+                    }
                 }
-
-                // IMPORTANT: Apply polite delay between article URL fetches to prevent spam detection
-                sleep(self::POLITE_DELAY_SECONDS);
-
-                $articleData = $this->fetchArticleTitle($url);
-
-                if ($articleData) {
-                    $validArticles[] = $articleData;
-                }
+                $response = [
+                    "success" => true,
+                    "data" => $validArticles
+                ];
+            } else {
+                $response = [
+                    "success" => false,
+                    "message" => $extractUrlsFromSitemap['message']
+                ];
             }
-
-            echo "Finished processing. Found " . count($validArticles) . " valid articles.\n";
-            return $validArticles;
         } catch (\Exception $e) {
-            echo "Fatal Error: " . $e->getMessage() . "\n";
-            return []; // Return empty array on final failure
+            $response = [
+                "success" => false,
+                "message" => $e->getMessage()
+            ];
         }
+        return $response;
     }
 
     /**
@@ -104,20 +120,15 @@ class SitemapService
             curl_close($ch);
 
             if ($content !== false && $httpCode >= 200 && $httpCode < 300) {
-                echo " -> Fetch successful on attempt {$attempt}.\n";
                 return $content;
             }
-
-            echo " -> Fetch failed on attempt {$attempt}: HTTP Code {$httpCode}, cURL Error: {$curlError}\n";
 
             if ($attempt < $maxRetries) {
                 // Increase delay for subsequent retries
                 $delay = self::RETRY_DELAY_SECONDS + ($attempt - 1) * 5;
-                echo " -> Retrying in {$delay} seconds...\n";
                 sleep($delay);
             }
         }
-
         throw new \Exception("Failed to fetch content from {$url} after {$maxRetries} attempts.");
     }
 
@@ -133,70 +144,79 @@ class SitemapService
         libxml_use_internal_errors(true);
         try {
             $xml = new \SimpleXMLElement($xmlContent);
-        } catch (\Exception $e) {
-            echo "Warning: Failed to parse sitemap XML. " . $e->getMessage() . "\n";
+        } catch (\Exception $e) {;
             libxml_clear_errors();
             libxml_use_internal_errors(false);
-            return [];
+            return [
+                "success" => false,
+                "message" => "Failed to parse sitemap XML. " . $e->getMessage()
+            ];
         }
         libxml_clear_errors();
         libxml_use_internal_errors(false);
-
         $urls = [];
-
         // Check for sitemap index (<sitemapindex><sitemap><loc>...</loc></sitemapindex>)
         if (isset($xml->sitemap)) {
-            echo "Found sitemap index. Processing linked sitemaps...\n";
             foreach ($xml->sitemap as $sitemapEntry) {
                 $linkedSitemapUrl = (string)$sitemapEntry->loc;
-
                 // **MODIFICATION: ONLY process sitemaps containing "post-sitemap"**
                 if (!str_contains($linkedSitemapUrl, 'post-sitemap')) {
-                    echo "  -> Skipping sitemap (not a post-sitemap): {$linkedSitemapUrl}\n";
                     continue; // Skip to the next entry
                 }
-
-                echo "  -> Fetching linked sitemap: {$linkedSitemapUrl}\n";
-
                 // Polite delay before fetching next linked sitemap
                 sleep(self::POLITE_DELAY_SECONDS);
-
-                try {
-                    $linkedContent = $this->fetchContentWithRetry($linkedSitemapUrl, self::MAX_RETRIES);
-                    // Recursively call to get URLs from the linked sitemap
-                    $urls = array_merge($urls, $this->extractUrlsFromSitemap($linkedContent));
-                } catch (\Exception $e) {
-                    echo "Warning: Failed to process linked sitemap {$linkedSitemapUrl}. Skipping.\n";
-                }
+                $linkedContent = $this->fetchContentWithRetry($linkedSitemapUrl, self::MAX_RETRIES);
+                // Recursively call to get URLs from the linked sitemap
+                $urls = array_merge($urls, $this->extractUrlsFromSitemap($linkedContent));
             }
         }
-        // Check for URL set (<urlset><url><loc>...</url></urlset>)
+        // Check for URL set (<urlset><url><loc>...</loc></urlset>)
         elseif (isset($xml->url)) {
-            echo "Found URL set. Extracting " . count($xml->url) . " URLs...\n";
             foreach ($xml->url as $urlEntry) {
                 $urls[] = (string)$urlEntry->loc;
             }
         } else {
-            echo "Warning: XML structure is neither Sitemap Index nor URL Set.\n";
+            return [
+                "success" => false,
+                "message" => "Warning: XML structure is neither Sitemap Index nor URL Set."
+            ];
         }
-
-        return array_unique($urls);
+        return [
+            "success" => true,
+            "data" => array_unique($urls)
+        ];
     }
 
     /**
      * Fetches the HTML content for a single URL and extracts the filtered title.
      *
      * @param string $url The article URL.
+     * @param string $baseHost The host of the root domain for filtering homepage links.
      * @return array|null An array containing 'title' and 'link', or null if invalid.
      */
-    private function fetchArticleTitle(string $url): ?array
+    private function fetchArticleTitle(string $url, string $baseHost): ?array
     {
-        echo "Checking URL: {$url}";
+        // --- HOMEPAGE CHECK START ---
+        $urlHost = parse_url($url, PHP_URL_HOST);
+
+        // 1. Check if the URL host matches the base host
+        if ($urlHost && strtolower($urlHost) === strtolower($baseHost)) {
+            $urlPath = parse_url($url, PHP_URL_PATH);
+
+            // 2. Check if the path is empty, just '/', or 'index.php/html' (common homepage indicators)
+            if (
+                empty($urlPath) || $urlPath === '/' ||
+                preg_match('/^\/(index\.(php|html?))?$/i', $urlPath)
+            ) {
+                return null;
+            }
+        }
+        // --- HOMEPAGE CHECK END ---
+
         // Only 1 attempt for article content, as we are already managing a polite delay
         try {
             $htmlContent = $this->fetchContentWithRetry($url, 1);
         } catch (\Exception $e) {
-            echo " -> Failed to fetch article content. Skipping.\n";
             return null;
         }
 
@@ -216,8 +236,6 @@ class SitemapService
                 ];
             }
         }
-
-        echo " -> Title is invalid or missing. Skipping.\n";
         return null;
     }
 
