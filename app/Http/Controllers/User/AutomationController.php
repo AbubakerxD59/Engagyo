@@ -117,9 +117,10 @@ class AutomationController extends Controller
         $id = $request->id;
         if ($id) {
             $user = Auth::user();
-            $post = $this->post->find($id);
+            $post = $this->post->with("photo")->find($id);
             if ($post) {
                 $postData = $post->toArray();
+                $post->photo()->delete();
                 if ($post->delete()) {
                     RefreshPosts::dispatch($postData, $user->id);
                 }
@@ -487,7 +488,7 @@ class AutomationController extends Controller
                     $posts = $posts->domainSearch($domain);
                 }
                 foreach ($posts as $post) {
-                    $post->photo->delete();
+                    $post->photo()->delete();
                 }
                 $posts->delete();
                 $response = array(
