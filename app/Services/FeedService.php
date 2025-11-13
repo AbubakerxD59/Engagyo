@@ -111,15 +111,16 @@ class FeedService
     private function fetchRss(string $targetUrl, int $max = 10)
     {
         try {
+            $agent = $this->dom->user_agent();
+            $options = ['curl_options' => [CURLOPT_USERAGENT => $agent]];
             $url = $targetUrl;
-            $feed = FeedReader::read($url);
+            $feed = FeedReader::read($url, "default", $options);
             $items = array_slice($feed->get_items(), 0, $max);
             info("items: " . json_encode($items));
             $posts = [];
             foreach ($items as $item) {
                 $title = $item->get_title();
                 $link = $item->get_link();
-                // $image = $this->extractImageFromRssItem($item, $this->widthArray, $this->heightArray);
                 $posts[] = [
                     'title' => $title,
                     'link' => $link,
@@ -192,7 +193,7 @@ class FeedService
                                         "admin"
                                     ];
                                     $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
-                                    if (!in_array($rss, $invalid_titles)) {
+                                    if (!in_array(strtolower($rss), $invalid_titles)) {
                                         if (isset($rss["title"])) {
                                             $posts[] = [
                                                 'title' => $rss["title"],
@@ -229,76 +230,5 @@ class FeedService
             return false;
         }
         return $content;
-    }
-
-    private function extractImageFromRssItem($item, array $pinterestWidths, array $pinterestHeights): ?string
-    {
-        $potentialImages = [];
-
-        // 1. Check for media:content or enclosure tags (often higher quality)
-        $enclosures = $item->get_enclosures();
-        if ($enclosures) {
-            foreach ($enclosures as $enclosure) {
-                if (strpos($enclosure->get_type(), 'image') !== false && $enclosure->get_link()) {
-                    $potentialImages[] = $enclosure->get_link();
-                }
-                // SimplePie specific for thumbnails in enclosures
-                if ($enclosure->get_thumbnail()) {
-                    $potentialImages[] = $enclosure->get_thumbnail();
-                }
-            }
-        }
-
-        // 2. Check for media:thumbnail
-        $media_thumbnail = $item->get_item_tags('http://search.yahoo.com/mrss/', 'thumbnail');
-        if (!empty($media_thumbnail) && isset($media_thumbnail[0]['attribs']['']['url'])) {
-            $potentialImages[] = $media_thumbnail[0]['attribs']['']['url'];
-        }
-
-        // 3. Look for images in the description or content
-        $description = $item->get_description();
-        $content = $item->get_content();
-
-        if ($description) {
-            preg_match_all('/<img[^>]+src="([^">]+)"/i', $description, $matches);
-            if (!empty($matches[1])) {
-                $potentialImages = array_merge($potentialImages, $matches[1]);
-            }
-        }
-        if ($content) {
-            preg_match_all('/<img[^>]+src="([^">]+)"/i', $content, $matches);
-            if (!empty($matches[1])) {
-                $potentialImages = array_merge($potentialImages, $matches[1]);
-            }
-        }
-
-        // 4. Check image from <image> tag or <itunes:image> if available directly on item (less common for items, more for channel)
-        // The vedmant/laravel-feed-reader might expose these differently or not at all at item level.
-
-        $potentialImages = array_unique(array_filter($potentialImages));
-
-        // Check for Pinterest-specific dimensions
-        foreach ($potentialImages as $imgUrl) {
-            $dimensions = @getimagesize($imgUrl); // Use @ to suppress errors for invalid images
-            if ($dimensions && is_array($dimensions)) {
-                list($width, $height) = $dimensions;
-                if (in_array((string)$width, $pinterestWidths) && in_array((string)$height, $pinterestHeights)) {
-                    return $imgUrl; // Found Pinterest specific image
-                }
-            }
-        }
-
-        // If no Pinterest image, return the first valid image as a thumbnail
-        foreach ($potentialImages as $imgUrl) {
-            if (filter_var($imgUrl, FILTER_VALIDATE_URL)) {
-                // Further check if it's a real image if necessary
-                $headers = @get_headers($imgUrl, 1);
-                if ($headers && isset($headers['Content-Type']) && strpos($headers['Content-Type'], 'image/') !== false) {
-                    return $imgUrl;
-                }
-            }
-        }
-
-        return null; // No suitable image found
     }
 }
