@@ -54,7 +54,7 @@ class FeedService
         $websiteUrl = $this->data["url"];
         $normalizedUrl = $this->normalizeUrl($websiteUrl);
         if ($this->data["exist"]) {
-            $feedUrls = $this->sitemap->fetchArticles($websiteUrl);
+            $feedUrls = $this->sitemap->fetchArticles($websiteUrl, $this->data);
         } else {
             $feedUrls = $this->fetchRss($normalizedUrl);
         }

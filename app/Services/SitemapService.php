@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Models\Post;
+
 /**
  * Class SitemapService
  *
@@ -42,7 +44,7 @@ class SitemapService
      * @return array An array of structured article data, where each element is
      * ['title' => string, 'link' => string]. Returns an empty array on failure.
      */
-    public function fetchArticles(string $baseUrl): array
+    public function fetchArticles(string $baseUrl, $data = []): array
     {
         // Extract the base host for comparison
         $baseHost = $baseUrl;
@@ -73,11 +75,12 @@ class SitemapService
                     // IMPORTANT: Apply polite delay between article URL fetches to prevent spam detection
                     sleep(self::POLITE_DELAY_SECONDS);
                     // Pass the base host to the function for homepage filtering
-                    if(is_array($url)){
-                        dd($allUrls, $url);      
+                    if (is_array($url)) {
+                        dd($allUrls, $url);
                     }
                     $articleData = $this->fetchArticleTitle($url, $baseHost);
-                    if ($articleData) {
+                    $articleExists = Post::exist(["user_id" => $data["user_id"], "account_id" => $data["account_id"], "social_type" => $data["social_type"], "source" => $data["source"], "type" => $data["type"], "domain_id" => $data["domain_id"], "url" => $url->loc])->first();
+                    if ($articleData && !$articleExists) {
                         $validArticles[] = $articleData;
                     }
                 }
