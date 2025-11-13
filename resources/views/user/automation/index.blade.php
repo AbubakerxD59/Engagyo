@@ -265,7 +265,6 @@
                 saved_domains = saved_domains.split(',').map(function(value) {
                     return Number(value);
                 });
-                console.log(saved_domains);
                 $.ajax({
                     url: "{{ route('panel.automation.getDomain') }}",
                     method: "GET",
@@ -303,7 +302,7 @@
                 postsDatatable.ajax.reload();
             })
             // Delete Post
-            $(document).on("click", ".post-delete", function() {
+            $(document).on("click", ".delete_btn", function() {
                 var id = $(this).data('id');
                 var token = $('meta[name="csrf-token"]').attr('content');
                 $(this).closest('tr').remove();
