@@ -29,6 +29,11 @@ class SitemapService
     private const POLITE_DELAY_SECONDS = 2;
 
     /**
+     * @var int The maximum number of valid articles to fetch before stopping.
+     */
+    private const MAX_ARTICLES_LIMIT = 10;
+
+    /**
      * Fetches articles from a given base URL's sitemap.
      *
      * @param string $baseUrl The base domain URL (e.g., https://example.com).
@@ -47,9 +52,16 @@ class SitemapService
             // 2. Extract all unique article URLs (handles sitemap indexes recursively)
             $allUrls = $this->extractUrlsFromSitemap($sitemapContent);
 
-            // 3. Fetch titles and filter with polite delays
+            // 3. Fetch titles and filter with polite delays, stopping after MAX_ARTICLES_LIMIT
             $validArticles = [];
+
             foreach ($allUrls as $url) {
+                // Stop processing and return if the limit is reached
+                if (count($validArticles) >= self::MAX_ARTICLES_LIMIT) {
+                    echo "Stopping process. Reached maximum limit of " . self::MAX_ARTICLES_LIMIT . " valid articles.\n";
+                    break;
+                }
+
                 // IMPORTANT: Apply polite delay between article URL fetches to prevent spam detection
                 sleep(self::POLITE_DELAY_SECONDS);
 
