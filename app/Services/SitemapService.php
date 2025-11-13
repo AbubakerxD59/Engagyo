@@ -66,6 +66,7 @@ class SitemapService
                 $allUrls = $extractUrlsFromSitemap['data'];
                 $validArticles = [];
                 foreach ($allUrls as $url) {
+                    dd($allUrls, $url);
                     // Stop processing and return if the limit is reached
                     if (count($validArticles) >= self::MAX_ARTICLES_LIMIT) {
                         break;
