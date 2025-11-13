@@ -91,7 +91,7 @@ class SitemapService
         } catch (\Exception $e) {
             $response = [
                 "success" => false,
-                "message" => $e->getMessage()
+                "message" => $e->getMessage() . " on line# " . $e->getLine()
             ];
         }
         return $response;
