@@ -170,7 +170,7 @@ class SitemapService
                 // Recursively call to get URLs from the linked sitemap
                 $extractUrls = $this->extractUrlsFromSitemap($linkedContent);
                 if ($extractUrls['success']) {
-                    $urls = array_merge($urls, $this->extractUrlsFromSitemap($linkedContent));
+                    $urls = array_merge($urls, $extractUrls['data']);
                 }
             }
         }
