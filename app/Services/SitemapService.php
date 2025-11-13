@@ -79,9 +79,11 @@ class SitemapService
                         dd($allUrls, $url);
                     }
                     $articleData = $this->fetchArticleTitle($url, $baseHost);
-                    $articleExists = Post::exist(["user_id" => $data["user_id"], "account_id" => $data["account_id"], "social_type" => $data["social_type"], "source" => $data["source"], "type" => $data["type"], "domain_id" => $data["domain_id"], "url" => $url->loc])->first();
-                    if ($articleData && !$articleExists) {
-                        $validArticles[] = $articleData;
+                    if ($articleData) {
+                        $articleExists = Post::exist(["user_id" => $data["user_id"], "account_id" => $data["account_id"], "social_type" => $data["social_type"], "source" => $data["source"], "type" => $data["type"], "domain_id" => $data["domain_id"], "url" => $articleData["link"]])->first();
+                        if (!$articleExists) {
+                            $validArticles[] = $articleData;
+                        }
                     }
                 }
                 $response = [
