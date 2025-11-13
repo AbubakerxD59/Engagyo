@@ -66,7 +66,6 @@ class SitemapService
                 $allUrls = $extractUrlsFromSitemap['data'];
                 $validArticles = [];
                 foreach ($allUrls as $url) {
-                    dd($allUrls, $url);
                     // Stop processing and return if the limit is reached
                     if (count($validArticles) >= self::MAX_ARTICLES_LIMIT) {
                         break;
@@ -74,6 +73,9 @@ class SitemapService
                     // IMPORTANT: Apply polite delay between article URL fetches to prevent spam detection
                     sleep(self::POLITE_DELAY_SECONDS);
                     // Pass the base host to the function for homepage filtering
+                    if(is_array($url)){
+                        dd($allUrls, $url);      
+                    }
                     $articleData = $this->fetchArticleTitle($url, $baseHost);
                     if ($articleData) {
                         $validArticles[] = $articleData;
