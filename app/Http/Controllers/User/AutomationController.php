@@ -153,7 +153,7 @@ class AutomationController extends Controller
         ]);
         if (!empty($id)) {
             $user = Auth::user();
-            $post = $this->post->userSearch($user->id)->not_published()->where("id", $id)->first();
+            $post = $this->post->userSearch($user->id)->where('status', [0])->where("id", $id)->first();
             if ($post) {
                 $data = [
                     "title" => $request->post_title,
