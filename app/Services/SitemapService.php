@@ -66,6 +66,7 @@ class SitemapService
             if ($extractUrlsFromSitemap['success']) {
                 // 3. Fetch titles and filter with polite delays, stopping after MAX_ARTICLES_LIMIT
                 $allUrls = $extractUrlsFromSitemap['data'];
+                dd($allUrls);
                 $validArticles = [];
                 foreach ($allUrls as $url) {
                     // Stop processing and return if the limit is reached
