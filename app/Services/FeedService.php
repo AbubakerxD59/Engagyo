@@ -193,7 +193,7 @@ class FeedService
                                         "admin"
                                     ];
                                     $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
-                                    if (!in_array(strtolower($rss), $invalid_titles)) {
+                                    if (!in_array(strtolower($rss["title"]), $invalid_titles)) {
                                         if (isset($rss["title"])) {
                                             $posts[] = [
                                                 'title' => $rss["title"],
