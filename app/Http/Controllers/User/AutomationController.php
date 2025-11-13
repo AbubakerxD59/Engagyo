@@ -186,7 +186,6 @@ class AutomationController extends Controller
     public function feedUrl(Request $request)
     {
         try {
-            info('here');
             $user = Auth::user();
             $type = $request->type;
             $domains = $request->url;
@@ -201,7 +200,6 @@ class AutomationController extends Controller
                 $account = $this->page->findOrFail($request->account);
                 $account_id = $account ? $account->page_id : '';
             }
-            info("times: " . json_encode($times));
             foreach ($times as $time) {
                 foreach ($domains as $domain) {
                     $parsedUrl = parse_url($domain);
@@ -255,7 +253,6 @@ class AutomationController extends Controller
                         "mode" => $mode,
                         "exist" => $exist
                     ];
-                    info("data: " . json_encode($data));
                     $response = array(
                         "success" => true,
                         "message" => "Your posts are being Fetched!"
@@ -264,9 +261,9 @@ class AutomationController extends Controller
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    $feedService = new FeedService($data);
-                    $response = $feedService->fetch();
-                    // FetchPost::dispatch($data);
+                    // $feedService = new FeedService($data);
+                    // $response = $feedService->fetch();
+                    FetchPost::dispatch($data);
                 }
             }
         } catch (Exception $e) {
