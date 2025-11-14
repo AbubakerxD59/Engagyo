@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\HtmlParseService;
+use App\Services\UrlMetaFetcher;
 use DOMDocument;
 use Illuminate\Http\Request;
 use App\Services\FeedService;
@@ -18,8 +19,10 @@ class GeneralController extends Controller
         $mode = count($check) > 0 ? 0 : 1;
         $link = $request->link;
         if (!empty($link)) {
-            $htmlParse = new HtmlParseService();
-            $get_info = $htmlParse->get_info($link, $mode);
+            // $htmlParse = new HtmlParseService();
+            // $get_info = $htmlParse->get_info($link, $mode);
+            $service = new UrlMetaFetcher();
+            $get_info == $service->fetchMetadata($link);
             if (isset($get_info["message"])) {
                 $response = array(
                     "success" => false,

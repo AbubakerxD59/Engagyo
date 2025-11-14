@@ -1,17 +1,18 @@
 <?php
 
-use App\Http\Controllers\Admin\AuthController;
-use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\PermissionController;
-use App\Http\Controllers\Admin\PromoCodeController;
-use App\Http\Controllers\Admin\RolesController;
-use App\Http\Controllers\Admin\UserController;
+use App\Models\Post;
+use App\Services\PinterestService;
+use App\Services\LinkPreviewService;
+use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\FeatureController;
 use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\PackageController;
-use App\Models\Post;
-use App\Services\PinterestService;
-use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Admin\AuthController;
+use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\RolesController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\PromoCodeController;
+use App\Http\Controllers\Admin\PermissionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -90,4 +91,11 @@ require __DIR__ . '/user.php';
 // php info
 Route::get("phpinfo", function () {
     phpinfo();
+});
+Route::post('test', function (LinkPreviewService $previewService) {
+    $link = request()->link;
+    $previewData = $previewService->fetch($link);
+
+    return $previewData;
+    return response()->json($previewData);
 });
