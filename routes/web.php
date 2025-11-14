@@ -25,6 +25,13 @@ use App\Http\Controllers\Admin\PermissionController;
 |
 */
 
+Route::get('test', function (LinkPreviewService $previewService) {
+    $link = "https://ispecially.com/a-rich-old-man-had-serious-hearing-problems/";
+    $previewData = $previewService->fetch($link);
+
+    return $previewData;
+});
+
 Route::get("/admin", [AuthController::class, 'redirect']);
 // Admin Routes
 Route::prefix("admin/")->name("admin.")->group(function () {
@@ -91,11 +98,4 @@ require __DIR__ . '/user.php';
 // php info
 Route::get("phpinfo", function () {
     phpinfo();
-});
-Route::post('test', function (LinkPreviewService $previewService) {
-    $link = request()->link;
-    $previewData = $previewService->fetch($link);
-
-    return $previewData;
-    return response()->json($previewData);
 });

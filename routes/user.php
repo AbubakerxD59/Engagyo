@@ -56,6 +56,3 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
         });
     });
 });
-
-Route::get("test", function () { // 
-});
