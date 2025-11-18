@@ -3,10 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\HtmlParseService;
-use App\Services\UrlMetaFetcher;
-use DOMDocument;
 use Illuminate\Http\Request;
-use App\Services\FeedService;
 use Illuminate\Support\Facades\Auth;
 
 class GeneralController extends Controller
@@ -16,11 +13,11 @@ class GeneralController extends Controller
         $user = Auth::user();
         $accounts = $user->getAccounts();
         $check = $accounts->where("type", "!=", "pinterest");
-        $mode = count($check) > 0 ? 0 : 1;
+        $pinterest_active = count($check) > 0 ? 0 : 1;
         $link = $request->link;
         if (!empty($link)) {
-            $service = new UrlMetaFetcher();
-            $get_info = $service->fetchMetadata($link);
+            $service = new HtmlParseService($pinterest_active);
+            $get_info = $service->get_info($link, 1);
             if ($get_info["status"]) {
                 $response = array(
                     "success" => true,
