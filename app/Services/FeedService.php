@@ -60,7 +60,7 @@ class FeedService
         //     $feedUrls = $this->fetchRss($websiteUrl);
         // }
         if ($feedUrls["success"]) {
-            // try {
+            try {
                 $items = $feedUrls["data"];
                 if (count($items) > 0) {
                     foreach ($items as $key => $item) {
@@ -98,14 +98,14 @@ class FeedService
                         "message" =>  $this->body["message"]
                     );
                 }
-            // } catch (Exception $e) {
-            //     $this->body["message"] = $e->getMessage();
-            //     create_notification($this->data["user_id"], $this->body, "Automation");
-            //     return array(
-            //         "success" => false,
-            //         "message" =>  $this->body["message"]
-            //     );
-            // }
+            } catch (Exception $e) {
+                $this->body["message"] = $e->getMessage();
+                create_notification($this->data["user_id"], $this->body, "Automation");
+                return array(
+                    "success" => false,
+                    "message" =>  $this->body["message"]
+                );
+            }
         } else {
             $this->body["message"] = $feedUrls["message"];
             create_notification($this->data["user_id"], $this->body, "Automation");
@@ -148,37 +148,31 @@ class FeedService
             $file = curl_exec($ch);
             // 5. Close the session
             curl_close($ch);
-        } else {
-            $single_feed = simplexml_load_string((string) $file);
-            dd($single_feed, $file);
-            if ($file !== false) {
-                if ($single_feed) {
-                    $feed[] = $single_feed;
-                    foreach ($feed as $data) {
-                        if (!empty($data)) {
-                            $i = 1;
-                            if (isset($data->channel->item)) {
-                                $items_count = count($data->channel->item);
-                                foreach ($data->channel->item as $item) {
-                                    $items_count--;
-                                    $item = $data->channel->item[$items_count];
-                                    if ($i > 10) {
-                                        break;
-                                    }
-                                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item->link])->first();
-                                    if (!$post) {
-                                        $posts[] = [
-                                            "title" => $item->title,
-                                            "link" => $item->link
-                                        ];
-                                        $i++;
-                                    }
+        }
+        $single_feed = simplexml_load_string((string) $file);
+        dd($file, $single_feed);
+        if ($file !== false) {
+            if ($single_feed) {
+                $feed[] = $single_feed;
+                foreach ($feed as $data) {
+                    if (!empty($data)) {
+                        $i = 1;
+                        if (isset($data->channel->item)) {
+                            $items_count = count($data->channel->item);
+                            foreach ($data->channel->item as $item) {
+                                $items_count--;
+                                $item = $data->channel->item[$items_count];
+                                if ($i > 10) {
+                                    break;
                                 }
-                            } else {
-                                $response = array(
-                                    'success' => false,
-                                    'message' => 'Your provided link has not valid RSS feed, Please fix and try again'
-                                );
+                                $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item->link])->first();
+                                if (!$post) {
+                                    $posts[] = [
+                                        "title" => $item->title,
+                                        "link" => $item->link
+                                    ];
+                                    $i++;
+                                }
                             }
                         } else {
                             $response = array(
@@ -186,23 +180,28 @@ class FeedService
                                 'message' => 'Your provided link has not valid RSS feed, Please fix and try again'
                             );
                         }
+                    } else {
+                        $response = array(
+                            'success' => false,
+                            'message' => 'Your provided link has not valid RSS feed, Please fix and try again'
+                        );
                     }
-                    $response = array(
-                        'success' => true,
-                        'data' => $posts
-                    );
-                } else {
-                    $response = array(
-                        'success' => false,
-                        'message' => 'Your provided link has not valid RSS feed, Please fix and try again.'
-                    );
                 }
+                $response = array(
+                    'success' => true,
+                    'data' => $posts
+                );
             } else {
                 $response = array(
                     'success' => false,
                     'message' => 'Your provided link has not valid RSS feed, Please fix and try again.'
                 );
             }
+        } else {
+            $response = array(
+                'success' => false,
+                'message' => 'Your provided link has not valid RSS feed, Please fix and try again.'
+            );
         }
         // } catch (Exception $e) {
         //     $response = array(
