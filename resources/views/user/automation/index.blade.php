@@ -19,7 +19,7 @@
                     <div class="card-body">
                         <div class="row">
                             <form id="adv_filter_form" class="row col-md-12">
-                                <div class="col-md-4 form-group">
+                                <div class="col-md-3 form-group">
                                     <label for="account">Accounts</label>
                                     <select name="account" id="account" class="form-control adv_filter">
                                         <option value="">All Accounts</option>
@@ -31,12 +31,8 @@
                                             </option>
                                         @endforeach
                                     </select>
-                                    <a class="btn btn-outline-info btn-sm mt-1">
-                                        Last Fetch:
-                                        <span class="last_fetch">-</span>
-                                    </a>
                                 </div>
-                                <div class="col-md-4 form-group">
+                                <div class="col-md-3 form-group">
                                     <label for="domains">Domains</label>
                                     <input type="hidden" id="saved_domains"
                                         value="{{ isset($user->rss_filters['domain']) ? implode(',', $user->rss_filters['domain']) : '' }}">
@@ -44,7 +40,7 @@
                                         multiple>
                                     </select>
                                 </div>
-                                <div class="col-md-4 form-group">
+                                <div class="col-md-3 form-group">
                                     <label for="status">Status</label>
                                     <select name="status" id="status" class="form-control adv_filter">
                                         <option value="">All Status</option>
@@ -53,11 +49,21 @@
                                         <option value="-1">Failed</option>
                                     </select>
                                 </div>
-                                <div class="col-md-12 form-group">
+                                <div class="col-md-3 form-group align-content-end">
+                                    <a class="btn btn-outline-info btn-sm float-right">
+                                        Last Fetch:
+                                        <span class="last_fetch">-</span>
+                                    </a>
+                                    <a class="btn btn-outline-info btn-sm mx-1 float-right">
+                                        Scheduled Till:
+                                        <span class="scheduled_till"></span>
+                                    </a>
+                                </div>
+                                {{-- <div class="col-md-12 form-group">
                                     <label for="search">Search</label>
                                     <input type="text" name="search" id="search"
                                         class="form-control adv_filter_search">
-                                </div>
+                                </div> --}}
                             </form>
                             <div class="col-md-12 row form-group justify-content-between">
                                 <div class="col-md-6">
@@ -83,10 +89,6 @@
                                             </div>
                                         </div>
                                     </div>
-                                    <a class="btn btn-outline-info btn-sm">
-                                        Scheduled Till:
-                                        <span class="scheduled_till"></span>
-                                    </a>
                                 </div>
                             </div>
                         </div>
