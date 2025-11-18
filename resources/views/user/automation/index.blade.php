@@ -138,7 +138,7 @@
                         .data("type") : 0;
                     param.domain = $("#domains").val();
                     param.status = $("#status").find(":selected").val();
-                    param.search_input = $("#search").val();
+                    // param.search_input = $("#search").val();
                     return param;
                 },
             },
