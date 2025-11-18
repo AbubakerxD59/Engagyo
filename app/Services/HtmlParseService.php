@@ -65,9 +65,8 @@ class HtmlParseService
                     $response['image'] = $meta_image;
                 }
                 $response['status'] = true;
-                $response['title'] = $meta_title;
+                $response['title'] = !empty($meta_title) ? html_entity_decode($meta_title) : $meta_title;
                 $response['link'] = $url;
-                dd($response);
             }
         } catch (Exception $e) {
             $response = [
