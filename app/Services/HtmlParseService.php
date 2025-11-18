@@ -14,7 +14,7 @@ class HtmlParseService
     private $dom;
     private $downloadPhoto;
     // private $parser;
-    public function __construct($pinterest_active)
+    public function __construct($pinterest_active = false)
     {
         $this->pinterest_active = $pinterest_active;
         $this->client = new HttpService();

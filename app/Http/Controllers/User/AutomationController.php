@@ -189,11 +189,9 @@ class AutomationController extends Controller
             $type = $request->type;
             $domains = $request->url;
             $times = $request->time;
-            $pinterest_active = false;
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($request->account);
                 $account_id = $account ? $account->board_id : '';
-                $pinterest_active = true;
             }
             if ($type == 'facebook') {
                 $account = $this->page->findOrFail($request->account);
@@ -249,7 +247,6 @@ class AutomationController extends Controller
                         "social_type" => $type,
                         "source" => "rss",
                         "time" => $time,
-                        "mode" => $mode,
                         "exist" => $exist
                     ];
                     $response = array(
@@ -260,7 +257,7 @@ class AutomationController extends Controller
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    $feedService = new FeedService($data, $pinterest_active);
+                    $feedService = new FeedService($data);
                     $response = $feedService->fetch();
                 }
             }

@@ -30,14 +30,12 @@ class FeedService
     private $data;
     private $body;
     private $sitemap;
-    private $pinterest_active;
     private $heightArray = [];
     private $widthArray = [];
-    public function __construct($data, $pinterest_active)
+    public function __construct($data)
     {
-        $this->pinterest_active = $pinterest_active;
         $this->post = new Post();
-        $this->dom = new HtmlParseService($pinterest_active);
+        $this->dom = new HtmlParseService();
         $this->sitemap = new SitemapService();
         $this->data = $data;
         $this->body = [
@@ -236,7 +234,7 @@ class FeedService
                                         "bot verification",
                                         "admin"
                                     ];
-                                    $rss = $this->dom->get_info($url->loc, $this->data["mode"]);
+                                    $rss = $this->dom->get_info($url->loc, 0);
                                     if (isset($rss["title"])) {
                                         if (!in_array(strtolower($rss["title"]), $invalid_titles)) {
                                             $posts[] = [
