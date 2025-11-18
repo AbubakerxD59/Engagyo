@@ -136,33 +136,48 @@ class FeedService
         $context = stream_context_create($contextOptions);
         $file = file_get_contents($links, FALSE, $context);
         if (strpos($file, '<?xml') === false && strpos($file, '<rss') === false) {
-            $response = array(
-                'success' => false,
-                'message' => "The fetched content does NOT appear to be XML!"
-            );
+            sleep(3);
+            // 1. Initialize cURL session
+            $ch = curl_init($links);
+            // 2. Set options
+            curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); // Return the content as a string instead of outputting it
+            curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Important for handling redirects
+            curl_setopt($ch, CURLOPT_TIMEOUT, 15); // Set a timeout in seconds
+            curl_setopt($ch, CURLOPT_USERAGENT, $this->dom->user_agent()); // A user agent can sometimes be required
+            // 3. Execute the request
+            $file = curl_exec($ch);
+            // 5. Close the session
+            curl_close($ch);
         } else {
-            $single_feed = simplexml_load_string((string) $file);
-            if ($single_feed) {
-                $feed[] = $single_feed;
-                foreach ($feed as $data) {
-                    if (!empty($data)) {
-                        $i = 1;
-                        if (isset($data->channel->item)) {
-                            $items_count = count($data->channel->item);
-                            foreach ($data->channel->item as $item) {
-                                $items_count--;
-                                $item = $data->channel->item[$items_count];
-                                if ($i > 10) {
-                                    break;
+            if ($file !== false) {
+                $single_feed = simplexml_load_string((string) $file);
+                if ($single_feed) {
+                    $feed[] = $single_feed;
+                    foreach ($feed as $data) {
+                        if (!empty($data)) {
+                            $i = 1;
+                            if (isset($data->channel->item)) {
+                                $items_count = count($data->channel->item);
+                                foreach ($data->channel->item as $item) {
+                                    $items_count--;
+                                    $item = $data->channel->item[$items_count];
+                                    if ($i > 10) {
+                                        break;
+                                    }
+                                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item->link])->first();
+                                    if (!$post) {
+                                        $posts[] = [
+                                            "title" => $item->title,
+                                            "link" => $item->link
+                                        ];
+                                        $i++;
+                                    }
                                 }
-                                $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item->link])->first();
-                                if (!$post) {
-                                    $posts[] = [
-                                        "title" => $item->title,
-                                        "link" => $item->link
-                                    ];
-                                    $i++;
-                                }
+                            } else {
+                                $response = array(
+                                    'success' => false,
+                                    'message' => 'Your provided link has not valid RSS feed, Please fix and try again'
+                                );
                             }
                         } else {
                             $response = array(
@@ -170,17 +185,17 @@ class FeedService
                                 'message' => 'Your provided link has not valid RSS feed, Please fix and try again'
                             );
                         }
-                    } else {
-                        $response = array(
-                            'success' => false,
-                            'message' => 'Your provided link has not valid RSS feed, Please fix and try again'
-                        );
                     }
+                    $response = array(
+                        'success' => true,
+                        'data' => $posts
+                    );
+                } else {
+                    $response = array(
+                        'success' => false,
+                        'message' => 'Your provided link has not valid RSS feed, Please fix and try again.'
+                    );
                 }
-                $response = array(
-                    'success' => true,
-                    'data' => $posts
-                );
             } else {
                 $response = array(
                     'success' => false,
