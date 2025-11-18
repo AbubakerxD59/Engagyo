@@ -28,7 +28,6 @@ class FeedService
     public function fetch()
     {
         $websiteUrl = $this->data["url"];
-        $feedUrls = $this->fetchRss($websiteUrl);
         if ($this->data["exist"]) {
             $feedUrls = $this->fetchSitemap($websiteUrl);
         } else {
@@ -327,19 +326,19 @@ class FeedService
                         }
                     }
                     $response = [
-                        'status' => true,
+                        'success' => true,
                         'message' => 'Good Work!! We are setting up your awesome feed, Please Wait.'
                     ];
                 } else {
                     $response = [
-                        'status' => false,
-                        'error' => 'Sitemap Data not found!'
+                        'success' => false,
+                        'message' => 'Sitemap Data not found!'
                     ];
                 }
             } else {
                 $response = [
-                    'status' => false,
-                    'error' => 'Failed to fetch the RSS feed'
+                    'success' => false,
+                    'message' => 'Failed to fetch the RSS feed'
                 ];
             }
         } catch (Exception $e) {
