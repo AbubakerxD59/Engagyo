@@ -30,12 +30,14 @@ class FeedService
     private $data;
     private $body;
     private $sitemap;
+    private $pinterest_active;
     private $heightArray = [];
     private $widthArray = [];
-    public function __construct($data)
+    public function __construct($data, $pinterest_active)
     {
+        $this->pinterest_active = $pinterest_active;
         $this->post = new Post();
-        $this->dom = new HtmlParseService();
+        $this->dom = new HtmlParseService($pinterest_active);
         $this->sitemap = new SitemapService();
         $this->data = $data;
         $this->body = [
@@ -52,11 +54,10 @@ class FeedService
     public function fetch()
     {
         $websiteUrl = $this->data["url"];
-        $normalizedUrl = $this->normalizeUrl($websiteUrl);
         if ($this->data["exist"]) {
             $feedUrls = $this->sitemap->fetchArticles($websiteUrl, $this->data);
         } else {
-            $feedUrls = $this->fetchRss($normalizedUrl);
+            $feedUrls = $this->fetchRss($websiteUrl);
         }
         if ($feedUrls["success"]) {
             try {
@@ -115,55 +116,70 @@ class FeedService
         }
     }
 
+    private function appendFeedToUrl($url)
+    {
+        if (!strpos($url, 'feed') || !strpos($url, 'rss')) {
+            if (substr($url, -5) !== '/feed') {
+                $url .= 'feed';
+            }
+        }
+        return $url;
+    }
+
     private function fetchRss(string $targetUrl, int $max = 10)
     {
-        try {
-            $xmlContent = $this->fetchContent($targetUrl, self::MAX_RETRIES);
-            $parseFeed = $this->parseFeed($xmlContent);
-            if ($parseFeed['success']) {
-                $response = [
-                    "success" => true,
-                    "data" => $parseFeed['data']
-                ];
-            } else {
-                $response = [
-                    "success" => false,
-                    "message" => $parseFeed['message']
-                ];
+        $posts = [];
+        $links = $this->appendFeedToUrl($targetUrl);
+        $userAgent = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
+        $contextOptions = ['http' => ['user_agent' => $userAgent, 'ignore_errors' => true]];
+        $context = stream_context_create($contextOptions);
+        $file = file_get_contents($links, FALSE, $context);
+        $single_feed = simplexml_load_string((string) $file);
+        if ($single_feed) {
+            $feed[] = $single_feed;
+            foreach ($feed as $data) {
+                if (!empty($data)) {
+                    $i = 1;
+                    if (isset($data->channel->item)) {
+                        $items_count = count($data->channel->item);
+                        foreach ($data->channel->item as $item) {
+                            $items_count--;
+                            $item = $data->channel->item[$items_count];
+                            if ($i > 10) {
+                                break;
+                            }
+                            $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item->link])->first();
+                            if (!$post) {
+                                $posts[] = [
+                                    "title" => $item->title,
+                                    "link" => $item->link
+                                ];
+                                $i++;
+                            }
+                        }
+                    } else {
+                        $response = array(
+                            'success' => false,
+                            'message' => 'Your provided link has not valid RSS feed, Please fix and try again'
+                        );
+                    }
+                } else {
+                    $response = array(
+                        'success' => false,
+                        'message' => 'Your provided link has not valid RSS feed, Please fix and try again'
+                    );
+                }
             }
-        } catch (Exception $e) {
-            $response = [
-                "success" => false,
-                "message" => $e->getMessage()
-            ];
+            $response = array(
+                'success' => true,
+                'data' => $posts
+            );
+        } else {
+            $response = array(
+                'success' => false,
+                'message' => 'Your provided link has not valid RSS feed, Please fix and try again.'
+            );
         }
-
-        // try {
-        //     $agent = $this->dom->user_agent();
-        //     $options = ['curl_options' => [CURLOPT_USERAGENT => $agent]];
-        //     $url = $targetUrl;
-        //     $feed = FeedReader::read($url, "default", $options);
-        //     $items = array_slice($feed->get_items(), 0, $max);
-        //     $posts = [];
-        //     foreach ($items as $item) {
-        //         $title = $item->get_title();
-        //         $link = $item->get_link();
-        //         $posts[] = [
-        //             'title' => $title,
-        //             'link' => $link,
-        //         ];
-        //     }
-        //     $response = [
-        //         "success" => true,
-        //         "data" => $posts
-        //     ];
-        // } catch (Exception $e) {
-        //     $response = [
-        //         "success" => false,
-        //         "message" => $e->getMessage()
-        //     ];
-        // }
-
         return $response;
     }
 

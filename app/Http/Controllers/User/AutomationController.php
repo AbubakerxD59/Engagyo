@@ -31,7 +31,6 @@ class AutomationController extends Controller
     private $page;
     private $pinterestService;
     private $facebookService;
-    private $dom;
     public function __construct(Post $post, Domain $domain, Pinterest $pinterest, Facebook $facebook, Board $board, Page $page)
     {
         $this->post = $post;
@@ -42,7 +41,6 @@ class AutomationController extends Controller
         $this->page = $page;
         $this->pinterestService = new PinterestService();
         $this->facebookService = new FacebookService();
-        $this->dom = new HtmlParseService();
     }
     public function index()
     {
@@ -190,11 +188,11 @@ class AutomationController extends Controller
             $type = $request->type;
             $domains = $request->url;
             $times = $request->time;
-            $mode = 0;
+            $pinterest_active = false;
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($request->account);
                 $account_id = $account ? $account->board_id : '';
-                $mode = 1;
+                $pinterest_active = true;
             }
             if ($type == 'facebook') {
                 $account = $this->page->findOrFail($request->account);
@@ -261,9 +259,8 @@ class AutomationController extends Controller
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    // $feedService = new FeedService($data);
-                    // $response = $feedService->fetch();
-                    FetchPost::dispatch($data);
+                    $feedService = new FeedService($data, $pinterest_active);
+                    $response = $feedService->fetch();
                 }
             }
         } catch (Exception $e) {
