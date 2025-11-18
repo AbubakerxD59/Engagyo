@@ -53,7 +53,6 @@ class FeedService
     {
         $websiteUrl = $this->data["url"];
         $feedUrls = $this->fetchRss($websiteUrl);
-        dd($feedUrls);
         if ($this->data["exist"]) {
             $feedUrls = $this->sitemap->fetchArticles($websiteUrl, $this->data);
         } else {
@@ -131,6 +130,7 @@ class FeedService
         // try {
             $posts = [];
             $links = $this->appendFeedToUrl($targetUrl);
+            dd($links);
             $userAgent = $this->dom->user_agent();
             $contextOptions = ['http' => ['user_agent' => $userAgent, 'ignore_errors' => true]];
             $context = stream_context_create($contextOptions);
