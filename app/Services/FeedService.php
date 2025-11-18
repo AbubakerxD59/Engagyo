@@ -60,7 +60,7 @@ class FeedService
         //     $feedUrls = $this->fetchRss($websiteUrl);
         // }
         if ($feedUrls["success"]) {
-            try {
+            // try {
                 $items = $feedUrls["data"];
                 if (count($items) > 0) {
                     foreach ($items as $key => $item) {
@@ -98,14 +98,14 @@ class FeedService
                         "message" =>  $this->body["message"]
                     );
                 }
-            } catch (Exception $e) {
-                $this->body["message"] = $e->getMessage();
-                create_notification($this->data["user_id"], $this->body, "Automation");
-                return array(
-                    "success" => false,
-                    "message" =>  $this->body["message"]
-                );
-            }
+            // } catch (Exception $e) {
+            //     $this->body["message"] = $e->getMessage();
+            //     create_notification($this->data["user_id"], $this->body, "Automation");
+            //     return array(
+            //         "success" => false,
+            //         "message" =>  $this->body["message"]
+            //     );
+            // }
         } else {
             $this->body["message"] = $feedUrls["message"];
             create_notification($this->data["user_id"], $this->body, "Automation");
