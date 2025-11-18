@@ -215,7 +215,32 @@ class FeedService
             $xml = simplexml_load_file($sitemapUrl);
             if (!$xml) {
                 $sitemapContent = file_get_contents($sitemapUrl, false, stream_context_create($arrContextOptions));
+                if (strpos($xml, '<?xml') === false && strpos($xml, '<rss') === false) {
+                    sleep(3);
+                    // 1. Initialize cURL session
+                    $ch = curl_init($sitemapUrl);
+                    // 2. Set options
+                    $headers = [
+                        'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+                        'Accept-Language: en-US,en;q=0.5',
+                        'Connection: keep-alive',
+                        'Upgrade-Insecure-Requests: 1',
+                    ];
+                    curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+                    $cookieFile = 'cookies.txt';
+                    curl_setopt($ch, CURLOPT_COOKIEJAR, $cookieFile); // Store cookies
+                    curl_setopt($ch, CURLOPT_COOKIEFILE, $cookieFile); // Send cookies
+                    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1); // Return the content as a string instead of outputting it
+                    curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true); // Important for handling redirects
+                    curl_setopt($ch, CURLOPT_TIMEOUT, 15); // Set a timeout in seconds
+                    curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"); // A user agent can sometimes be required
+                    // 3. Execute the request
+                    $sitemapContent = curl_exec($ch);
+                    // 5. Close the session
+                    curl_close($ch);
+                }
                 if (!empty($sitemapContent)) {
+                    sleep(3);
                     $xml = simplexml_load_string($sitemapContent);
                 }
             }
@@ -242,8 +267,10 @@ class FeedService
                     strpos($loc, "sitemap-") !== false
                 ) {
                     $sitemapUrl = $loc; // Use the filtered URL
+                    sleep(3);
                     $sitemapXml = simplexml_load_file($sitemapUrl);
                     if (!$sitemapXml) {
+                        sleep(3);
                         $sitemapContent = file_get_contents($sitemapUrl, false, stream_context_create($arrContextOptions));
                         if (!empty($sitemapContent)) {
                             $sitemapXml = simplexml_load_string($sitemapContent);
