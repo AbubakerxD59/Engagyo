@@ -24,7 +24,6 @@ class HtmlParseService
     public function get_info($url, $fetchPhoto = 0)
     {
         try {
-            // $response = $this->client->get($url, [], ['User-Agent' => $this->user_agent()]);
             $curl = curl_init();
             curl_setopt_array($curl, array(
                 CURLOPT_URL => $url,
@@ -51,24 +50,8 @@ class HtmlParseService
                 @$dom->loadHTML($json_response);
                 $html = HtmlDomParser::str_get_html($json_response);
                 $meta_title = $html->find("meta[property='og:title']", 0)->content;
-                if ($meta_title == "") {
-                    $meta_title = $html->find("meta[name='twitter:title']", 0)->content;
-                }
-                if (!empty($meta_title)) {
-                    $meta_title = trim($meta_title);
-                }
                 if (empty($meta_title)) {
-                    $title = $dom->getElementsByTagName('title')->item(0);
-                    if (empty($title)) {
-                        $title = $html->find('title', 0);
-                    } else {
-                        $title = $title->nodeValue;
-                    }
-                    $colon_pos = strpos($title, ":");
-                    if ($colon_pos !== false) {
-                        $title = substr($title, 0, $colon_pos);
-                    }
-                    $meta_title = $title;
+                    $meta_title = $html->find("meta[name='twitter:title']", 0)->content;
                 }
                 if ($fetchPhoto) {
                     $meta_image = $this->fetchPhoto($json_response);
@@ -91,64 +74,66 @@ class HtmlParseService
     {
         $dom = new DOMDocument();
         @$dom->loadHTML($response);
-        $html = HtmlDomParser::str_get_html($response);
-        $tags = $dom->getElementsByTagName('img');
-        $meta_image = $html->find("meta[property='og:image']", 0)->content;
-        if (empty($meta_image)) {
-            $meta_image = $html->find("meta[name='twitter:image']", 0)->content;
+        // fetch from meta tags
+        $metaTags = $dom->getElementsByTagName('meta');
+        foreach ($metaTags as $meta) {
+            if ($meta->getAttribute('property') == 'og:image') {
+                $ogimage = $meta->getAttribute('content');
+            }
+            if ($meta->getAttribute('property') == 'og:image:secure_url') {
+                $ogimagesecure = $meta->getAttribute('content');
+            }
+            if (empty($ogimage) && $meta->getAttribute('name') == 'twitter:image') {
+                $ogimage = $meta->getAttribute('content');
+            }
         }
+        if ($ogimage && $ogimagesecure && $ogimage == $ogimagesecure) {
+            $meta_image = $ogimage;
+        } elseif ($ogimagesecure) {
+            $meta_image = $ogimagesecure;
+        } else {
+            $meta_image = $ogimage;
+        }
+
+        $images = $dom->getElementsByTagName('img');
         // fetch images  if pinterest channel is active 
         if ($this->pinterest_active) {
-            $pinterest_image = $this->fetch_pinterest_image($tags);
-            if ($pinterest_image != '' && $pinterest_image != null) {
+            $pinterest_image = $this->fetch_pinterest_image($images);
+            if (!empty($pinterest_image)) {
                 $meta_image = $pinterest_image;
             }
         }
         if (empty($meta_image)) {
-            $ogimage = "";
-            $ogimagesecure = "";
-            $metaTags = $dom->getElementsByTagName('meta');
-            foreach ($metaTags as $meta) {
-                if ($meta->getAttribute('property') == 'og:image') {
-                    $ogimage = $meta->getAttribute('content');
+            foreach ($images as $thumbnail) {
+                if ($this->check_for($thumbnail->getAttribute('class'), 'post-thumbnail post-image')) {
+                    $image = $thumbnail->hasAttribute('data-lazy-src') ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
+                    $meta_image = $image;
                 }
-                if ($meta->getAttribute('property') == 'og:image:secure_url') {
-                    $ogimagesecure = $meta->getAttribute('content');
-                }
-                if (empty($ogimage) && $meta->getAttribute('name') == 'twitter:image') {
-                    $ogimage = $meta->getAttribute('content');
-                }
-            }
-
-            if ($ogimage && $ogimagesecure && $ogimage == $ogimagesecure) {
-                $meta_image = $ogimage;
-            } elseif ($ogimagesecure) {
-                $meta_image = $ogimagesecure;
-            } else {
-                $meta_image = $ogimage;
             }
         }
-
         if (empty($meta_image)) {
             $thumbnails = $dom->getElementsByTagName('div');
             foreach ($thumbnails as $thumbnail) {
-                if (check_for($thumbnail->getAttribute('class'), 'thumbnail')) {
+                if ($this->check_for($thumbnail->getAttribute('class'), 'featured thumbnail post-image')) {
                     $image = $thumbnail->getElementsByTagName('img')->item(0);
                     $src = $image->getAttribute('src');
                     $meta_image = $src;
                 }
             }
         }
-        if (empty($meta_image)) {
-            $thumbnails = $dom->getElementsByTagName('img');
-            foreach ($thumbnails as $thumbnail) {
-                if (check_for($thumbnail->getAttribute('class'), 'size-post-thumbnail')) {
-                    $image = $thumbnail->hasAttribute('data-lazy-src') ? $thumbnail->getAttribute('data-lazy-src') : $thumbnail->getAttribute('src');
-                    $meta_image = $image;
-                }
+
+        return $meta_image;
+    }
+
+    public function check_for($source, $find)
+    {
+        $words = explode(' ', $find);
+        foreach ($words as $string) {
+            if (str_contains($source, $string)) {
+                return true;
             }
         }
-        return $meta_image;
+        return false;
     }
 
     public function fix($post)
@@ -182,20 +167,14 @@ class HtmlParseService
 
     private function fetch_pinterest_image($tags)
     {
-        $image = '';
-        $pin_image = false;
         $pinterest_image = '';
         foreach ($tags as $tag) {
             if ($this->get_aspect_ratio($tag)) {
-                $pin_image = true;
                 $pinterest_image = $tag->hasAttribute('data-lazy-src') ? $tag->getAttribute("data-lazy-src") : $tag->getAttribute('src');
-                break;
+                return $pinterest_image;
             }
         }
-        if ($pin_image) {
-            $image = $pinterest_image;
-        }
-        return $image;
+        return null;
     }
 
     private function get_aspect_ratio($image)
