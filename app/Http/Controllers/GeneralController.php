@@ -32,7 +32,7 @@ class GeneralController extends Controller
                 } else {
                     $response = array(
                         "success" => false,
-                        "message" => $get_info["message"]
+                        "message" => isset($get_info["message"]) ? $get_info["message"] : "Something went wrong!"
                     );
                     $retry++;
                     sleep(5);
