@@ -52,6 +52,8 @@ class FeedService
     public function fetch()
     {
         $websiteUrl = $this->data["url"];
+        $feedUrls = $this->fetchRss($websiteUrl);
+        dd($feedUrls);
         if ($this->data["exist"]) {
             $feedUrls = $this->sitemap->fetchArticles($websiteUrl, $this->data);
         } else {
