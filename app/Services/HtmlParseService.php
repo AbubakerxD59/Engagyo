@@ -88,7 +88,9 @@ class HtmlParseService
     {
         $dom = new DOMDocument();
         @$dom->loadHTML($response);
+        echo '1-';
         // fetch from meta tags
+        $meta_image = null;
         $metaTags = $dom->getElementsByTagName('meta');
         $ogimage = $ogimagesecure = null;
         foreach ($metaTags as $meta) {
@@ -109,15 +111,19 @@ class HtmlParseService
         } else {
             $meta_image = $ogimage;
         }
-
+        echo '2-';
+        echo $meta_image;
         $images = $dom->getElementsByTagName('img');
-        // fetch images  if pinterest channel is active 
+        // fetch images if pinterest channel is active 
         if ($this->pinterest_active) {
             $pinterest_image = $this->fetch_pinterest_image($images);
             if (!empty($pinterest_image)) {
                 $meta_image = $pinterest_image;
             }
         }
+        // fetch images from img tags
+        echo '3-';
+        echo $meta_image;
         if (empty($meta_image)) {
             foreach ($images as $thumbnail) {
                 if ($this->check_for($thumbnail->getAttribute('class'), 'post-thumbnail post-image')) {
@@ -126,6 +132,9 @@ class HtmlParseService
                 }
             }
         }
+        // fetch images inside divs
+        echo '4-';
+        echo $meta_image;
         if (empty($meta_image)) {
             $thumbnails = $dom->getElementsByTagName('div');
             foreach ($thumbnails as $thumbnail) {
@@ -136,7 +145,7 @@ class HtmlParseService
                 }
             }
         }
-
+        dd($meta_image);
         return $meta_image;
     }
 
