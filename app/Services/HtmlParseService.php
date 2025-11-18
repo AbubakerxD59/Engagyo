@@ -71,7 +71,6 @@ class HtmlParseService
                 }
                 if ($fetchPhoto) {
                     $meta_image = $this->fetchPhoto($response);
-                    dd($meta_image);
                     $response['image'] = $meta_image;
                 }
                 $response['status'] = true;
@@ -95,6 +94,7 @@ class HtmlParseService
         $tags = $dom->getElementsByTagName('img');
         $meta_image = '';
         $meta_image = $html->find("meta[property='og:image']", 0)->content;
+        dd($meta_image);
         if (empty($meta_image)) {
             $meta_image = $html->find("meta[name='twitter:image']", 0)->content;
         }
