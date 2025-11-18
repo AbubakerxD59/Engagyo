@@ -105,6 +105,7 @@ class FeedService
     {
         try {
             $posts = [];
+            $curl = false;
             $links = $this->appendFeedToUrl($targetUrl);
             $userAgent = $this->dom->user_agent();
             $contextOptions = ['http' => ['user_agent' => $userAgent, 'ignore_errors' => true]];
@@ -133,9 +134,12 @@ class FeedService
                 $file = curl_exec($ch);
                 // 5. Close the session
                 curl_close($ch);
+                $curl = true;
             }
             if ($file !== false) {
-                $single_feed = simplexml_load_string((string) $file);
+
+                $single_feed = $curl ? simplexml_load_string($file, 'SimpleXMLElement', LIBXML_NOCDATA) : simplexml_load_string((string) $file);
+                info($single_feed);
                 if ($single_feed) {
                     $feed[] = $single_feed;
                     foreach ($feed as $data) {
@@ -205,6 +209,7 @@ class FeedService
     public function fetchSitemap(string $targetUrl, int $max = 10)
     {
         try {
+            $curl = false;
             $posts = [];
             $http_domain = 'http://' . $targetUrl;
             $main_domain = strtolower($this->data["protocol"] . "://" . $targetUrl);
@@ -238,11 +243,13 @@ class FeedService
                     $sitemapContent = curl_exec($ch);
                     // 5. Close the session
                     curl_close($ch);
+                    $curl = true;
                 }
                 if (!empty($sitemapContent)) {
                     sleep(3);
-                    $xml = simplexml_load_string($sitemapContent);
+                    $xml = $curl ? simplexml_load_string($sitemapContent, 'SimpleXMLElement', LIBXML_NOCDATA) : simplexml_load_string($sitemapContent);
                 }
+                info($xml);
             }
             if (count($xml) > 0) {
                 $filteredSitemaps = [];
