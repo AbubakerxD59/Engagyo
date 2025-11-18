@@ -54,17 +54,11 @@ class HtmlParseService
                     $meta_title = $html->find("meta[name='twitter:title']", 0)->content;
                 }
                 if (empty($meta_title)) {
-                    $title = $dom->getElementsByTagName('title')->item(0);
-                    if (empty($title)) {
-                        $title = $html->find('title', 0);
-                    } else {
-                        $title = $title->nodeValue;
+                    $title = $dom->getElementsByTagName('title');
+                    if ($title->length > 0) {
+                        $page_title = $title->item(0)->textContent;
+                        $meta_title = $page_title;
                     }
-                    $colon_pos = strpos($title, ":");
-                    if ($colon_pos !== false) {
-                        $title = substr($title, 0, $colon_pos);
-                    }
-                    $meta_title = $title;
                 }
                 if ($fetchPhoto) {
                     $meta_image = $this->fetchPhoto($json_response);
@@ -92,17 +86,20 @@ class HtmlParseService
         // fetch from meta tags
         $meta_image = null;
         $metaTags = $dom->getElementsByTagName('meta');
-        dd($metaTags);
         $ogimage = $ogimagesecure = null;
-        foreach ($metaTags as $meta) {
-            if ($meta->getAttribute('property') == 'og:image') {
-                $ogimage = $meta->getAttribute('content');
+        foreach ($metaTags as $tag) {
+            if ($tag->hasAttribute('property') && $tag->getAttribute('property') === 'og:image') {
+                echo 'og:image-';
+                if ($tag->hasAttribute('content')) {
+                    echo 'content-';
+                    $ogimage = $tag->getAttribute('content');
+                    echo $ogimage;
+                }
             }
-            if ($meta->getAttribute('property') == 'og:image:secure_url') {
-                $ogimagesecure = $meta->getAttribute('content');
-            }
-            if (empty($ogimage) && $meta->getAttribute('name') == 'twitter:image') {
-                $ogimage = $meta->getAttribute('content');
+            if ($tag->hasAttribute('property') && $tag->getAttribute('property') === 'og:image:secure_url') {
+                if ($tag->hasAttribute('content')) {
+                    $ogimagesecure = $tag->getAttribute('content');
+                }
             }
         }
         if ($ogimage && $ogimagesecure && $ogimage == $ogimagesecure) {
