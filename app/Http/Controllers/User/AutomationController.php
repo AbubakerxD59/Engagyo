@@ -258,7 +258,7 @@ class AutomationController extends Controller
                     $feedService->fetch();
                     $response = array(
                         "success" => true,
-                        "message" => "Your posts are being Fetched. This process may take around 5-10 minutes!"
+                        "message" => "Your posts are Fetched!"
                     );
                 }
             }

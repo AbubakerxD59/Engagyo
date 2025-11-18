@@ -195,6 +195,7 @@
                     submit_button.attr('disabled', false);
                     return false;
                 }
+                toastr.warning("Your posts are being fetched. This process may take around 5 minutes!");
                 $.ajax({
                     url: "{{ route('panel.automation.feedUrl') }}",
                     type: "POST",
