@@ -28,6 +28,7 @@ class GeneralController extends Controller
                         "image" => isset($get_info["image"]) ? $get_info["image"] : "",
                         "link" => $link,
                     );
+                    break;
                 } else {
                     $response = array(
                         "success" => false,
