@@ -238,6 +238,7 @@ class AutomationController extends Controller
                     }
 
                     $data = [
+                        "protocol" => $parsedUrl["scheme"],
                         "url" => $link,
                         "category" => $category,
                         "domain_id" => $domain_id,

@@ -123,7 +123,7 @@ class FeedService
                 $url .= '/feed';
             }
         }
-        return $url;
+        return strtolower($this->data["protocol"] . "://" . $url);
     }
 
     private function fetchRss(string $targetUrl, int $max = 10)
