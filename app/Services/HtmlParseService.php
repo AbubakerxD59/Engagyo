@@ -92,6 +92,7 @@ class HtmlParseService
         // fetch from meta tags
         $meta_image = null;
         $metaTags = $dom->getElementsByTagName('meta');
+        dd($metaTags);
         $ogimage = $ogimagesecure = null;
         foreach ($metaTags as $meta) {
             if ($meta->getAttribute('property') == 'og:image') {
