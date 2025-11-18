@@ -254,18 +254,26 @@ class AutomationController extends Controller
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    $feedService = new FeedService($data);
-                    $feedUrl = $feedService->fetch();
-                    if ($feedUrl['success']) {
+                    if ($exist) {
+                        FetchPost::dispatch($data);
                         $response = array(
                             "success" => true,
-                            "message" => "Your posts are Fetched!"
+                            "message" => "Your posts are being Fetched!"
                         );
                     } else {
-                        $response = array(
-                            "success" => false,
-                            "message" => $feedUrl['message']
-                        );
+                        $feedService = new FeedService($data);
+                        $feedUrl = $feedService->fetch();
+                        if ($feedUrl['success']) {
+                            $response = array(
+                                "success" => true,
+                                "message" => "Your posts are Fetched!"
+                            );
+                        } else {
+                            $response = array(
+                                "success" => false,
+                                "message" => $feedUrl['message']
+                            );
+                        }
                     }
                 }
             }
