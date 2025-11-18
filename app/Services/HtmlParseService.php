@@ -42,13 +42,14 @@ class HtmlParseService
                 ),
             ));
 
-            $response = curl_exec($curl);
+            $json_response = curl_exec($curl);
             $err = curl_error($curl);
             curl_close($curl);
             if (!$err) {
+                $response = [];
                 $dom = new DOMDocument();
-                @$dom->loadHTML($response);
-                $html = HtmlDomParser::str_get_html($response);
+                @$dom->loadHTML($json_response);
+                $html = HtmlDomParser::str_get_html($json_response);
                 $meta_title = $html->find("meta[property='og:title']", 0)->content;
                 if ($meta_title == "") {
                     $meta_title = $html->find("meta[name='twitter:title']", 0)->content;
@@ -70,7 +71,7 @@ class HtmlParseService
                     $meta_title = $title;
                 }
                 if ($fetchPhoto) {
-                    $meta_image = $this->fetchPhoto($response);
+                    $meta_image = $this->fetchPhoto($json_response);
                     $response['image'] = $meta_image;
                 }
                 $response['status'] = true;
