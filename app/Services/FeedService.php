@@ -130,12 +130,12 @@ class FeedService
     {
         $posts = [];
         $links = $this->appendFeedToUrl($targetUrl);
+        dd($links);
         $userAgent = "facebookexternalhit/1.1 (+http://www.facebook.com/externalhit_uatext.php)";
         $contextOptions = ['http' => ['user_agent' => $userAgent, 'ignore_errors' => true]];
         $context = stream_context_create($contextOptions);
         $file = file_get_contents($links, FALSE, $context);
         $single_feed = simplexml_load_string((string) $file);
-        dd($targetUrl, $single_feed);
         if ($single_feed) {
             $feed[] = $single_feed;
             foreach ($feed as $data) {
