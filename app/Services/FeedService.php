@@ -120,7 +120,7 @@ class FeedService
     {
         if (!strpos($url, 'feed') || !strpos($url, 'rss')) {
             if (substr($url, -5) !== '/feed') {
-                $url .= 'feed';
+                $url .= '/feed';
             }
         }
         return $url;
