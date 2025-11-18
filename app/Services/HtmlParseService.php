@@ -66,7 +66,6 @@ class HtmlParseService
                     }
                     $meta_title = $title;
                 }
-                dd($meta_title);
                 if ($fetchPhoto) {
                     $meta_image = $this->fetchPhoto($json_response);
                     $response['image'] = $meta_image;
@@ -74,6 +73,7 @@ class HtmlParseService
                 $response['status'] = true;
                 $response['title'] = $meta_title;
                 $response['link'] = $url;
+                dd($response);
             }
         } catch (Exception $e) {
             $response = [
