@@ -24,14 +24,6 @@ use App\Http\Controllers\Admin\PermissionController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
-
-Route::get('test', function (LinkPreviewService $previewService) {
-    $link = "https://ispecially.com/a-rich-old-man-had-serious-hearing-problems/";
-    $previewData = $previewService->fetch($link);
-
-    return $previewData;
-});
-
 Route::get("/admin", [AuthController::class, 'redirect']);
 // Admin Routes
 Route::prefix("admin/")->name("admin.")->group(function () {

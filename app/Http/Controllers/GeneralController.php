@@ -19,21 +19,19 @@ class GeneralController extends Controller
         $mode = count($check) > 0 ? 0 : 1;
         $link = $request->link;
         if (!empty($link)) {
-            // $htmlParse = new HtmlParseService();
-            // $get_info = $htmlParse->get_info($link, $mode);
             $service = new UrlMetaFetcher();
-            $get_info == $service->fetchMetadata($link);
-            if (isset($get_info["message"])) {
-                $response = array(
-                    "success" => false,
-                    "message" => $get_info["message"]
-                );
-            } else {
+            $get_info = $service->fetchMetadata($link);
+            if ($get_info["status"]) {
                 $response = array(
                     "success" => true,
                     "title" => isset($get_info["title"]) ? $get_info["title"] : "",
                     "image" => isset($get_info["image"]) ? $get_info["image"] : "",
                     "link" => $link,
+                );
+            } else {
+                $response = array(
+                    "success" => false,
+                    "message" => $get_info["error"]
                 );
             }
         } else {
