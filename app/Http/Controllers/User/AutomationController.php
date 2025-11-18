@@ -255,11 +255,18 @@ class AutomationController extends Controller
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
                     $feedService = new FeedService($data);
-                    $feedService->fetch();
-                    $response = array(
-                        "success" => true,
-                        "message" => "Your posts are Fetched!"
-                    );
+                    $feedUrl = $feedService->fetch();
+                    if ($feedUrl['success']) {
+                        $response = array(
+                            "success" => true,
+                            "message" => "Your posts are Fetched!"
+                        );
+                    } else {
+                        $response = array(
+                            "success" => false,
+                            "message" => $feedUrl['message']
+                        );
+                    }
                 }
             }
         } catch (Exception $e) {
