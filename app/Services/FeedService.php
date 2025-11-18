@@ -53,11 +53,12 @@ class FeedService
     {
         $websiteUrl = $this->data["url"];
         $feedUrls = $this->fetchRss($websiteUrl);
-        if ($this->data["exist"]) {
-            $feedUrls = $this->sitemap->fetchArticles($websiteUrl, $this->data);
-        } else {
-            $feedUrls = $this->fetchRss($websiteUrl);
-        }
+        dd($feedUrls);
+        // if ($this->data["exist"]) {
+        //     $feedUrls = $this->sitemap->fetchArticles($websiteUrl, $this->data);
+        // } else {
+        //     $feedUrls = $this->fetchRss($websiteUrl);
+        // }
         if ($feedUrls["success"]) {
             try {
                 $items = $feedUrls["data"];
@@ -141,7 +142,6 @@ class FeedService
             );
         } else {
             $single_feed = simplexml_load_string((string) $file);
-            dd($links, $single_feed);
             if ($single_feed) {
                 $feed[] = $single_feed;
                 foreach ($feed as $data) {
