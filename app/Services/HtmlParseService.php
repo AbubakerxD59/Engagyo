@@ -53,6 +53,20 @@ class HtmlParseService
                 if (empty($meta_title)) {
                     $meta_title = $html->find("meta[name='twitter:title']", 0)->content;
                 }
+                if (empty($meta_title)) {
+                    $title = $dom->getElementsByTagName('title')->item(0);
+                    if (empty($title)) {
+                        $title = $html->find('title', 0);
+                    } else {
+                        $title = $title->nodeValue;
+                    }
+                    $colon_pos = strpos($title, ":");
+                    if ($colon_pos !== false) {
+                        $title = substr($title, 0, $colon_pos);
+                    }
+                    $meta_title = $title;
+                }
+                dd($meta_title);
                 if ($fetchPhoto) {
                     $meta_image = $this->fetchPhoto($json_response);
                     $response['image'] = $meta_image;
