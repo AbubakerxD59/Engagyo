@@ -128,13 +128,18 @@ class FeedService
     private function fetchRss(string $targetUrl, int $max = 10)
     {
         // try {
-            $posts = [];
-            $links = $this->appendFeedToUrl($targetUrl);
-            dd($links);
-            $userAgent = $this->dom->user_agent();
-            $contextOptions = ['http' => ['user_agent' => $userAgent, 'ignore_errors' => true]];
-            $context = stream_context_create($contextOptions);
-            $file = file_get_contents($links, FALSE, $context);
+        $posts = [];
+        $links = $this->appendFeedToUrl($targetUrl);
+        $userAgent = $this->dom->user_agent();
+        $contextOptions = ['http' => ['user_agent' => $userAgent, 'ignore_errors' => true]];
+        $context = stream_context_create($contextOptions);
+        $file = file_get_contents($links, FALSE, $context);
+        if (strpos($file, '<?xml') === false && strpos($file, '<rss') === false) {
+            $response = array(
+                'success' => false,
+                'message' => "The fetched content does NOT appear to be XML!"
+            );
+        } else {
             $single_feed = simplexml_load_string((string) $file);
             dd($links, $single_feed);
             if ($single_feed) {
@@ -182,6 +187,7 @@ class FeedService
                     'message' => 'Your provided link has not valid RSS feed, Please fix and try again.'
                 );
             }
+        }
         // } catch (Exception $e) {
         //     $response = array(
         //         'success' => false,
