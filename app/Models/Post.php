@@ -311,12 +311,12 @@ class Post extends Model
         return $date_time;
     }
 
-    public function scheduledTill($search, $social_type, $account, $domain, $status, $user_id)
+    public function scheduledTill($search = null, $social_type, $account, $domain, $status, $user_id)
     {
         $post = $this->userSearch($user_id)->orderBy('publish_date', 'DESC');
-        if (!empty($search)) {
-            $post = $post->search($search);
-        }
+        // if (!empty($search)) {
+        //     $post = $post->search($search);
+        // }
         if ($account) {
             if ($social_type == 'pinterest') {
                 $account = Board::find($account);

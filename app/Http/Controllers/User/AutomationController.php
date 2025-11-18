@@ -58,13 +58,14 @@ class AutomationController extends Controller
         $account = $data["account"];
         $type = $data["account_type"];
         $status = $data["status"];
-        $search = $data['search_input'];
+        $search = null;
+        // $search = $data['search_input'];
         $domain = isset($data["domain"]) ? $data["domain"] : [];
         $lastFetch = '';
         $posts = $this->post->isRss()->userSearch($user->id)->accountExist();
-        if (!empty($search)) {
-            $posts = $posts->search($search);
-        }
+        // if (!empty($search)) {
+        //     $posts = $posts->search($search);
+        // }
         if ($account) {
             if ($type == 'pinterest') {
                 $account = $this->board->find($account);
