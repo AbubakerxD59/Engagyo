@@ -149,8 +149,9 @@ class FeedService
             // 5. Close the session
             curl_close($ch);
         } else {
+            $single_feed = simplexml_load_string((string) $file);
+            dd($single_feed, $file);
             if ($file !== false) {
-                $single_feed = simplexml_load_string((string) $file);
                 if ($single_feed) {
                     $feed[] = $single_feed;
                     foreach ($feed as $data) {
