@@ -12,8 +12,8 @@ class GeneralController extends Controller
     {
         $user = Auth::user();
         $accounts = $user->getAccounts();
-        $check = $accounts->where("type", "!=", "pinterest");
-        $pinterest_active = count($check) > 0 ? 0 : 1;
+        $check = $accounts->where("schedule_status", 1)->where("type", "!=", "pinterest")->count();
+        $pinterest_active = $check <= 0 ? 1 : 0;
         dd($pinterest_active);
         $link = $request->link;
         if (!empty($link)) {
