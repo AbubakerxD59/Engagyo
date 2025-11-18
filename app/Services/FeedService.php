@@ -248,7 +248,7 @@ class FeedService
                     sleep(3);
                     $xml = $curl ? simplexml_load_string($sitemapContent, 'SimpleXMLElement', LIBXML_NOCDATA) : simplexml_load_string($sitemapContent);
                 }
-                info($xml);
+                info("sitemap: " . $xml);
             }
             if (count($xml) > 0) {
                 $filteredSitemaps = [];
