@@ -211,6 +211,7 @@ class FeedService
             $http_domain = 'http://' . $targetUrl;
             $main_domain = strtolower($this->data["protocol"] . "://" . $targetUrl);
             $sitemapUrl = $this->appendSitemapToUrl($targetUrl);
+            info("sitemapUrl:" . $sitemapUrl);
             // context options
             $arrContextOptions = array('http' => ['method' => "GET", 'header' => "User-Agent: curl/7.68.0\r\n", 'ignore_errors' => true], "ssl" => array("verify_peer" => false, "verify_peer_name" => false));
             // load xml from sitemap.xml
