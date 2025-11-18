@@ -71,6 +71,7 @@ class HtmlParseService
                 }
                 if ($fetchPhoto) {
                     $meta_image = $this->fetchPhoto($response);
+                    dd($meta_image);
                     $response['image'] = $meta_image;
                 }
                 $response['status'] = true;
@@ -94,7 +95,7 @@ class HtmlParseService
         $tags = $dom->getElementsByTagName('img');
         $meta_image = '';
         $meta_image = $html->find("meta[property='og:image']", 0)->content;
-        if ($meta_image == "") {
+        if (empty($meta_image)) {
             $meta_image = $html->find("meta[name='twitter:image']", 0)->content;
         }
         // fetch images  if pinterest channel is active 
@@ -104,7 +105,7 @@ class HtmlParseService
                 $meta_image = $pinterest_image;
             }
         }
-        if (empty($meta_image) && $meta_image == "") {
+        if (empty($meta_image)) {
             $ogimage = "";
             $ogimagesecure = "";
             $meta_image = "";
@@ -206,7 +207,7 @@ class HtmlParseService
             $height = $image->getAttribute('height') ? (float) $image->getAttribute('height') : 0;
             $width = $image->getAttribute('width') ? (float) $image->getAttribute('width') : 0;
             if (empty($height) || empty($width)) {
-                $dimensions = $this->getImageDimensionsFromUrl($image->getAttribute('src'));
+                $dimensions = getimagesize($image->getAttribute('src'));
                 if (isset($dimensions["width"])) {
                     $width = $dimensions["width"];
                 }
@@ -214,8 +215,8 @@ class HtmlParseService
                     $width = $dimensions["height"];
                 }
             }
-            $heightArray = array("1128", "900", "1000", "1024", "1349");
-            $widthArray = array("564", "700", "1500", "512", "759");
+            $widthArray = array("564", "700", "1500", "512", "759", "640");
+            $heightArray = array("1128", "900", "1000", "1024", "1349", "960");
             if (in_array(ceil($height), $heightArray) && in_array(ceil($width), $widthArray)) {
                 $pin_image = true;
             }
