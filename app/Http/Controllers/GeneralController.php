@@ -31,7 +31,7 @@ class GeneralController extends Controller
                 } else {
                     $response = array(
                         "success" => false,
-                        "message" => $get_info["error"]
+                        "message" => $get_info["message"]
                     );
                     $retry++;
                     sleep(5);
