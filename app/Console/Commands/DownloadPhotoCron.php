@@ -30,7 +30,7 @@ class DownloadPhotoCron extends Command
     {
         $pending_photos = Photo::with("post")->pending()->available($this->max_tries)->limit(1)->get();
         foreach ($pending_photos as $photo) {
-            DownloadPhoto::dispatch($photo);
+            DownloadPhoto::dispatch($photo->toArray());
         }
     }
 }

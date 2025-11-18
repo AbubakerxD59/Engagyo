@@ -5,19 +5,27 @@ namespace App\Services;
 use DOMXPath;
 use Exception;
 use DOMDocument;
+use App\Services\HtmlParseService;
 
 class DownloadPhotoService
 {
     public function fetch($data)
     {
         try {
-            info('service');
-            $is_pinterest = $data["mode"] == "pinterst" ? true : false;
-            $image = $this->fetchThumbnail($data["url"], $is_pinterest);
-            $response = [
-                "success" => true,
-                "data" => $image
-            ];
+            $pinterest_active = $data["mode"] == "pinterst" ? true : false;
+            $dom = new HtmlParseService($pinterest_active);
+            $get_info = $dom->get_info($data['url'], 1);
+            if ($get_info['success']) {
+                $response = [
+                    "success" => true,
+                    "data" => $get_info['image']
+                ];
+            } else {
+                $response = [
+                    "success" => false,
+                    "message" => $get_info['message']
+                ];
+            }
         } catch (Exception $e) {
             $response = [
                 "success" => false,
