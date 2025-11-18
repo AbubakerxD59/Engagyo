@@ -16,20 +16,26 @@ class GeneralController extends Controller
         $pinterest_active = count($check) > 0 ? 0 : 1;
         $link = $request->link;
         if (!empty($link)) {
+            $max_tries = 3;
+            $retry = 1;
             $service = new HtmlParseService($pinterest_active);
-            $get_info = $service->get_info($link, 1);
-            if ($get_info["status"]) {
-                $response = array(
-                    "success" => true,
-                    "title" => isset($get_info["title"]) ? $get_info["title"] : "",
-                    "image" => isset($get_info["image"]) ? $get_info["image"] : "",
-                    "link" => $link,
-                );
-            } else {
-                $response = array(
-                    "success" => false,
-                    "message" => $get_info["error"]
-                );
+            while ($max_tries >= $retry) {
+                $get_info = $service->get_info($link, 1);
+                if ($get_info["status"] && !empty($get_info["title"]) && !empty($get_info["image"])) {
+                    $response = array(
+                        "success" => true,
+                        "title" => isset($get_info["title"]) ? $get_info["title"] : "",
+                        "image" => isset($get_info["image"]) ? $get_info["image"] : "",
+                        "link" => $link,
+                    );
+                } else {
+                    $response = array(
+                        "success" => false,
+                        "message" => $get_info["error"]
+                    );
+                    $retry++;
+                    sleep(5);
+                }
             }
         } else {
             $response = array(

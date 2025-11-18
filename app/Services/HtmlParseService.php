@@ -69,15 +69,13 @@ class HtmlParseService
                     }
                     $meta_title = $title;
                 }
-                $response = [
-                    "status" => true,
-                    "title" => $meta_title,
-                    "link" => $url
-                ];
                 if ($fetchPhoto) {
                     $meta_image = $this->fetchPhoto($response);
                     $response['image'] = $meta_image;
                 }
+                $response['status'] = true;
+                $response['title'] = $meta_title;
+                $response['link'] = $url;
             }
         } catch (Exception $e) {
             $response = [
