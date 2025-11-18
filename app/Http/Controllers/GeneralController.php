@@ -14,6 +14,7 @@ class GeneralController extends Controller
         $accounts = $user->getAccounts();
         $check = $accounts->where("type", "!=", "pinterest");
         $pinterest_active = count($check) > 0 ? 0 : 1;
+        dd($pinterest_active);
         $link = $request->link;
         if (!empty($link)) {
             $max_tries = 3;
