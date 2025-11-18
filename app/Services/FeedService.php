@@ -128,7 +128,7 @@ class FeedService
 
     private function fetchRss(string $targetUrl, int $max = 10)
     {
-        try {
+        // try {
             $posts = [];
             $links = $this->appendFeedToUrl($targetUrl);
             $userAgent = $this->dom->user_agent();
@@ -182,12 +182,12 @@ class FeedService
                     'message' => 'Your provided link has not valid RSS feed, Please fix and try again.'
                 );
             }
-        } catch (Exception $e) {
-            $response = array(
-                'success' => false,
-                'message' => $e->getMessage()
-            );
-        }
+        // } catch (Exception $e) {
+        //     $response = array(
+        //         'success' => false,
+        //         'message' => $e->getMessage()
+        //     );
+        // }
         return $response;
     }
 
