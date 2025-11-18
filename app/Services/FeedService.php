@@ -136,9 +136,7 @@ class FeedService
                 $curl = true;
             }
             if ($file !== false) {
-
                 $single_feed = $curl ? simplexml_load_string($file, 'SimpleXMLElement', LIBXML_NOCDATA) : simplexml_load_string((string) $file);
-                info($single_feed);
                 if ($single_feed) {
                     $feed[] = $single_feed;
                     foreach ($feed as $data) {
@@ -248,8 +246,8 @@ class FeedService
                     sleep(3);
                     $xml = $curl ? simplexml_load_string($sitemapContent, 'SimpleXMLElement', LIBXML_NOCDATA) : simplexml_load_string($sitemapContent);
                 }
-                info("sitemap: " . $xml);
             }
+            info("searchinssh: " . $xml);
             if (count($xml) > 0) {
                 $filteredSitemaps = [];
                 foreach ($xml->sitemap as $sitemap) {

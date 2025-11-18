@@ -32,7 +32,6 @@ class FetchPost implements ShouldQueue
      */
     public function handle(): void
     {
-        info('fetch post');
         $feedService = new FeedService($this->data);
         $feedService->fetch();
     }
