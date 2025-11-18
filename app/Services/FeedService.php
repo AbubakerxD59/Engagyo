@@ -146,6 +146,7 @@ class FeedService
             curl_setopt($ch, CURLOPT_USERAGENT, $this->dom->user_agent()); // A user agent can sometimes be required
             // 3. Execute the request
             $file = curl_exec($ch);
+            dd("curl: " . $file);
             // 5. Close the session
             curl_close($ch);
         }
