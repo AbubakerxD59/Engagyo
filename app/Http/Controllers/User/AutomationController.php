@@ -250,16 +250,16 @@ class AutomationController extends Controller
                         "time" => $time,
                         "exist" => $exist
                     ];
-                    $response = array(
-                        "success" => true,
-                        "message" => "Your posts are being Fetched. This process may take around 5-10 minutes!"
-                    );
                     // Update last fetch
                     $account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
                     $feedService = new FeedService($data);
-                    $response = $feedService->fetch();
+                    $feedService->fetch();
+                    $response = array(
+                        "success" => true,
+                        "message" => "Your posts are being Fetched. This process may take around 5-10 minutes!"
+                    );
                 }
             }
         } catch (Exception $e) {
