@@ -99,7 +99,8 @@ class PinterestService
             $post->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => json_encode($publish)
+                "response" => $publish["message"]
+                // "response" => json_encode($publish)
             ]);
         }
     }
@@ -133,7 +134,8 @@ class PinterestService
                         $post_row->update([
                             "status" => -1,
                             "published_at" => date("Y-m-d H:i:s"),
-                            "message" => json_encode($upload_video)
+                            "message" => $upload_video["message"]
+                            // "message" => json_encode($upload_video)
                         ]);
                     }
                 } else {
