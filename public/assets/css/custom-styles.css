@@ -566,6 +566,15 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
     width: 1%;
 }
 
+.fixed-width-100 {
+    width: 100px;
+    min-width: 100px;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 .no-wrap {
     white-space: nowrap;
 }

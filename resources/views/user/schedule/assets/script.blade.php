@@ -497,7 +497,8 @@
                 },
                 {
                     data: 'response',
-                    name: 'response'
+                    name: 'response',
+                    className: 'fixed-width-100'
                 },
                 {
                     data: 'action',
