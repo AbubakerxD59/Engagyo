@@ -28,6 +28,7 @@ class Post extends Model
         "video",
         "publish_date",
         "status",
+        "published_at",
         "scheduled",
         "response"
     ];
