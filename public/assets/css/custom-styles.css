@@ -567,9 +567,9 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
 }
 
 .fixed-width-100 {
-    width: 250px;
-    min-width: 250px;
-    max-width: 250px;
+    width: 500px;
+    min-width: 500px;
+    max-width: 500px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
