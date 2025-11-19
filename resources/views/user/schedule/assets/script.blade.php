@@ -158,10 +158,12 @@
                 toastr.error("Schedule date & time are required!");
                 return false;
             }
-            if (is_link) {
-                processLink();
-            } else {
-                validateAndProcess();
+            if (!checkPastDateTime(schedule_date, schedule_time)) {
+                if (is_link) {
+                    processLink();
+                } else {
+                    validateAndProcess();
+                }
             }
         });
         // validate and process post
