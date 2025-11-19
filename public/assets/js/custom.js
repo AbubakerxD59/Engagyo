@@ -27,6 +27,23 @@ function checkLink(value) {
     }
     return false;
 }
+
+// check for past date/time
+function checkPastDateTime(dateValue, timeValue) {
+    const combinedDateTimeString = `${dateValue} ${timeValue}:00`;
+    const inputDate = new Date(combinedDateTimeString);
+    const now = new Date();
+    inputDate.setSeconds(0, 0);
+    const isPast = inputDate.getTime() < now.getTime();
+    if (isPast) {
+        toastr.error("The selected date and time is in the past. Please select a future date/time!");
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
 $(document).ready(function () {
     // check counts
     $('.check_count').on('input', function () {

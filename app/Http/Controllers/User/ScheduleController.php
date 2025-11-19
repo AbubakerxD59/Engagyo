@@ -812,4 +812,50 @@ class  ScheduleController extends Controller
         }
         return response()->json($response);
     }
+
+    public function postEdit(Request $request)
+    {
+        try {
+            $post = Post::with("page.facebook", "board.pinterest")->findOrFail($request->id);
+            $view = view("user.schedule.ajax.edit-post", compact("post"));
+            $response = array(
+                "success" => true,
+                "data" => $view->render(),
+                "action" => route('panel.schedule.post.update', $post->id)
+            );
+        } catch (Exception $e) {
+            $response = array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
+        }
+        return response()->json($response);
+    }
+    public function postUpdate($id, Request $request)
+    {
+        try {
+            $post = Post::findOrFail($id);
+            $data = [
+                "title" => $request->edit_post_title,
+                "url" => $request->edit_post_link,
+                "comment" => $request->edit_post_comment,
+                "publish_date" => date("Y-m-d", strtotime($request->edit_post_publish_date)) . " " . date("H:i", strtotime($request->edit_post_publish_time)),
+            ];
+            if ($request->has("edit_post_publish_image") && $request->File("edit_post_publish_image")) {
+                $image = saveImage($request->file("edit_post_publish_image"));
+                $data['image'] = $image;
+            }
+            $post->update($data);
+            $response = array(
+                "success" => true,
+                "message" => "Post updated Successfully!"
+            );
+        } catch (Exception $e) {
+            $response = array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
+        }
+        return response()->json($response);
+    }
 }

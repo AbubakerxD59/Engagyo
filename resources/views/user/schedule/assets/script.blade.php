@@ -524,12 +524,81 @@
                             reloadDatatable();
                             toastr.success(response.message);
                         } else {
-                            toastr.errro(response.message);
+                            toastr.error(response.message);
                         }
                     }
                 })
             } else {
                 return;
+            }
+        });
+        // edit post
+        $(document).on('click', '.edit_btn', function() {
+            var id = $(this).data('id');
+            var modal = $('.edit-post-modal');
+            modal.find(".modal-body").empty();
+            modal.modal("toggle");
+            $.ajax({
+                url: "{{ route('panel.schedule.post.edit') }}",
+                type: "GET",
+                data: {
+                    id: id,
+                },
+                success: function(response) {
+                    if (response.success) {
+                        modal.find("#update-post-form").attr("action", response.action);
+                        modal.find(".modal-body").html(response.data);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                }
+            })
+        });
+        // image preview in edit form
+        $(document).on('change', '#edit_post_publish_image', function() {
+            const files = event.target.files;
+            if (files.length > 0) {
+                const file = files[0];
+                if (file.type.match('image.*')) {
+                    const reader = new FileReader();
+                    reader.onload = function(e) {
+                        const dataURL = e.target.result;
+                        $('#edit_post_image_preview')
+                            .attr('src', dataURL)
+                            .show();
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    alert("Please select a valid image file.");
+                }
+            }
+        });
+        // update post
+        $(document).on('submit', '#update-post-form', function(e) {
+            event.preventDefault();
+            var modal = $('.edit-post-modal');
+            var date = modal.find('#edit_post_publish_date').val();
+            var time = modal.find('#edit_post_publish_time').val();
+            if (!checkPastDateTime(date, time)) {
+                var url = $(this).attr("action");
+                var formData = new FormData(this);
+                formData.append("_token", "{{ csrf_token() }}");
+                $.ajax({
+                    url: url,
+                    type: "POST",
+                    processData: false,
+                    contentType: false,
+                    data: formData,
+                    success: function(response) {
+                        if (response.success) {
+                            modal.modal("hide");
+                            reloadDatatable();
+                            toastr.success(response.message);
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    }
+                });
             }
         });
     });

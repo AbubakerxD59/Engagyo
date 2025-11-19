@@ -149,6 +149,7 @@
     </div>
     @include('user.schedule.modals.settings-modal')
     @include('user.schedule.modals.schedule-modal')
+    @include('user.schedule.modals.edit-post-modal')
 @endsection
 
 @push('styles')
