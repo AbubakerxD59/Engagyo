@@ -559,6 +559,13 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
 
 /* dropzone css */
 
+.dt-nowrap {
+    /* Prevents the text from wrapping */
+    white-space: nowrap;
+    /* Ensures the column doesn't shrink more than necessary */
+    width: 1%;
+}
+
 .no-wrap {
     white-space: nowrap;
 }

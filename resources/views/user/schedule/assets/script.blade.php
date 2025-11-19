@@ -482,15 +482,18 @@
                 },
                 {
                     data: 'account_detail',
-                    name: 'account_detail'
+                    name: 'account_detail',
+                    className: 'dt-nowrap'
                 },
                 {
                     data: 'publish_datetime',
-                    name: 'publish_datetime'
+                    name: 'publish_datetime',
+                    className: 'dt-nowrap'
                 },
                 {
                     data: 'status_view',
-                    name: 'status_view'
+                    name: 'status_view',
+                    className: 'dt-nowrap'
                 },
                 {
                     data: 'response',
@@ -498,7 +501,8 @@
                 },
                 {
                     data: 'action',
-                    name: 'action'
+                    name: 'action',
+                    className: 'dt-nowrap'
                 },
             ],
         });
