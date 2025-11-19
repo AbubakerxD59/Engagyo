@@ -13,7 +13,7 @@ class GeneralController extends Controller
         $user = Auth::user();
         $accounts = $user->getAccounts();
         $check = $accounts->where("schedule_status", "active")->where("type", "!=", "pinterest")->first();
-        $pinterest_active = $check ? true : false;
+        $pinterest_active = $check ? false : true;
         $link = $request->link;
         if (!empty($link)) {
             $max_tries = 3;
