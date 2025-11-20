@@ -43,6 +43,7 @@ class FeedService
                         if (!$post) {
                             $post_row = $this->post->create([
                                 "user_id" => $this->data["user_id"],
+                                "account_parent_id" => $this->data["account_parent_id"],
                                 "account_id" => $this->data["account_id"],
                                 "social_type" => $this->data["social_type"],
                                 "type" => $this->data["type"],

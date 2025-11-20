@@ -16,6 +16,7 @@ use App\Jobs\PublishPinterestPost;
 use App\Services\PinterestService;
 use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use App\Services\PostService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
@@ -131,8 +132,9 @@ class  ScheduleController extends Controller
                         } else {
                             $type = "content_only";
                         }
-                        $post = Post::create([
+                        $data = [
                             "user_id" => $user->id,
+                            "account_parent_id" => $account->fb_id,
                             "account_id" => $account->page_id,
                             "social_type" => "facebook",
                             "type" => $type,
@@ -143,7 +145,9 @@ class  ScheduleController extends Controller
                             "video" => $video,
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
-                        ]);
+                        ];
+                        $post = PostService::create($data);
+
                         $postData = array();
                         if ($file) {
                             if (!empty($image)) {
@@ -179,8 +183,9 @@ class  ScheduleController extends Controller
                     if ($pinterest && $file) {
                         // store in db
                         $type = !empty($image) ? "photo" : "video";
-                        $post = Post::create([
+                        $data = [
                             "user_id" => $user->id,
+                            "account_parent_id" => $account->pin_id,
                             "account_id" => $account->board_id,
                             "social_type" => "pinterest",
                             "type" => $type,
@@ -191,7 +196,9 @@ class  ScheduleController extends Controller
                             "video" => $video,
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
-                        ]);
+                        ];
+                        $post = PostService::create($data);
+
                         $access_token = $pinterest->access_token;
                         if (!$pinterest->validToken()) {
                             $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
@@ -268,8 +275,9 @@ class  ScheduleController extends Controller
                             } else {
                                 $type = "content_only";
                             }
-                            Post::create([
+                            $data = [
                                 "user_id" => $user->id,
+                                "account_parent_id" => $account->fb_id,
                                 "account_id" => $account->page_id,
                                 "social_type" => "facebook",
                                 "type" => $type,
@@ -280,7 +288,8 @@ class  ScheduleController extends Controller
                                 "video" => $video,
                                 "status" => 0,
                                 "publish_date" => $nextTime,
-                            ]);
+                            ];
+                            $post = PostService::create($data);
                         }
                     }
                     if ($account->type == "pinterest") {
@@ -289,8 +298,9 @@ class  ScheduleController extends Controller
                             $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->board_id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots);
                             // store in db
                             $type = !empty($image) ? "photo" : "video";
-                            Post::create([
+                            $data = [
                                 "user_id" => $user->id,
+                                "account_parent_id" => $account->pin_id,
                                 "account_id" => $account->board_id,
                                 "social_type" => "pinterest",
                                 "type" => $type,
@@ -301,7 +311,8 @@ class  ScheduleController extends Controller
                                 "video" => $video,
                                 "status" => 0,
                                 "publish_date" => $nextTime,
-                            ]);
+                            ];
+                            $post = PostService::create($data);
                         }
                     }
                     $response = array(
@@ -356,8 +367,9 @@ class  ScheduleController extends Controller
                         } else {
                             $type = "content_only";
                         }
-                        Post::create([
+                        $data = [
                             "user_id" => $user->id,
+                            "account_parent_id" => $account->fb_id,
                             "account_id" => $account->page_id,
                             "social_type" => "facebook",
                             "type" => $type,
@@ -369,7 +381,8 @@ class  ScheduleController extends Controller
                             "status" => 0,
                             "publish_date" => $scheduleDateTime,
                             "scheduled" => 1
-                        ]);
+                        ];
+                        $post = PostService::create($data);
                     }
                 }
                 if ($account->type == "pinterest") {
@@ -377,8 +390,9 @@ class  ScheduleController extends Controller
                     if ($pinterest && $file) {
                         // store in db
                         $type = !empty($image) ? "photo" : "video";
-                        Post::create([
+                        $data = [
                             "user_id" => $user->id,
+                            "account_parent_id" => $account->pin_id,
                             "account_id" => $account->board_id,
                             "social_type" => "pinterest",
                             "type" => $type,
@@ -390,7 +404,8 @@ class  ScheduleController extends Controller
                             "status" => 0,
                             "publish_date" => $scheduleDateTime,
                             "scheduled" => 1
-                        ]);
+                        ];
+                        $post = PostService::create($data);
                     }
                 }
                 $response = array(
@@ -423,8 +438,9 @@ class  ScheduleController extends Controller
                         $facebook = Facebook::where("fb_id", $account->fb_id)->first();
                         if ($facebook) {
                             // store in db
-                            $post = Post::create([
+                            $data = [
                                 "user_id" => $user->id,
+                                "account_parent_id" => $account->fb_id,
                                 "account_id" => $account->page_id,
                                 "social_type" => "facebook",
                                 "type" => "link",
@@ -435,7 +451,8 @@ class  ScheduleController extends Controller
                                 "image" => $image,
                                 "status" => 0,
                                 "publish_date" => date("Y-m-d H:i"),
-                            ]);
+                            ];
+                            $post = PostService::create($data);
 
                             $access_token = $account->access_token;
                             if (!$account->validToken()) {
@@ -454,8 +471,9 @@ class  ScheduleController extends Controller
                         $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
                         if ($pinterest) {
                             // store in db
-                            $post = Post::create([
+                            $data = [
                                 "user_id" => $user->id,
+                                "account_parent_id" => $account->pin_id,
                                 "account_id" => $account->board_id,
                                 "social_type" => "pinterest",
                                 "type" => "link",
@@ -466,7 +484,9 @@ class  ScheduleController extends Controller
                                 "image" => $image,
                                 "status" => 0,
                                 "publish_date" => date("Y-m-d H:i"),
-                            ]);
+                            ];
+                            $post = PostService::create($data);
+
                             $access_token = $pinterest->access_token;
                             if (!$pinterest->validToken()) {
                                 $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
@@ -522,8 +542,9 @@ class  ScheduleController extends Controller
                         if ($facebook) {
                             $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->page_id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots);
                             // store in db
-                            $post = Post::create([
+                            $data = [
                                 "user_id" => $user->id,
+                                "account_parent_id" => $account->fb_id,
                                 "account_id" => $account->page_id,
                                 "social_type" => "facebook",
                                 "type" => "link",
@@ -533,8 +554,10 @@ class  ScheduleController extends Controller
                                 "url" => $url,
                                 "image" => $image,
                                 "status" => 0,
-                                "publish_date" => $nextTime,
-                            ]);
+                                "publish_date" => $nextTime
+                            ];
+
+                            $post = PostService::create($data);
 
                             $access_token = $account->access_token;
                             if (!$account->validToken()) {
@@ -554,8 +577,9 @@ class  ScheduleController extends Controller
                         if ($pinterest) {
                             $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->board_id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots);
                             // store in db
-                            $post = Post::create([
+                            $data = [
                                 "user_id" => $user->id,
+                                "account_parent_id" => $account->pin_id,
                                 "account_id" => $account->board_id,
                                 "social_type" => "pinterest",
                                 "type" => "link",
@@ -566,7 +590,9 @@ class  ScheduleController extends Controller
                                 "image" => $image,
                                 "status" => 0,
                                 "publish_date" => $nextTime,
-                            ]);
+                            ];
+                            $post = PostService::create($data);
+
                             $access_token = $pinterest->access_token;
                             if (!$pinterest->validToken()) {
                                 $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
@@ -624,8 +650,9 @@ class  ScheduleController extends Controller
                         $facebook = Facebook::where("fb_id", $account->fb_id)->first();
                         if ($facebook) {
                             // store in db
-                            $post = Post::create([
+                            $data = [
                                 "user_id" => $user->id,
+                                "account_parent_id" => $account->fb_id,
                                 "account_id" => $account->page_id,
                                 "social_type" => "facebook",
                                 "type" => "link",
@@ -636,7 +663,8 @@ class  ScheduleController extends Controller
                                 "image" => $image,
                                 "status" => 0,
                                 "publish_date" => $scheduleDateTime,
-                            ]);
+                            ];
+                            $post = PostService::create($data);
 
                             $access_token = $account->access_token;
                             if (!$account->validToken()) {
@@ -655,8 +683,9 @@ class  ScheduleController extends Controller
                         $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
                         if ($pinterest) {
                             // store in db
-                            $post = Post::create([
+                            $data = [
                                 "user_id" => $user->id,
+                                "account_parent_id" => $account->pin_id,
                                 "account_id" => $account->board_id,
                                 "social_type" => "pinterest",
                                 "type" => "link",
@@ -667,7 +696,9 @@ class  ScheduleController extends Controller
                                 "image" => $image,
                                 "status" => 0,
                                 "publish_date" => $scheduleDateTime,
-                            ]);
+                            ];
+                            $post = PostService::create($data);
+
                             $access_token = $pinterest->access_token;
                             if (!$pinterest->validToken()) {
                                 $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
@@ -768,7 +799,7 @@ class  ScheduleController extends Controller
     public function postsListing(Request $request)
     {
         $data = $request->all();
-        $posts = Post::with("page.facebook", "board.pinterest")->isScheduled()->userSearch(auth()->id());
+        $posts = Post::with("facebook", "pinterest", "page.facebook", "board.pinterest")->isScheduled()->userSearch(auth()->id());
         // filters
         if (!empty($request->account_id)) {
             $posts = $posts->whereIn("account_id", $request->account_id);

@@ -192,10 +192,12 @@ class AutomationController extends Controller
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($request->account);
                 $account_id = $account ? $account->board_id : '';
+                $account_parent_id = $account ? $account->pin_id : '';
             }
             if ($type == 'facebook') {
                 $account = $this->page->findOrFail($request->account);
                 $account_id = $account ? $account->page_id : '';
+                $account_parent_id = $account ? $account->fb_id : '';
             }
             foreach ($times as $time) {
                 foreach ($domains as $domain) {
@@ -243,6 +245,7 @@ class AutomationController extends Controller
                         "category" => $category,
                         "domain_id" => $domain_id,
                         "user_id" => $user->id,
+                        "account_parent_id" => $account_parent_id,
                         "account_id" => $account_id,
                         "type" => "link",
                         "social_type" => $type,
