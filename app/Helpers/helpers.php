@@ -475,7 +475,3 @@ function pinterestDimensions()
     );
     return $response;
 }
-
-function success_response(){
-    return "Post Published Successfully!";
-}

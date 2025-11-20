@@ -20,6 +20,7 @@ class PinterestService
     private $header;
     private $scopes;
     private $baseUrl = "https://api.pinterest.com/v5/";
+    private $response = "Post Published Successfully!";
     public function __construct()
     {
         $this->scopes = ['user_accounts:read', 'boards:read', 'pins:read', 'boards:write', 'pins:write'];
@@ -93,7 +94,7 @@ class PinterestService
                 "post_id" => $publish["id"],
                 "status" => 1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => success_response(),
+                "response" => $this->response,
             ]);
         } else {
             $post->update([
@@ -127,7 +128,7 @@ class PinterestService
                             "post_id" => $upload_video["id"],
                             "status" => 1,
                             "published_at" => date("Y-m-d H:i:s"),
-                            "response" => success_response(),
+                            "response" => $this->response,
                         ]);
                     } else {
                         $post_row->update([

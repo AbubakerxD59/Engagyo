@@ -16,6 +16,7 @@ class FacebookService
     private $post;
     private $helper;
     private $scopes;
+    private $response = "Post Published Successfully!";
     public function __construct()
     {
         $this->facebook = new Facebook([
@@ -213,7 +214,7 @@ class FacebookService
                 "post_id" => $post_id,
                 "status" => 1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => success_response()
+                "response" => $this->response,
             ]);
         } else {
             $post->update([
@@ -255,7 +256,7 @@ class FacebookService
                 "post_id" => $post_id,
                 "status" => 1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => success_response()
+                "response" => $this->response,
             ]);
         } else {
             $post->update([
@@ -298,7 +299,7 @@ class FacebookService
                 "post_id" => $post_id,
                 "status" => 1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => success_response()
+                "response" => $this->response,
             ]);
         } else {
             $post->update([
@@ -340,7 +341,7 @@ class FacebookService
                 "post_id" => $post_id,
                 "status" => 1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => success_response()
+                "response" => $this->response,
             ]);
         } else {
             $post_row->update([
