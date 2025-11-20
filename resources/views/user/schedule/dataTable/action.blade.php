@@ -4,6 +4,9 @@
             <button type="button" class="btn btn-outline-primary btn-sm edit_btn" data-id="{{ $post->id }}">
                 Edit
             </button>
+            <button type="button" class="btn btn-outline-secondary btn-sm publish_now_btn" data-id="{{ $post->id }}">
+                Publish Now
+            </button>
         @endif
         <button type="button" class="btn btn-outline-danger btn-sm delete_btn" data-id="{{ $post->id }}">
             Delete

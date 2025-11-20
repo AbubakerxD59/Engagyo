@@ -890,4 +890,10 @@ class  ScheduleController extends Controller
         }
         return response()->json($response);
     }
+
+    public function postPublishNow(Request $request)
+    {
+        $response = PostService::publishNow($request->id);
+        return response()->json($response);
+    }
 }

@@ -608,5 +608,28 @@
                 });
             }
         });
+        // publish now
+        $(document).on('click', '.publish_now_btn', function() {
+            if (confirm("Do you wish to Publish this Post Now?")) {
+                var id = $(this).data('id');
+                $.ajax({
+                    url: "{{ route('panel.schedule.post.publish.now') }}",
+                    type: "POST",
+                    data: {
+                        id: id,
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            reloadDatatable();
+                            toastr.success(response.message);
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    }
+                })
+            } else {
+                return;
+            }
+        });
     });
 </script>

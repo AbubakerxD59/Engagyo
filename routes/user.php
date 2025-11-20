@@ -16,9 +16,12 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
             Route::get("get/setting", "getSetting")->name("get.setting");
             Route::post("timeslot/setting", "timeslotSetting")->name("timeslot.setting");
             Route::get("posts/listing", "postsListing")->name("posts.listing");
-            Route::get("post/delete/{id?}", "postDelete")->name('post.delete');
-            Route::get("post/edit/{id?}", "postEdit")->name("post.edit");
-            Route::post("post/update/{id?}", "postUpdate")->name("post.update");
+            Route::prefix("post/")->name("post.")->group(function () {
+                Route::get("delete/{id?}", "postDelete")->name('delete');
+                Route::get("edit/{id?}", "postEdit")->name("edit");
+                Route::post("update/{id?}", "postUpdate")->name("update");
+                Route::post("publish/now/{id?}", "postPublishNow")->name("publish.now");
+            });
         });
     });
     // Accounts Routes
