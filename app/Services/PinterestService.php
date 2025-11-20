@@ -93,14 +93,13 @@ class PinterestService
                 "post_id" => $publish["id"],
                 "status" => 1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => "Published Successfully!"
+                "response" => success_response(),
             ]);
         } else {
             $post->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
                 "response" => $publish["message"]
-                // "response" => json_encode($publish)
             ]);
         }
     }
@@ -128,35 +127,35 @@ class PinterestService
                             "post_id" => $upload_video["id"],
                             "status" => 1,
                             "published_at" => date("Y-m-d H:i:s"),
-                            "message" => "Published Successfully!"
+                            "response" => success_response(),
                         ]);
                     } else {
                         $post_row->update([
                             "status" => -1,
                             "published_at" => date("Y-m-d H:i:s"),
-                            "message" => $upload_video["message"]
-                            // "message" => json_encode($upload_video)
+                            "response" => $upload_video["message"]
+                            // "response" => json_encode($upload_video)
                         ]);
                     }
                 } else {
                     $post_row->update([
                         "status" => -1,
                         "published_at" => date("Y-m-d H:i:s"),
-                        "message" => $media_status["message"]
+                        "response" => $media_status["message"]
                     ]);
                 }
             } else {
                 $post_row->update([
                     "status" => -1,
                     "published_at" => date("Y-m-d H:i:s"),
-                    "message" => $file["message"]
+                    "response" => $file["message"]
                 ]);
             }
         } else {
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "message" => $response["message"]
+                "response" => $response["message"]
             ]);
         }
         removeFromS3($post["video_key"]);

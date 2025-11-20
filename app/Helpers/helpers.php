@@ -451,14 +451,17 @@ function getError($string)
 
 function timeslots()
 {
-    $hours = 24;
+    $hours = 12;
     $minutes = 60;
     $timeslots = [];
-    for ($i = 0; $i < $hours; $i++) {
-        for ($j = 0; $j < $minutes; $j += 10) {
-            $j = $j ? $j : '0' . $j;
-            $time = $i >= 10 ? $i . ':' . $j : "0" . $i . ':' . $j;
-            $timeslots[] = $time;
+    $formats = ["AM", "PM"];
+    $hours = ['12', '01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11'];
+    $minutes = ["00", "10", "20", "30", "40", "50"];
+    foreach ($formats as $format) {
+        foreach ($hours as $hour) {
+            foreach ($minutes as $minute) {
+                $timeslots[] = $hour . ":" . $minute . " " . $format;
+            }
         }
     }
     return $timeslots;
@@ -471,4 +474,8 @@ function pinterestDimensions()
         "width" => array("564", "700", "1500", "512", "759"),
     );
     return $response;
+}
+
+function success_response(){
+    return "Post Published Successfully!";
 }

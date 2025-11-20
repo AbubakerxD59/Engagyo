@@ -18,7 +18,6 @@ Route::middleware("web")->name("facebook.")->controller(FacebookController::clas
 });
 
 // TikTok
-Route::name("tiktok.")->controller(TikTokController::class)->group(function(){
+Route::name("tiktok.")->controller(TikTokController::class)->group(function () {
     Route::get("tiktok-callback", "tiktokCallback")->name("callback");
 });
-

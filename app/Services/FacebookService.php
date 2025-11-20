@@ -212,13 +212,13 @@ class FacebookService
             $post->update([
                 "post_id" => $post_id,
                 "status" => 1,
-                "published_at" => date("Y-m-d H:i:s"),
-                "response" => "Post published Successfully!"
+                "published_at" => date('Y-m-d H:i:s'),
+                "response" => success_response()
             ]);
         } else {
             $post->update([
                 "status" => -1,
-                "published_at" => date("Y-m-d H:i:s"),
+                "published_at" => date('Y-m-d H:i:s'),
                 "response" => $response["message"]
             ]);
         }
@@ -254,13 +254,13 @@ class FacebookService
             $post->update([
                 "post_id" => $post_id,
                 "status" => 1,
-                "published_at" => date("Y-m-d H:i:s"),
-                "response" => "Post published Successfully!"
+                "published_at" => date('Y-m-d H:i:s'),
+                "response" => success_response()
             ]);
         } else {
             $post->update([
                 "status" => -1,
-                "published_at" => date("Y-m-d H:i:s"),
+                "published_at" => date('Y-m-d H:i:s'),
                 "response" => $response["message"]
             ]);
         }
@@ -297,13 +297,13 @@ class FacebookService
             $post->update([
                 "post_id" => $post_id,
                 "status" => 1,
-                "published_at" => date("Y-m-d H:i:s"),
-                "response" => "Post published Successfully!"
+                "published_at" => date('Y-m-d H:i:s'),
+                "response" => success_response()
             ]);
         } else {
             $post->update([
                 "status" => -1,
-                "published_at" => date("Y-m-d H:i:s"),
+                "published_at" => date('Y-m-d H:i:s'),
                 "response" => $response["message"]
             ]);
         }
@@ -339,13 +339,13 @@ class FacebookService
             $post_row->update([
                 "post_id" => $post_id,
                 "status" => 1,
-                "published_at" => date("Y-m-d H:i:s"),
-                "response" => "Post published Successfully!"
+                "published_at" => date('Y-m-d H:i:s'),
+                "response" => success_response()
             ]);
         } else {
             $post_row->update([
                 "status" => -1,
-                "published_at" => date("Y-m-d H:i:s"),
+                "published_at" => date('Y-m-d H:i:s'),
                 "response" => $response["message"]
             ]);
         }
