@@ -45,14 +45,14 @@ class PostService
     {
         try {
             $user = Auth::user();
-            $post = Post::userSearch($user->id)->where("status", "!=", 1)->where("id", $id)->firstOrFail();
+            $post = Post::with("page.facebook", "board.pinterest")->userSearch($user->id)->where("status", "!=", 1)->where("id", $id)->firstOrFail();
             if ($post->social_type == "facebook") { // Facebook
                 $postData = self::postTypeBody($post);
-                PublishFacebookPost::dispatch($post->id, $postData, $post->facebook->access_token, $post->type, $post->comment);
+                PublishFacebookPost::dispatch($post->id, $postData, $post->page->facebook->access_token, $post->type, $post->comment);
             }
             if ($post->social_type == "pinterest") { // Pinterest
                 $postData = self::postTypeBody($post);
-                PublishPinterestPost::dispatch($post->id, $postData, $post->pinterest->access_token, $post->type);
+                PublishPinterestPost::dispatch($post->id, $postData, $post->board->pinterest->access_token, $post->type);
             }
             $response = array(
                 "success" => true,
