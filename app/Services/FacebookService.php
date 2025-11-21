@@ -376,4 +376,28 @@ class FacebookService
         }
         return $response;
     }
+
+    public function delete($post_id, $access_token)
+    {
+        try {
+            $publish = $this->facebook->delete('/' . $post_id, [], $access_token);
+            $response = [
+                "success" => true,
+                "data" => $publish
+            ];
+        } catch (FacebookResponseException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        } catch (FacebookSDKException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        }
+        return $response;
+    }
 }
