@@ -8,7 +8,6 @@
     @endif
     @if ($post->published_at)
         <br>
-        Published At:
-        <span class="text-muted">{{ date('Y-m-d h:i A', strtotime($post->published_at)) }}</span>
+        <span class="badge badge-info">Published At: {{ date('Y-m-d h:i A', strtotime($post->published_at)) }}</span>
     @endif
 </div>
