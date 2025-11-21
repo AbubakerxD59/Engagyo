@@ -261,9 +261,13 @@ class PinterestService
 
     public function delete($post)
     {
-        $board = $post->board;
-        $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $board->access_token);
-        $response = $this->client->delete($this->baseUrl . "pins", [$post->post_id], $this->header);
+        try {
+            $board = $post->board;
+            $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $board->access_token);
+            $response = $this->client->delete($this->baseUrl . "pins", [$post->post_id], $this->header);
+        } catch (Exception $e) {
+            $response = $e->getMessage();
+        }
         dd($response);
         // $post = $this->post->find($id);
         // if (isset($publish['id'])) {
