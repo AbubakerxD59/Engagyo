@@ -264,7 +264,7 @@ class PinterestService
         try {
             $board = $post->board;
             $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $board->access_token);
-            $response = $this->client->delete($this->baseUrl . "pins", [$post->post_id], $this->header);
+            $response = $this->client->delete($this->baseUrl . "pins/" . $post->post_id, [], $this->header);
         } catch (Exception $e) {
             $response = $e->getMessage();
         }
