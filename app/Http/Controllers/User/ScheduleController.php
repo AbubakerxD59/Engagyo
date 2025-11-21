@@ -19,6 +19,7 @@ use App\Http\Controllers\Controller;
 use App\Services\PostService;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
+use PhpParser\Node\Expr\AssignOp\Pow;
 
 class  ScheduleController extends Controller
 {
@@ -148,24 +149,12 @@ class  ScheduleController extends Controller
                         ];
                         $post = PostService::create($data);
 
-                        $postData = array();
-                        if ($file) {
-                            if (!empty($image)) {
-                                $postData = ["caption" => $content, "url" => $post->image];
-                            }
-                            if (!empty($video)) {
-                                $postData = ["description" => $content, "file_url" => $post->video_key];
-                            }
-                        } else {
-                            $postData = ["message" => $content];
-                        }
                         $access_token = $account->access_token;
                         if (!$account->validToken()) {
                             $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
                             if ($token["success"]) {
                                 $data = $token["data"];
                                 $access_token = $data["access_token"];
-                                PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                             } else {
                                 $response = array(
                                     "success" => false,
@@ -173,9 +162,9 @@ class  ScheduleController extends Controller
                                 );
                                 return $response;
                             }
-                        } else {
-                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                         }
+                        $postData = PostService::postTypeBody($post);
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                     }
                 }
                 if ($account->type == "pinterest") {
@@ -204,27 +193,7 @@ class  ScheduleController extends Controller
                             $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
                             $access_token = $token["access_token"];
                         }
-                        $postData = [];
-                        if ($type == "photo") {
-                            $encoded_image = file_get_contents($post->image);
-                            $encoded_image = base64_encode($encoded_image);
-                            $postData = array(
-                                "title" => $content,
-                                "board_id" => (string) $account->board_id,
-                                "media_source" => array(
-                                    "source_type" => "image_base64",
-                                    "content_type" => "image/jpeg",
-                                    "data" => $encoded_image
-                                )
-                            );
-                        }
-                        if ($type == "video") {
-                            $postData = array(
-                                "title" => $post->title,
-                                "board_id" => (string) $post->account_id,
-                                'video_key' => $post->video
-                            );
-                        }
+                        $postData = PostService::postTypeBody($post);
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
                     }
                 }
@@ -457,13 +426,18 @@ class  ScheduleController extends Controller
                             $access_token = $account->access_token;
                             if (!$account->validToken()) {
                                 $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                                $data = $token["data"];
-                                $access_token = $data["access_token"];
+                                if ($token["success"]) {
+                                    $data = $token["data"];
+                                    $access_token = $data["access_token"];
+                                } else {
+                                    $response = array(
+                                        "success" => false,
+                                        "message" => $token["message"]
+                                    );
+                                    return $response;
+                                }
                             }
-                            $postData = [
-                                'link' => $post->url,
-                                'message' => $post->title,
-                            ];
+                            $postData = PostService::postTypeBody($post);
                             PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                         }
                     }
@@ -492,15 +466,7 @@ class  ScheduleController extends Controller
                                 $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
                                 $access_token = $token["access_token"];
                             }
-                            $postData = array(
-                                "title" => $post->title,
-                                "link" => $post->url,
-                                "board_id" => (string) $post->account_id,
-                                "media_source" => array(
-                                    "source_type" => "image_url",
-                                    "url" => $post->image
-                                )
-                            );
+                            $postData = PostService::postTypeBody($post);
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                         }
                     }
@@ -556,19 +522,23 @@ class  ScheduleController extends Controller
                                 "status" => 0,
                                 "publish_date" => $nextTime
                             ];
-
                             $post = PostService::create($data);
 
                             $access_token = $account->access_token;
                             if (!$account->validToken()) {
                                 $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                                $data = $token["data"];
-                                $access_token = $data["access_token"];
+                                if ($token["success"]) {
+                                    $data = $token["data"];
+                                    $access_token = $data["access_token"];
+                                } else {
+                                    $response = array(
+                                        "success" => false,
+                                        "message" => $token["message"]
+                                    );
+                                    return $response;
+                                }
                             }
-                            $postData = [
-                                'link' => $post->url,
-                                'message' => $post->title,
-                            ];
+                            $postData = PostService::postTypeBody($post);
                             PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                         }
                     }
@@ -598,15 +568,7 @@ class  ScheduleController extends Controller
                                 $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
                                 $access_token = $token["access_token"];
                             }
-                            $postData = array(
-                                "title" => $post->title,
-                                "link" => $post->url,
-                                "board_id" => (string) $post->account_id,
-                                "media_source" => array(
-                                    "source_type" => "image_url",
-                                    "url" => $post->image
-                                )
-                            );
+                            $postData = PostService::postTypeBody($post);
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                         }
                     }
@@ -669,13 +631,18 @@ class  ScheduleController extends Controller
                             $access_token = $account->access_token;
                             if (!$account->validToken()) {
                                 $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                                $data = $token["data"];
-                                $access_token = $data["access_token"];
+                                if ($token["success"]) {
+                                    $data = $token["data"];
+                                    $access_token = $data["access_token"];
+                                } else {
+                                    $response = array(
+                                        "success" => false,
+                                        "message" => $token["message"]
+                                    );
+                                    return $response;
+                                }
                             }
-                            $postData = [
-                                'link' => $post->url,
-                                'message' => $post->title,
-                            ];
+                            $postData = PostService::postTypeBody($post);
                             PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                         }
                     }
@@ -704,15 +671,7 @@ class  ScheduleController extends Controller
                                 $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
                                 $access_token = $token["access_token"];
                             }
-                            $postData = array(
-                                "title" => $post->title,
-                                "link" => $post->url,
-                                "board_id" => (string) $post->account_id,
-                                "media_source" => array(
-                                    "source_type" => "image_url",
-                                    "url" => $post->image
-                                )
-                            );
+                            $postData = PostService::postTypeBody($post);
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                         }
                     }

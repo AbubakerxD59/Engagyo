@@ -2,10 +2,12 @@
 
 namespace App\Console\Commands;
 
+use Exception;
 use App\Models\Post;
 use Illuminate\Console\Command;
 use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
+use App\Services\PostService;
 
 class FacebookPublishCron extends Command
 {
@@ -31,12 +33,12 @@ class FacebookPublishCron extends Command
         $now = date("Y-m-d H:i");
         $posts = $post->notPublished()->past($now)->facebook()->notSchedule()->get();
         foreach ($posts as $key => $post) {
-            if ($post->status == "0") {
-                $user = $post->user()->first();
+            try {
+                $user = $post->user()->firstOrFail();
                 if ($user) {
-                    $page = $post->page()->userSearch($user->id)->first();
+                    $page = $post->page()->userSearch($user->id)->firstOrFail();
                     if ($page) {
-                        $facebook = $page->facebook()->userSearch($user->id)->first();
+                        $facebook = $page->facebook()->userSearch($user->id)->firstOrFail();
                         if ($facebook) {
                             $access_token = $page->access_token;
                             if (!$page->validToken()) {
@@ -47,35 +49,23 @@ class FacebookPublishCron extends Command
                                 } else {
                                     $post->update([
                                         "status" => -1,
-                                        "response" => $token["message"]
+                                        "response" => $token["message"],
+                                        "published_at" => date("Y-m-d H:i:s")
                                     ]);
                                     continue;
                                 }
                             }
-                            if ($post->type == "content_only") {
-                                $postData = [
-                                    "message" => $post->title
-                                ];
-                            } elseif ($post->type == "link") {
-                                $postData = [
-                                    'link' => $post->url,
-                                    'message' => $post->title,
-                                ];
-                            } elseif ($post->type == "photo") {
-                                $postData = [
-                                    "caption" => $post->title,
-                                    "url" => $post->image
-                                ];
-                            } elseif ($post->type == "video") {
-                                $postData = [
-                                    "description" => $post->title,
-                                    "file_url" => $post->video_key
-                                ];
-                            }
+                            $postData = PostService::postTypeBody($post);
                             PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
                         }
                     }
                 }
+            } catch (Exception $e) {
+                $post->update([
+                    "status" => -1,
+                    "response" => $e->getMessage(),
+                    "published_at" => date("Y-m-d H:i:s")
+                ]);
             }
         }
     }

@@ -13,6 +13,7 @@ use App\Models\Pinterest;
 use App\Jobs\RefreshPosts;
 use Illuminate\Http\Request;
 use App\Services\FeedService;
+use App\Services\PostService;
 use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
@@ -349,17 +350,8 @@ class AutomationController extends Controller
                             } else {
                                 $access_token = $pinterest->access_token;
                             }
-                            $postData = array(
-                                "title" => $post->title,
-                                "link" => $post->url,
-                                "board_id" => (string) $post->account_id,
-                                "media_source" => array(
-                                    "source_type" => str_contains($post->image, "http") ? "image_url" : "image_base64",
-                                    "url" => $post->image
-                                )
-                            );
-                            $type = str_contains($post->image, "http") ? "link" : "photo";
-                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
+                            $postData = PostService::postTypeBody($post);
+                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
                             $response = array(
                                 "success" => true,
                                 "message" => "Your post is being Published!"

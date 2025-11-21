@@ -80,12 +80,6 @@ class PostService
                     "url" => $post->image
                 ];
             }
-            if ($post->type == "photo") {
-                $postData = [
-                    "caption" => $post->title,
-                    "url" => $post->image
-                ];
-            }
             if ($post->type == "video") {
                 $postData = [
                     "description" => $post->title,
