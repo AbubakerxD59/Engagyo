@@ -162,7 +162,6 @@ class  ScheduleController extends Controller
                         $access_token = $account->access_token;
                         if (!$account->validToken()) {
                             $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                            dd($token);
                             if ($token["success"]) {
                                 $data = $token["data"];
                                 $access_token = $data["access_token"];
@@ -172,7 +171,7 @@ class  ScheduleController extends Controller
                                     "success" => false,
                                     "message" => $token["message"]
                                 );
-                                return response()->json($response);
+                                return $response;
                             }
                         } else {
                             PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
