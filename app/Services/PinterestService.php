@@ -272,10 +272,11 @@ class PinterestService
             }
             $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
             $response = $this->client->delete($this->baseUrl . "pins/" . $post->post_id, [], $this->header);
+            $response2 = $this->client->delete($this->baseUrl . "pins", [$post->post_id], $this->header);
         } catch (Exception $e) {
             $response = $e->getMessage();
         }
-        dd($response, $board);
+        dd($response, $response2, $this->header);
         // $post = $this->post->find($id);
         // if (isset($publish['id'])) {
         //     $post->update([
