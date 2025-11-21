@@ -162,6 +162,7 @@ class  ScheduleController extends Controller
                         $access_token = $account->access_token;
                         if (!$account->validToken()) {
                             $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
+                            dd($token);
                             if ($token["success"]) {
                                 $data = $token["data"];
                                 $access_token = $data["access_token"];
