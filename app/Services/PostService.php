@@ -57,8 +57,24 @@ class PostService
             $user = Auth::user();
             $post = Post::with("page.facebook", "board.pinterest")->userSearch($user->id)->where("status", "!=", 1)->where("id", $id)->firstOrFail();
             if ($post->social_type == "facebook") { // Facebook
+                $facebook = $post->page->facebook;
+                $access_token = $facebook->access_token;
+                if (!$facebook->validToken()) {
+                    $service = new FacebookService();
+                    $token = $service->refreshAccessToken($facebook->access_token, $facebook->id);
+                    if ($token["success"]) {
+                        $data = $token["data"];
+                        $access_token = $data["access_token"];
+                    } else {
+                        $response = array(
+                            "success" => false,
+                            "message" => $token["message"]
+                        );
+                        return $response;
+                    }
+                }
                 $postData = self::postTypeBody($post);
-                PublishFacebookPost::dispatch($post->id, $postData, $post->page->facebook->access_token, $post->type, $post->comment);
+                PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
             }
             if ($post->social_type == "pinterest") { // Pinterest
                 $postData = self::postTypeBody($post);
