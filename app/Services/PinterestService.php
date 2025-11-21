@@ -263,12 +263,19 @@ class PinterestService
     {
         try {
             $board = $post->board;
-            $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $board->access_token);
+            $pinterest = $board->pinterest;
+            if (!$pinterest->validToken()) {
+                $token = $this->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
+                $access_token = $token["access_token"];
+            } else {
+                $access_token = $pinterest->access_token;
+            }
+            $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
             $response = $this->client->delete($this->baseUrl . "pins/" . $post->post_id, [], $this->header);
         } catch (Exception $e) {
             $response = $e->getMessage();
         }
-        dd($response);
+        dd($response, $board);
         // $post = $this->post->find($id);
         // if (isset($publish['id'])) {
         //     $post->update([
