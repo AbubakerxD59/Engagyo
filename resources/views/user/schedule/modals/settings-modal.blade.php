@@ -40,7 +40,7 @@
                                 </div>
                             </td>
                             <td>
-                                @php $account_timeslots = $account->timeslots->pluck("timeslot")->toArray(); @endphp
+                                @php $account_timeslots = $account->timeslots->pluck("time")->toArray(); @endphp
                                 <select name="time[]" class="form-control select2 timeslot"
                                     data-id="{{ $account->id }}" data-type="{{ $account->type }}" multiple>
                                     @foreach (timeslots() as $timeslot)

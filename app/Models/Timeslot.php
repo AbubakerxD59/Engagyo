@@ -15,4 +15,8 @@ class Timeslot extends Model
         "timeslot",
         "type",
     ];
+    public function getTimeAttribute(){
+        $timeslot = $this->timeslot;
+        return date("h:i A", strtotime($timeslot));
+    }
 }
