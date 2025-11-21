@@ -257,4 +257,28 @@ class PinterestService
         $response = $this->client->postJson($this->baseUrl . "pins", $payload, $this->header);
         return $response;
     }
+
+
+    public function delete($post)
+    {
+        $board = $post->board;
+        $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $board->access_token);
+        $response = $this->client->delete($this->baseUrl . "pins", $post->post_id, $this->header);
+        dd($response);
+        // $post = $this->post->find($id);
+        // if (isset($publish['id'])) {
+        //     $post->update([
+        //         "post_id" => $publish["id"],
+        //         "status" => 1,
+        //         "published_at" => date("Y-m-d H:i:s"),
+        //         "response" => $this->response,
+        //     ]);
+        // } else {
+        //     $post->update([
+        //         "status" => -1,
+        //         "published_at" => date("Y-m-d H:i:s"),
+        //         "response" => $publish["message"]
+        //     ]);
+        // }
+    }
 }

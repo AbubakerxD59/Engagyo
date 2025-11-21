@@ -380,27 +380,26 @@ class FacebookService
 
     public function delete($post)
     {
-        // try {
+        try {
             $page = $post->page;
             $publish = $this->facebook->delete('/' . $post->post_id, [], $page->access_token);
-            dd($publish);
             $response = [
                 "success" => true,
                 "data" => $publish
             ];
-        // } catch (FacebookResponseException $e) {
-        //     $error =  $e->getMessage();
-        //     $response = [
-        //         "success" => false,
-        //         "message" => $error
-        //     ];
-        // } catch (FacebookSDKException $e) {
-        //     $error =  $e->getMessage();
-        //     $response = [
-        //         "success" => false,
-        //         "message" => $error
-        //     ];
-        // }
+        } catch (FacebookResponseException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        } catch (FacebookSDKException $e) {
+            $error =  $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error
+            ];
+        }
         return $response;
     }
 }

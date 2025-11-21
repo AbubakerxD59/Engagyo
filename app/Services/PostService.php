@@ -35,11 +35,15 @@ class PostService
     }
     public static function delete($post_id)
     {
-        $post = Post::with("page")->where("id", $post_id)->first();
+        $post = Post::with("page", "board")->where("id", $post_id)->first();
         if ($post) {
             if ($post->status == 1) {
                 if ($post->social_type == "facebook") {
                     $service = new FacebookService();
+                    $service->delete($post);
+                }
+                if ($post->social_type == "pinterest") {
+                    $service = new PinterestService();
                     $service->delete($post);
                 }
             }
