@@ -516,10 +516,13 @@
         var reloadDatatable = function() {
             postsdataTable.ajax.reload();
         }
+        var drawDataTable = function() {
+            postsdataTable.draw('full-hold');
+        }
         // delete post
         $(document).on('click', '.delete_btn', function() {
             if (confirm(
-                "Published post will be delete from Account! Do you wish to Delete this Post?")) {
+                    "Published post will be delete from Account! Do you wish to Delete this Post?")) {
                 var id = $(this).data('id');
                 $.ajax({
                     url: "{{ route('panel.schedule.post.delete') }}",
@@ -529,7 +532,7 @@
                     },
                     success: function(response) {
                         if (response.success) {
-                            reloadDatatable();
+                            drawDataTable();
                             toastr.success(response.message);
                         } else {
                             toastr.error(response.message);
@@ -600,7 +603,7 @@
                     success: function(response) {
                         if (response.success) {
                             modal.modal("hide");
-                            reloadDatatable();
+                            drawDataTable();
                             toastr.success(response.message);
                         } else {
                             toastr.error(response.message);
