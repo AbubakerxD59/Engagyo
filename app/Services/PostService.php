@@ -6,7 +6,6 @@ use Exception;
 use App\Models\Post;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishPinterestPost;
-use App\Models\Pinterest;
 use Illuminate\Support\Facades\Auth;
 
 class PostService
