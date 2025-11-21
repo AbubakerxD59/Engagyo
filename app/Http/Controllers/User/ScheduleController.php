@@ -164,7 +164,6 @@ class  ScheduleController extends Controller
                             }
                         }
                         $postData = PostService::postTypeBody($post);
-                        dd($account, $access_token, $postData, $post);
                         PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                     }
                 }
