@@ -261,36 +261,16 @@ class PinterestService
 
     public function delete($post)
     {
-        try {
-            $board = $post->board;
-            $pinterest = $board->pinterest;
-            if (!$pinterest->validToken()) {
-                $token = $this->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                $access_token = $token["access_token"];
-            } else {
-                $access_token = $pinterest->access_token;
-            }
-            $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
-            $response = $this->client->delete($this->baseUrl . "pins/" . $post->post_id, [], $this->header);
-            $response2 = $this->client->delete($this->baseUrl . "pins", [$post->post_id], $this->header);
-        } catch (Exception $e) {
-            $response = $e->getMessage();
+        $board = $post->board;
+        $pinterest = $board->pinterest;
+        if (!$pinterest->validToken()) {
+            $token = $this->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
+            $access_token = $token["access_token"];
+        } else {
+            $access_token = $pinterest->access_token;
         }
-        dd($response, $response2, $this->header);
-        // $post = $this->post->find($id);
-        // if (isset($publish['id'])) {
-        //     $post->update([
-        //         "post_id" => $publish["id"],
-        //         "status" => 1,
-        //         "published_at" => date("Y-m-d H:i:s"),
-        //         "response" => $this->response,
-        //     ]);
-        // } else {
-        //     $post->update([
-        //         "status" => -1,
-        //         "published_at" => date("Y-m-d H:i:s"),
-        //         "response" => $publish["message"]
-        //     ]);
-        // }
+        $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
+        $response = $this->client->delete($this->baseUrl . "pins/" . $post->post_id, [], $this->header);
+        return true;
     }
 }
