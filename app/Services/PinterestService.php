@@ -263,7 +263,7 @@ class PinterestService
     {
         $board = $post->board;
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $board->access_token);
-        $response = $this->client->delete($this->baseUrl . "pins", $post->post_id, $this->header);
+        $response = $this->client->delete($this->baseUrl . "pins", [$post->post_id], $this->header);
         dd($response);
         // $post = $this->post->find($id);
         // if (isset($publish['id'])) {
