@@ -402,4 +402,21 @@ class FacebookService
         }
         return $response;
     }
+
+    public static function validateToken($account)
+    {
+        $access_token = $account->access_token;
+        $response = ["success" => true, "access_token" => $access_token];
+        if (!$account->validToken()) {
+            $service = new FacebookService();
+            $token = $service->refreshAccessToken($access_token, $account->id);
+            if ($token["success"]) {
+                $data = $token["data"];
+                $response = ["success" => true, "access_token" => $data["access_token"]];
+            } else {
+                $response = ["success" => false, "message" => $token["message"]];
+            }
+        }
+        return $response;
+    }
 }
