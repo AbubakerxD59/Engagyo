@@ -74,10 +74,12 @@ class FacebookService
     public function refreshAccessToken($access_token, $page_id)
     {
         try {
+            $old_access_token = $access_token;
             $getOAuth2Client = $this->facebook->getOAuth2Client();
             $access_token = $getOAuth2Client->getLongLivedAccessToken($access_token);
             $tokenMetadata = $getOAuth2Client->debugToken($access_token);
             $access_token = $access_token->getValue();
+            dd($old_access_token, $access_token);
             $page = Page::find($page_id)->first();
             $page->update([
                 "access_token" => $access_token,
