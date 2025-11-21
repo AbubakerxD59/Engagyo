@@ -518,7 +518,8 @@
         }
         // delete post
         $(document).on('click', '.delete_btn', function() {
-            if (confirm("Do you wish to Delete this Post? Published post will be also be Deleted!")) {
+            if (confirm(
+                "Published post will be delete from Account! Do you wish to Delete this Post?")) {
                 var id = $(this).data('id');
                 $.ajax({
                     url: "{{ route('panel.schedule.post.delete') }}",
