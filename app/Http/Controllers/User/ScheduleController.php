@@ -788,9 +788,8 @@ class  ScheduleController extends Controller
     public function postDelete(Request $request)
     {
         try {
-            $id = $request->id;
-            $post = Post::findOrFail($id);
-            $post->delete();
+            $post = Post::findOrFail($request->id);
+            PostService::delete($post->id);
             $response = [
                 "success" => true,
                 "message" => "Post delete Successfully!"

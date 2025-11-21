@@ -35,8 +35,14 @@ class PostService
     }
     public static function delete($post_id)
     {
-        $post = Post::where("id", $post_id)->first();
+        $post = Post::with("page")->where("id", $post_id)->first();
         if ($post) {
+            if ($post->status == 1) {
+                if ($post->social_type == "facebook") {
+                    $service = new FacebookService();
+                    $service->delete($post);
+                }
+            }
             $post->delete();
         }
         return true;
