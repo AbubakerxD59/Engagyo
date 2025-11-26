@@ -7,5 +7,8 @@ use Illuminate\Http\Request;
 
 class TikTokController extends Controller
 {
-    //
+    public function tiktokCallback(Request $request)
+    {
+        return true;
+    }
 }
