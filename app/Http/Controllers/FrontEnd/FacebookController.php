@@ -22,7 +22,7 @@ class FacebookController extends Controller
     }
     public function deleteCallback(Request $request)
     {
-        dd($request->all());
+        return true;
     }
 
     public function facebookCallback(Request $request)
@@ -101,6 +101,6 @@ class FacebookController extends Controller
 
     public function deauthorizeCallback(Request $request)
     {
-        dd($request->all());
+        return true;
     }
 }
