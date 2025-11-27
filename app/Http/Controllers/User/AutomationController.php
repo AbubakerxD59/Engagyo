@@ -46,9 +46,10 @@ class AutomationController extends Controller
     }
     public function index()
     {
-        $user = Auth::user();
+        $user = User::with("boards.pinterest", "pages.facebook")->findOrFail(Auth::id());
         $timeslots = timeslots();
-        return view("user.automation.index", compact("user", "timeslots"));
+        $accounts = $user->getAccounts();
+        return view("user.automation.index", compact("user", "timeslots", "accounts"));
     }
 
     public function posts(Request $request)
@@ -294,28 +295,12 @@ class AutomationController extends Controller
             $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
             $type = $request->type;
             if ($type == 'pinterest') {
-                $account = $this->board->find($id);
-                if ($account) {
-                    $account_id = $account->board_id;
-                } else {
-                    $response = [
-                        "success" => false,
-                        "message" => "Something went Wrong!"
-                    ];
-                }
+                $account = $this->board->findOrFail($id);
             }
             if ($type == 'facebook') {
                 $account = $this->page->find($id);
-                if ($account) {
-                    $account_id = $account->page_id;
-                } else {
-                    $response = [
-                        "success" => false,
-                        "message" => "Something went Wrong!"
-                    ];
-                }
             }
-            $domains = $user->getDomains($account_id);
+            $domains = $user->getDomains($account->id);
             $response = [
                 "success" => true,
                 "data" => $domains
@@ -331,24 +316,35 @@ class AutomationController extends Controller
 
     public function postPublish(Request $request, $id = null)
     {
-        $user = Auth::user();
-        if (!empty($id)) {
-            $type = $request->type;
-            if ($type == "pinterest") {
-                $post = $this->post->userSearch($user->id)->notPublished()->where("id", $id)->first();
-                if ($post) {
-                    $board = $this->board->search($post->account_id)->active()->first();
-                    if ($board) {
-                        $pinterest = $this->pinterest->where("pin_id",  $board->pin_id)->first();
-                        if ($pinterest) {
-                            if (!$pinterest->validToken()) {
-                                $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                                $access_token = $token["access_token"];
-                            } else {
-                                $access_token = $pinterest->access_token;
-                            }
-                            $postData = PostService::postTypeBody($post);
-                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
+        try {
+            $user = Auth::user();
+            if (!empty($id)) {
+                $type = $request->type;
+                if ($type == "pinterest") {
+                    $post = $this->post->with("board.pinterest")->userSearch($user->id)->notPublished()->findOrFail($id);
+                    $pinterest = $post->board->pinterest;
+                    if (!$pinterest->validToken()) {
+                        $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
+                        $access_token = $token["access_token"];
+                    } else {
+                        $access_token = $pinterest->access_token;
+                    }
+                    $postData = PostService::postTypeBody($post);
+                    PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
+                    $response = array(
+                        "success" => true,
+                        "message" => "Your post is being Published!"
+                    );
+                }
+                if ($type == 'facebook') {
+                    $post = $this->post->with(relations: "page.facebook")->userSearch($user->id)->notPublished()->where("id", $id)->firstOrFail();
+                    $page = $post->page;
+
+                    if (!$page->validToken()) {
+                        $token = $this->facebookService->refreshAccessToken($page->access_token, $page->id);
+                        if ($token["success"]) {
+                            $data = $token["data"];
+                            $access_token = $data["access_token"];
                             $response = array(
                                 "success" => true,
                                 "message" => "Your post is being Published!"
@@ -356,78 +352,31 @@ class AutomationController extends Controller
                         } else {
                             $response = array(
                                 "success" => false,
-                                "message" => "Something went Wrong!"
+                                "message" => $token["message"]
                             );
+                            return response()->json($response);
                         }
                     } else {
-                        $response = array(
-                            "success" => false,
-                            "message" => "Something went Wrong!"
-                        );
+                        $access_token = $page->access_token;
                     }
+                    $postData = PostService::postTypeBody($post);
+                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link");
                 } else {
                     $response = array(
                         "success" => false,
-                        "message" => "Something went Wrong!"
-                    );
-                }
-            } elseif ($type == 'facebook') {
-                $post = $this->post->userSearch($user->id)->notPublished()->where("id", $id)->first();
-                if ($post) {
-                    $page = $this->page->search($post->account_id)->active()->first();
-                    if ($page) {
-                        $facebook = $this->facebook->where("fb_id", $page->fb_id)->first();
-                        if ($facebook) {
-                            $access_token = $page->access_token;
-                            if (!$page->validToken()) {
-                                $token = $this->facebookService->refreshAccessToken($page->access_token, $page->id);
-                                if ($token["success"]) {
-                                    $data = $token["data"];
-                                    $access_token = $data["access_token"];
-                                    $postData = [
-                                        'link' => $post->url,
-                                        'message' => $post->title,
-                                    ];
-                                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link");
-                                    $response = array(
-                                        "success" => true,
-                                        "message" => "Your post is being Published!"
-                                    );
-                                } else {
-                                    $response = array(
-                                        "success" => false,
-                                        "message" => $token["message"]
-                                    );
-                                }
-                            }
-                        } else {
-                            $response = array(
-                                "success" => false,
-                                "message" => "Something went Wrong!"
-                            );
-                        }
-                    } else {
-                        $response = array(
-                            "success" => false,
-                            "message" => "Something went Wrong!"
-                        );
-                    }
-                } else {
-                    $response = array(
-                        "success" => false,
-                        "message" => "Something went Wrong!"
+                        "message" => "Something went Wrong!!"
                     );
                 }
             } else {
                 $response = array(
                     "success" => false,
-                    "message" => "Something went Wrong!!"
+                    "message" => "Something went Wrong!"
                 );
             }
-        } else {
+        } catch (Exception $e) {
             $response = array(
                 "success" => false,
-                "message" => "Something went Wrong!"
+                "message" => $e->getMessage()
             );
         }
         return response()->json($response);

@@ -17,13 +17,59 @@
                         </div>
                     </div>
                     <div class="card-body">
+                        <form id="fetchPostForm">
+                            <div>
+                                <div class="row">
+                                    <div class="col-md-4 form-group">
+                                        <label for="fetch_account">Accounts</label>
+                                        <select name="account" id="fetch_account" class="form-control" required>
+                                            <option value="">All Accounts</option>
+                                            @foreach ($accounts as $key => $account)
+                                                <option value="{{ $account->id }}" data-type="{{ $account->type }}">
+                                                    {{ strtoupper($account->name . ' - ' . $account->type) }}
+                                                </option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-3 form-group">
+                                        <label for="time">Time</label>
+                                        <select name="time[]" id="time"class="form-control select2" multiple>
+                                            @foreach ($timeslots as $timeslot)
+                                                <option value="{{ $timeslot }}">{{ $timeslot }}</option>
+                                            @endforeach
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4 form-group">
+                                        <label for="feed_url">Feed Url</label>
+                                        <select name="feed_url[]" id="feed_url" class="form-control select2"
+                                            multiple></select>
+                                        <div class="d-flex">
+                                        </div>
+                                    </div>
+                                    <div class="align-content-end col-md-1 form-group text-right">
+                                        <a class="btn btn-info" id="addNewUrl">+</a>
+                                    </div>
+                                </div>
+                                <div class="row d-flex justify-content-end">
+                                    <div class="new_url col-md-5 p-0" style="display: none;">
+                                    </div>
+                                </div>
+                                <button type="submit" class="btn btn-outline-primary float-right"
+                                    id="fetchPostsBtn">Fetch</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+                {{-- Posts table --}}
+                <div class="card">
+                    <div class="card-body">
                         <div class="row">
                             <form id="adv_filter_form" class="row col-md-12">
-                                <div class="col-md-3 form-group">
+                                <div class="col-md-4 form-group">
                                     <label for="account">Accounts</label>
                                     <select name="account" id="account" class="form-control adv_filter">
                                         <option value="">All Accounts</option>
-                                        @foreach ($user->getAccounts() as $key => $account)
+                                        @foreach ($accounts as $key => $account)
                                             <option value="{{ $account->id }}" data-type="{{ $account->type }}"
                                                 data-shuffle="{{ $account->shuffle }}"
                                                 {{ @$user->rss_filters['selected_account'] == $account->id && @$user->rss_filters['selected_type'] == $account->type ? 'selected' : '' }}>
@@ -32,7 +78,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                <div class="col-md-3 form-group">
+                                <div class="col-md-4 form-group">
                                     <label for="domains">Domains</label>
                                     <input type="hidden" id="saved_domains"
                                         value="{{ isset($user->rss_filters['domain']) ? implode(',', $user->rss_filters['domain']) : '' }}">
@@ -40,7 +86,7 @@
                                         multiple>
                                     </select>
                                 </div>
-                                <div class="col-md-3 form-group">
+                                <div class="col-md-4 form-group">
                                     <label for="status">Status</label>
                                     <select name="status" id="status" class="form-control adv_filter">
                                         <option value="">All Status</option>
@@ -49,37 +95,16 @@
                                         <option value="-1">Failed</option>
                                     </select>
                                 </div>
-                                <div class="col-md-3 form-group align-content-end">
-                                    <a class="btn btn-outline-info btn-sm float-right">
-                                        Last Fetch:
-                                        <span class="last_fetch">-</span>
-                                    </a>
-                                    <a class="btn btn-outline-info btn-sm mx-1 float-right">
-                                        Scheduled Till:
-                                        <span class="scheduled_till"></span>
-                                    </a>
-                                </div>
-                                {{-- <div class="col-md-12 form-group">
-                                    <label for="search">Search</label>
-                                    <input type="text" name="search" id="search"
-                                        class="form-control adv_filter_search">
-                                </div> --}}
                             </form>
                             <div class="col-md-12 row form-group justify-content-between">
                                 <div class="col-md-6">
                                     <button id="clearFilters" class="btn btn-outline-secondary btn-sm ">Clear
                                         Filters
                                     </button>
-                                    <button id="postsFetch" class="btn btn-outline-success btn-sm" data-toggle="modal"
-                                        data-target="#fetchPostsModal">
-                                        Fetch Post
-                                    </button>
                                     <button id="deleteAll" class="btn btn-outline-danger btn-sm" style="display: none;">
                                         Delete All
                                     </button>
-                                </div>
-                                <div class="col-md-6 d-flex justify-content-end">
-                                    <div class="btn btn-success bg-transparent text-muted shuffle_toggle py-1 mx-1"
+                                    <div class="btn btn-info bg-transparent text-muted shuffle_toggle py-1 mx-1"
                                         style="display: none;">
                                         <div class="d-flex align-items-start">
                                             <label for="toggle" class="pointer m-0">Shuffle</label>
@@ -89,6 +114,16 @@
                                             </div>
                                         </div>
                                     </div>
+                                </div>
+                                <div class="col-md-3 form-group align-content-end">
+                                    <a class="btn btn-outline-secondary btn-sm float-right">
+                                        Last Fetch:
+                                        <span class="last_fetch">NA</span>
+                                    </a>
+                                    <a class="btn btn-outline-secondary btn-sm mx-1 float-right">
+                                        Scheduled Till:
+                                        <span class="scheduled_till">NA</span>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -109,7 +144,6 @@
             </div>
         </section>
     </div>
-    @include('user.automation.fetch_posts_modal', ['user' => $user, 'timeslots' => $timeslots])
     @include('user.automation.edit_post_modal')
 @endsection
 @push('styles')
@@ -146,7 +180,7 @@
                 var api = this.api();
                 var response = api.ajax.json();
                 $('.scheduled_till').html(response.scheduled_till);
-                $('.last_fetch').html(!empty(response.last_fetch) ? response.last_fetch : '-');
+                $('.last_fetch').html(!empty(response.last_fetch) ? response.last_fetch : 'NA');
             },
             columns: [{
                     data: 'post',
@@ -224,11 +258,11 @@
                 var new_url = $('.new_url');
                 new_url.show();
                 var new_url_body =
-                    '<div class="col-md-12 form-group d-flex justify-content-end new_url_body">';
+                    '<div class="col-md-12 form-group d-flex justify-content-between new_url_body">';
                 new_url_body +=
-                    '<button class="btn btn-outline-danger mr-4 new_url_delete_btn"><i class="fa fa-trash"></i></button>';
+                    '<input type="text" name="new_feed_url[]" class="form-control new_feed_url col-md-9" placeholder="Add new Feed URL" required>';
                 new_url_body +=
-                    '<input type="text" name="new_feed_url[]" class="form-control new_feed_url" placeholder="Add new Feed URL" required>';
+                    '<button class="btn btn-outline-danger new_url_delete_btn"><i class="fa fa-trash"></i></button>';
                 new_url_body += '</div>';
                 new_url.append(new_url_body);
             })
@@ -498,8 +532,6 @@
                     });
                 }
             }
-            // Trigger change acocunt
-            $('#account').trigger('change');
         });
     </script>
     </script>

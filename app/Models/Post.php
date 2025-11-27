@@ -16,7 +16,6 @@ class Post extends Model
     protected $fillable = [
         "user_id",
         "post_id",
-        "account_parent_id",
         "account_id",
         "social_type",
         "type",
@@ -40,16 +39,6 @@ class Post extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
-    }
-
-    public function facebook()
-    {
-        return $this->belongsTo(Facebook::class, 'account_parent_id', 'fb_id');
-    }
-
-    public function pinterest()
-    {
-        return $this->belongsTo(Pinterest::class, 'account_parent_id', 'pin_id');
     }
 
     public function board()
@@ -343,7 +332,7 @@ class Post extends Model
             $post = $post->where("status", $status);
         }
         $post = $post->first();
-        return $post ? date("Y-m-d h:i A", strtotime($post->publish_date)) : '-';
+        return $post ? date("Y-m-d h:i A", strtotime($post->publish_date)) : 'NA';
     }
 
     protected function title(): Attribute
