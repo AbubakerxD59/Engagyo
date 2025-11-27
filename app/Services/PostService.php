@@ -14,7 +14,7 @@ class PostService
     {
         $post = Post::create([
             "user_id" => $data["user_id"],
-            "account_parent_id" => $data["account_parent_id"],
+            // "account_parent_id" => $data["account_parent_id"],
             "account_id" => $data["account_id"],
             "social_type" => $data["social_type"],
             "type" => $data["type"],
