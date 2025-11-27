@@ -109,12 +109,14 @@ class PostService
             }
         }
         if ($post->social_type == "pinterest") { //Pinterest
+            $board = $post->board;
+            $board_id = $board ? $board->board_id : null;
             if ($post->type == "photo") {
                 $encoded_image = file_get_contents($post->image);
                 $encoded_image = base64_encode($encoded_image);
                 $postData = array(
                     "title" => $post->title,
-                    "board_id" => (string) $post->account_id,
+                    "board_id" => (string) $board_id,
                     "media_source" => array(
                         "source_type" => "image_base64",
                         "content_type" => "image/jpeg",
@@ -125,7 +127,7 @@ class PostService
             if ($post->type == "video") {
                 $postData = array(
                     "title" => $post->title,
-                    "board_id" => (string) $post->account_id,
+                    "board_id" => (string) $board_id,
                     'video_key' => $post->video
                 );
             }
@@ -133,7 +135,7 @@ class PostService
                 $postData = [
                     "title" => $post->title,
                     "link" => $post->url,
-                    "board_id" => (string) $post->account_id,
+                    "board_id" => (string) $board_id,
                     "media_source" => [
                         "source_type" => str_contains($post->image, "http") ? "image_url" : "image_base64",
                         "url" => $post->image

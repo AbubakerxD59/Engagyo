@@ -26,6 +26,7 @@
                         <b>{{ $account->name }}</b>
                     </div>
                 </td>
+
                 <td>
                     @php $account_timeslots = $account->timeslots->pluck("timeslot")->toArray(); @endphp
                     <select name="time[]" class="form-control select2 timeslot" data-id="{{ $account->id }}"

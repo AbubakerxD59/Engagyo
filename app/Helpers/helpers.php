@@ -23,7 +23,8 @@ function panel_logo()
 
 function site_company()
 {
-    $company = "TRUE BREATHE MEDIA (SMC-PRIVATE) LIMITED";
+    // $company = "TRUE BREATHE MEDIA (SMC-PRIVATE) LIMITED";
+    $company = "";
     return $company;
 }
 

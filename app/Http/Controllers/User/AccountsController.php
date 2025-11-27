@@ -89,10 +89,7 @@ class AccountsController extends Controller
         if ($board) {
             $user = Auth::user();
             $pinterest = $this->pinterest->search($request->pin_id)->userSearch($user->id)->first();
-            $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "pin_id" => $pinterest->pin_id, "board_id" => $board["id"]], [
-                "user_id" => $user->id,
-                "pin_id" => $pinterest->pin_id,
-                "board_id" => $board["id"],
+            $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "pin_id" => $pinterest->id, "board_id" => $board["id"]], [
                 "name" => $board["name"],
                 "status" => 1
             ]);

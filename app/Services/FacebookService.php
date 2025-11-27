@@ -271,7 +271,6 @@ class FacebookService
 
     public function photo($id, $access_token, $post)
     {
-        info('photo function');
         try {
             $publish = $this->facebook->post('/me/photos', $post, $access_token);
             $response = [
