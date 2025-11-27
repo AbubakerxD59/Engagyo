@@ -13,6 +13,7 @@ use Illuminate\Http\Request;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
+use Exception;
 use Illuminate\Support\Facades\Auth;
 
 class AccountsController extends Controller
@@ -85,17 +86,21 @@ class AccountsController extends Controller
 
     public function addBoard(Request $request)
     {
-        $board = $request->board_data;
-        if ($board) {
-            $user = Auth::user();
-            $pinterest = $this->pinterest->search($request->pin_id)->userSearch($user->id)->first();
-            $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "pin_id" => $pinterest->id, "board_id" => $board["id"]], [
-                "name" => $board["name"],
-                "status" => 1
-            ]);
-            return response()->json(["success" => true, "message" => "Board connected Successfully!"]);
-        } else {
-            return response()->json(["success" => false, "message" => "Something went Wrong!"]);
+        try {
+            $board = $request->board_data;
+            if ($board) {
+                $user = Auth::user();
+                $pinterest = $this->pinterest->search($request->pin_id)->userSearch($user->id)->firstOrfail();
+                $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "board_id" => $board["id"]], [
+                    "name" => $board["name"],
+                    "status" => 1
+                ]);
+                return response()->json(["success" => true, "message" => "Board connected Successfully!"]);
+            } else {
+                return response()->json(["success" => false, "message" => "Something went Wrong!"]);
+            }
+        } catch (Exception $e) {
+            return response()->json(["success" => false, "message" => $e->getMessage()]);
         }
     }
 

@@ -29,13 +29,14 @@ class Pinterest extends Model
 
     protected $appends = ["type"];
 
-    public function user(){
+    public function user()
+    {
         return $this->belongsTo(User::class, 'user_id', 'id');
     }
 
     public function boards()
     {
-        return $this->hasMany(Board::class, 'pin_id', 'pin_id');
+        return $this->hasMany(Board::class, 'pin_id',  'id');
     }
 
     public function scopeSearch($query, $search)
