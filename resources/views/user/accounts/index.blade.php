@@ -94,7 +94,7 @@
                     </div>
                 </div>
                 {{-- TikTok --}}
-                <div class="card">
+                {{-- <div class="card">
                     <div class="card-header with-border clearfix">
                         <div class="card-title">
                             <input type="hidden" id="pinterestAcc" value="{{ session_check('pinterest_auth') ? 1 : 0 }}">
@@ -136,7 +136,8 @@
                             @endforeach
                         </div>
                     </div>
-                </div>
+                </div> --}}
+
             </div>
         </section>
     </div>
