@@ -31,7 +31,7 @@ class Page extends Model
 
     public function facebook()
     {
-        return $this->belongsTo(Facebook::class, 'fb_id', 'fb_id');
+        return $this->belongsTo(Facebook::class, 'fb_id', 'id');
     }
 
     public function posts()

@@ -73,7 +73,7 @@ class AccountsController extends Controller
     {
         if (!empty($id)) {
             $pinterestUrl = $this->pinterestService->getLoginUrl();
-            $pinterest = $this->pinterest->search($id)->first();
+            $pinterest = $this->pinterest->search($id)->firstOrFail();
             if ($pinterest) {
                 return view('user.accounts.pinterest', compact('pinterestUrl', 'pinterest'));
             } else {
@@ -110,6 +110,13 @@ class AccountsController extends Controller
             $user = Auth::user();
             $board = $this->board->search($id)->userSearch($user->id)->first();
             if ($board) {
+                // posts
+                $board->posts()->delete();
+                // domains
+                $board->domains()->delete();
+                // timeslots
+                $board->timeslots()->delete();
+                // board
                 $board->delete();
                 return back()->with("success", "Board deleted Successfully!");
             } else {
@@ -165,10 +172,7 @@ class AccountsController extends Controller
         if ($page) {
             $user = Auth::user();
             $facebook = $this->facebook->search($request->fb_id)->userSearch($user->id)->first();
-            $facebook->pages()->updateOrCreate(["user_id" => $user->id, "fb_id" => $facebook->fb_id, "page_id" => $page["id"]], [
-                "user_id" => $user->id,
-                "fb_id" => $facebook->fb_id,
-                "page_id" => $page["id"],
+            $facebook->pages()->updateOrCreate(["user_id" => $user->id, "page_id" => $page["id"]], [
                 "name" => $page["name"],
                 "status" => 1,
                 "access_token" => $page["access_token"],
@@ -186,6 +190,13 @@ class AccountsController extends Controller
             $user = Auth::user();
             $page = $this->page->search($id)->userSearch($user->id)->first();
             if ($page) {
+                // posts
+                $page->posts()->delete();
+                // domains
+                $page->domains()->delete();
+                // timeslots
+                $page->timeslots()->delete();
+                // page
                 $page->delete();
                 return back()->with("success", "Page deleted Successfully!");
             } else {

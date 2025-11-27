@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Scopes\PostScope;
+use App\Models\Scopes\UserScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -500,5 +501,10 @@ class Post extends Model
         $title = $this->title;
         $image = $this->image;
         return empty($title) || empty($image) ? true : false;
+    }
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
     }
 }

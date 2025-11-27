@@ -30,7 +30,7 @@ class Board extends Model
 
     public function pinterest()
     {
-        return $this->belongsTo(Pinterest::class, 'pin_id', 'pin_id');
+        return $this->belongsTo(Pinterest::class, 'pin_id', 'id');
     }
 
     public function posts()

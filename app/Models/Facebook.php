@@ -27,7 +27,7 @@ class Facebook extends Model
 
     public function pages()
     {
-        return $this->hasMany(Page::class, 'fb_id', 'fb_id');
+        return $this->hasMany(Page::class, 'fb_id', 'id');
     }
 
     public function scopeSearch($query, $search)
