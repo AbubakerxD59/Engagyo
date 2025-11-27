@@ -45,7 +45,7 @@ class Page extends Model
     }
     public function timeslots()
     {
-        return $this->hasMany(Timeslot::class, "account_id", "page_id")->where("account_type", "facebook");
+        return $this->hasMany(Timeslot::class, "account_id", "id")->where("account_type", "facebook");
     }
 
     public function scopeConnected($query, $search)

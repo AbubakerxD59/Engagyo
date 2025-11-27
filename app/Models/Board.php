@@ -45,7 +45,7 @@ class Board extends Model
 
     public function timeslots()
     {
-        return $this->hasMany(Timeslot::class, "account_id", "board_id")->where("account_type", "pinterest");
+        return $this->hasMany(Timeslot::class, "account_id", "id")->where("account_type", "pinterest");
     }
 
     public function scopeSearch($query, $search)
@@ -88,7 +88,8 @@ class Board extends Model
         return $pinterest;
     }
 
-    public function getAccountIdAttribute(){
+    public function getAccountIdAttribute()
+    {
         return $this->board_id;
     }
 }
