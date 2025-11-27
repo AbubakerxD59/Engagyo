@@ -14,12 +14,10 @@ use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
 use App\Services\PinterestService;
-use Illuminate\Support\Facades\Log;
 use App\Http\Controllers\Controller;
+use App\Models\User;
 use App\Services\PostService;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
-use PhpParser\Node\Expr\AssignOp\Pow;
 
 class  ScheduleController extends Controller
 {
@@ -34,7 +32,7 @@ class  ScheduleController extends Controller
     }
     public function index()
     {
-        $user = Auth::user();
+        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
         $accounts = $user->getAccounts();
         return view("user.schedule.index", compact("accounts"));
     }
@@ -108,7 +106,7 @@ class  ScheduleController extends Controller
     private function publishPost($request)
     {
         try {
-            $user = Auth::user();
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -136,7 +134,7 @@ class  ScheduleController extends Controller
                         $data = [
                             "user_id" => $user->id,
                             "account_parent_id" => $account->fb_id,
-                            "account_id" => $account->page_id,
+                            "account_id" => $account->id,
                             "social_type" => "facebook",
                             "type" => $type,
                             "source" => $this->source,
@@ -175,7 +173,7 @@ class  ScheduleController extends Controller
                         $data = [
                             "user_id" => $user->id,
                             "account_parent_id" => $account->pin_id,
-                            "account_id" => $account->board_id,
+                            "account_id" => $account->id,
                             "social_type" => "pinterest",
                             "type" => $type,
                             "source" => $this->source,
@@ -215,7 +213,7 @@ class  ScheduleController extends Controller
     private function queuePost($request)
     {
         try {
-            $user = Auth::user();
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -247,7 +245,7 @@ class  ScheduleController extends Controller
                             $data = [
                                 "user_id" => $user->id,
                                 "account_parent_id" => $account->fb_id,
-                                "account_id" => $account->page_id,
+                                "account_id" => $account->id,
                                 "social_type" => "facebook",
                                 "type" => $type,
                                 "source" => $this->source,
@@ -270,7 +268,7 @@ class  ScheduleController extends Controller
                             $data = [
                                 "user_id" => $user->id,
                                 "account_parent_id" => $account->pin_id,
-                                "account_id" => $account->board_id,
+                                "account_id" => $account->id,
                                 "social_type" => "pinterest",
                                 "type" => $type,
                                 "source" => $this->source,
@@ -307,7 +305,7 @@ class  ScheduleController extends Controller
     private function schedulePost($request)
     {
         try {
-            $user = Auth::user();
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -339,7 +337,7 @@ class  ScheduleController extends Controller
                         $data = [
                             "user_id" => $user->id,
                             "account_parent_id" => $account->fb_id,
-                            "account_id" => $account->page_id,
+                            "account_id" => $account->id,
                             "social_type" => "facebook",
                             "type" => $type,
                             "source" => $this->source,
@@ -362,7 +360,7 @@ class  ScheduleController extends Controller
                         $data = [
                             "user_id" => $user->id,
                             "account_parent_id" => $account->pin_id,
-                            "account_id" => $account->board_id,
+                            "account_id" => $account->id,
                             "social_type" => "pinterest",
                             "type" => $type,
                             "source" => $this->source,
@@ -394,7 +392,7 @@ class  ScheduleController extends Controller
     private function publishLink($request)
     {
         try {
-            $user = Auth::user();
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -410,7 +408,7 @@ class  ScheduleController extends Controller
                             $data = [
                                 "user_id" => $user->id,
                                 "account_parent_id" => $account->fb_id,
-                                "account_id" => $account->page_id,
+                                "account_id" => $account->id,
                                 "social_type" => "facebook",
                                 "type" => "link",
                                 "source" => $this->source,
@@ -448,7 +446,7 @@ class  ScheduleController extends Controller
                             $data = [
                                 "user_id" => $user->id,
                                 "account_parent_id" => $account->pin_id,
-                                "account_id" => $account->board_id,
+                                "account_id" => $account->id,
                                 "social_type" => "pinterest",
                                 "type" => "link",
                                 "source" => $this->source,
@@ -494,7 +492,7 @@ class  ScheduleController extends Controller
     private function queueLink($request)
     {
         try {
-            $user = Auth::user();
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -511,7 +509,7 @@ class  ScheduleController extends Controller
                             $data = [
                                 "user_id" => $user->id,
                                 "account_parent_id" => $account->fb_id,
-                                "account_id" => $account->page_id,
+                                "account_id" => $account->id,
                                 "social_type" => "facebook",
                                 "type" => "link",
                                 "source" => $this->source,
@@ -550,7 +548,7 @@ class  ScheduleController extends Controller
                             $data = [
                                 "user_id" => $user->id,
                                 "account_parent_id" => $account->pin_id,
-                                "account_id" => $account->board_id,
+                                "account_id" => $account->id,
                                 "social_type" => "pinterest",
                                 "type" => "link",
                                 "source" => $this->source,
@@ -596,7 +594,7 @@ class  ScheduleController extends Controller
     private function scheduleLink($request)
     {
         try {
-            $user = Auth::user();
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -615,7 +613,7 @@ class  ScheduleController extends Controller
                             $data = [
                                 "user_id" => $user->id,
                                 "account_parent_id" => $account->fb_id,
-                                "account_id" => $account->page_id,
+                                "account_id" => $account->id,
                                 "social_type" => "facebook",
                                 "type" => "link",
                                 "source" => $this->source,
@@ -653,7 +651,7 @@ class  ScheduleController extends Controller
                             $data = [
                                 "user_id" => $user->id,
                                 "account_parent_id" => $account->pin_id,
-                                "account_id" => $account->board_id,
+                                "account_id" => $account->id,
                                 "social_type" => "pinterest",
                                 "type" => "link",
                                 "source" => $this->source,
@@ -697,7 +695,7 @@ class  ScheduleController extends Controller
     }
     public function getSetting(Request $request)
     {
-        $user = Auth::user();
+        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
         $accounts = $user->getAccounts();
         $view = view("user.schedule.ajax.settings", compact("accounts"));
         $response = [
@@ -716,10 +714,10 @@ class  ScheduleController extends Controller
             $account = null;
             if ($type == "facebook") {
                 $account = Page::with("timeslots")->where("id", $id)->first();
-                $account_id = $account->page_id;
+                $account_id = $account->id;
             } else if ($type == "pinterest") {
                 $account = Board::with("timeslots")->where("id", $id)->first();
-                $account_id = $account->board_id;
+                $account_id = $account->id;
             }
             if ($account) {
                 // remove previous

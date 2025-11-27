@@ -22,7 +22,7 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            @foreach ($user->load('facebook')->facebook as $fb)
+                            @foreach ($user->facebook as $fb)
                                 <article class="account_box col-md-3 m-1">
                                     <a href="{{ route('panel.accounts.facebook', $fb->fb_id) }}">
                                         <div class="d-flex align-items-center">
@@ -66,7 +66,51 @@
                     </div>
                     <div class="card-body">
                         <div class="row">
-                            @foreach ($user->load('pinterest')->pinterest as $pin)
+                            @foreach ($user->pinterest as $pin)
+                                <article class="account_box col-md-3 m-1">
+                                    <a href="{{ route('panel.accounts.pinterest', $pin->pin_id) }}">
+                                        <div class="d-flex align-items-center">
+                                            <picture>
+                                                <img src="{{ $pin->profile_image }}" class="rounded-pill logo"
+                                                    onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
+                                            </picture>
+                                            <div class="account_name">{{ $pin->username }}</div>
+                                        </div>
+                                    </a>
+                                    <div>
+                                        <button class="btn btn-outline-danger btn-sm delete-btn border-0"
+                                            onclick="confirmDelete(event)">
+                                            <i class="fa fa-trash px-2"></i>
+                                        </button>
+                                        <form action="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}"
+                                            method="POST" class="delete_form">
+                                            @csrf
+                                            @method('DELETE')
+                                        </form>
+                                    </div>
+                                </article>
+                            @endforeach
+                        </div>
+                    </div>
+                </div>
+                {{-- TikTok --}}
+                <div class="card">
+                    <div class="card-header with-border clearfix">
+                        <div class="card-title">
+                            <input type="hidden" id="pinterestAcc" value="{{ session_check('pinterest_auth') ? 1 : 0 }}">
+                            <img src="{{ social_logo('pinterest') }}">
+                            <span>Pinterest</span>
+                        </div>
+                        <a href="{{ $pinterestUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="row">
+                            @foreach ($user->pinterest as $pin)
                                 <article class="account_box col-md-3 m-1">
                                     <a href="{{ route('panel.accounts.pinterest', $pin->pin_id) }}">
                                         <div class="d-flex align-items-center">

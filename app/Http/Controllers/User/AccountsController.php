@@ -4,15 +4,16 @@ namespace App\Http\Controllers\User;
 
 use App\Models\Page;
 use App\Models\Post;
+use App\Models\User;
 use App\Models\Board;
 use App\Models\Domain;
 use App\Models\Facebook;
 use App\Models\Pinterest;
+use Illuminate\Http\Request;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Http\Request;
 
 class AccountsController extends Controller
 {
@@ -37,7 +38,7 @@ class AccountsController extends Controller
     }
     public function index()
     {
-        $user = Auth::user();
+        $user = User::with("facebook", "pinterest")->findOrFail(Auth::id());
         $facebookUrl = $this->facebookService->getLoginUrl();
         $pinterestUrl = $this->pinterestService->getLoginUrl();
         return view("user.accounts.index", compact("user", "facebookUrl", "pinterestUrl"));

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use Exception;
 use App\Models\Page;
 use App\Models\Post;
+use App\Models\User;
 use App\Models\Board;
 use App\Models\Domain;
 use App\Jobs\FetchPost;
@@ -60,25 +61,21 @@ class AutomationController extends Controller
         $type = $data["account_type"];
         $status = $data["status"];
         $search = null;
-        // $search = $data['search_input'];
         $domain = isset($data["domain"]) ? $data["domain"] : [];
         $lastFetch = '';
         $posts = $this->post->isRss()->userSearch($user->id)->accountExist();
-        // if (!empty($search)) {
-        //     $posts = $posts->search($search);
-        // }
         if ($account) {
             if ($type == 'pinterest') {
-                $account = $this->board->find($account);
+                $account = $this->board->findOrFail($account);
                 $lastFetch = $account->last_fetch;
-                $account = $account->board_id;
+                $account_id = $account->id;
             }
             if ($type == 'facebook') {
-                $account = $this->page->find($account);
+                $account = $this->page->findOrFail($account);
                 $lastFetch = $account->last_fetch;
-                $account = $account->page_id;
+                $account_id = $account->id;
             }
-            $posts = $posts->where("account_id", $account);
+            $posts = $posts->where("account_id", $account_id);
         }
         if (count($domain) > 0) {
             $posts = $posts->whereIn("domain_id", $domain);
@@ -87,7 +84,7 @@ class AutomationController extends Controller
             $posts = $posts->where("status", $status);
         }
         $totalRecordswithFilter = clone $posts;
-        $scheduledTill = $this->post->scheduledTill($search, $type, $data["account"], $domain, $status, $user->id);
+        $scheduledTill = $this->post->scheduledTill($search, $type, $account_id, $domain, $status, $user->id);
         $posts = $posts->orderBy('publish_date', $order);
         /*Set limit offset */
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
@@ -192,13 +189,13 @@ class AutomationController extends Controller
             $times = $request->time;
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($request->account);
-                $account_id = $account ? $account->board_id : '';
-                $account_parent_id = $account ? $account->pin_id : '';
+                $account_id = $account->id;
+                $account_parent_id = $account->pin_id;
             }
             if ($type == 'facebook') {
                 $account = $this->page->findOrFail($request->account);
-                $account_id = $account ? $account->page_id : '';
-                $account_parent_id = $account ? $account->fb_id : '';
+                $account_id = $account->id;
+                $account_parent_id = $account->fb_id;
             }
             foreach ($times as $time) {
                 foreach ($domains as $domain) {
@@ -294,7 +291,7 @@ class AutomationController extends Controller
     {
         $id = $request->account_id;
         if (!empty($id)) {
-            $user = Auth::user();
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
             $type = $request->type;
             if ($type == 'pinterest') {
                 $account = $this->board->find($id);
@@ -342,7 +339,7 @@ class AutomationController extends Controller
                 if ($post) {
                     $board = $this->board->search($post->account_id)->active()->first();
                     if ($board) {
-                        $pinterest = $this->pinterest->where("pin_id", operator: $board->pin_id)->first();
+                        $pinterest = $this->pinterest->where("pin_id",  $board->pin_id)->first();
                         if ($pinterest) {
                             if (!$pinterest->validToken()) {
                                 $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
@@ -538,14 +535,10 @@ class AutomationController extends Controller
         return response()->json($response);
     }
 
-    public function test()
-    {
-        //    
-    }
 
     public function saveFilters(Request $request)
     {
-        $user = Auth::user();
+        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
         $selected_account = $request->selected_account;
         $selected_type = $request->selected_type;
         $domain = $request->has("domain") ? $request->domain : [];

@@ -30,15 +30,16 @@ class Domain extends Model
 
     public function board()
     {
-        return $this->belongsTo(Board::class, 'account_id', 'board_id');
+        return $this->belongsTo(Board::class, 'account_id', 'id');
     }
 
     public function page()
     {
-        return $this->belongsTo(Page::class, 'account_id', 'page_id');
+        return $this->belongsTo(Page::class, 'account_id', 'id');
     }
 
-    public function posts(){
+    public function posts()
+    {
         return $this->hasMany(Post::class, 'domain_id', 'id');
     }
 

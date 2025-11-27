@@ -53,12 +53,12 @@ class Post extends Model
 
     public function board()
     {
-        return $this->belongsTo(Board::class, 'account_id', 'board_id');
+        return $this->belongsTo(Board::class, 'account_id', 'id');
     }
 
     public function page()
     {
-        return $this->belongsTo(Page::class, 'account_id', 'page_id');
+        return $this->belongsTo(Page::class, 'account_id', 'id');
     }
 
     public function domain()
@@ -326,19 +326,14 @@ class Post extends Model
     public function scheduledTill($search = null, $social_type, $account, $domain, $status, $user_id)
     {
         $post = $this->userSearch($user_id)->orderBy('publish_date', 'DESC');
-        // if (!empty($search)) {
-        //     $post = $post->search($search);
-        // }
         if ($account) {
             if ($social_type == 'pinterest') {
-                $account = Board::find($account);
-                $account = $account->board_id;
+                $account = Board::findOrFail($account);
             }
             if ($social_type == 'facebook') {
-                $account = Page::find($account);
-                $account = $account->page_id;
+                $account = Page::findOrFail($account);
             }
-            $post = $post->where("account_id", $account);
+            $post = $post->where("account_id", $account->id);
         }
         if (count($domain) > 0) {
             $post = $post->whereIn("domain_id", $domain);
@@ -452,10 +447,10 @@ class Post extends Model
         $social_type = $this->social_type;
         $profile_image = '';
         if ($social_type == "facebook") {
-            $profile_image = $this->facebook ? $this->facebook->profile_image : $this->page->facebook->profile_image;
+            $profile_image = $this->facebook ? $this->facebook?->profile_image : $this->page?->facebook?->profile_image;
         }
         if ($social_type == "pinterest") {
-            $profile_image = $this->pinterest ? $this->pinterest->profile_image : $this->board->pinterest->profile_image;
+            $profile_image = $this->pinterest ? $this->pinterest?->profile_image : $this->board?->pinterest?->profile_image;
         }
         return $profile_image;
     }
