@@ -412,10 +412,10 @@ class Post extends Model
         $social_type = $this->social_type;
         $account_name = '';
         if ($social_type == "facebook") {
-            $account_name = $this->page->name;
+            $account_name = $this->page?->name;
         }
         if ($social_type == "pinterest") {
-            $account_name = $this->board->name;
+            $account_name = $this->board?->name;
         }
         return $account_name;
     }
