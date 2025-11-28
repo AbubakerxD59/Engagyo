@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 
@@ -26,6 +25,11 @@
     @if (Session::has('error'))
         <script type="text/javascript">
             toastr.error('{{ Session::get('error') }}');
+        </script>
+    @endif
+    @if (Session::has('errors'))
+        <script type="text/javascript">
+            toastr.error('{{ Session::get('errors')->first() }}');
         </script>
     @endif
 </body>

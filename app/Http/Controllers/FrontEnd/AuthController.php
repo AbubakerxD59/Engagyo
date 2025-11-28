@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\FrontEnd;
 
+use Exception;
 use App\Models\User;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
@@ -69,33 +70,36 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request)
     {
-        $request->validated();
-        $user = $this->user->create([
-            "first_name" => $request->first_name,
-            "last_name" => $request->last_name,
-            "username" => Str::random(6),
-            "email" => $request->email,
-            "password" => $request->password,
-            "agreement" => $request->agreement,
-            "status" => 1,
-        ]);
-        if ($user) {
-            $user->assignRole("User");
-            $response = [
-                "success" => true,
-                "message" => "Welcome to" . env("APP_NAME", "Engagyo") . " ! Get started and explore"
-            ];
-        } else {
-            $response = [
-                "success" => false,
-                "message" => "Something went Wrong!"
-            ];
-        }
+        try {
+            $request->validated();
+            $user = $this->user->create([
+                "username" => Str::random(6),
+                "email" => $request->email,
+                "password" => $request->password,
+                "agreement" => $request->agreement,
+                "status" => 1,
+            ]);
 
-        if ($response['success']) {
-            return redirect()->route("frontend.showLogin")->with("success", $response["message"]);
-        } else {
-            return back()->with("error", $response["message"]);
+            if ($user) {
+                $user->assignRole("User");
+                $response = [
+                    "success" => true,
+                    "message" => "Welcome to " . env("APP_NAME", "Engagyo") . " ! Get started and explore"
+                ];
+            } else {
+                $response = [
+                    "success" => false,
+                    "message" => "Something went Wrong!"
+                ];
+            }
+
+            if ($response['success']) {
+                return redirect()->route("frontend.showLogin")->with("success", $response["message"]);
+            } else {
+                return back()->with("error", $response["message"]);
+            }
+        } catch (Exception $e) {
+            return back()->with("error", $e->getMessage());
         }
     }
 
