@@ -35,6 +35,7 @@ class FacebookPublishCron extends Command
         $posts = $post->with("user", "page.facebook")->notPublished()->past($now)->facebook()->notSchedule()->get();
         foreach ($posts as $key => $post) {
             try {
+                sleep(3);
                 $page = $post->page;
                 if ($page->facebook) {
                     $access_token = $page->access_token;

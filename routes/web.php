@@ -97,7 +97,6 @@ Route::get("test", function (Post $post, FacebookService $facebookService) {
                     }
                 }
                 $postData = PostService::postTypeBody($post);
-                dd($page, $access_token, $postData, $page->validToken());
                 PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
             }
         } catch (Exception $e) {
