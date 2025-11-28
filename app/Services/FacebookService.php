@@ -26,7 +26,8 @@ class FacebookService
             'persistent_data_handler' => new LaravelSessionPersistentDataHandler()
         ]);
         $this->helper = $this->facebook->getRedirectLoginHelper();
-        $this->scopes = ['business_management', 'email', 'public_profile', 'pages_manage_metadata', 'pages_manage_posts', 'pages_read_engagement', 'pages_show_list', 'pages_manage_engagement', 'pages_read_user_content', 'read_insights', 'pages_manage_ads'];
+        // $this->scopes = ['business_management', 'email', 'public_profile', 'pages_manage_metadata', 'pages_manage_posts', 'pages_read_engagement', 'pages_show_list', 'pages_manage_engagement', 'pages_read_user_content', 'read_insights', 'pages_manage_ads'];
+        $this->scopes = ['email', 'user_gender', 'user_hometown', 'public_profile'];
         $this->post = new Post();
     }
 
@@ -52,6 +53,32 @@ class FacebookService
                     "metadata" => $tokenMetadata,
                     "access_token" => $access_token
                 ],
+            ];
+        } catch (FacebookResponseException $e) {
+            // When Graph returns an error
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        } catch (FacebookSDKException $e) {
+            // When validation fails or other local issues
+            $error = $e->getMessage();
+            $response = [
+                "success" => false,
+                "message" => $error,
+            ];
+        }
+        return $response;
+    }
+
+    public function validateAccessToken($access_token)
+    {
+        try {
+            $tokenMetadata = $this->facebook->getOAuth2Client()->debugToken($access_token);
+            $response = [
+                "success" => true,
+                "data" => $tokenMetadata,
             ];
         } catch (FacebookResponseException $e) {
             // When Graph returns an error
