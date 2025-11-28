@@ -163,7 +163,7 @@ class  ScheduleController extends Controller
                     PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                 }
                 if ($account->type == "pinterest") {
-                    $pinterest = Pinterest::where(" id", $account->pin_id)->firstOrFail();
+                    $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
                     if ($file) {
                         // store in db
                         $type = !empty($image) ? "photo" : "video";
