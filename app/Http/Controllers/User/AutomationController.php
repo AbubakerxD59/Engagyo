@@ -18,6 +18,7 @@ use App\Services\PostService;
 use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
+use App\Services\HtmlParseService;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -452,17 +453,26 @@ class AutomationController extends Controller
         $id = $request->id;
         $post = $this->post->where('id', $id)->notPublished()->first();
         if ($post) {
-            $fix = $this->dom->fix($post);
-            $title = !empty($fix["title"]) ? $fix["title"] : $post->title;
-            $image = !empty($fix["image"]) ? $fix["image"] : $post->image;
-            $post->update([
-                'title' => $title,
-                'image' => $image,
-            ]);
-            $response = array(
-                "success" => true,
-                "message" => "Post fixed Successfully!"
-            );
+            $pinterest_active = $post->social_type == "pinterest" ? true : false;
+            $dom = new HtmlParseService($pinterest_active);
+            $get_info = $dom->get_info($post->url, 1);
+            if ($get_info['status']) {
+                $title = !empty($get_info["title"]) ? $get_info["title"] : $post->title;
+                $image = !empty($get_info["image"]) ? $get_info["image"] : $post->image;
+                $post->update([
+                    'title' => $title,
+                    'image' => $image,
+                ]);
+                $response = [
+                    "success" => true,
+                    "data" => "Post fixed Successfully!"
+                ];
+            } else {
+                $response = [
+                    "success" => false,
+                    "message" => $get_info['message']
+                ];
+            }
         } else {
             $response = array(
                 "success" => false,
