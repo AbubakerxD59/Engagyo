@@ -31,25 +31,18 @@ class PinterestPublishCron extends Command
     public function handle(Post $post, PinterestService $pinterestService)
     {
         $now = date("Y-m-d H:i");
-        $posts = $post->notPublished()->past($now)->pinterest()->notSchedule()->get();
-        foreach ($posts as $key => $post) {
-            if ($post->status == "0") {
-                $user = $post->user()->first();
-                if ($user) {
-                    $board = $post->board()->userSearch($user->id)->first();
-                    if ($board) {
-                        $pinterest = $board->pinterest()->userSearch($user->id)->first();
-                        if ($pinterest) {
-                            $access_token = $pinterest->access_token;
-                            if (!$pinterest->validToken()) {
-                                $token = $pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                                $access_token = $token["access_token"];
-                            }
-                            $postData = PostService::postTypeBody($post);
-                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
-                        }
-                    }
+        $posts = $post->with("user", "board.pinterest")->notPublished()->past($now)->pinterest()->notSchedule()->get();
+        foreach ($posts as $post) {
+            $board = $post->board;
+            $pinterest = $board ? $board->pinterest : null;
+            if ($pinterest) {
+                $access_token = $pinterest->access_token;
+                if (!$pinterest->validToken()) {
+                    $token = $pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
+                    $access_token = $token["access_token"];
                 }
+                $postData = PostService::postTypeBody($post);
+                PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
             }
         }
     }

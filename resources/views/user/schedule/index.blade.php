@@ -100,7 +100,7 @@
                                 <label for="account">Account</label>
                                 <select name="account" id="account" class="form-control select2 filter" multiple>
                                     @foreach ($accounts as $account)
-                                        <option value="{{ $account->account_id }}">{{ ucfirst($account->name) }}</option>
+                                        <option value="{{ $account->id }}">{{ ucfirst($account->name) }}</option>
                                     @endforeach
                                 </select>
                             </div>

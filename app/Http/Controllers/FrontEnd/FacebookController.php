@@ -2,8 +2,9 @@
 
 namespace App\Http\Controllers\FrontEnd;
 
-use App\Models\Facebook;
 use App\Models\Page;
+use App\Models\User;
+use App\Models\Facebook;
 use Illuminate\Http\Request;
 use App\Services\FacebookService;
 use App\Http\Controllers\Controller;
@@ -22,6 +23,7 @@ class FacebookController extends Controller
     }
     public function deleteCallback(Request $request)
     {
+        info(json_encode($request->all()));
         return true;
     }
 
@@ -29,7 +31,7 @@ class FacebookController extends Controller
     {
         $code = $request->code;
         if (!empty($code)) {
-            $user = Auth::user();
+            $user = User::with("facebook")->findOrFail(Auth::id());
             $getAccessToken = $this->facebookService->getAccessToken();
             if ($getAccessToken["success"]) {
                 $data = $getAccessToken["data"];
@@ -53,7 +55,7 @@ class FacebookController extends Controller
                     $pages = [];
                     $key = 0;
                     foreach ($items as $page) {
-                        $connected = $this->page->connected(['user_id' => $user->id, 'fb_id' => $me["id"], 'page_id' => $page->getField("id")])->first() ? true : false;
+                        $connected = $this->page->connected(['fb_id' => $me["id"], 'page_id' => $page->getField("id")])->first() ? true : false;
                         $profile_image = $this->facebookService->pageProfileImage($access_token, $page->getField("id"));
                         if ($profile_image["success"]) {
                             $profile_image = $profile_image["data"];
@@ -101,6 +103,7 @@ class FacebookController extends Controller
 
     public function deauthorizeCallback(Request $request)
     {
+        info(json_encode($request->all()));
         return true;
     }
 }

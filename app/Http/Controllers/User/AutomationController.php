@@ -18,7 +18,6 @@ use App\Services\PostService;
 use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
-use App\Services\HtmlParseService;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -56,7 +55,7 @@ class AutomationController extends Controller
     {
         $user = Auth::user();
         $data = $request->all();
-        $iTotalRecords = $this->post->userSearch($user->id);
+        $iTotalRecords = $this->post;
         $order = $data["order"][0]["dir"];
         $account = $data["account"];
         $type = $data["account_type"];
@@ -64,7 +63,7 @@ class AutomationController extends Controller
         $search = null;
         $domain = isset($data["domain"]) ? $data["domain"] : [];
         $lastFetch = '';
-        $posts = $this->post->isRss()->userSearch($user->id)->accountExist();
+        $posts = $this->post->isRss()->accountExist();
         if ($account) {
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($account);
@@ -151,7 +150,7 @@ class AutomationController extends Controller
         ]);
         if (!empty($id)) {
             $user = Auth::user();
-            $post = $this->post->userSearch($user->id)->notPublished()->where("id", $id)->first();
+            $post = $this->post->notPublished()->where("id", $id)->first();
             if ($post) {
                 $data = [
                     "title" => $request->post_title,
@@ -191,12 +190,10 @@ class AutomationController extends Controller
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($request->account);
                 $account_id = $account->id;
-                $account_parent_id = $account->pin_id;
             }
             if ($type == 'facebook') {
                 $account = $this->page->findOrFail($request->account);
                 $account_id = $account->id;
-                $account_parent_id = $account->fb_id;
             }
             foreach ($times as $time) {
                 foreach ($domains as $domain) {
@@ -212,7 +209,7 @@ class AutomationController extends Controller
                         $urlDomain = $parsedUrl["path"];
                         $category = null;
                     }
-                    $search = ["user_id" => $user->id, "account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
+                    $search = ["account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
                     $domain = $this->domain->exists($search)->first();
                     if (!$domain) {
                         $domain = $this->domain->create([
@@ -230,7 +227,7 @@ class AutomationController extends Controller
                             "time" => $times
                         ]);
                     }
-                    $posts = $domain->posts()->userSearch($user->id)->get();
+                    $posts = $domain->posts()->get();
                     $exist = count($posts) > 0 ? true : false;
                     if ($exist) {
                         $link = $urlDomain;
@@ -244,7 +241,6 @@ class AutomationController extends Controller
                         "category" => $category,
                         "domain_id" => $domain_id,
                         "user_id" => $user->id,
-                        "account_parent_id" => $account_parent_id,
                         "account_id" => $account_id,
                         "type" => "link",
                         "social_type" => $type,
@@ -321,7 +317,7 @@ class AutomationController extends Controller
             if (!empty($id)) {
                 $type = $request->type;
                 if ($type == "pinterest") {
-                    $post = $this->post->with("board.pinterest")->userSearch($user->id)->notPublished()->findOrFail($id);
+                    $post = $this->post->with("board.pinterest")->notPublished()->findOrFail($id);
                     $pinterest = $post->board->pinterest;
                     if (!$pinterest->validToken()) {
                         $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
@@ -337,7 +333,7 @@ class AutomationController extends Controller
                     );
                 }
                 if ($type == 'facebook') {
-                    $post = $this->post->with(relations: "page.facebook")->userSearch($user->id)->notPublished()->where("id", $id)->firstOrFail();
+                    $post = $this->post->with(relations: "page.facebook")->notPublished()->where("id", $id)->firstOrFail();
                     $page = $post->page;
 
                     if (!$page->validToken()) {
@@ -390,10 +386,10 @@ class AutomationController extends Controller
         if (!empty($id)) {
             $user = Auth::user();
             if ($type == 'pinterest') {
-                $account = $this->board->userSearch($user->id)->where("id", $id)->first();
+                $account = $this->board->where("id", $id)->first();
             }
             if ($type == 'facebook') {
-                $account = $this->page->userSearch($user->id)->where("id", $id)->first();
+                $account = $this->page->where("id", $id)->first();
             }
             if ($account) {
                 $account->update([
@@ -426,10 +422,10 @@ class AutomationController extends Controller
         if (!empty($id)) {
             $user = Auth::user();
             if ($type == 'pinterest') {
-                $account = $this->board->with("posts.photo")->userSearch($user->id)->where("id", $id)->first();
+                $account = $this->board->with("posts.photo")->where("id", $id)->first();
             }
             if ($type == 'facebook') {
-                $account = $this->page->with("posts.photo")->userSearch($user->id)->where("id", $id)->first();
+                $account = $this->page->with("posts.photo")->where("id", $id)->first();
             }
             if ($account) {
                 $posts = $account->posts()->notPublished();

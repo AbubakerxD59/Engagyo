@@ -32,50 +32,43 @@ class PublishSchedulePostCron extends Command
     public function handle(Post $post, PinterestService $pinterestService, FacebookService $facebookService)
     {
         $now = date("Y-m-d H:i");
-        $posts = $post->notPublished()->past($now)->schedule()->get();
+        $posts = $post->with("user", "page.facebook", "board.pinterest")->notPublished()->past($now)->schedule()->get();
         foreach ($posts as $key => $post) {
-            $user = $post->user()->first();
-            if ($user) {
-                // for facebook posts
-                if ($post->social_type == "facebook") {
-                    $page = $post->page()->userSearch($user->id)->first();
-                    if ($page) {
-                        $facebook = $page->facebook()->userSearch($user->id)->first();
-                        if ($facebook) {
-                            $access_token = $page->access_token;
-                            if (!$page->validToken()) {
-                                $token = $facebookService->refreshAccessToken($page->access_token, $page->id);
-                                if ($token["success"]) {
-                                    $data = $token["data"];
-                                    $access_token = $data["access_token"];
-                                } else {
-                                    $post->update([
-                                        "status" => -1,
-                                        "response" => $token["message"]
-                                    ]);
-                                    continue;
-                                }
-                            }
-                            $postData = PostService::postTypeBody($post);
-                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
+            // for facebook posts
+            if ($post->social_type == "facebook") {
+                $page = $post->page;
+                $facebook = $page ? $page->facebook : null;
+                if ($facebook) {
+                    $access_token = $page->access_token;
+                    if (!$page->validToken()) {
+                        $token = $facebookService->refreshAccessToken($page->access_token, $page->id);
+                        if ($token["success"]) {
+                            $data = $token["data"];
+                            $access_token = $data["access_token"];
+                        } else {
+                            $post->update([
+                                "status" => -1,
+                                "response" => $token["message"]
+                            ]);
+                            continue;
                         }
                     }
+                    $postData = PostService::postTypeBody($post);
+                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
                 }
-                // for pinterest posts
-                if ($post->social_type == "pinterest") {
-                    $board = $post->board()->userSearch($user->id)->first();
-                    if ($board) {
-                        $pinterest = $board->pinterest()->userSearch($user->id)->first();
-                        if ($pinterest) {
-                            $access_token = $pinterest->access_token;
-                            if (!$pinterest->validToken()) {
-                                $token = $pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                                $access_token = $token["access_token"];
-                            }
-                            $postData = PostService::postTypeBody($post);
-                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
-                        }
+            }
+            // for pinterest posts
+            if ($post->social_type == "pinterest") {
+                $board = $post->board;
+                $pinterest = $board ? $board->pinterest : null;
+                if ($pinterest) {
+                    $access_token = $pinterest->access_token;
+                    if (!$pinterest->validToken()) {
+                        $token = $pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
+                        $access_token = $token["access_token"];
                     }
+                    $postData = PostService::postTypeBody($post);
+                    PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
                 }
             }
         }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\UserScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -36,12 +37,12 @@ class Page extends Model
 
     public function posts()
     {
-        return $this->hasMany(Post::class, 'account_id', 'page_id');
+        return $this->hasMany(Post::class, 'account_id', 'id');
     }
 
     public function domains()
     {
-        return $this->hasMany(Domain::class, 'account_id', 'page_id');
+        return $this->hasMany(Domain::class, 'account_id', 'id');
     }
     public function timeslots()
     {
@@ -50,17 +51,12 @@ class Page extends Model
 
     public function scopeConnected($query, $search)
     {
-        $query->where('user_id', $search['user_id'])->where('fb_id', $search['fb_id'])->where('page_id', $search['page_id']);
+        $query->where('fb_id', $search['fb_id'])->where('page_id', $search['page_id']);
     }
 
     public function scopeSearch($query, $search)
     {
         $query->where('fb_id', $search)->orWhere('page_id', $search)->orWhere('name', $search);
-    }
-
-    public function scopeUserSearch($query, $id)
-    {
-        $query->where('user_id', $id);
     }
 
     public function scopeActive($query)
@@ -105,7 +101,13 @@ class Page extends Model
         return $now > $expires_in ? true : false;
     }
 
-    public function getAccountIdAttribute(){
+    public function getAccountIdAttribute()
+    {
         return $this->page_id;
+    }
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
     }
 }

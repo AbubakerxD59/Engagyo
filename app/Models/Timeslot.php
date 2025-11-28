@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Models\Scopes\UserScope;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Timeslot extends Model
 {
@@ -29,5 +30,10 @@ class Timeslot extends Model
     public function board()
     {
         return $this->belongsTo(Board::class, "account_id", "id");
+    }
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
     }
 }

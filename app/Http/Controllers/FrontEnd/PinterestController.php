@@ -25,7 +25,7 @@ class PinterestController extends Controller
     }
     public function pinterestCallback(Request $request)
     {
-        $user = Auth::user();
+        $user = User::with("pinterest")->find(Auth::id());
         if ($request->has('code') && $request->has('state')) {
             $token = $this->pinterestService->getOauthToken($request->code);
             if (isset($token["access_token"])) {
@@ -53,7 +53,7 @@ class PinterestController extends Controller
                     $boards = $this->pinterestService->getBoards($token["access_token"]);
                     if (isset($boards['items'])) {
                         foreach ($boards["items"] as $key => $board) {
-                            $connected = $this->board->connected(['user_id' => $user->id, 'pin_id' => $me["id"], 'board_id' => $board["id"]])->first() ? true : false;
+                            $connected = $this->board->connected(['pin_id' => $me["id"], 'board_id' => $board["id"]])->first() ? true : false;
                             $boards["items"][$key]["connected"] = $connected;
                         }
                         session_set('pinterest_auth', '1');

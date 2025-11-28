@@ -38,12 +38,11 @@ class FeedService
                 $items = $feedUrls["data"];
                 if (count($items) > 0) {
                     foreach ($items as $key => $item) {
-                        $nextTime = $this->post->nextTime(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"]], $this->data["time"]);
-                        $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
+                        $nextTime = $this->post->nextTime(["account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"]], $this->data["time"]);
+                        $post = $this->post->exist(["account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
                         if (!$post) {
                             $post_row = $this->post->create([
                                 "user_id" => $this->data["user_id"],
-                                "account_parent_id" => $this->data["account_parent_id"],
                                 "account_id" => $this->data["account_id"],
                                 "social_type" => $this->data["social_type"],
                                 "type" => $this->data["type"],
@@ -151,7 +150,7 @@ class FeedService
                                     if ($i > 10) {
                                         break;
                                     }
-                                    $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item->link])->first();
+                                    $post = $this->post->exist(["account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item->link])->first();
                                     if (!$post) {
                                         $posts[] = [
                                             "title" => $item->title,
@@ -316,7 +315,7 @@ class FeedService
                             continue; // Skip the first iteration
                         }
                         // Check if the URL is already in the database
-                        $post = $this->post->exist(["user_id" => $this->data["user_id"], "account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $postUrl])->first();
+                        $post = $this->post->exist(["account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $postUrl])->first();
                         $data = $this->dom->get_info($postUrl);
                         if (!$post) {
                             $posts[] = [

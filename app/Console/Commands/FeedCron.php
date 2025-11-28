@@ -28,21 +28,21 @@ class FeedCron extends Command
      */
     public function handle(Domain $domain)
     {
-        $domains = $domain->get();
+        $domains = $domain->with("user", "board.pinterest", "page.facebook")->get();
         foreach ($domains as $key => $value) {
-            $user = $value->user()->where("status", 1)->first();
+            $type = $value->type;
+            $times = $value->time;
+            $user = $value->user;
             if ($user) {
-                $type = $value->type;
-                $times = $value->time;
                 if ($type == 'pinterest') {
-                    $sub_account = $value->board()->first();
-                    $account = $sub_account->pinterest()->first();
-                    $account_id = $sub_account->board_id;
+                    $sub_account = $value->board;
+                    $account = $sub_account ? $sub_account->pinterest : null;
+                    $account_id = $sub_account->id;
                     $mode = 1;
                 } elseif ($type == 'facebook') {
-                    $sub_account = $value->page()->first();
-                    $account = $sub_account->facebook()->first();
-                    $account_id = $sub_account->page_id;
+                    $sub_account = $value->page;
+                    $account = $sub_account ? $sub_account->facebook : null;
+                    $account_id = $sub_account->id;
                     $mode = 0;
                 }
                 if ($sub_account && $account) {

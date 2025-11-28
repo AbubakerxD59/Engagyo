@@ -14,7 +14,6 @@ class PostService
     {
         $post = Post::create([
             "user_id" => $data["user_id"],
-            // "account_parent_id" => $data["account_parent_id"],
             "account_id" => $data["account_id"],
             "social_type" => $data["social_type"],
             "type" => $data["type"],
@@ -54,7 +53,7 @@ class PostService
     {
         try {
             $user = Auth::user();
-            $post = Post::with("page.facebook", "board.pinterest")->userSearch($user->id)->where("status", "!=", 1)->where("id", $id)->firstOrFail();
+            $post = Post::with("page.facebook", "board.pinterest")->where("status", "!=", 1)->where("id", $id)->firstOrFail();
             if ($post->social_type == "facebook") { // Facebook
                 $page = $post->page;
                 $response = FacebookService::validateToken($page);

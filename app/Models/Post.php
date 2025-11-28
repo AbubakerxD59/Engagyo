@@ -82,7 +82,6 @@ class Post extends Model
 
     public function scopeExist($query, $search)
     {
-        $query->where("user_id", $search["user_id"]);
         if (isset($search["account_id"])) {
             $query->where("account_id", $search["account_id"]);
         }
@@ -101,11 +100,6 @@ class Post extends Model
         if (isset($search["url"])) {
             $query->where("url", "like", "%" . $search["url"] . "%");
         }
-    }
-
-    public function scopeUserSearch($query, $id)
-    {
-        $query->where("user_id", $id);
     }
 
     public function scopeAccountExist($query)
@@ -315,7 +309,7 @@ class Post extends Model
 
     public function scheduledTill($search = null, $social_type, $account, $domain, $status, $user_id)
     {
-        $post = $this->userSearch($user_id)->orderBy('publish_date', 'DESC');
+        $post = $this->orderBy('publish_date', 'DESC');
         if ($account) {
             if ($social_type == 'pinterest') {
                 $account = Board::findOrFail($account);

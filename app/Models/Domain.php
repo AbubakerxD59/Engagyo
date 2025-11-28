@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\UserScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -50,7 +51,7 @@ class Domain extends Model
 
     public function scopeExists($query, $search)
     {
-        $query->where('user_id', $search["user_id"])
+        $query
             ->where('account_id', $search["account_id"])
             ->where('type', $search["type"])
             ->where("name", $search["name"]);
@@ -62,11 +63,6 @@ class Domain extends Model
     public function scopeAccount($query, $id)
     {
         $query->where("account_id", $id);
-    }
-
-    public function scopeUserSearch($query, $id)
-    {
-        $query->where("user_id", $id);
     }
 
     public function scopeAccounts($query, $id)
@@ -82,5 +78,10 @@ class Domain extends Model
                 return "https://" . $name;
             }
         );
+    }
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
     }
 }

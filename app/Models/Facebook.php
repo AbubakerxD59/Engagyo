@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\UserScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -33,11 +34,6 @@ class Facebook extends Model
     public function scopeSearch($query, $search)
     {
         $query->where('fb_id', $search)->orWhere("username", "%{$search}%");
-    }
-
-    public function scopeUserSearch($query, $id)
-    {
-        $query->where('user_id', $id);
     }
 
     protected function profileImage(): Attribute
@@ -75,5 +71,10 @@ class Facebook extends Model
         $now = strtotime(date("Y-m-d H:i:s"));
         $expires_in = $this->expires_in;
         return $now > $expires_in ? true : false;
+    }
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
     }
 }

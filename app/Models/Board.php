@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Scopes\UserScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -35,12 +36,12 @@ class Board extends Model
 
     public function posts()
     {
-        return $this->hasMany(Post::class, 'account_id', 'board_id');
+        return $this->hasMany(Post::class, 'account_id', 'id');
     }
 
     public function domains()
     {
-        return $this->hasMany(Domain::class, 'account_id', 'board_id');
+        return $this->hasMany(Domain::class, 'account_id', 'id');
     }
 
     public function timeslots()
@@ -51,11 +52,6 @@ class Board extends Model
     public function scopeSearch($query, $search)
     {
         $query->where('pin_id', $search)->orWhere('board_id', $search)->orWhere('name', $search);
-    }
-
-    public function scopeUserSearch($query, $id)
-    {
-        $query->where('user_id', $id);
     }
 
     public function scopeActive($query)
@@ -70,7 +66,7 @@ class Board extends Model
 
     public function scopeConnected($query, $search)
     {
-        $query->where('user_id', $search['user_id'])->where('pin_id', $search['pin_id'])->where('board_id', $search['board_id']);
+        $query->where('pin_id', $search['pin_id'])->where('board_id', $search['board_id']);
     }
 
     protected function type(): Attribute
@@ -91,5 +87,10 @@ class Board extends Model
     public function getAccountIdAttribute()
     {
         return $this->board_id;
+    }
+
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope);
     }
 }

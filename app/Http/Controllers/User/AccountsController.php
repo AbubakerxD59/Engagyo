@@ -48,16 +48,15 @@ class AccountsController extends Controller
     public function pinterestDelete($id = null)
     {
         if (!empty($id)) {
-            $user = Auth::user();
-            $pinterest = $this->pinterest->search($id)->userSearch($user->id)->first();
+            $pinterest = $this->pinterest->search($id)->first();
             if ($pinterest) {
-                $board_ids = $pinterest->boards()->userSearch($user->id)->get()->pluck("board_id")->toArray();
+                $board_ids = $pinterest->boards()->get()->pluck("board_id")->toArray();
                 // posts
-                $this->post->accounts($board_ids)->userSearch($user->id)->delete();
+                $this->post->accounts($board_ids)->delete();
                 // domains
-                $this->domain->accounts($board_ids)->userSearch($user->id)->delete();
+                $this->domain->accounts($board_ids)->delete();
                 // boards
-                $pinterest->boards()->userSearch($user->id)->delete();
+                $pinterest->boards()->delete();
                 // pinterest account
                 $pinterest->delete();
                 return back()->with("success", "Pinterest Account deleted Successfully!");
@@ -90,7 +89,7 @@ class AccountsController extends Controller
             $board = $request->board_data;
             if ($board) {
                 $user = Auth::user();
-                $pinterest = $this->pinterest->search($request->pin_id)->userSearch($user->id)->firstOrfail();
+                $pinterest = $this->pinterest->search($request->pin_id)->firstOrfail();
                 $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "board_id" => $board["id"]], [
                     "name" => $board["name"],
                     "status" => 1
@@ -108,7 +107,7 @@ class AccountsController extends Controller
     {
         if (!empty($id)) {
             $user = Auth::user();
-            $board = $this->board->search($id)->userSearch($user->id)->first();
+            $board = $this->board->search($id)->first();
             if ($board) {
                 // posts
                 $board->posts()->delete();
@@ -131,15 +130,15 @@ class AccountsController extends Controller
     {
         if (!empty($id)) {
             $user = Auth::user();
-            $facebook = $this->facebook->search($id)->userSearch($user->id)->first();
+            $facebook = $this->facebook->search($id)->first();
             if ($facebook) {
-                $page_ids = $facebook->pages()->userSearch($user->id)->get()->pluck("page_id")->toArray();
+                $page_ids = $facebook->pages()->get()->pluck("page_id")->toArray();
                 // posts
-                $this->post->accounts($page_ids)->userSearch($user->id)->delete();
+                $this->post->accounts($page_ids)->delete();
                 // domains
-                $this->domain->accounts($page_ids)->userSearch($user->id)->delete();
+                $this->domain->accounts($page_ids)->delete();
                 // pages
-                $facebook->pages()->userSearch($user->id)->delete();
+                $facebook->pages()->delete();
                 // facebook account
                 $facebook->delete();
                 return back()->with("success", "Facebook Account deleted Successfully!");
@@ -171,7 +170,7 @@ class AccountsController extends Controller
         $page = $request->page_data;
         if ($page) {
             $user = Auth::user();
-            $facebook = $this->facebook->search($request->fb_id)->userSearch($user->id)->first();
+            $facebook = $this->facebook->search($request->fb_id)->first();
             $facebook->pages()->updateOrCreate(["user_id" => $user->id, "page_id" => $page["id"]], [
                 "name" => $page["name"],
                 "status" => 1,
@@ -188,7 +187,7 @@ class AccountsController extends Controller
     {
         if (!empty($id)) {
             $user = Auth::user();
-            $page = $this->page->search($id)->userSearch($user->id)->first();
+            $page = $this->page->search($id)->first();
             if ($page) {
                 // posts
                 $page->posts()->delete();

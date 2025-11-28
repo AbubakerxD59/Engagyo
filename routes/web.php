@@ -1,17 +1,11 @@
 <?php
 
-use App\Models\Post;
-use App\Services\PinterestService;
-use App\Services\LinkPreviewService;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\FeatureController;
 use App\Http\Controllers\GeneralController;
-use App\Http\Controllers\PackageController;
 use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RolesController;
 use App\Http\Controllers\Admin\DashboardController;
-use App\Http\Controllers\Admin\PromoCodeController;
 use App\Http\Controllers\Admin\PermissionController;
 
 /*
@@ -24,6 +18,7 @@ use App\Http\Controllers\Admin\PermissionController;
 | be assigned to the "web" middleware group. Make something great!
 |
 */
+
 Route::get("/admin", [AuthController::class, 'redirect']);
 // Admin Routes
 Route::prefix("admin/")->name("admin.")->group(function () {
@@ -53,25 +48,6 @@ Route::prefix("admin/")->name("admin.")->group(function () {
         // Permissions
         Route::resource('permissions', PermissionController::class)->except('show');
         Route::controller(PermissionController::class)->prefix('permissions/')->name('permissions.')->group(function () {
-            Route::get('dataTable', 'dataTable')->name('dataTable');
-        });
-
-        // Packages
-        Route::resource('packages', PackageController::class)->except('show');
-        Route::controller(PackageController::class)->prefix('packages/')->name('packages.')->group(function () {
-            Route::get('dataTable', 'dataTable')->name('dataTable');
-            Route::post('add-facility', 'addFacility')->name('add_facility');
-        });
-
-        // Features
-        Route::resource('features', FeatureController::class)->except('show');
-        Route::controller(FeatureController::class)->prefix('features/')->name('features.')->group(function () {
-            Route::get('dataTable', 'dataTable')->name('dataTable');
-        });
-
-        // Promo Codes
-        Route::resource('promo-code', PromoCodeController::class)->except('show');
-        Route::controller(PromoCodeController::class)->prefix('promo-code/')->name('promo-code.')->group(function () {
             Route::get('dataTable', 'dataTable')->name('dataTable');
         });
     });

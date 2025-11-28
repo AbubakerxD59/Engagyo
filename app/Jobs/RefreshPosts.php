@@ -35,7 +35,7 @@ class RefreshPosts implements ShouldQueue
         $account = $this->data["account_id"];
         $domain = $this->data["domain_id"];
         $currentPublish = $this->data["publish_date"];
-        $nextPosts = $post->userSearch($this->user_id)->accounts($account)->domainSearch($domain);
+        $nextPosts = $post->where("user_id", $this->user_id)->accounts($account)->domainSearch($domain);
         if ($type == 'pinterest') {
             $nextPosts = $nextPosts->pinterest();
         } elseif ($type == 'facebook') {

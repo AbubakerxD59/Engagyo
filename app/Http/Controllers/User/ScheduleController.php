@@ -106,7 +106,7 @@ class  ScheduleController extends Controller
     private function publishPost($request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
+            $user = User::with("boards.pinterest", "pages.facebook")->findOrFail(Auth::id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -123,56 +123,52 @@ class  ScheduleController extends Controller
             }
             foreach ($accounts as $account) {
                 if ($account->type == "facebook") {
-                    $facebook = Facebook::where("fb_id", $account->fb_id)->first();
-                    if ($facebook) {
-                        // store in db
-                        if ($file) {
-                            $type = !empty($image) ?  "photo" : "video";
-                        } else {
-                            $type = "content_only";
-                        }
-                        $data = [
-                            "user_id" => $user->id,
-                            "account_parent_id" => $account->fb_id,
-                            "account_id" => $account->id,
-                            "social_type" => "facebook",
-                            "type" => $type,
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "image" => $image,
-                            "video" => $video,
-                            "status" => 0,
-                            "publish_date" => date("Y-m-d H:i"),
-                        ];
-                        $post = PostService::create($data);
-
-                        $access_token = $account->access_token;
-                        if (!$account->validToken()) {
-                            $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                            if ($token["success"]) {
-                                $data = $token["data"];
-                                $access_token = $data["access_token"];
-                            } else {
-                                $response = array(
-                                    "success" => false,
-                                    "message" => $token["message"]
-                                );
-                                return $response;
-                            }
-                        }
-                        $postData = PostService::postTypeBody($post);
-                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
+                    Facebook::where("id", $account->fb_id)->firstOrFail();
+                    // store in db
+                    if ($file) {
+                        $type = !empty($image) ?  "photo" : "video";
+                    } else {
+                        $type = "content_only";
                     }
+                    $data = [
+                        "user_id" => $user->id,
+                        "account_id" => $account->id,
+                        "social_type" => "facebook",
+                        "type" => $type,
+                        "source" => $this->source,
+                        "title" => $content,
+                        "comment" => $comment,
+                        "image" => $image,
+                        "video" => $video,
+                        "status" => 0,
+                        "publish_date" => date("Y-m-d H:i"),
+                    ];
+                    $post = PostService::create($data);
+
+                    $access_token = $account->access_token;
+                    if (!$account->validToken()) {
+                        $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
+                        if ($token["success"]) {
+                            $data = $token["data"];
+                            $access_token = $data["access_token"];
+                        } else {
+                            $response = array(
+                                "success" => false,
+                                "message" => $token["message"]
+                            );
+                            return $response;
+                        }
+                    }
+                    $postData = PostService::postTypeBody($post);
+                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                 }
                 if ($account->type == "pinterest") {
-                    $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
-                    if ($pinterest && $file) {
+                    $pinterest = Pinterest::where(" id", $account->pin_id)->firstOrFail();
+                    if ($file) {
                         // store in db
                         $type = !empty($image) ? "photo" : "video";
                         $data = [
                             "user_id" => $user->id,
-                            "account_parent_id" => $account->pin_id,
                             "account_id" => $account->id,
                             "social_type" => "pinterest",
                             "type" => $type,
@@ -232,42 +228,37 @@ class  ScheduleController extends Controller
             foreach ($accounts as $account) {
                 if (count($account->timeslots) > 0) {
                     if ($account->type == "facebook") {
-                        $facebook = Facebook::where("fb_id", $account->fb_id)->first();
-                        if ($facebook) {
-                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots);
-
-                            // store in db
-                            if ($file) {
-                                $type = !empty($image) ?  "photo" : "video";
-                            } else {
-                                $type = "content_only";
-                            }
-                            $data = [
-                                "user_id" => $user->id,
-                                "account_parent_id" => $account->fb_id,
-                                "account_id" => $account->id,
-                                "social_type" => "facebook",
-                                "type" => $type,
-                                "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "image" => $image,
-                                "video" => $video,
-                                "status" => 0,
-                                "publish_date" => $nextTime,
-                            ];
-                            $post = PostService::create($data);
+                        Facebook::where("id", $account->fb_id)->firstOrFail();
+                        $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots);
+                        // store in db
+                        if ($file) {
+                            $type = !empty($image) ?  "photo" : "video";
+                        } else {
+                            $type = "content_only";
                         }
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "facebook",
+                            "type" => $type,
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "video" => $video,
+                            "status" => 0,
+                            "publish_date" => $nextTime,
+                        ];
+                        PostService::create($data);
                     }
                     if ($account->type == "pinterest") {
-                        $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
-                        if ($pinterest && $file) {
-                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots);
+                        Pinterest::where("id", $account->pin_id)->firstOrFail();
+                        if ($file) {
+                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots);
                             // store in db
                             $type = !empty($image) ? "photo" : "video";
                             $data = [
                                 "user_id" => $user->id,
-                                "account_parent_id" => $account->pin_id,
                                 "account_id" => $account->id,
                                 "social_type" => "pinterest",
                                 "type" => $type,
@@ -279,7 +270,7 @@ class  ScheduleController extends Controller
                                 "status" => 0,
                                 "publish_date" => $nextTime,
                             ];
-                            $post = PostService::create($data);
+                            PostService::create($data);
                         }
                     }
                     $response = array(
@@ -326,40 +317,36 @@ class  ScheduleController extends Controller
             foreach ($accounts as $account) {
                 $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
                 if ($account->type == "facebook") {
-                    $facebook = Facebook::where("fb_id", $account->fb_id)->first();
-                    if ($facebook) {
-                        // store in db
-                        if ($file) {
-                            $type = !empty($image) ?  "photo" : "video";
-                        } else {
-                            $type = "content_only";
-                        }
-                        $data = [
-                            "user_id" => $user->id,
-                            "account_parent_id" => $account->fb_id,
-                            "account_id" => $account->id,
-                            "social_type" => "facebook",
-                            "type" => $type,
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "image" => $image,
-                            "video" => $video,
-                            "status" => 0,
-                            "publish_date" => $scheduleDateTime,
-                            "scheduled" => 1
-                        ];
-                        $post = PostService::create($data);
+                    Facebook::where("id", $account->fb_id)->firstOrFail();
+                    // store in db
+                    if ($file) {
+                        $type = !empty($image) ?  "photo" : "video";
+                    } else {
+                        $type = "content_only";
                     }
+                    $data = [
+                        "user_id" => $user->id,
+                        "account_id" => $account->id,
+                        "social_type" => "facebook",
+                        "type" => $type,
+                        "source" => $this->source,
+                        "title" => $content,
+                        "comment" => $comment,
+                        "image" => $image,
+                        "video" => $video,
+                        "status" => 0,
+                        "publish_date" => $scheduleDateTime,
+                        "scheduled" => 1
+                    ];
+                    PostService::create($data);
                 }
                 if ($account->type == "pinterest") {
-                    $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
-                    if ($pinterest && $file) {
+                    Pinterest::where("id", $account->pin_id)->firstOrFail();
+                    if ($file) {
                         // store in db
                         $type = !empty($image) ? "photo" : "video";
                         $data = [
                             "user_id" => $user->id,
-                            "account_parent_id" => $account->pin_id,
                             "account_id" => $account->id,
                             "social_type" => "pinterest",
                             "type" => $type,
@@ -372,7 +359,7 @@ class  ScheduleController extends Controller
                             "publish_date" => $scheduleDateTime,
                             "scheduled" => 1
                         ];
-                        $post = PostService::create($data);
+                        PostService::create($data);
                     }
                 }
                 $response = array(
@@ -402,71 +389,65 @@ class  ScheduleController extends Controller
             if (!empty($url) && !empty($image)) {
                 foreach ($accounts as $account) {
                     if ($account->type == "facebook") {
-                        $facebook = Facebook::where("fb_id", $account->fb_id)->first();
-                        if ($facebook) {
-                            // store in db
-                            $data = [
-                                "user_id" => $user->id,
-                                "account_parent_id" => $account->fb_id,
-                                "account_id" => $account->id,
-                                "social_type" => "facebook",
-                                "type" => "link",
-                                "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "url" => $url,
-                                "image" => $image,
-                                "status" => 0,
-                                "publish_date" => date("Y-m-d H:i"),
-                            ];
-                            $post = PostService::create($data);
+                        Facebook::where("id", $account->fb_id)->firstOrFail();
+                        // store in db
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "facebook",
+                            "type" => "link",
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "url" => $url,
+                            "image" => $image,
+                            "status" => 0,
+                            "publish_date" => date("Y-m-d H:i"),
+                        ];
+                        $post = PostService::create($data);
 
-                            $access_token = $account->access_token;
-                            if (!$account->validToken()) {
-                                $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                                if ($token["success"]) {
-                                    $data = $token["data"];
-                                    $access_token = $data["access_token"];
-                                } else {
-                                    $response = array(
-                                        "success" => false,
-                                        "message" => $token["message"]
-                                    );
-                                    return $response;
-                                }
+                        $access_token = $account->access_token;
+                        if (!$account->validToken()) {
+                            $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
+                            if ($token["success"]) {
+                                $data = $token["data"];
+                                $access_token = $data["access_token"];
+                            } else {
+                                $response = array(
+                                    "success" => false,
+                                    "message" => $token["message"]
+                                );
+                                return $response;
                             }
-                            $postData = PostService::postTypeBody($post);
-                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                         }
+                        $postData = PostService::postTypeBody($post);
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                     }
                     if ($account->type == "pinterest") {
-                        $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
-                        if ($pinterest) {
-                            // store in db
-                            $data = [
-                                "user_id" => $user->id,
-                                "account_parent_id" => $account->pin_id,
-                                "account_id" => $account->id,
-                                "social_type" => "pinterest",
-                                "type" => "link",
-                                "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "url" => $url,
-                                "image" => $image,
-                                "status" => 0,
-                                "publish_date" => date("Y-m-d H:i"),
-                            ];
-                            $post = PostService::create($data);
+                        $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
+                        // store in db
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "pinterest",
+                            "type" => "link",
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "url" => $url,
+                            "image" => $image,
+                            "status" => 0,
+                            "publish_date" => date("Y-m-d H:i"),
+                        ];
+                        $post = PostService::create($data);
 
-                            $access_token = $pinterest->access_token;
-                            if (!$pinterest->validToken()) {
-                                $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                                $access_token = $token["access_token"];
-                            }
-                            $postData = PostService::postTypeBody($post);
-                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
+                        $access_token = $pinterest->access_token;
+                        if (!$pinterest->validToken()) {
+                            $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
+                            $access_token = $token["access_token"];
                         }
+                        $postData = PostService::postTypeBody($post);
+                        PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                     }
                 }
                 $response = array(
@@ -502,52 +483,48 @@ class  ScheduleController extends Controller
             if (!empty($url) && !empty($image)) {
                 foreach ($accounts as $account) {
                     if ($account->type == "facebook") {
-                        $facebook = Facebook::where("fb_id", $account->fb_id)->first();
-                        if ($facebook) {
-                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots);
-                            // store in db
-                            $data = [
-                                "user_id" => $user->id,
-                                "account_parent_id" => $account->fb_id,
-                                "account_id" => $account->id,
-                                "social_type" => "facebook",
-                                "type" => "link",
-                                "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "url" => $url,
-                                "image" => $image,
-                                "status" => 0,
-                                "publish_date" => $nextTime
-                            ];
-                            $post = PostService::create($data);
+                        Facebook::where("id", $account->fb_id)->firstOrFail();
+                        $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots);
+                        // store in db
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "facebook",
+                            "type" => "link",
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "url" => $url,
+                            "image" => $image,
+                            "status" => 0,
+                            "publish_date" => $nextTime
+                        ];
+                        $post = PostService::create($data);
 
-                            $access_token = $account->access_token;
-                            if (!$account->validToken()) {
-                                $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                                if ($token["success"]) {
-                                    $data = $token["data"];
-                                    $access_token = $data["access_token"];
-                                } else {
-                                    $response = array(
-                                        "success" => false,
-                                        "message" => $token["message"]
-                                    );
-                                    return $response;
-                                }
+                        $access_token = $account->access_token;
+                        if (!$account->validToken()) {
+                            $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
+                            if ($token["success"]) {
+                                $data = $token["data"];
+                                $access_token = $data["access_token"];
+                            } else {
+                                $response = array(
+                                    "success" => false,
+                                    "message" => $token["message"]
+                                );
+                                return $response;
                             }
-                            $postData = PostService::postTypeBody($post);
-                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                         }
+                        $postData = PostService::postTypeBody($post);
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                     }
                     if ($account->type == "pinterest") {
-                        $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
+                        $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
                         if ($pinterest) {
-                            $nextTime = (new Post)->nextScheduleTime(["user_id" => $user->id, "account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots);
+                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots);
                             // store in db
                             $data = [
                                 "user_id" => $user->id,
-                                "account_parent_id" => $account->pin_id,
                                 "account_id" => $account->id,
                                 "social_type" => "pinterest",
                                 "type" => "link",
@@ -607,50 +584,46 @@ class  ScheduleController extends Controller
                 foreach ($accounts as $account) {
                     $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
                     if ($account->type == "facebook") {
-                        $facebook = Facebook::where("fb_id", $account->fb_id)->first();
-                        if ($facebook) {
-                            // store in db
-                            $data = [
-                                "user_id" => $user->id,
-                                "account_parent_id" => $account->fb_id,
-                                "account_id" => $account->id,
-                                "social_type" => "facebook",
-                                "type" => "link",
-                                "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "url" => $url,
-                                "image" => $image,
-                                "status" => 0,
-                                "publish_date" => $scheduleDateTime,
-                            ];
-                            $post = PostService::create($data);
+                        Facebook::where("id", $account->fb_id)->firstOrFail();
+                        // store in db
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "facebook",
+                            "type" => "link",
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "url" => $url,
+                            "image" => $image,
+                            "status" => 0,
+                            "publish_date" => $scheduleDateTime,
+                        ];
+                        $post = PostService::create($data);
 
-                            $access_token = $account->access_token;
-                            if (!$account->validToken()) {
-                                $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                                if ($token["success"]) {
-                                    $data = $token["data"];
-                                    $access_token = $data["access_token"];
-                                } else {
-                                    $response = array(
-                                        "success" => false,
-                                        "message" => $token["message"]
-                                    );
-                                    return $response;
-                                }
+                        $access_token = $account->access_token;
+                        if (!$account->validToken()) {
+                            $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
+                            if ($token["success"]) {
+                                $data = $token["data"];
+                                $access_token = $data["access_token"];
+                            } else {
+                                $response = array(
+                                    "success" => false,
+                                    "message" => $token["message"]
+                                );
+                                return $response;
                             }
-                            $postData = PostService::postTypeBody($post);
-                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                         }
+                        $postData = PostService::postTypeBody($post);
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                     }
                     if ($account->type == "pinterest") {
-                        $pinterest = Pinterest::where("pin_id", $account->pin_id)->first();
+                        $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
                         if ($pinterest) {
                             // store in db
                             $data = [
                                 "user_id" => $user->id,
-                                "account_parent_id" => $account->pin_id,
                                 "account_id" => $account->id,
                                 "social_type" => "pinterest",
                                 "type" => "link",
@@ -713,15 +686,15 @@ class  ScheduleController extends Controller
             $timeslots = $request->timeslots;
             $account = null;
             if ($type == "facebook") {
-                $account = Page::with("timeslots")->where("id", $id)->first();
+                $account = Page::with("timeslots")->where("id", $id)->firstOrFail();
                 $account_id = $account->id;
             } else if ($type == "pinterest") {
-                $account = Board::with("timeslots")->where("id", $id)->first();
+                $account = Board::with("timeslots")->where("id", $id)->firstOrFail();
                 $account_id = $account->id;
             }
             if ($account) {
                 // remove previous
-                Timeslot::where("user_id", $user->id)->where("account_id", $account_id)->where("account_type", $type)->where("type", "schedule")->delete();
+                Timeslot::where("account_id", $account_id)->where("account_type", $type)->where("type", "schedule")->delete();
                 // create new timeslots
                 if (is_array($timeslots)) {
                     foreach ($timeslots as $timeslot) {
@@ -756,7 +729,7 @@ class  ScheduleController extends Controller
     public function postsListing(Request $request)
     {
         $data = $request->all();
-        $posts = Post::with("facebook", "pinterest", "page.facebook", "board.pinterest")->isScheduled()->userSearch(auth()->id());
+        $posts = Post::with("facebook", "pinterest", "page.facebook", "board.pinterest")->isScheduled();
         // filters
         if (!empty($request->account_id)) {
             $posts = $posts->whereIn("account_id", $request->account_id);
