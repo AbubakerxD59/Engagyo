@@ -210,10 +210,12 @@ class FacebookService
         return $response;
     }
 
-    public function createLink($id, $access_token, $post)
+    public function createLink($id, $access_token, $postData)
     {
         try {
-            $publish = $this->facebook->post('/me/feed', $post, $access_token);
+            $post = Post::with("page.facebook")->findOrFail($id);
+            $page_id = $post->page ? $post->page->page_id : null;
+            $publish = $this->facebook->post('/' . $page_id . '/feed', $postData, $access_token);
             $response = [
                 "success" => true,
                 "data" => $publish
@@ -294,10 +296,12 @@ class FacebookService
         return $response;
     }
 
-    public function photo($id, $access_token, $post)
+    public function photo($id, $access_token, $postData)
     {
         try {
-            $publish = $this->facebook->post('/me/photos', $post, $access_token);
+            $post = Post::with("page.facebook")->findOrFail($id);
+            $page_id = $post->page ? $post->page->page_id : null;
+            $publish = $this->facebook->post('/' . $page_id . '/feed', $postData, $access_token);
             $response = [
                 "success" => true,
                 "data" => $publish
