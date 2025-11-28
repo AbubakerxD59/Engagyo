@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\User;
 use App\Services\HtmlParseService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -10,7 +11,7 @@ class GeneralController extends Controller
 {
     public function previewLink(Request $request)
     {
-        $user = Auth::user();
+        $user = User::with("pages.facebook", "boards.pinterest")->findOrFail(Auth::id());
         $accounts = $user->getAccounts();
         $check = $accounts->where("schedule_status", "active")->where("type", "!=", "pinterest")->first();
         $pinterest_active = $check ? false : true;

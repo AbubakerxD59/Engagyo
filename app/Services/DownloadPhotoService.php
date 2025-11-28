@@ -15,7 +15,7 @@ class DownloadPhotoService
             $pinterest_active = $data["mode"] == "pinterst" ? true : false;
             $dom = new HtmlParseService($pinterest_active);
             $get_info = $dom->get_info($data['url'], 1);
-            if ($get_info['success']) {
+            if ($get_info['status']) {
                 $response = [
                     "success" => true,
                     "data" => $get_info['image']
