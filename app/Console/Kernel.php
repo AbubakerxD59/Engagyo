@@ -19,12 +19,12 @@ class Kernel extends ConsoleKernel
         // Command to fetch latest posts for each domain
         // $schedule->command('rss:feed')->everyTwoHours();
         // Command to publish Pinterest posts
-        $schedule->command('pinterest:publish')->everyFiveMinutes();
+        // $schedule->command('pinterest:publish')->everyFiveMinutes();
         // Command to publish Facebook posts
-        $schedule->command('facebook:publish')->everyFiveMinutes();
+        // $schedule->command('facebook:publish')->everyFiveMinutes();
         // Command to publish Scheduled posts
-        $schedule->command('schedule:publish')->everyMinute();
-        // Command to publish download photos
+        // $schedule->command('schedule:publish')->everyMinute();
+        // Command to download photos
         $schedule->command('download:photo')->everyFiveMinutes();
     }
 

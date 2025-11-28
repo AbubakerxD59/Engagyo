@@ -77,6 +77,7 @@ Route::get("test", function (Post $post, FacebookService $facebookService) {
     $now = date("Y-m-d H:i");
 
     $posts = $post->with("user", "page.facebook")->notPublished()->past($now)->facebook()->notSchedule()->get();
+    dd($posts);
     foreach ($posts as $key => $post) {
         try {
             $page = $post->page;
