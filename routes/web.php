@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\Post;
+use App\Services\PostService;
+use App\Jobs\PublishFacebookPost;
+use App\Services\FacebookService;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\Admin\AuthController;
@@ -66,4 +70,42 @@ require __DIR__ . '/user.php';
 // php info
 Route::get("phpinfo", function () {
     phpinfo();
+});
+
+
+Route::get("test", function (Post $post, FacebookService $facebookService) {
+    $now = date("Y-m-d H:i");
+
+    $posts = $post->with("user", "page.facebook")->notPublished()->past($now)->facebook()->notSchedule()->get();
+    foreach ($posts as $key => $post) {
+        try {
+            $page = $post->page;
+            if ($page->facebook) {
+                $access_token = $page->access_token;
+                if (!$page->validToken()) {
+                    $token = $facebookService->refreshAccessToken($page->access_token, $page->id);
+                    if ($token["success"]) {
+                        $data = $token["data"];
+                        $access_token = $data["access_token"];
+                    } else {
+                        $post->update([
+                            "status" => -1,
+                            "response" => $token["message"],
+                            "published_at" => date("Y-m-d H:i:s")
+                        ]);
+                        continue;
+                    }
+                }
+                $postData = PostService::postTypeBody($post);
+                dd($page, $access_token, $postData, $page->validToken());
+                PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
+            }
+        } catch (Exception $e) {
+            $post->update([
+                "status" => -1,
+                "response" => $e->getMessage(),
+                "published_at" => date("Y-m-d H:i:s")
+            ]);
+        }
+    }
 });
