@@ -16,7 +16,13 @@
                  </strong>
              </span>
          </div>
-         <span>{{ $post->title }}</span>
+         <span>
+             @if ($post->type == 'link')
+                 <a href="{{ $post->url }}" target="_blank">{{ $post->title }}</a>
+             @else
+                 {{ $post->title }}
+             @endif
+         </span>
          <!-- COMMENTS SECTION -->
          <div class="comment-input-container">
              <p class="mb-3 text-muted">No comments yet</p>
