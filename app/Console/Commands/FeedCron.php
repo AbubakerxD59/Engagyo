@@ -47,7 +47,7 @@ class FeedCron extends Command
                 }
                 if ($sub_account && $account) {
                     $sub_account->update([
-                        "last_fetch" => date("Y-m-d H:i A")
+                        "last_fetch" => date("Y-m-d H:i")
                     ]);
                     foreach ($times as $time) {
                         $data = [

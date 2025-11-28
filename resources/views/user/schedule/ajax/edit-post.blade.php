@@ -9,11 +9,13 @@
         <input type="text" name="edit_post_link" id="edit_post_link" class="form-control"
             value="{{ $post->url }}">
     </div>
-    <div class="col-md-6 mt-2">
-        <label for="edit_post_comment">Comment</label>
-        <input type="text" name="edit_post_comment" id="edit_post_comment" class="form-control"
-            value="{{ $post->comment }}">
-    </div>
+    @if ($post->social_type == 'facebook')
+        <div class="col-md-6 mt-2">
+            <label for="edit_post_comment">Comment</label>
+            <input type="text" name="edit_post_comment" id="edit_post_comment" class="form-control"
+                value="{{ $post->comment }}">
+        </div>
+    @endif
     <div class="col-md-6 mt-2">
         <label for="edit_post_publish_date">Publish Date</label>
         <input type="date" name="edit_post_publish_date" id="edit_post_publish_date" class="form-control"

@@ -175,12 +175,6 @@ class Post extends Model
         $query->whereIn("source", ["schedule"]);
     }
 
-    public function getDomain()
-    {
-        $domain = $this->domain()->first();
-        return $domain ? $domain->name : '';
-    }
-
     public function getAccount($social_type, $id)
     {
         if ($social_type == 'pinterest') {
@@ -326,7 +320,7 @@ class Post extends Model
             $post = $post->where("status", $status);
         }
         $post = $post->first();
-        return $post ? date("Y-m-d h:i A", strtotime($post->publish_date)) : 'NA';
+        return $post ? date("jS M, Y h:i A", strtotime($post->publish_date)) : 'NA';
     }
 
     protected function title(): Attribute
@@ -431,10 +425,10 @@ class Post extends Model
         $social_type = $this->social_type;
         $profile_image = '';
         if ($social_type == "facebook") {
-            $profile_image = $this->facebook ? $this->facebook?->profile_image : $this->page?->facebook?->profile_image;
+            $profile_image = $this->page?->facebook ? $this->page->facebook->profile_image : null;
         }
         if ($social_type == "pinterest") {
-            $profile_image = $this->pinterest ? $this->pinterest?->profile_image : $this->board?->pinterest?->profile_image;
+            $profile_image = $this->board?->pinterest ? $this->board->pinterest->profile_image : null;
         }
         return $profile_image;
     }
@@ -477,6 +471,12 @@ class Post extends Model
     public function getIsPinterestAttribute()
     {
         return $this->social_type == "pinterest" ? true : false;
+    }
+
+    public function getDomainNameAttribute()
+    {
+        $domain = $this->domain;
+        return $domain ? $domain->name : "";
     }
 
     public function getFixAttribute()

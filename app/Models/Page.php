@@ -106,6 +106,11 @@ class Page extends Model
         return $this->page_id;
     }
 
+    public function getlastFetchedAttribute(){
+        $date = $this->last_fetch;
+        return $date ? date("jS M, Y h:i A", strtotime($date)) : '';
+    }
+
     protected static function booted()
     {
         static::addGlobalScope(new UserScope);

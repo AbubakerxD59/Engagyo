@@ -8,7 +8,7 @@
                     <span aria-hidden="true">&times;</span>
                 </button>
             </div>
-            <form id="editPostForm">
+            <form action="" method="POST" id="editPostForm">
                 <div class="modal-body">
                     <div class="card-body">
                         <input type="hidden" name="post_id" id="post_id">

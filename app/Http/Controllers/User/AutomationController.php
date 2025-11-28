@@ -63,16 +63,16 @@ class AutomationController extends Controller
         $search = null;
         $domain = isset($data["domain"]) ? $data["domain"] : [];
         $lastFetch = '';
-        $posts = $this->post->isRss()->accountExist();
+        $posts = $this->post->with("page.facebook", "board.pinterest", "domain")->isRss()->accountExist();
         if ($account) {
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($account);
-                $lastFetch = $account->last_fetch;
+                $lastFetch = $account->last_fetched;
                 $account_id = $account->id;
             }
             if ($type == 'facebook') {
                 $account = $this->page->findOrFail($account);
-                $lastFetch = $account->last_fetch;
+                $lastFetch = $account->last_fetched;
                 $account_id = $account->id;
             }
             $posts = $posts->where("account_id", $account_id);
@@ -89,15 +89,7 @@ class AutomationController extends Controller
         /*Set limit offset */
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
         $posts = $posts->get();
-        foreach ($posts as $k => $val) {
-            $posts[$k]['post'] = view('user.automation.post')->with('post', $val)->render();
-            $posts[$k]['account_name'] = "<a href='" . $val->getAccountUrl($val->social_type, $val->account_id) . "' target='_blank'><img src='" . social_logo($val->type) . "' width='20px' height='20px'></img> " . $val->getAccount($val->social_type, $val->account_id)->name . "</a>";
-            $posts[$k]['domain_name'] = $val->getDomain();
-            $posts[$k]['publish'] = date("Y-m-d h:i A", strtotime($val->publish_date));
-            $posts[$k]['status_view'] = get_post_status($val->status);
-            $posts[$k]['action'] = view(view: 'user.automation.action')->with('post', $val)->render();
-            $posts[$k] = $val;
-        }
+        $posts->append(["post_details", "account_detail", "publish_datetime", "domain_name", "status_view", "action"]);
 
         return response()->json([
             'draw' => intval($data['draw']),

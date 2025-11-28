@@ -115,12 +115,12 @@
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-3 form-group align-content-end">
-                                    <a class="btn btn-outline-secondary btn-sm float-right">
+                                <div class="col-md-6 form-group align-content-end">
+                                    <a class="btn btn-info btn-sm float-right">
                                         Last Fetch:
                                         <span class="last_fetch">NA</span>
                                     </a>
-                                    <a class="btn btn-outline-secondary btn-sm mx-1 float-right">
+                                    <a class="btn btn-info btn-sm mx-1 float-right">
                                         Scheduled Till:
                                         <span class="scheduled_till">NA</span>
                                     </a>
@@ -147,6 +147,8 @@
     @include('user.automation.edit_post_modal')
 @endsection
 @push('styles')
+    @include('user.schedule.assets.facebook_post')
+    @include('user.schedule.assets.pinterest_post')
 @endpush
 @push('scripts')
     <script>
@@ -183,11 +185,11 @@
                 $('.last_fetch').html(!empty(response.last_fetch) ? response.last_fetch : 'NA');
             },
             columns: [{
-                    data: 'post',
+                    data: 'post_details',
                     sortable: false
                 },
                 {
-                    data: 'account_name',
+                    data: 'account_detail',
                     sortable: false
                 },
                 {
@@ -195,7 +197,7 @@
                     sortable: false
                 },
                 {
-                    data: 'publish',
+                    data: 'publish_datetime',
                 },
                 {
                     data: 'status_view',
@@ -338,6 +340,10 @@
                 $("#account").trigger("change");
                 postsDatatable.ajax.reload();
             })
+            // draw dataTable
+            var drawDataTable = function() {
+                postsDatatable.draw('full-hold');
+            }
             // Delete Post
             $(document).on("click", ".delete_btn", function() {
                 var id = $(this).data('id');
@@ -360,47 +366,74 @@
                 });
             })
             // Edit Post
-            $(document).on('click', '.post_edit', function() {
-                var form = $("#editPostForm");
-                var post = $(this).data("body");
-                var modal = $("#editPostModal");
-                form.trigger("reset");
-                modal.find("#post_id").val(post.id);
-                modal.find("#post_title").val(post.title);
-                modal.find("#post_url").val(post.url);
-                modal.find("#post_date").val(post.date);
-                modal.find("#post_time").val(post.modal_time);
-                modal.find("#post_image_preview").attr("src", post.image);
+            $(document).on('click', '.edit_btn', function() {
+                var id = $(this).data('id');
+                var modal = $('#editPostModal');
+                modal.find(".modal-body").empty();
                 modal.modal("toggle");
-            })
-            // Edit Post Modal
-            $(document).on('submit', '#editPostForm', function(event) {
-                event.preventDefault();
-                var modal = $("#editPostModal");
-                var form = $("#editPostForm");
-                var token = $('meta[name="csrf-token"]').attr('content');
-                var post_id = form.find('#post_id').val();
-                var formData = new FormData(this);
-                formData.append('_token', token);
                 $.ajax({
-                    url: "{{ route('panel.automation.posts.update') }}/" + post_id,
-                    type: 'POST',
-                    contentType: 'multipart/form-data',
-                    cache: false,
-                    contentType: false,
-                    processData: false,
-                    data: formData,
+                    url: "{{ route('panel.schedule.post.edit') }}",
+                    type: "GET",
+                    data: {
+                        id: id,
+                    },
                     success: function(response) {
                         if (response.success) {
-                            postsDatatable.ajax.reload();
-                            modal.modal("toggle");
-                            toastr.success(response.message);
+                            modal.find("#editPostForm").attr("action", response.action);
+                            modal.find(".modal-body").html(response.data);
                         } else {
                             toastr.error(response.message);
                         }
-                    },
-                });
+                    }
+                })
             })
+            // image preview in edit form
+            $(document).on('change', '#edit_post_publish_image', function() {
+                const files = event.target.files;
+                if (files.length > 0) {
+                    const file = files[0];
+                    if (file.type.match('image.*')) {
+                        const reader = new FileReader();
+                        reader.onload = function(e) {
+                            const dataURL = e.target.result;
+                            $('#edit_post_image_preview')
+                                .attr('src', dataURL)
+                                .show();
+                        };
+                        reader.readAsDataURL(file);
+                    } else {
+                        alert("Please select a valid image file.");
+                    }
+                }
+            });
+            // update post
+            $(document).on('submit', '#editPostForm', function(e) {
+                event.preventDefault();
+                var modal = $('#editPostModal');
+                var date = modal.find('#edit_post_publish_date').val();
+                var time = modal.find('#edit_post_publish_time').val();
+                if (!checkPastDateTime(date, time)) {
+                    var url = $(this).attr("action");
+                    var formData = new FormData(this);
+                    formData.append("_token", "{{ csrf_token() }}");
+                    $.ajax({
+                        url: url,
+                        type: "POST",
+                        processData: false,
+                        contentType: false,
+                        data: formData,
+                        success: function(response) {
+                            if (response.success) {
+                                modal.modal("hide");
+                                drawDataTable();
+                                toastr.success(response.message);
+                            } else {
+                                toastr.error(response.message);
+                            }
+                        }
+                    });
+                }
+            });
             // Publish Post
             $(document).on("click", ".publish-post", function() {
                 if (confirm("Do you wish to Publish?")) {

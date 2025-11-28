@@ -89,6 +89,12 @@ class Board extends Model
         return $this->board_id;
     }
 
+    public function getlastFetchedAttribute()
+    {
+        $date = $this->last_fetch;
+        return $date ? date("jS M, Y h:i A", strtotime($date)) : '';
+    }
+
     protected static function booted()
     {
         static::addGlobalScope(new UserScope);
