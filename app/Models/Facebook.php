@@ -70,7 +70,7 @@ class Facebook extends Model
     {
         $now = strtotime(date("Y-m-d H:i:s"));
         $expires_in = $this->expires_in;
-        return $now > $expires_in ? true : false;
+        return $expires_in > $now ? true : false;
     }
 
     protected static function booted()

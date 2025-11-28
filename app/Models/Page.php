@@ -83,7 +83,7 @@ class Page extends Model
         return Attribute::make(
             set: function ($value) {
                 $value = time();
-                $next_time = strtotime('+3 months', $value);
+                $next_time = strtotime('+80 days', $value);
                 $expires_in = date("Y-m-d H:i:s", $next_time);
                 return $expires_in;
             },
@@ -98,7 +98,7 @@ class Page extends Model
     {
         $now = strtotime(date("Y-m-d H:i:s"));
         $expires_in = $this->expires_in;
-        return $now > $expires_in ? true : false;
+        return $expires_in >= $now ? true : false;
     }
 
     public function getAccountIdAttribute()
@@ -106,7 +106,8 @@ class Page extends Model
         return $this->page_id;
     }
 
-    public function getlastFetchedAttribute(){
+    public function getlastFetchedAttribute()
+    {
         $date = $this->last_fetch;
         return $date ? date("jS M, Y h:i A", strtotime($date)) : '';
     }
