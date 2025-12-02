@@ -67,44 +67,9 @@ require __DIR__ . '/frontend.php';
 
 // User Panel routes
 require __DIR__ . '/user.php';
+// API Docs
+require __DIR__ . '/api-docs.php';
 // php info
 Route::get("phpinfo", function () {
     phpinfo();
-});
-
-
-Route::get("test", function (Post $post, FacebookService $facebookService) {
-    $now = date("Y-m-d H:i");
-
-    $posts = $post->with("user", "page.facebook")->notPublished()->past($now)->facebook()->notSchedule()->get();
-    foreach ($posts as $key => $post) {
-        try {
-            $page = $post->page;
-            if ($page->facebook) {
-                $access_token = $page->access_token;
-                if (!$page->validToken()) {
-                    $token = $facebookService->refreshAccessToken($page->access_token, $page->id);
-                    if ($token["success"]) {
-                        $data = $token["data"];
-                        $access_token = $data["access_token"];
-                    } else {
-                        $post->update([
-                            "status" => -1,
-                            "response" => $token["message"],
-                            "published_at" => date("Y-m-d H:i:s")
-                        ]);
-                        continue;
-                    }
-                }
-                $postData = PostService::postTypeBody($post);
-                PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
-            }
-        } catch (Exception $e) {
-            $post->update([
-                "status" => -1,
-                "response" => $e->getMessage(),
-                "published_at" => date("Y-m-d H:i:s")
-            ]);
-        }
-    }
 });

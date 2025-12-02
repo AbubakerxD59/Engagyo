@@ -24,11 +24,11 @@ class User extends Authenticatable
         'last_name',
         'email',
         'password',
-        'whatsapp_number',
         'phone_number',
         'city',
         'country',
         'address',
+        'profile_pic',
         'status',
         'timezone_id',
         'rss_filters',
@@ -157,6 +157,16 @@ class User extends Authenticatable
     {
         $domains = $this->domains()->where("account_id", $id)->get();
         return count($domains) > 0 ? $domains : [];
+    }
+
+    public function apiKeys()
+    {
+        return $this->hasMany(ApiKey::class, 'user_id', 'id');
+    }
+
+    public function timezone()
+    {
+        return $this->belongsTo(Timezone::class);
     }
 
     public function getScheduledActiveAccounts()

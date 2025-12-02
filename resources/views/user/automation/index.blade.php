@@ -82,9 +82,15 @@
                                     <label for="domains">Domains</label>
                                     <input type="hidden" id="saved_domains"
                                         value="{{ isset($user->rss_filters['domain']) ? implode(',', $user->rss_filters['domain']) : '' }}">
-                                    <select name="domains[]" id="domains" class="form-control adv_filter select2"
-                                        multiple>
-                                    </select>
+                                    <div class="d-flex align-items-center">
+                                        <select name="domains[]" id="domains" class="form-control adv_filter select2"
+                                            multiple style="flex: 1;">
+                                        </select>
+                                        <button type="button" id="deleteDomains" class="btn btn-outline-danger btn-sm ml-2"
+                                            style="display: none;" title="Delete Selected Domains">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="col-md-4 form-group">
                                     <label for="status">Status</label>
@@ -284,6 +290,7 @@
                 select.empty();
                 toggleShuffle(account_id);
                 toggleDelete(account_id);
+                $("#deleteDomains").hide(); // Hide delete domains button when account changes
                 if (account_id != '') {
                     fetchDomains(account_id, selected_type, select, 'id');
                 }
@@ -331,6 +338,68 @@
             $('.adv_filter').on('change', function() {
                 save_filters();
                 postsDatatable.ajax.reload();
+                toggleDeleteDomains();
+            });
+
+            // Toggle delete domains button visibility
+            var toggleDeleteDomains = function() {
+                var selectedDomains = $("#domains").val();
+                if (selectedDomains && selectedDomains.length > 0) {
+                    $("#deleteDomains").show();
+                } else {
+                    $("#deleteDomains").hide();
+                }
+            }
+
+            // Delete Selected Domains
+            $(document).on('click', '#deleteDomains', function() {
+                var selectedDomains = $("#domains").val();
+                if (!selectedDomains || selectedDomains.length === 0) {
+                    toastr.warning("Please select domains to delete!");
+                    return;
+                }
+
+                var confirmMessage = selectedDomains.length === 1 ?
+                    "Are you sure you want to delete this domain and all its associated posts?" :
+                    "Are you sure you want to delete " + selectedDomains.length +
+                    " domains and all their associated posts?";
+
+                if (confirm(confirmMessage)) {
+                    var token = $('meta[name="csrf-token"]').attr('content');
+                    $.ajax({
+                        url: "{{ route('panel.automation.deleteDomain') }}",
+                        method: "POST",
+                        data: {
+                            "domain_ids": selectedDomains,
+                            "_token": token
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                toastr.success(response.message);
+                                // Refresh domains dropdown
+                                var account_id = $("#account").find(":selected").val();
+                                var selected_type = $("#account").find(":selected").data(
+                                "type");
+                                var select = $('#domains');
+                                select.empty();
+                                if (account_id != '') {
+                                    fetchDomains(account_id, selected_type, select, 'id');
+                                }
+                                // Hide delete button
+                                $("#deleteDomains").hide();
+                                // Clear saved domains for this selection
+                                $('#saved_domains').val('');
+                                // Reload datatable
+                                postsDatatable.ajax.reload();
+                            } else {
+                                toastr.error(response.message);
+                            }
+                        },
+                        error: function() {
+                            toastr.error("An error occurred while deleting domains.");
+                        }
+                    });
+                }
             });
             $('.adv_filter_search').on('keyup', function() {
                 postsDatatable.ajax.reload();
@@ -338,6 +407,7 @@
             $("#clearFilters").on("click", function() {
                 $("#adv_filter_form").trigger("reset");
                 $("#account").trigger("change");
+                $("#deleteDomains").hide();
                 postsDatatable.ajax.reload();
             })
             // draw dataTable

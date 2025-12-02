@@ -476,3 +476,312 @@ function pinterestDimensions()
     );
     return $response;
 }
+
+function getApiEndpoints()
+{
+    $endpoints = [];
+
+    $endpoints[] = [
+        "id" => "auth-test",
+        "method" => "GET",
+        "endpoint" => "/auth/test",
+        "description" => "Test authentication",
+        "category" => "Authentication",
+        "parameters" => [],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here"
+            ]
+        ],
+        "response" => [
+            "success" => true,
+            "message" => "Authentication successful",
+            "data" => [
+                "authenticated" => true,
+                "user" => [
+                    "id" => 1,
+                    "email" => "user@example.com",
+                    "name" => "John Doe"
+                ],
+                "api_key" => [
+                    "id" => 1,
+                    "last_used_at" => "2025-12-02T12:00:00+00:00"
+                ]
+            ]
+        ]
+    ];
+
+    $endpoints[] = [
+        "id" => "user-profile",
+        "method" => "GET",
+        "endpoint" => "/user/profile",
+        "description" => "Get user profile",
+        "category" => "User",
+        "parameters" => [],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here"
+            ]
+        ],
+        "response" => [
+            "success" => true,
+            "data" => [
+                "user" => [
+                    "id" => 1,
+                    "first_name" => "John",
+                    "last_name" => "Doe",
+                    "full_name" => "John Doe",
+                    "email" => "user@example.com",
+                    "phone_number" => "+1234567890",
+                    "city" => "New York",
+                    "country" => "USA",
+                    "address" => "123 Main St",
+                    "timezone_id" => 1,
+                    "created_at" => "2025-01-01T00:00:00+00:00"
+                ]
+            ]
+        ]
+    ];
+
+    $endpoints[] = [
+        "id" => "user-profile-update",
+        "method" => "PUT",
+        "endpoint" => "/user/profile",
+        "description" => "Update user profile",
+        "category" => "User",
+        "parameters" => [
+            ["name" => "first_name", "type" => "string", "required" => false, "description" => "User's first name"],
+            ["name" => "last_name", "type" => "string", "required" => false, "description" => "User's last name"],
+            ["name" => "phone_number", "type" => "string", "required" => false, "description" => "Phone number"],
+            ["name" => "city", "type" => "string", "required" => false, "description" => "City"],
+            ["name" => "country", "type" => "string", "required" => false, "description" => "Country"],
+            ["name" => "address", "type" => "string", "required" => false, "description" => "Address"]
+        ],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here",
+                "Content-Type" => "application/json"
+            ],
+            "body" => [
+                "first_name" => "John",
+                "last_name" => "Smith",
+                "city" => "Los Angeles"
+            ]
+        ],
+        "response" => [
+            "success" => true,
+            "message" => "Profile updated successfully",
+            "data" => [
+                "user" => [
+                    "id" => 1,
+                    "first_name" => "John",
+                    "last_name" => "Smith",
+                    "full_name" => "John Smith",
+                    "email" => "user@example.com",
+                    "city" => "Los Angeles"
+                ]
+            ]
+        ]
+    ];
+
+    $endpoints[] = [
+        "id" => "user-stats",
+        "method" => "GET",
+        "endpoint" => "/user/stats",
+        "description" => "Get user statistics",
+        "category" => "User",
+        "parameters" => [],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here"
+            ]
+        ],
+        "response" => [
+            "success" => true,
+            "data" => [
+                "stats" => [
+                    "pinterest_accounts" => 2,
+                    "facebook_accounts" => 1,
+                    "boards" => 5,
+                    "pages" => 3,
+                    "domains" => 10,
+                    "api_keys" => 2
+                ]
+            ]
+        ]
+    ];
+
+    $endpoints[] = [
+        "id" => "user-accounts",
+        "method" => "GET",
+        "endpoint" => "/user/accounts",
+        "description" => "Get user connected accounts",
+        "category" => "User",
+        "parameters" => [],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here"
+            ]
+        ],
+        "response" => [
+            "success" => true,
+            "data" => [
+                "accounts" => [
+                    "pinterest" => [
+                        [
+                            "_id" => "pin_123456",
+                            "username" => "johndoe",
+                            "type" => "pinterest",
+                            "profile_image" => "https://example.com/image.jpg",
+                            "created_at" => "2025-01-01T00:00:00+00:00"
+                        ]
+                    ],
+                    "facebook" => [
+                        [
+                            "_id" => "fb_789012",
+                            "name" => "John Doe",
+                            "type" => "facebook",
+                            "profile_image" => "https://example.com/fb-image.jpg",
+                            "created_at" => "2025-01-01T00:00:00+00:00"
+                        ]
+                    ]
+                ],
+                "total" => 2
+            ]
+        ]
+    ];
+
+    $endpoints[] = [
+        "id" => "user-boards",
+        "method" => "GET",
+        "endpoint" => "/user/boards",
+        "description" => "Get user Pinterest boards",
+        "category" => "User",
+        "parameters" => [],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here"
+            ]
+        ],
+        "response" => [
+            "success" => true,
+            "data" => [
+                "boards" => [
+                    [
+                        "_id" => "board_123456",
+                        "name" => "My Board",
+                        "type" => "pinterest",
+                        "pinterest_account" => [
+                            "_id" => "pin_123456",
+                            "name" => "johndoe",
+                            "profile_image" => "https://example.com/image.jpg"
+                        ],
+                        "created_at" => "2025-01-01T00:00:00+00:00"
+                    ]
+                ],
+                "total" => 1
+            ]
+        ]
+    ];
+
+    $endpoints[] = [
+        "id" => "user-pages",
+        "method" => "GET",
+        "endpoint" => "/user/pages",
+        "description" => "Get user Facebook pages",
+        "category" => "User",
+        "parameters" => [],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here"
+            ]
+        ],
+        "response" => [
+            "success" => true,
+            "data" => [
+                "pages" => [
+                    [
+                        "_id" => "page_123456",
+                        "name" => "My Business Page",
+                        "type" => "facebook",
+                        "facebook_account" => [
+                            "_id" => "fb_789012",
+                            "name" => "John Doe",
+                            "profile_image" => "https://example.com/fb-image.jpg"
+                        ],
+                        "created_at" => "2025-01-01T00:00:00+00:00"
+                    ]
+                ],
+                "total" => 1
+            ]
+        ]
+    ];
+
+    $endpoints[] = [
+        "id" => "user-domains",
+        "method" => "GET",
+        "endpoint" => "/user/domains",
+        "description" => "Get user domains",
+        "category" => "User",
+        "parameters" => [],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here"
+            ]
+        ],
+        "response" => [
+            "success" => true,
+            "data" => [
+                "domains" => [
+                    [
+                        "_id" => 1,
+                        "name" => "example.com",
+                        "type" => "rss",
+                        "category" => "blog",
+                        "created_at" => "2025-01-01T00:00:00+00:00"
+                    ]
+                ],
+                "total" => 1
+            ]
+        ]
+    ];
+
+    $endpoints[] = [
+        "id" => "media-upload",
+        "method" => "POST",
+        "endpoint" => "/media/upload",
+        "description" => "Upload media (image/video) to S3",
+        "category" => "Media",
+        "parameters" => [
+            ["name" => "media", "type" => "file", "required" => true, "description" => "Image or video file to upload (max 100MB)"]
+        ],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here",
+                "Content-Type" => "multipart/form-data"
+            ],
+            "body" => [
+                "media" => "(binary file)"
+            ],
+            "curl" => 'curl -X POST "{base_url}/media/upload" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -F "media=@/path/to/image.jpg"'
+        ],
+        "response" => [
+            "success" => true,
+            "message" => "Media uploaded successfully",
+            "data" => [
+                "type" => "image",
+                "url" => "https://s3.amazonaws.com/bucket/images/20251202_abc123.jpg",
+                "filename" => "20251202120000_abc123xyz.jpg",
+                "original_filename" => "my-photo.jpg",
+                "size" => 1048576,
+                "size_formatted" => "1 MB",
+                "mimetype" => "image/jpeg",
+                "extension" => "jpg",
+                "path" => "images/20251202120000_abc123xyz.jpg"
+            ]
+        ],
+        "notes" => "Supported formats: Images (jpeg, jpg, png, gif, webp, bmp), Videos (mp4, mpeg, mov, avi, wmv, webm, 3gp, flv). Maximum file size: 100MB."
+    ];
+
+    return $endpoints;
+}

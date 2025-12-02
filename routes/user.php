@@ -4,6 +4,8 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\User\AccountsController;
 use App\Http\Controllers\User\ScheduleController;
 use App\Http\Controllers\User\AutomationController;
+use App\Http\Controllers\User\ApiKeysController;
+use App\Http\Controllers\User\SettingsController;
 use App\Models\Post;
 
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(function () {
@@ -48,6 +50,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
             Route::post("feed-url", "feedUrl")->name("feedUrl");
             Route::get("get-domain", "getDomain")->name("getDomain");
             Route::post("save-filters", "saveFilters")->name("saveFilters");
+            Route::post("delete-domain", "deleteDomain")->name("deleteDomain");
             // Posts Routes
             Route::name("posts.")->group(function () {
                 Route::get("posts-dataTable", "posts")->name("dataTable");
@@ -58,6 +61,26 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
                 Route::post("posts-delete-all", "deleteAll")->name("deleteAll");
                 Route::post("post-fix", "postFix")->name("fix");
             });
+        });
+    });
+    // API Keys Routes
+    Route::controller(ApiKeysController::class)->group(function () {
+        Route::get("api-keys", "index")->name("api-keys");
+        Route::name("api-keys.")->prefix("api-keys/")->group(function () {
+            Route::post("store", "store")->name("store");
+            Route::post("refresh/{id}", "refresh")->name("refresh");
+            Route::post("toggle/{id}", "toggle")->name("toggle");
+            Route::delete("destroy/{id}", "destroy")->name("destroy");
+        });
+    });
+    // Settings Routes
+    Route::controller(SettingsController::class)->group(function () {
+        Route::get("settings", "index")->name("settings");
+        Route::name("settings.")->prefix("settings/")->group(function () {
+            Route::post("update", "update")->name("update");
+            Route::post("update-profile-pic", "updateProfilePic")->name("updateProfilePic");
+            Route::post("remove-profile-pic", "removeProfilePic")->name("removeProfilePic");
+            Route::post("update-password", "updatePassword")->name("updatePassword");
         });
     });
 });

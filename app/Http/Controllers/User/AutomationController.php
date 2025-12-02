@@ -504,4 +504,59 @@ class AutomationController extends Controller
         ];
         return response()->json($response);
     }
+
+    public function deleteDomain(Request $request)
+    {
+        $domainIds = $request->domain_ids;
+
+        if (empty($domainIds) || !is_array($domainIds)) {
+            return response()->json([
+                "success" => false,
+                "message" => "No domains selected!"
+            ]);
+        }
+
+        try {
+            $user = Auth::user();
+            $deletedCount = 0;
+
+            foreach ($domainIds as $domainId) {
+                $domain = $this->domain->where('id', $domainId)->first();
+
+                if ($domain) {
+                    // Delete all posts associated with this domain
+                    $posts = $domain->posts()->get();
+                    foreach ($posts as $post) {
+                        $post->photo()->delete();
+                        $post->delete();
+                    }
+
+                    // Delete the domain
+                    $domain->delete();
+                    $deletedCount++;
+                }
+            }
+
+            if ($deletedCount > 0) {
+                $message = $deletedCount == 1
+                    ? "Domain deleted successfully!"
+                    : "{$deletedCount} domains deleted successfully!";
+
+                return response()->json([
+                    "success" => true,
+                    "message" => $message
+                ]);
+            } else {
+                return response()->json([
+                    "success" => false,
+                    "message" => "No domains found to delete!"
+                ]);
+            }
+        } catch (Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => $e->getMessage()
+            ]);
+        }
+    }
 }
