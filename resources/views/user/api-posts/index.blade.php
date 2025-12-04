@@ -62,6 +62,7 @@
                                 <tr>
                                     <th>Post <small>(Details)</small></th>
                                     <th>Account</th>
+                                    <th>API Key</th>
                                     <th>Publish Date/Time</th>
                                     <th>Status</th>
                                     <th style="max-width:200px;">Response</th>
@@ -117,6 +118,18 @@
                         name: "account_detail",
                         orderable: false,
                         searchable: false,
+                    },
+                    {
+                        data: "api_key_name",
+                        name: "api_key_name",
+                        orderable: false,
+                        searchable: false,
+                        render: function(data, type, row) {
+                            if (data && data !== '-') {
+                                return '<span class="badge badge-info"><i class="fas fa-key mr-1"></i>' + data + '</span>';
+                            }
+                            return '<span class="text-muted">-</span>';
+                        }
                     },
                     {
                         data: "publish_datetime",

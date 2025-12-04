@@ -46,6 +46,7 @@ class PostController extends BaseController
         }
 
         $user = $request->user();
+        $apiKeyId = $request->input('api_key_id');
         $platform = Platform::from($request->input('platform'));
         $accountId = $request->input('account_id');
         $imageUrl = $request->input('image_url');
@@ -58,8 +59,8 @@ class PostController extends BaseController
         $publishNow = empty($scheduledAt);
 
         return match ($platform) {
-            Platform::FACEBOOK => $this->publishToFacebook($user, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt),
-            Platform::PINTEREST => $this->publishToPinterest($user, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt),
+            Platform::FACEBOOK => $this->publishToFacebook($user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt),
+            Platform::PINTEREST => $this->publishToPinterest($user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt),
             default => $this->errorResponse('Platform not supported for posting', 400),
         };
     }
@@ -68,6 +69,7 @@ class PostController extends BaseController
      * Publish a post to Facebook.
      *
      * @param $user
+     * @param int|null $apiKeyId
      * @param string $accountId
      * @param string $imageUrl
      * @param string $title
@@ -77,7 +79,7 @@ class PostController extends BaseController
      * @param string|null $scheduledAt
      * @return \Illuminate\Http\JsonResponse
      */
-    private function publishToFacebook($user, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt = null)
+    private function publishToFacebook($user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt = null)
     {
         // Find the page by page_id (belongs to user)
         $page = Page::withoutGlobalScopes()
@@ -101,6 +103,7 @@ class PostController extends BaseController
         // Create the post record
         $post = Post::create([
             'user_id' => $user->id,
+            'api_key_id' => $apiKeyId,
             'account_id' => $page->id,
             'social_type' => 'facebook',
             'type' => $link ? 'link' : 'photo',
@@ -173,6 +176,7 @@ class PostController extends BaseController
      * Publish a post to Pinterest.
      *
      * @param $user
+     * @param int|null $apiKeyId
      * @param string $accountId
      * @param string $imageUrl
      * @param string $title
@@ -182,7 +186,7 @@ class PostController extends BaseController
      * @param string|null $scheduledAt
      * @return \Illuminate\Http\JsonResponse
      */
-    private function publishToPinterest($user, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt = null)
+    private function publishToPinterest($user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt = null)
     {
         // Find the board by board_id (belongs to user)
         $board = Board::withoutGlobalScopes()
@@ -219,6 +223,7 @@ class PostController extends BaseController
         // Create the post record
         $post = Post::create([
             'user_id' => $user->id,
+            'api_key_id' => $apiKeyId,
             'account_id' => $board->id,
             'social_type' => 'pinterest',
             'type' => $link ? 'link' : 'photo',

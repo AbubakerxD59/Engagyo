@@ -32,7 +32,7 @@ class ApiPostsController extends Controller
         $data = $request->all();
 
         // Only get posts with source = 'api'
-        $posts = Post::with("page.facebook", "board.pinterest")->where('source', 'api');
+        $posts = Post::with("page.facebook", "board.pinterest", "apiKey")->where('source', 'api');
 
         // filters
         if (!empty($request->account_id)) {
@@ -51,7 +51,7 @@ class ApiPostsController extends Controller
         $totalRecordswithFilter = clone $posts;
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
         $posts = $posts->orderByDesc("created_at")->get();
-        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action"]);
+        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "api_key_name"]);
 
         $response = [
             "draw" => intval($data['draw']),

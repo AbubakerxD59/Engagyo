@@ -15,6 +15,7 @@ class Post extends Model
 
     protected $fillable = [
         "user_id",
+        "api_key_id",
         "post_id",
         "account_id",
         "social_type",
@@ -39,6 +40,11 @@ class Post extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function apiKey()
+    {
+        return $this->belongsTo(ApiKey::class, 'api_key_id', 'id');
     }
 
     public function board()
@@ -484,6 +490,11 @@ class Post extends Model
         $title = $this->title;
         $image = $this->image;
         return empty($title) || empty($image) ? true : false;
+    }
+
+    public function getApiKeyNameAttribute()
+    {
+        return $this->apiKey?->name ?? '-';
     }
 
     protected static function booted()
