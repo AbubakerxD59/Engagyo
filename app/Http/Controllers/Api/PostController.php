@@ -242,14 +242,14 @@ class PostController extends BaseController
             $postData = [
                 'title' => $title,
                 'description' => $description ?? $title,
-                'board_id' => $accountId,
+                'board_id' => (string) $accountId,
                 'media_source' => [
                     'source_type' => 'image_url',
                     'url' => $imageUrl,
                 ],
             ];
 
-            // Add link if provided
+            // Add link if provided (destination URL for the pin)
             if ($link) {
                 $postData['link'] = $link;
             }

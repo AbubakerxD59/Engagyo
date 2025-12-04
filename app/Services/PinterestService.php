@@ -84,16 +84,14 @@ class PinterestService
         return $boards;
     }
 
-    public function create($id, $post, $access_token)
+    public function create($id, $postData, $access_token)
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
 
-        // Trim title to Pinterest's max length (100 chars)
-        if (isset($post['title'])) {
-            $post['title'] = $this->trimTitle($post['title']);
-        }
+        // Sanitize Pinterest API fields
+        $postData = $this->sanitizePinData($postData);
 
-        $publish = $this->client->postJson($this->baseUrl . "pins", $post, $this->header);
+        $publish = $this->client->postJson($this->baseUrl . "pins", $postData, $this->header);
         $post = $this->post->find($id);
         if (isset($publish['id'])) {
             $post->update([
@@ -252,14 +250,18 @@ class PinterestService
     private function uploadVideo($postData, $media_id)
     {
         $payload = [
-            "title" => $this->trimTitle($postData["title"]),
-            "board_id" => (string) $postData["board_id"],
+            "title" => $postData["title"],
+            "board_id" => $postData["board_id"],
             "media_source" => [
                 "source_type" => "video_id",
                 "media_id" => $media_id,
                 "cover_image_key_frame_time" => 1
             ]
         ];
+
+        // Sanitize the payload
+        $payload = $this->sanitizePinData($payload);
+
         $response = $this->client->postJson($this->baseUrl . "pins", $payload, $this->header);
         return $response;
     }
@@ -278,6 +280,35 @@ class PinterestService
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $response = $this->client->delete($this->baseUrl . "pins/" . $post->post_id, [], $this->header);
         return true;
+    }
+
+    /**
+     * Sanitize pin data to comply with Pinterest API limits.
+     * - title: max 100 characters
+     * - description: max 500 characters
+     * - board_id: must be string
+     *
+     * @param array $data
+     * @return array
+     */
+    private function sanitizePinData(array $data): array
+    {
+        // Trim title to max 100 characters (using 99 to be safe)
+        if (isset($data['title']) && $data['title'] !== null) {
+            $data['title'] = mb_strlen($data['title']) > 100 ? mb_substr($data['title'], 0, 99) : $data['title'];
+        }
+
+        // Trim description to max 500 characters (using 499 to be safe)
+        if (isset($data['description']) && $data['description'] !== null) {
+            $data['description'] = mb_strlen($data['description']) > 500 ? mb_substr($data['description'], 0, 499) : $data['description'];
+        }
+
+        // Ensure board_id is a string
+        if (isset($data['board_id'])) {
+            $data['board_id'] = (string) $data['board_id'];
+        }
+
+        return $data;
     }
 
     /**
