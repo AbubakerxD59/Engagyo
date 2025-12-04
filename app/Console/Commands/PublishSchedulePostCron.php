@@ -33,6 +33,7 @@ class PublishSchedulePostCron extends Command
     {
         $now = date("Y-m-d H:i");
         $posts = $post->with("user", "page.facebook", "board.pinterest")->notPublished()->past($now)->schedule()->get();
+        info(json_encode($posts));
         foreach ($posts as $key => $post) {
             // for facebook posts
             if ($post->social_type == "facebook") {

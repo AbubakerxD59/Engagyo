@@ -118,6 +118,7 @@
                         name: "account_detail",
                         orderable: false,
                         searchable: false,
+                        className: 'dt-nowrap'
                     },
                     {
                         data: "api_key_name",
@@ -126,7 +127,8 @@
                         searchable: false,
                         render: function(data, type, row) {
                             if (data && data !== '-') {
-                                return '<span class="badge badge-info"><i class="fas fa-key mr-1"></i>' + data + '</span>';
+                                return '<span class="badge badge-info"><i class="fas fa-key mr-1"></i>' +
+                                    data + '</span>';
                             }
                             return '<span class="text-muted">-</span>';
                         }
@@ -136,6 +138,7 @@
                         name: "publish_datetime",
                         orderable: false,
                         searchable: false,
+                        className: 'dt-nowrap'
                     },
                     {
                         data: "status_view",
@@ -154,6 +157,7 @@
                         name: "action",
                         orderable: false,
                         searchable: false,
+                        className: 'dt-nowrap'
                     },
                 ],
                 pageLength: 10,
@@ -260,4 +264,3 @@
         });
     </script>
 @endpush
-
