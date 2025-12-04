@@ -87,6 +87,12 @@ class PinterestService
     public function create($id, $post, $access_token)
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
+
+        // Trim title to Pinterest's max length (100 chars)
+        if (isset($post['title'])) {
+            $post['title'] = $this->trimTitle($post['title']);
+        }
+
         $publish = $this->client->postJson($this->baseUrl . "pins", $post, $this->header);
         $post = $this->post->find($id);
         if (isset($publish['id'])) {
@@ -246,7 +252,7 @@ class PinterestService
     private function uploadVideo($postData, $media_id)
     {
         $payload = [
-            "title" => $postData["title"],
+            "title" => $this->trimTitle($postData["title"]),
             "board_id" => (string) $postData["board_id"],
             "media_source" => [
                 "source_type" => "video_id",
@@ -272,5 +278,20 @@ class PinterestService
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
         $response = $this->client->delete($this->baseUrl . "pins/" . $post->post_id, [], $this->header);
         return true;
+    }
+
+    /**
+     * Trim title to Pinterest's maximum allowed length.
+     * Pinterest API allows max 100 characters for pin titles.
+     *
+     * @param string|null $title
+     * @return string|null
+     */
+    private function trimTitle(?string $title): ?string
+    {
+        if ($title === null) {
+            return null;
+        }
+        return mb_strlen($title) > 100 ? mb_substr($title, 0, 99) : $title;
     }
 }
