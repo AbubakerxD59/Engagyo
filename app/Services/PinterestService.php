@@ -104,7 +104,7 @@ class PinterestService
             $post->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => $publish["message"]
+                "response" => $this->extractErrorMessage($publish)
             ]);
         }
     }
@@ -138,29 +138,28 @@ class PinterestService
                         $post_row->update([
                             "status" => -1,
                             "published_at" => date("Y-m-d H:i:s"),
-                            "response" => $upload_video["message"]
-                            // "response" => json_encode($upload_video)
+                            "response" => $this->extractErrorMessage($upload_video)
                         ]);
                     }
                 } else {
                     $post_row->update([
                         "status" => -1,
                         "published_at" => date("Y-m-d H:i:s"),
-                        "response" => $media_status["message"]
+                        "response" => $this->extractErrorMessage($media_status)
                     ]);
                 }
             } else {
                 $post_row->update([
                     "status" => -1,
                     "published_at" => date("Y-m-d H:i:s"),
-                    "response" => $file["message"]
+                    "response" => $this->extractErrorMessage($file)
                 ]);
             }
         } else {
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => $response["message"]
+                "response" => $this->extractErrorMessage($response)
             ]);
         }
         removeFromS3($post["video_key"]);
@@ -324,5 +323,70 @@ class PinterestService
             return null;
         }
         return mb_strlen($title) > 100 ? mb_substr($title, 0, 99) : $title;
+    }
+
+    /**
+     * Extract a clean, readable error message from Pinterest API response.
+     *
+     * @param mixed $response
+     * @return string
+     */
+    private function extractErrorMessage($response): string
+    {
+        // If it's a string, return it directly
+        if (is_string($response)) {
+            return $response;
+        }
+
+        // If it's an array, try to extract the message
+        if (is_array($response)) {
+            // Check for common error message keys
+            if (isset($response['message'])) {
+                $message = $response['message'];
+
+                // If message is also an array/object, try to get a string from it
+                if (is_array($message)) {
+                    return json_encode($message);
+                }
+
+                // Clean up the message - remove technical prefixes if present
+                if (is_string($message)) {
+                    // Remove common prefixes like "Invalid request: " etc.
+                    $cleanMessage = preg_replace('/^(Invalid request:\s*)/i', '', $message);
+                    return $cleanMessage ?: $message;
+                }
+
+                return (string) $message;
+            }
+
+            // Check for 'error' key
+            if (isset($response['error'])) {
+                if (is_string($response['error'])) {
+                    return $response['error'];
+                }
+                if (is_array($response['error']) && isset($response['error']['message'])) {
+                    return $response['error']['message'];
+                }
+            }
+
+            // Check for 'error_description' key
+            if (isset($response['error_description'])) {
+                return $response['error_description'];
+            }
+
+            // If we have a code, include it in the message
+            if (isset($response['code'])) {
+                $code = $response['code'];
+                $msg = $response['message'] ?? 'Unknown error';
+                return "Error {$code}: {$msg}";
+            }
+
+            // Fallback: return JSON encoded response (limited length)
+            $json = json_encode($response);
+            return mb_strlen($json) > 200 ? mb_substr($json, 0, 200) . '...' : $json;
+        }
+
+        // Fallback for any other type
+        return 'An unknown error occurred with Pinterest API.';
     }
 }
