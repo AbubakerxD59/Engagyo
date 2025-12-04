@@ -41,15 +41,15 @@
                         <p>Accounts</p>
                     </a>
                 </li>
-                {{-- API Keys --}}
+                {{-- API Posts --}}
                 <?php
-                $apiKeys = ['panel.api-keys'];
+                $apiPosts = ['panel.api-posts'];
                 ?>
                 <li class="nav-item">
-                    <a href="{{ route('panel.api-keys') }}"
-                        class="nav-link {{ in_array(request()->route()->getName(), $apiKeys) ? 'active' : '' }}">
-                        <i class="nav-icon fas fa-key"></i>
-                        <p>API Keys</p>
+                    <a href="{{ route('panel.api-posts') }}"
+                        class="nav-link {{ in_array(request()->route()->getName(), $apiPosts) ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-code"></i>
+                        <p>API Posts</p>
                     </a>
                 </li>
             </ul>

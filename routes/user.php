@@ -5,6 +5,7 @@ use App\Http\Controllers\User\AccountsController;
 use App\Http\Controllers\User\ScheduleController;
 use App\Http\Controllers\User\AutomationController;
 use App\Http\Controllers\User\ApiKeysController;
+use App\Http\Controllers\User\ApiPostsController;
 use App\Http\Controllers\User\SettingsController;
 use App\Models\Post;
 
@@ -71,6 +72,19 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
             Route::post("refresh/{id}", "refresh")->name("refresh");
             Route::post("toggle/{id}", "toggle")->name("toggle");
             Route::delete("destroy/{id}", "destroy")->name("destroy");
+        });
+    });
+    // API Posts Routes
+    Route::controller(ApiPostsController::class)->group(function () {
+        Route::get("api-posts", "index")->name("api-posts");
+        Route::name("api-posts.")->prefix("api-posts/")->group(function () {
+            Route::get("posts/listing", "postsListing")->name("posts.listing");
+            Route::prefix("post/")->name("post.")->group(function () {
+                Route::get("delete", "postDelete")->name('delete');
+                Route::get("edit", "postEdit")->name("edit");
+                Route::post("update/{id?}", "postUpdate")->name("update");
+                Route::post("publish/now", "postPublishNow")->name("publish.now");
+            });
         });
     });
     // Settings Routes

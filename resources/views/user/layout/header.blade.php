@@ -22,6 +22,9 @@
                 <a class="dropdown-item" href="{{ route('panel.settings') }}">
                     <i class="fas fa-cog mr-2"></i> Settings
                 </a>
+                <a class="dropdown-item" href="{{ route('panel.api-keys') }}">
+                    <i class="fas fa-key mr-2"></i> API Keys
+                </a>
                 <div class="dropdown-divider"></div>
                 <a class="dropdown-item text-danger logout-btn" href="#">
                     <i class="fas fa-sign-out-alt mr-2"></i> Logout

@@ -785,12 +785,16 @@ function getApiEndpoints()
                 "post" => [
                     "id" => 123,
                     "platform" => "facebook",
-                    "account_id" => "123456789012345",
-                    "account_name" => "My Business Page",
                     "status" => "scheduled",
                     "type" => "link",
                     "scheduled_at" => "2025-12-25 10:00:00",
                     "created_at" => "2025-12-04T10:30:00+00:00"
+                ],
+                "account" => [
+                    "type" => "facebook_page",
+                    "page_id" => "123456789012345",
+                    "name" => "My Business Page",
+                    "profile_image" => "https://example.com/fb-profile.jpg"
                 ]
             ]
         ],
@@ -833,11 +837,18 @@ function getApiEndpoints()
                 "post" => [
                     "id" => 124,
                     "platform" => "pinterest",
-                    "account_id" => "board_123456789",
-                    "board_name" => "Travel Photos",
                     "status" => "publishing",
                     "type" => "link",
                     "created_at" => "2025-12-04T10:35:00+00:00"
+                ],
+                "account" => [
+                    "type" => "pinterest_board",
+                    "board_id" => "board_123456789",
+                    "board_name" => "Travel Photos",
+                    "pinterest_account" => [
+                        "username" => "johndoe",
+                        "profile_image" => "https://example.com/pinterest-profile.jpg"
+                    ]
                 ]
             ]
         ],
@@ -847,7 +858,7 @@ function getApiEndpoints()
     $endpoints[] = [
         "id" => "posts-status",
         "method" => "GET",
-        "endpoint" => "/posts/{id}/status",
+        "endpoint" => "/posts/status/{id}",
         "description" => "Get post status by ID",
         "category" => "Posts",
         "parameters" => [
@@ -857,7 +868,7 @@ function getApiEndpoints()
             "headers" => [
                 "Authorization" => "Bearer your_api_key_here"
             ],
-            "curl" => 'curl -X GET "{base_url}/posts/123/status" \\\n  -H "Authorization: Bearer your_api_key_here"'
+            "curl" => 'curl -X GET "{base_url}/posts/status/123" \\\n  -H "Authorization: Bearer your_api_key_here"'
         ],
         "response" => [
             "success" => true,
@@ -874,6 +885,12 @@ function getApiEndpoints()
                     "scheduled_at" => null,
                     "published_at" => "2025-12-04 10:30:05",
                     "created_at" => "2025-12-04T10:30:00+00:00"
+                ],
+                "account" => [
+                    "type" => "facebook_page",
+                    "page_id" => "123456789012345",
+                    "name" => "My Business Page",
+                    "profile_image" => "https://example.com/fb-profile.jpg"
                 ]
             ]
         ],

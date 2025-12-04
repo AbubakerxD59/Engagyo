@@ -147,12 +147,11 @@ class PostController extends BaseController
                 'post' => [
                     'id' => $post->id,
                     'platform' => 'facebook',
-                    'account_id' => $accountId,
-                    'account_name' => $page->name,
                     'status' => 'publishing',
                     'type' => $link ? 'link' : 'photo',
                     'created_at' => $post->created_at->toIso8601String(),
-                ]
+                ],
+                'account' => $this->formatFacebookAccount($page),
             ], 'Post is being published to Facebook');
         }
 
@@ -161,13 +160,12 @@ class PostController extends BaseController
             'post' => [
                 'id' => $post->id,
                 'platform' => 'facebook',
-                'account_id' => $accountId,
-                'account_name' => $page->name,
                 'status' => 'scheduled',
                 'type' => $link ? 'link' : 'photo',
                 'scheduled_at' => $post->publish_date,
                 'created_at' => $post->created_at->toIso8601String(),
-            ]
+            ],
+            'account' => $this->formatFacebookAccount($page),
         ], 'Post scheduled successfully for ' . date('M d, Y \a\t h:i A', strtotime($scheduledAt)));
     }
 
@@ -263,12 +261,11 @@ class PostController extends BaseController
                 'post' => [
                     'id' => $post->id,
                     'platform' => 'pinterest',
-                    'account_id' => $accountId,
-                    'board_name' => $board->name,
                     'status' => 'publishing',
                     'type' => $link ? 'link' : 'photo',
                     'created_at' => $post->created_at->toIso8601String(),
-                ]
+                ],
+                'account' => $this->formatPinterestAccount($board, $pinterest),
             ], 'Post is being published to Pinterest');
         }
 
@@ -277,13 +274,12 @@ class PostController extends BaseController
             'post' => [
                 'id' => $post->id,
                 'platform' => 'pinterest',
-                'account_id' => $accountId,
-                'board_name' => $board->name,
                 'status' => 'scheduled',
                 'type' => $link ? 'link' : 'photo',
                 'scheduled_at' => $post->publish_date,
                 'created_at' => $post->created_at->toIso8601String(),
-            ]
+            ],
+            'account' => $this->formatPinterestAccount($board, $pinterest),
         ], 'Post scheduled successfully for ' . date('M d, Y \a\t h:i A', strtotime($scheduledAt)));
     }
 
@@ -329,7 +325,8 @@ class PostController extends BaseController
                 'scheduled_at' => $post->scheduled ? $post->publish_date : null,
                 'published_at' => $post->published_at,
                 'created_at' => $post->created_at->toIso8601String(),
-            ]
+            ],
+            'account' => $this->getAccountDetails($post),
         ];
 
         // Include error message if failed
@@ -338,5 +335,66 @@ class PostController extends BaseController
         }
 
         return $this->successResponse($response);
+    }
+
+    /**
+     * Get account details for a post.
+     *
+     * @param Post $post
+     * @return array|null
+     */
+    private function getAccountDetails(Post $post): ?array
+    {
+        if ($post->social_type === 'facebook') {
+            $page = Page::withoutGlobalScopes()->find($post->account_id);
+            return $page ? $this->formatFacebookAccount($page) : null;
+        }
+
+        if ($post->social_type === 'pinterest') {
+            $board = Board::withoutGlobalScopes()->with('pinterest')->find($post->account_id);
+            return $board ? $this->formatPinterestAccount($board, $board->pinterest) : null;
+        }
+
+        return null;
+    }
+
+    /**
+     * Format Facebook page account details.
+     *
+     * @param Page $page
+     * @return array
+     */
+    private function formatFacebookAccount(Page $page): array
+    {
+        return [
+            'type' => 'facebook_page',
+            'page_id' => $page->page_id,
+            'name' => $page->name,
+            'profile_image' => $page->facebook?->profile_image
+                ? url($page->facebook->profile_image)
+                : null,
+        ];
+    }
+
+    /**
+     * Format Pinterest board account details.
+     *
+     * @param Board $board
+     * @param $pinterest
+     * @return array
+     */
+    private function formatPinterestAccount(Board $board, $pinterest): array
+    {
+        return [
+            'type' => 'pinterest_board',
+            'board_id' => $board->board_id,
+            'board_name' => $board->name,
+            'pinterest_account' => $pinterest ? [
+                'username' => $pinterest->username,
+                'profile_image' => $pinterest->profile_image
+                    ? url($pinterest->profile_image)
+                    : null,
+            ] : null,
+        ];
     }
 }
