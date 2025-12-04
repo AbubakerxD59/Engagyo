@@ -1,7 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
-use App\Http\Controllers\Api\MediaController;
+use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -78,12 +78,15 @@ Route::prefix('v1')->group(function () {
 
         /*
         |--------------------------------------------------------------------------
-        | Media Endpoints
+        | Post Endpoints
         |--------------------------------------------------------------------------
         */
-        Route::prefix('media')->group(function () {
-            // Upload media (image or video) to S3
-            Route::post('/upload', [MediaController::class, 'upload']);
+        Route::prefix('posts')->group(function () {
+            // Create and publish a post to Facebook or Pinterest
+            Route::post('/', [PostController::class, 'create']);
+
+            // Get post status by ID
+            Route::get('/status/{id}', [PostController::class, 'status']);
         });
     });
 });

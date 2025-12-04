@@ -746,41 +746,138 @@ function getApiEndpoints()
         ]
     ];
 
+    // Posts Endpoints
     $endpoints[] = [
-        "id" => "media-upload",
+        "id" => "posts-create",
         "method" => "POST",
-        "endpoint" => "/media/upload",
-        "description" => "Upload media (image/video) to S3",
-        "category" => "Media",
+        "endpoint" => "/posts",
+        "description" => "Create and publish a post to Facebook or Pinterest",
+        "category" => "Posts",
         "parameters" => [
-            ["name" => "media", "type" => "file", "required" => true, "description" => "Image or video file to upload (max 100MB)"]
+            ["name" => "platform", "type" => "string", "required" => true, "description" => "Target platform: 'facebook' or 'pinterest'"],
+            ["name" => "account_id", "type" => "string", "required" => true, "description" => "Page ID (Facebook) or Board ID (Pinterest)"],
+            ["name" => "image_url", "type" => "string", "required" => true, "description" => "Publicly accessible URL of the image to post"],
+            ["name" => "title", "type" => "string", "required" => true, "description" => "Post title/message (max 500 characters)"],
+            ["name" => "description", "type" => "string", "required" => false, "description" => "Additional description (max 2000 characters)"],
+            ["name" => "link", "type" => "string", "required" => false, "description" => "Destination URL for link posts"],
+            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Schedule post for future (format: Y-m-d H:i:s). If not provided, post is published immediately"]
         ],
         "request" => [
             "headers" => [
                 "Authorization" => "Bearer your_api_key_here",
-                "Content-Type" => "multipart/form-data"
+                "Content-Type" => "application/json"
             ],
             "body" => [
-                "media" => "(binary file)"
+                "platform" => "facebook",
+                "account_id" => "123456789012345",
+                "image_url" => "https://example.com/images/my-photo.jpg",
+                "title" => "Check out this amazing post!",
+                "description" => "This is an optional description for the post.",
+                "link" => "https://example.com/my-article",
+                "scheduled_at" => "2025-12-25 10:00:00"
             ],
-            "curl" => 'curl -X POST "{base_url}/media/upload" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -F "media=@/path/to/image.jpg"'
+            "curl" => 'curl -X POST "{base_url}/posts" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"facebook","account_id":"123456789","image_url":"https://example.com/image.jpg","title":"My Post"}\''
         ],
         "response" => [
             "success" => true,
-            "message" => "Media uploaded successfully",
+            "message" => "Post scheduled successfully for Dec 25, 2025 at 10:00 AM",
             "data" => [
-                "type" => "image",
-                "url" => "https://s3.amazonaws.com/bucket/images/20251202_abc123.jpg",
-                "filename" => "20251202120000_abc123xyz.jpg",
-                "original_filename" => "my-photo.jpg",
-                "size" => 1048576,
-                "size_formatted" => "1 MB",
-                "mimetype" => "image/jpeg",
-                "extension" => "jpg",
-                "path" => "images/20251202120000_abc123xyz.jpg"
+                "post" => [
+                    "id" => 123,
+                    "platform" => "facebook",
+                    "account_id" => "123456789012345",
+                    "account_name" => "My Business Page",
+                    "status" => "scheduled",
+                    "type" => "link",
+                    "scheduled_at" => "2025-12-25 10:00:00",
+                    "created_at" => "2025-12-04T10:30:00+00:00"
+                ]
             ]
         ],
-        "notes" => "Supported formats: Images (jpeg, jpg, png, gif, webp, bmp), Videos (mp4, mpeg, mov, avi, wmv, webm, 3gp, flv). Maximum file size: 100MB."
+        "notes" => "If scheduled_at is not provided, the post will be published immediately. Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id."
+    ];
+
+    $endpoints[] = [
+        "id" => "posts-create-immediate",
+        "method" => "POST",
+        "endpoint" => "/posts",
+        "description" => "Create and publish a post immediately",
+        "category" => "Posts",
+        "parameters" => [
+            ["name" => "platform", "type" => "string", "required" => true, "description" => "Target platform: 'facebook' or 'pinterest'"],
+            ["name" => "account_id", "type" => "string", "required" => true, "description" => "Page ID (Facebook) or Board ID (Pinterest)"],
+            ["name" => "image_url", "type" => "string", "required" => true, "description" => "Publicly accessible URL of the image to post"],
+            ["name" => "title", "type" => "string", "required" => true, "description" => "Post title/message (max 500 characters)"],
+            ["name" => "description", "type" => "string", "required" => false, "description" => "Additional description (max 2000 characters)"],
+            ["name" => "link", "type" => "string", "required" => false, "description" => "Destination URL for link posts"]
+        ],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here",
+                "Content-Type" => "application/json"
+            ],
+            "body" => [
+                "platform" => "pinterest",
+                "account_id" => "board_123456789",
+                "image_url" => "https://example.com/images/my-pin.jpg",
+                "title" => "Beautiful sunset photography",
+                "description" => "Captured this amazing sunset at the beach.",
+                "link" => "https://example.com/photos/sunset"
+            ],
+            "curl" => 'curl -X POST "{base_url}/posts" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"pinterest","account_id":"board_123","image_url":"https://example.com/image.jpg","title":"My Pin"}\''
+        ],
+        "response" => [
+            "success" => true,
+            "message" => "Post is being published to Pinterest",
+            "data" => [
+                "post" => [
+                    "id" => 124,
+                    "platform" => "pinterest",
+                    "account_id" => "board_123456789",
+                    "board_name" => "Travel Photos",
+                    "status" => "publishing",
+                    "type" => "link",
+                    "created_at" => "2025-12-04T10:35:00+00:00"
+                ]
+            ]
+        ],
+        "notes" => "When no scheduled_at is provided, the post is queued for immediate publishing. Status will be 'publishing' until the job completes."
+    ];
+
+    $endpoints[] = [
+        "id" => "posts-status",
+        "method" => "GET",
+        "endpoint" => "/posts/{id}/status",
+        "description" => "Get post status by ID",
+        "category" => "Posts",
+        "parameters" => [
+            ["name" => "id", "type" => "integer", "required" => true, "description" => "Post ID (returned from create endpoint)"]
+        ],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here"
+            ],
+            "curl" => 'curl -X GET "{base_url}/posts/123/status" \\\n  -H "Authorization: Bearer your_api_key_here"'
+        ],
+        "response" => [
+            "success" => true,
+            "data" => [
+                "post" => [
+                    "id" => 123,
+                    "platform" => "facebook",
+                    "status" => "published",
+                    "status_code" => 1,
+                    "is_scheduled" => false,
+                    "title" => "Check out this amazing post!",
+                    "image" => "https://example.com/images/my-photo.jpg",
+                    "post_id" => "fb_987654321",
+                    "scheduled_at" => null,
+                    "published_at" => "2025-12-04 10:30:05",
+                    "created_at" => "2025-12-04T10:30:00+00:00"
+                ]
+            ]
+        ],
+        "notes" => "Status values: 'pending' (waiting to publish), 'scheduled' (scheduled for future), 'publishing' (being processed), 'published' (successfully posted), 'failed' (error occurred). If status is 'failed', an 'error' field will be included with the error message."
     ];
 
     return $endpoints;
