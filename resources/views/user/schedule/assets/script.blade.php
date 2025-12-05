@@ -289,7 +289,7 @@
             $('#comment').val('');
             $('#characterCount').text('');
             $('#article-container').empty();
-            reloadDatatable();
+            reloadPosts();
             enableActionButton();
         }
         // check link for content

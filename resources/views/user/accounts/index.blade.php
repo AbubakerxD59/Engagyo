@@ -43,7 +43,8 @@
                                         </div>
                                     </a>
                                     <div class="account-card-actions">
-                                        <button class="btn-account-delete" onclick="confirmDelete(event)" title="Delete Account">
+                                        <button class="btn-account-delete" onclick="confirmDelete(event)"
+                                            title="Delete Account">
                                             <i class="fa fa-trash"></i>
                                         </button>
                                         <form action="{{ route('panel.accounts.facebook.delete', $fb->fb_id) }}"
@@ -88,9 +89,11 @@
                     <div class="card-body">
                         <div class="accounts-grid">
                             @forelse ($user->pinterest as $pin)
-                                <article class="account-card pinterest-card has-tooltip" data-tooltip="{{ $pin->username }}">
+                                <article class="account-card pinterest-card has-tooltip"
+                                    data-tooltip="{{ $pin->username }}">
                                     <div class="account-card-accent"></div>
-                                    <a href="{{ route('panel.accounts.pinterest', $pin->pin_id) }}" class="account-card-link">
+                                    <a href="{{ route('panel.accounts.pinterest', $pin->pin_id) }}"
+                                        class="account-card-link">
                                         <div class="account-card-content">
                                             <div class="account-avatar-wrapper">
                                                 <img src="{{ $pin->profile_image }}" class="account-avatar"
@@ -108,7 +111,8 @@
                                         </div>
                                     </a>
                                     <div class="account-card-actions">
-                                        <button class="btn-account-delete" onclick="confirmDelete(event)" title="Delete Account">
+                                        <button class="btn-account-delete" onclick="confirmDelete(event)"
+                                            title="Delete Account">
                                             <i class="fa fa-trash"></i>
                                         </button>
                                         <form action="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}"
@@ -479,11 +483,11 @@
             .accounts-grid {
                 grid-template-columns: 1fr;
             }
-            
+
             .account-card-link {
                 padding: 14px 10px 14px 16px;
             }
-            
+
             .account-avatar {
                 width: 44px;
                 height: 44px;
