@@ -97,7 +97,7 @@ class UserController extends BaseController
         // Pinterest accounts
         $pinterestAccounts = $user->pinterest()->get()->map(function ($pinterest) {
             return [
-                '_id' => $pinterest->pin_id,
+                '_id' => (string) $pinterest->pin_id,
                 'username' => $pinterest->username,
                 'type' => 'pinterest',
                 'profile_image' => !empty($pinterest->profile_image) ? url($pinterest->profile_image) : null,
@@ -108,7 +108,7 @@ class UserController extends BaseController
         // Facebook accounts
         $facebookAccounts = $user->facebook()->get()->map(function ($facebook) {
             return [
-                '_id' => $facebook->fb_id,
+                '_id' => (string) $facebook->fb_id,
                 'name' => $facebook->name,
                 'type' => 'facebook',
                 'profile_image' => !empty($facebook->profile_image) ? url($facebook->profile_image) : null,
@@ -139,7 +139,7 @@ class UserController extends BaseController
         return $this->successResponse([
             'boards' => $boards->map(function ($board) {
                 return [
-                    '_id' => $board->board_id,
+                    '_id' => (string) $board->board_id,
                     'name' => $board->name,
                     'type' => 'pinterest',
                     'pinterest_account' => $board->pinterest ? [
@@ -167,7 +167,7 @@ class UserController extends BaseController
         return $this->successResponse([
             'pages' => $pages->map(function ($page) {
                 return [
-                    '_id' => $page->page_id,
+                    '_id' => (string) $page->page_id,
                     'name' => $page->name,
                     'type' => 'facebook',
                     'facebook_account' => $page->facebook ? [
