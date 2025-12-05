@@ -143,7 +143,6 @@ class UserController extends BaseController
                     'name' => $board->name,
                     'type' => 'pinterest',
                     'pinterest_account' => $board->pinterest ? [
-                        '_id' => $board->pinterest->pin_id,
                         'name' => $board->pinterest->username,
                         'profile_image' => !empty($board->pinterest->profile_image) ? url($board->pinterest->profile_image) : null,
                     ] : null,
@@ -172,7 +171,6 @@ class UserController extends BaseController
                     'name' => $page->name,
                     'type' => 'facebook',
                     'facebook_account' => $page->facebook ? [
-                        '_id' => $page->facebook->fb_id,
                         'name' => $page->facebook->username,
                         'profile_image' => !empty($page->facebook->profile_image) ? url($page->facebook->profile_image) : null,
                     ] : null,
