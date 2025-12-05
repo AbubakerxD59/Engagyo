@@ -462,6 +462,14 @@ class Post extends Model
         return date("Y-m-d h:i A", strtotime($publish_datetime));
     }
 
+    public function getPublishedAtFormattedAttribute()
+    {
+        if ($this->published_at) {
+            return date("Y-m-d h:i A", strtotime($this->published_at));
+        }
+        return null;
+    }
+
     public function getStatusViewAttribute()
     {
         $view = view("user.schedule.dataTable.status_view")->with("post", $this);

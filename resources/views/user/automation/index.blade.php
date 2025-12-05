@@ -72,6 +72,7 @@
                                         @foreach ($accounts as $key => $account)
                                             <option value="{{ $account->id }}" data-type="{{ $account->type }}"
                                                 data-shuffle="{{ $account->shuffle }}"
+                                                data-rss-paused="{{ $account->rss_paused ? 1 : 0 }}"
                                                 {{ @$user->rss_filters['selected_account'] == $account->id && @$user->rss_filters['selected_type'] == $account->type ? 'selected' : '' }}>
                                                 {{ strtoupper($account->name . ' - ' . $account->type) }}
                                             </option>
@@ -120,6 +121,16 @@
                                             </div>
                                         </div>
                                     </div>
+                                    <div class="btn bg-transparent text-muted rss_toggle py-1 mx-1"
+                                        style="display: none;">
+                                        <div class="d-flex align-items-start">
+                                            <label for="rss_toggle" class="pointer m-0">RSS Automation</label>
+                                            <div class="toggle-switch mx-1">
+                                                <input class="toggle-input rss_automation" id="rss_toggle" type="checkbox">
+                                                <label class="toggle-label rss-label" for="rss_toggle"></label>
+                                            </div>
+                                        </div>
+                                    </div>
                                 </div>
                                 <div class="col-md-6 form-group align-content-end">
                                     <a class="btn btn-info btn-sm float-right">
@@ -133,88 +144,754 @@
                                 </div>
                             </div>
                         </div>
-                        <table class="table table-striped table-bordered" id="dataTable">
-                            <thead>
-                                <tr>
-                                    <th>Post</th>
-                                    <th>Account</th>
-                                    <th>Domain</th>
-                                    <th>Publish Date</th>
-                                    <th>Status</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                        </table>
+                        
+                        {{-- Posts Grid --}}
+                        <div id="postsGrid" class="automation-posts-grid">
+                            <div class="loading-state text-center py-5">
+                                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                                <p class="mt-2 text-muted">Loading posts...</p>
+                            </div>
+                        </div>
+
+                        {{-- Pagination --}}
+                        <div id="postsPagination" class="d-flex justify-content-between align-items-center mt-4">
+                            <div class="pagination-info text-muted"></div>
+                            <nav>
+                                <ul class="pagination pagination-sm mb-0"></ul>
+                            </nav>
+                        </div>
                     </div>
                 </div>
             </div>
         </section>
     </div>
     @include('user.automation.edit_post_modal')
+    
+    {{-- Image Lightbox Modal --}}
+    <div class="image-lightbox" id="imageLightbox">
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <button class="lightbox-close" id="lightboxClose">
+                <i class="fas fa-times"></i>
+            </button>
+            <img src="" alt="Full size image" id="lightboxImage">
+            <div class="lightbox-caption" id="lightboxCaption"></div>
+        </div>
+    </div>
 @endsection
 @push('styles')
     @include('user.schedule.assets.facebook_post')
     @include('user.schedule.assets.pinterest_post')
+    <style>
+        .rss_toggle {
+            border: 1px solid #dc3545;
+            border-radius: 5px;
+        }
+        .rss_toggle.active {
+            border-color: #28a745;
+        }
+        .rss_toggle label[for="rss_toggle"] {
+            color: #dc3545;
+        }
+        .rss_toggle.active label[for="rss_toggle"] {
+            color: #28a745;
+        }
+
+        /* Automation Posts Grid Layout */
+        .automation-posts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        @media (max-width: 1200px) {
+            .automation-posts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 768px) {
+            .automation-posts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Automation Post Card Container */
+        .automation-post-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            height: 580px;
+        }
+
+        .automation-post-card:hover {
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+            transform: translateY(-2px);
+        }
+
+        /* Post Preview Section */
+        .automation-post-card .post-preview {
+            height: 320px;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .automation-post-card .post-preview::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 30px;
+            background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.9));
+            pointer-events: none;
+        }
+
+        .automation-post-card .post-preview .pinterest_card,
+        .automation-post-card .post-preview .facebook_card {
+            margin: 0;
+            border-radius: 0;
+            box-shadow: none;
+            height: 100%;
+            overflow: hidden;
+        }
+
+        .automation-post-card .post-preview .pinterest_card .image-container,
+        .automation-post-card .post-preview .facebook_card .pronunciation-image-container {
+            max-height: 180px;
+            overflow: hidden;
+        }
+
+        .automation-post-card .post-preview .pinterest_card .image-container img,
+        .automation-post-card .post-preview .facebook_card .pronunciation-image-container img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+        }
+
+        /* Post Meta Section */
+        .automation-post-card .post-meta {
+            padding: 12px 15px;
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-height: 0;
+            overflow-y: auto;
+        }
+
+        .automation-post-card .post-meta::-webkit-scrollbar {
+            width: 4px;
+        }
+
+        .automation-post-card .post-meta::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 2px;
+        }
+
+        .post-meta-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+        }
+
+        .post-meta-row:last-child {
+            margin-bottom: 0;
+        }
+
+        /* Account Badge */
+        .post-account-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 10px;
+            background: #fff;
+            border-radius: 20px;
+            border: 1px solid #e9ecef;
+        }
+
+        .post-account-badge img {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            object-fit: cover;
+        }
+
+        .post-account-badge .platform-icon {
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            color: #fff;
+        }
+
+        .post-account-badge .platform-icon.facebook { background: #1877F2; }
+        .post-account-badge .platform-icon.pinterest { background: #E60023; }
+
+        .post-account-badge .post-account-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: #333;
+            max-width: 100px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* Domain Badge */
+        .domain-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 8px;
+            background: #e3f2fd;
+            color: #1976d2;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 500;
+        }
+
+        .domain-badge i {
+            font-size: 10px;
+            flex-shrink: 0;
+        }
+
+        /* Date/Time Info */
+        .datetime-info {
+            font-size: 11px;
+            color: #666;
+        }
+
+        .datetime-info .label {
+            color: #999;
+            margin-right: 4px;
+        }
+
+        .datetime-info .value {
+            font-weight: 500;
+            color: #333;
+        }
+
+        /* Status Badges */
+        .status-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-badge.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+
+        .status-badge.published {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.failed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        /* Published At */
+        .published-at {
+            font-size: 10px;
+            color: #28a745;
+            background: #d4edda;
+            padding: 2px 6px;
+            border-radius: 3px;
+            margin-top: 4px;
+            display: inline-block;
+        }
+
+        /* Response Section */
+        .response-section {
+            margin-top: 8px;
+            padding: 8px;
+            background: #fff;
+            border-radius: 6px;
+            border: 1px solid #e9ecef;
+            max-height: 60px;
+            overflow-y: auto;
+        }
+
+        .response-section::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        .response-section::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 2px;
+        }
+
+        .response-section .response-label {
+            font-size: 10px;
+            color: #999;
+            text-transform: uppercase;
+            margin-bottom: 2px;
+        }
+
+        .response-section .response-text {
+            font-size: 11px;
+            color: #333;
+            word-break: break-word;
+            line-height: 1.3;
+        }
+
+        .response-section .response-text.success {
+            color: #28a745;
+        }
+
+        .response-section .response-text.error {
+            color: #dc3545;
+        }
+
+        /* Action Buttons */
+        .post-actions-bar {
+            display: flex;
+            gap: 8px;
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid #e9ecef;
+        }
+
+        .post-actions-bar .btn {
+            flex: 1;
+            padding: 6px 10px;
+            font-size: 12px;
+            border-radius: 6px;
+        }
+
+        /* Empty State */
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+
+        .empty-state i {
+            font-size: 48px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        /* Pagination Styles */
+        .pagination-info {
+            font-size: 13px;
+        }
+
+        .pagination .page-item .page-link {
+            border-radius: 6px;
+            margin: 0 2px;
+            border: none;
+            color: #666;
+        }
+
+        .pagination .page-item.active .page-link {
+            background: var(--theme-color);
+            color: #fff;
+        }
+
+        .pagination .page-item.disabled .page-link {
+            color: #ccc;
+        }
+
+        /* Image Lightbox */
+        .image-lightbox {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 9999;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .image-lightbox.active {
+            display: flex;
+        }
+
+        .lightbox-backdrop {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            cursor: pointer;
+        }
+
+        .lightbox-content {
+            position: relative;
+            max-width: 90%;
+            max-height: 90%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            animation: lightboxZoomIn 0.3s ease;
+        }
+
+        @keyframes lightboxZoomIn {
+            from {
+                opacity: 0;
+                transform: scale(0.8);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .lightbox-content img {
+            max-width: 100%;
+            max-height: 80vh;
+            border-radius: 8px;
+            box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
+            object-fit: contain;
+        }
+
+        .lightbox-close {
+            position: absolute;
+            top: -40px;
+            right: -40px;
+            width: 40px;
+            height: 40px;
+            border: none;
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+            font-size: 20px;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lightbox-close:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
+        }
+
+        .lightbox-caption {
+            margin-top: 15px;
+            color: #fff;
+            font-size: 14px;
+            text-align: center;
+            max-width: 600px;
+            line-height: 1.5;
+        }
+
+        /* Make post images clickable */
+        .automation-post-card .pinterest_card .image-container img.post-image,
+        .automation-post-card .facebook_card .pronunciation-image-container img {
+            cursor: zoom-in;
+            transition: opacity 0.2s ease;
+        }
+
+        .automation-post-card .pinterest_card .image-container img.post-image:hover,
+        .automation-post-card .facebook_card .pronunciation-image-container img:hover {
+            opacity: 0.9;
+        }
+
+        /* Magnify icon on hover */
+        .automation-post-card .pinterest_card .image-container,
+        .automation-post-card .facebook_card .pronunciation-image-container {
+            position: relative;
+        }
+
+        .automation-post-card .pinterest_card .image-container::before,
+        .automation-post-card .facebook_card .pronunciation-image-container::before {
+            content: '\f00e';
+            font-family: 'Font Awesome 5 Free';
+            font-weight: 900;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 0, 0, 0.6);
+            color: #fff;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        .automation-post-card .pinterest_card .image-container:hover::before,
+        .automation-post-card .facebook_card .pronunciation-image-container:hover::before {
+            opacity: 1;
+        }
+
+        @media (max-width: 768px) {
+            .lightbox-close {
+                top: 10px;
+                right: 10px;
+            }
+        }
+    </style>
 @endpush
 @push('scripts')
     <script>
-        var postsDatatable = $('#dataTable').DataTable({
-            "paging": true,
-            'iDisplayLength': 10,
-            "lengthChange": true,
-            "searching": false,
-            "ordering": true,
-            "info": true,
-            "autoWidth": false,
-            "responsive": true,
-            "processing": true,
-            "serverSide": true,
-            order: [
-                [3, 'ASC']
-            ],
-            ajax: {
+        // Posts Grid Variables
+        var currentPage = 1;
+        var perPage = 9;
+        var totalPosts = 0;
+
+        // Load posts
+        function loadPosts(page = 1) {
+            currentPage = page;
+
+            $('#postsGrid').html(`
+                <div class="loading-state text-center py-5" style="grid-column: 1/-1;">
+                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                    <p class="mt-2 text-muted">Loading posts...</p>
+                </div>
+            `);
+
+            $.ajax({
                 url: "{{ route('panel.automation.posts.dataTable') }}",
-                data: function(param) {
-                    param.account = $("#account").find(":selected").val();
-                    param.account_type = $("#account").find(":selected").val() ? $("#account").find(":selected")
-                        .data("type") : 0;
-                    param.domain = $("#domains").val();
-                    param.status = $("#status").find(":selected").val();
-                    // param.search_input = $("#search").val();
-                    return param;
+                type: "GET",
+                data: {
+                    draw: 1,
+                    start: (page - 1) * perPage,
+                    length: perPage,
+                    account: $("#account").find(":selected").val(),
+                    account_type: $("#account").find(":selected").val() ? $("#account").find(":selected").data("type") : 0,
+                    domain: $("#domains").val(),
+                    status: $("#status").find(":selected").val(),
                 },
-            },
-            drawCallback: function() {
-                var api = this.api();
-                var response = api.ajax.json();
-                $('.scheduled_till').html(response.scheduled_till);
-                $('.last_fetch').html(!empty(response.last_fetch) ? response.last_fetch : 'NA');
-            },
-            columns: [{
-                    data: 'post_details',
-                    sortable: false
+                success: function(response) {
+                    totalPosts = response.iTotalDisplayRecords;
+                    renderPosts(response.data);
+                    renderPagination();
+                    // Update scheduled till and last fetch
+                    $('.scheduled_till').html(response.scheduled_till || 'NA');
+                    $('.last_fetch').html(!empty(response.last_fetch) ? response.last_fetch : 'NA');
                 },
-                {
-                    data: 'account_detail',
-                    sortable: false
-                },
-                {
-                    data: 'domain_name',
-                    sortable: false
-                },
-                {
-                    data: 'publish_datetime',
-                },
-                {
-                    data: 'status_view',
-                    sortable: false
-                },
-                {
-                    data: 'action',
-                    sortable: false
+                error: function() {
+                    $('#postsGrid').html(`
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>Failed to load posts. Please try again.</p>
+                        </div>
+                    `);
                 }
-            ],
+            });
+        }
+
+        // Render posts grid
+        function renderPosts(posts) {
+            if (posts.length === 0) {
+                $('#postsGrid').html(`
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No RSS posts found</p>
+                        <small>Fetch posts from RSS feeds using the form above</small>
+                    </div>
+                `);
+                return;
+            }
+
+            var html = '';
+            posts.forEach(function(post) {
+                html += renderPostCard(post);
+            });
+            $('#postsGrid').html(html);
+        }
+
+        // Render single post card
+        function renderPostCard(post) {
+            var statusClass = post.status == 1 ? 'published' : (post.status == -1 ? 'failed' : 'pending');
+            var statusText = post.status == 1 ? 'Published' : (post.status == -1 ? 'Failed' : 'Pending');
+            var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' : 'fab fa-pinterest-p';
+            var platformClass = post.social_type;
+
+            // Domain badge
+            var domainBadge = '';
+            if (post.domain_name) {
+                domainBadge = `<span class="domain-badge" title="${post.domain_name}"><i class="fas fa-globe"></i> ${post.domain_name}</span>`;
+            }
+
+            var publishedAt = post.status == 1 && post.published_at_formatted ?
+                `<div class="published-at">Published at: ${post.published_at_formatted}</div>` : '';
+
+            var responseHtml = '';
+            if (post.response) {
+                var responseClass = post.status == 1 ? 'success' : (post.status == -1 ? 'error' : '');
+                var responseText = post.response.length > 100 ? post.response.substring(0, 100) + '...' : post.response;
+                responseHtml = `
+                    <div class="response-section">
+                        <div class="response-label">Response</div>
+                        <div class="response-text ${responseClass}">${responseText}</div>
+                    </div>
+                `;
+            }
+
+            var actionButtons = '';
+            if (post.status == 0) {
+                actionButtons = `
+                    <button class="btn btn-outline-primary btn-sm edit_btn" data-id="${post.id}" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm fix-post" data-post-id="${post.id}" title="Fix Post">
+                        <i class="fas fa-wrench"></i>
+                    </button>
+                    <button class="btn btn-outline-success btn-sm publish-post" data-id="${post.id}" data-type="${post.social_type}" title="Publish Now">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm delete_btn" data-id="${post.id}" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+            } else {
+                actionButtons = `
+                    <button class="btn btn-outline-danger btn-sm delete_btn" data-id="${post.id}" title="Delete">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                `;
+            }
+
+            return `
+                <div class="automation-post-card">
+                    <div class="post-preview">
+                        ${post.post_details}
+                    </div>
+                    <div class="post-meta">
+                        <div class="post-meta-row">
+                            <div class="post-account-badge">
+                                <span class="platform-icon ${platformClass}">
+                                    <i class="${platformIcon}"></i>
+                                </span>
+                                <span class="post-account-name">${post.account_name || 'Unknown'}</span>
+                            </div>
+                            ${domainBadge}
+                        </div>
+                        <div class="post-meta-row">
+                            <div class="datetime-info">
+                                <span class="label">Scheduled:</span>
+                                <span class="value">${post.publish_datetime}</span>
+                            </div>
+                            <div>
+                                <span class="status-badge ${statusClass}">
+                                    <i class="fas fa-${post.status == 1 ? 'check-circle' : (post.status == -1 ? 'times-circle' : 'clock')}"></i>
+                                    ${statusText}
+                                </span>
+                                ${publishedAt}
+                            </div>
+                        </div>
+                        ${responseHtml}
+                        <div class="post-actions-bar">
+                            ${actionButtons}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render pagination
+        function renderPagination() {
+            var totalPages = Math.ceil(totalPosts / perPage);
+            var start = (currentPage - 1) * perPage + 1;
+            var end = Math.min(currentPage * perPage, totalPosts);
+
+            if (totalPosts === 0) {
+                $('.pagination-info').html('');
+                $('.pagination').html('');
+                return;
+            }
+
+            $('.pagination-info').html(`Showing ${start} to ${end} of ${totalPosts} posts`);
+
+            var paginationHtml = '';
+
+            // Previous button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage - 1}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Page numbers
+            var startPage = Math.max(1, currentPage - 2);
+            var endPage = Math.min(totalPages, currentPage + 2);
+
+            if (startPage > 1) {
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+                if (startPage > 2) {
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+
+            for (var i = startPage; i <= endPage; i++) {
+                paginationHtml += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                    </li>
+                `;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+                paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a></li>`;
+            }
+
+            // Next button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage + 1}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+
+            $('.pagination').html(paginationHtml);
+        }
+
+        // Pagination click
+        $(document).on('click', '.pagination .page-link', function(e) {
+            e.preventDefault();
+            var page = $(this).data('page');
+            if (page && !$(this).parent().hasClass('disabled') && !$(this).parent().hasClass('active')) {
+                loadPosts(page);
+            }
         });
+
+        // Reload posts function (for use after actions)
+        function reloadPosts() {
+            loadPosts(currentPage);
+        }
+
+        // Initial load
+        loadPosts(1);
     </script>
     <script>
         $(document).ready(function() {
@@ -252,7 +929,7 @@
                         submit_button.attr('disabled', false);
                         if (response.success) {
                             $("#fetchPostsModal").modal("toggle");
-                            postsDatatable.ajax.reload();
+                            reloadPosts();
                             $("#fetchPostForm").trigger("reset");
                             toastr.success(response.message);
                         } else {
@@ -285,10 +962,20 @@
                 var account_id = $(this).find(":selected").val();
                 var selected_type = $(this).find(":selected").data("type");
                 var shuffle = $(this).find(":selected").data('shuffle');
+                var rss_paused = $(this).find(":selected").data('rss-paused');
                 var select = $('#domains');
                 shuffle == 1 ? $('.shuffle').attr('checked', true) : $('.shuffle').attr('checked', false);
+                // RSS automation: checked means active (not paused), unchecked means paused
+                if (rss_paused == 1) {
+                    $('.rss_automation').prop('checked', false);
+                    $('.rss_toggle').removeClass('active');
+                } else {
+                    $('.rss_automation').prop('checked', true);
+                    $('.rss_toggle').addClass('active');
+                }
                 select.empty();
                 toggleShuffle(account_id);
+                toggleRssToggle(account_id);
                 toggleDelete(account_id);
                 $("#deleteDomains").hide(); // Hide delete domains button when account changes
                 if (account_id != '') {
@@ -337,7 +1024,7 @@
             // Filters and Reset
             $('.adv_filter').on('change', function() {
                 save_filters();
-                postsDatatable.ajax.reload();
+                loadPosts(1);
                 toggleDeleteDomains();
             });
 
@@ -389,8 +1076,8 @@
                                 $("#deleteDomains").hide();
                                 // Clear saved domains for this selection
                                 $('#saved_domains').val('');
-                                // Reload datatable
-                                postsDatatable.ajax.reload();
+                                // Reload posts
+                                loadPosts(currentPage);
                             } else {
                                 toastr.error(response.message);
                             }
@@ -402,38 +1089,40 @@
                 }
             });
             $('.adv_filter_search').on('keyup', function() {
-                postsDatatable.ajax.reload();
+                reloadPosts();
             })
             $("#clearFilters").on("click", function() {
                 $("#adv_filter_form").trigger("reset");
                 $("#account").trigger("change");
                 $("#deleteDomains").hide();
-                postsDatatable.ajax.reload();
+                reloadPosts();
             })
-            // draw dataTable
+            // reload posts
             var drawDataTable = function() {
-                postsDatatable.draw('full-hold');
+                reloadPosts();
             }
             // Delete Post
             $(document).on("click", ".delete_btn", function() {
-                var id = $(this).data('id');
-                var token = $('meta[name="csrf-token"]').attr('content');
-                $(this).closest('tr').remove();
-                $.ajax({
-                    url: "{{ route('panel.automation.posts.destroy') }}",
-                    type: "POST",
-                    data: {
-                        "id": id,
-                        "_token": token
-                    },
-                    success: function(response) {
-                        if (response.success) {
-                            toastr.success(response.message);
-                        } else {
-                            toastr.error(response.message);
+                if (confirm("Are you sure you want to delete this post?")) {
+                    var id = $(this).data('id');
+                    var token = $('meta[name="csrf-token"]').attr('content');
+                    $.ajax({
+                        url: "{{ route('panel.automation.posts.destroy') }}",
+                        type: "POST",
+                        data: {
+                            "id": id,
+                            "_token": token
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                toastr.success(response.message);
+                                reloadPosts();
+                            } else {
+                                toastr.error(response.message);
+                            }
                         }
-                    }
-                });
+                    });
+                }
             })
             // Edit Post
             $(document).on('click', '.edit_btn', function() {
@@ -519,7 +1208,7 @@
                         },
                         success: function(response) {
                             if (response.success) {
-                                postsDatatable.ajax.reload();
+                                reloadPosts();
                                 toastr.success(response.message);
                             } else {
                                 toastr.error(response.message);
@@ -534,6 +1223,14 @@
                     $(".shuffle_toggle").show();
                 } else {
                     $(".shuffle_toggle").hide();
+                }
+            }
+            // Toggle RSS toggle
+            var toggleRssToggle = function(id) {
+                if (id != '') {
+                    $(".rss_toggle").show();
+                } else {
+                    $(".rss_toggle").hide();
                 }
             }
             var toggleDelete = function(id) {
@@ -568,6 +1265,47 @@
                     }
                 });
             })
+            // RSS Automation toggle
+            $(document).on('click', '.rss_automation', function() {
+                var toggle = $(".rss_automation");
+                var rssToggleDiv = $(".rss_toggle");
+                // When checked = active (not paused), when unchecked = paused
+                var isChecked = toggle.is(":checked");
+                var selected_account = $("#account").find(":selected").val();
+                var selected_type = $("#account").find(":selected").data("type");
+                var token = $('meta[name="csrf-token"]').attr('content');
+                $.ajax({
+                    url: "{{ route('panel.accounts.toggleRssPause') }}",
+                    method: "POST",
+                    data: {
+                        "id": selected_account,
+                        "type": selected_type,
+                        "_token": token
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                            // Update the data attribute on the option
+                            $("#account").find(":selected").data('rss-paused', response.paused ? 1 : 0);
+                            // Update the visual state
+                            if (response.paused) {
+                                rssToggleDiv.removeClass('active');
+                            } else {
+                                rssToggleDiv.addClass('active');
+                            }
+                        } else {
+                            toastr.error(response.message);
+                            // Revert the checkbox state
+                            toggle.prop('checked', !isChecked);
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Something went wrong!');
+                        // Revert the checkbox state
+                        toggle.prop('checked', !isChecked);
+                    }
+                });
+            })
             // Delete All
             $(document).on('click', '#deleteAll', function() {
                 if (confirm("Do you wish to Delete all Posts!")) {
@@ -587,7 +1325,7 @@
                         success: function(response) {
                             if (response.success) {
                                 toastr.success(response.message);
-                                postsDatatable.ajax.reload();
+                                reloadPosts();
                             } else {
                                 toastr.error(response.message);
                             }
@@ -610,7 +1348,7 @@
                         success: function(response) {
                             if (response.success) {
                                 toastr.success(response.message);
-                                postsDatatable.ajax.reload();
+                                reloadPosts();
                             } else {
                                 toastr.error(response.message);
                             }
@@ -637,23 +1375,74 @@
                     });
                 }
             }
+            
+            // Trigger change event if account is pre-selected from saved filters
+            var preSelectedAccount = $("#account").val();
+            if (preSelectedAccount && preSelectedAccount !== '') {
+                $("#account").trigger('change');
+            }
         });
-    </script>
     </script>
     <script>
         var imageInput = document.getElementById('post_image');
         var imagePreview = document.getElementById('post_image_preview');
-        imageInput.addEventListener('change', function(event) {
-            var file = event.target.files[0];
-            if (file) {
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    imagePreview.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            } else {
-                imagePreview.src = "/img/noimage.png";
+        if (imageInput) {
+            imageInput.addEventListener('change', function(event) {
+                var file = event.target.files[0];
+                if (file) {
+                    var reader = new FileReader();
+                    reader.onload = function(e) {
+                        imagePreview.src = e.target.result;
+                    };
+                    reader.readAsDataURL(file);
+                } else {
+                    imagePreview.src = "/img/noimage.png";
+                }
+            });
+        }
+
+        // Image Lightbox functionality for posts grid
+        $(document).on('click',
+            '.automation-post-card .pinterest_card .image-container img.post-image, .automation-post-card .facebook_card .pronunciation-image-container img',
+            function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var imgSrc = $(this).attr('src');
+                var imgAlt = $(this).attr('alt') || '';
+
+                // Get post title from the card
+                var $card = $(this).closest('.pinterest_card, .facebook_card');
+                var caption = $card.find('.card-content span:last, .mb-3.px-3 span').first().text().trim();
+
+                $('#lightboxImage').attr('src', imgSrc);
+                $('#lightboxCaption').text(caption || imgAlt);
+                $('#imageLightbox').addClass('active');
+
+                // Prevent body scroll
+                $('body').css('overflow', 'hidden');
+            });
+
+        // Close lightbox on close button click
+        $('#lightboxClose').on('click', function() {
+            closeLightbox();
+        });
+
+        // Close lightbox on backdrop click
+        $('.lightbox-backdrop').on('click', function() {
+            closeLightbox();
+        });
+
+        // Close lightbox on ESC key
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape' && $('#imageLightbox').hasClass('active')) {
+                closeLightbox();
             }
         });
+
+        function closeLightbox() {
+            $('#imageLightbox').removeClass('active');
+            $('body').css('overflow', '');
+        }
     </script>
 @endpush

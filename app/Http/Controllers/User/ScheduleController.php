@@ -145,20 +145,15 @@ class  ScheduleController extends Controller
                     ];
                     $post = PostService::create($data);
 
-                    $access_token = $account->access_token;
-                    if (!$account->validToken()) {
-                        $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                        if ($token["success"]) {
-                            $data = $token["data"];
-                            $access_token = $data["access_token"];
-                        } else {
-                            $response = array(
-                                "success" => false,
-                                "message" => $token["message"]
-                            );
-                            return $response;
-                        }
+                    // Use validateToken for proper error handling
+                    $tokenResponse = FacebookService::validateToken($account);
+                    if (!$tokenResponse['success']) {
+                        return array(
+                            "success" => false,
+                            "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
+                        );
                     }
+                    $access_token = $tokenResponse['access_token'];
                     $postData = PostService::postTypeBody($post);
                     PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                 }
@@ -182,11 +177,15 @@ class  ScheduleController extends Controller
                         ];
                         $post = PostService::create($data);
 
-                        $access_token = $pinterest->access_token;
-                        if (!$pinterest->validToken()) {
-                            $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                            $access_token = $token["access_token"];
+                        // Use validateToken for proper error handling
+                        $tokenResponse = PinterestService::validateToken($account);
+                        if (!$tokenResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token."
+                            );
                         }
+                        $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
                     }
@@ -406,20 +405,15 @@ class  ScheduleController extends Controller
                         ];
                         $post = PostService::create($data);
 
-                        $access_token = $account->access_token;
-                        if (!$account->validToken()) {
-                            $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                            if ($token["success"]) {
-                                $data = $token["data"];
-                                $access_token = $data["access_token"];
-                            } else {
-                                $response = array(
-                                    "success" => false,
-                                    "message" => $token["message"]
-                                );
-                                return $response;
-                            }
+                        // Use validateToken for proper error handling
+                        $tokenResponse = FacebookService::validateToken($account);
+                        if (!$tokenResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
+                            );
                         }
+                        $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
                         PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                     }
@@ -441,11 +435,15 @@ class  ScheduleController extends Controller
                         ];
                         $post = PostService::create($data);
 
-                        $access_token = $pinterest->access_token;
-                        if (!$pinterest->validToken()) {
-                            $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                            $access_token = $token["access_token"];
+                        // Use validateToken for proper error handling
+                        $tokenResponse = PinterestService::validateToken($account);
+                        if (!$tokenResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token."
+                            );
                         }
+                        $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                     }
@@ -501,20 +499,15 @@ class  ScheduleController extends Controller
                         ];
                         $post = PostService::create($data);
 
-                        $access_token = $account->access_token;
-                        if (!$account->validToken()) {
-                            $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                            if ($token["success"]) {
-                                $data = $token["data"];
-                                $access_token = $data["access_token"];
-                            } else {
-                                $response = array(
-                                    "success" => false,
-                                    "message" => $token["message"]
-                                );
-                                return $response;
-                            }
+                        // Use validateToken for proper error handling
+                        $tokenResponse = FacebookService::validateToken($account);
+                        if (!$tokenResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
+                            );
                         }
+                        $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
                         PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                     }
@@ -538,11 +531,15 @@ class  ScheduleController extends Controller
                             ];
                             $post = PostService::create($data);
 
-                            $access_token = $pinterest->access_token;
-                            if (!$pinterest->validToken()) {
-                                $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                                $access_token = $token["access_token"];
+                            // Use validateToken for proper error handling
+                            $tokenResponse = PinterestService::validateToken($account);
+                            if (!$tokenResponse['success']) {
+                                return array(
+                                    "success" => false,
+                                    "message" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token."
+                                );
                             }
+                            $access_token = $tokenResponse['access_token'];
                             $postData = PostService::postTypeBody($post);
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                         }
@@ -601,20 +598,15 @@ class  ScheduleController extends Controller
                         ];
                         $post = PostService::create($data);
 
-                        $access_token = $account->access_token;
-                        if (!$account->validToken()) {
-                            $token = $this->facebookService->refreshAccessToken($account->access_token, $account->id);
-                            if ($token["success"]) {
-                                $data = $token["data"];
-                                $access_token = $data["access_token"];
-                            } else {
-                                $response = array(
-                                    "success" => false,
-                                    "message" => $token["message"]
-                                );
-                                return $response;
-                            }
+                        // Use validateToken for proper error handling
+                        $tokenResponse = FacebookService::validateToken($account);
+                        if (!$tokenResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
+                            );
                         }
+                        $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
                         PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                     }
@@ -637,11 +629,15 @@ class  ScheduleController extends Controller
                             ];
                             $post = PostService::create($data);
 
-                            $access_token = $pinterest->access_token;
-                            if (!$pinterest->validToken()) {
-                                $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                                $access_token = $token["access_token"];
+                            // Use validateToken for proper error handling
+                            $tokenResponse = PinterestService::validateToken($account);
+                            if (!$tokenResponse['success']) {
+                                return array(
+                                    "success" => false,
+                                    "message" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token."
+                                );
                             }
+                            $access_token = $tokenResponse['access_token'];
                             $postData = PostService::postTypeBody($post);
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                         }
@@ -746,7 +742,7 @@ class  ScheduleController extends Controller
         $totalRecordswithFilter = clone $posts;
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
         $posts = $posts->orderBy("publish_date")->get();
-        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action"]);
+        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "account_name", "account_profile", "published_at_formatted"]);
         $response = [
             "draw" => intval($data['draw']),
             "iTotalRecords" => Post::count(),

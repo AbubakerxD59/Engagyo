@@ -51,7 +51,7 @@ class ApiPostsController extends Controller
         $totalRecordswithFilter = clone $posts;
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
         $posts = $posts->orderByDesc("created_at")->get();
-        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "api_key_name"]);
+        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "api_key_name", "account_name", "account_profile", "published_at_formatted"]);
 
         $response = [
             "draw" => intval($data['draw']),

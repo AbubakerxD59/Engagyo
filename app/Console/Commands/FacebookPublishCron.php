@@ -37,25 +37,40 @@ class FacebookPublishCron extends Command
             try {
                 sleep(3);
                 $page = $post->page;
-                if ($page->facebook) {
-                    $access_token = $page->access_token;
-                    if (!$page->validToken()) {
-                        $token = $facebookService->refreshAccessToken($page->access_token, $page->id);
-                        if ($token["success"]) {
-                            $data = $token["data"];
-                            $access_token = $data["access_token"];
-                        } else {
-                            $post->update([
-                                "status" => -1,
-                                "response" => $token["message"],
-                                "published_at" => date("Y-m-d H:i:s")
-                            ]);
-                            continue;
-                        }
-                    }
-                    $postData = PostService::postTypeBody($post);
-                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
+                
+                if (!$page) {
+                    $post->update([
+                        "status" => -1,
+                        "response" => "Facebook page not found.",
+                        "published_at" => date("Y-m-d H:i:s")
+                    ]);
+                    continue;
                 }
+
+                if (!$page->facebook) {
+                    $post->update([
+                        "status" => -1,
+                        "response" => "Facebook account not found. Please reconnect your account.",
+                        "published_at" => date("Y-m-d H:i:s")
+                    ]);
+                    continue;
+                }
+
+                // Use validateToken for proper error handling
+                $tokenResponse = FacebookService::validateToken($page);
+                if (!$tokenResponse['success']) {
+                    $post->update([
+                        "status" => -1,
+                        "response" => $tokenResponse["message"] ?? "Failed to validate Facebook access token.",
+                        "published_at" => date("Y-m-d H:i:s")
+                    ]);
+                    continue;
+                }
+
+                $access_token = $tokenResponse['access_token'];
+                $postData = PostService::postTypeBody($post);
+                PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
+
             } catch (Exception $e) {
                 $post->update([
                     "status" => -1,

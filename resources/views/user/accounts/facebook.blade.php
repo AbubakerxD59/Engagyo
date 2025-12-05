@@ -90,13 +90,15 @@
 @endpush
 @push('scripts')
     <script>
-        var dataTable = $('#dataTable').DataTable({
-            "paging": true,
-            'iDisplayLength': 10,
-            "lengthChange": true,
-            "searching": true,
-            "ordering": false,
-            "info": false,
+        $(document).ready(function() {
+            var dataTable = $('#dataTable').DataTable({
+                "paging": true,
+                'iDisplayLength': 10,
+                "lengthChange": true,
+                "searching": true,
+                "ordering": false,
+                "info": false,
+            });
         });
     </script>
 @endpush

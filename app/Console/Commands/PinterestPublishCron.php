@@ -32,17 +32,52 @@ class PinterestPublishCron extends Command
     {
         $now = date("Y-m-d H:i");
         $posts = $post->with("user", "board.pinterest")->notPublished()->past($now)->pinterest()->notSchedule()->get();
+        
         foreach ($posts as $post) {
-            $board = $post->board;
-            $pinterest = $board ? $board->pinterest : null;
-            if ($pinterest) {
-                $access_token = $pinterest->access_token;
-                if (!$pinterest->validToken()) {
-                    $token = $pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                    $access_token = $token["access_token"];
+            try {
+                $board = $post->board;
+                
+                if (!$board) {
+                    $post->update([
+                        "status" => -1,
+                        "response" => "Pinterest board not found.",
+                        "published_at" => date("Y-m-d H:i:s")
+                    ]);
+                    continue;
                 }
+
+                $pinterest = $board->pinterest;
+                
+                if (!$pinterest) {
+                    $post->update([
+                        "status" => -1,
+                        "response" => "Pinterest account not found. Please reconnect your account.",
+                        "published_at" => date("Y-m-d H:i:s")
+                    ]);
+                    continue;
+                }
+
+                // Use validateToken for proper error handling
+                $tokenResponse = PinterestService::validateToken($board);
+                if (!$tokenResponse['success']) {
+                    $post->update([
+                        "status" => -1,
+                        "response" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token.",
+                        "published_at" => date("Y-m-d H:i:s")
+                    ]);
+                    continue;
+                }
+
+                $access_token = $tokenResponse['access_token'];
                 $postData = PostService::postTypeBody($post);
                 PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
+
+            } catch (\Exception $e) {
+                $post->update([
+                    "status" => -1,
+                    "response" => "Error: " . $e->getMessage(),
+                    "published_at" => date("Y-m-d H:i:s")
+                ]);
             }
         }
     }

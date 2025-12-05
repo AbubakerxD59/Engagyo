@@ -44,9 +44,25 @@ function checkPastDateTime(dateValue, timeValue) {
     }
 }
 
+// Custom Tooltip Function - Initialize tooltips globally
+function initTooltips() {
+    $('.has-tooltip').each(function() {
+        var $element = $(this);
+        var tooltipText = $element.data('tooltip');
+        
+        // Create tooltip element if not exists and has tooltip data
+        if (tooltipText && $element.find('.custom-tooltip').length === 0) {
+            $element.append('<span class="custom-tooltip">' + tooltipText + '</span>');
+        }
+    });
+}
+
 $(document).ready(function () {
     // check counts
     $('.check_count').on('input', function () {
         getCharacterCount($(this));
     });
+
+    // Initialize tooltips globally
+    initTooltips();
 });

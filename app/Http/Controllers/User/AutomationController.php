@@ -57,10 +57,10 @@ class AutomationController extends Controller
         $user = Auth::user();
         $data = $request->all();
         $iTotalRecords = $this->post;
-        $order = $data["order"][0]["dir"];
-        $account = $data["account"];
-        $type = $data["account_type"];
-        $status = $data["status"];
+        $order = isset($data["order"][0]["dir"]) ? $data["order"][0]["dir"] : 'ASC';
+        $account = $data["account"] ?? null;
+        $type = $data["account_type"] ?? null;
+        $status = $data["status"] ?? null;
         $search = null;
         $domain = isset($data["domain"]) ? $data["domain"] : [];
         $lastFetch = '';
@@ -85,20 +85,32 @@ class AutomationController extends Controller
             $posts = $posts->where("status", $status);
         }
         $totalRecordswithFilter = clone $posts;
-        $scheduledTill = $this->post->scheduledTill($search, $type, $data["account"], $domain, $status, $user->id);
+        $scheduledTill = $this->post->scheduledTill($search, $type, $data["account"] ?? null, $domain, $status, $user->id);
         $posts = $posts->orderBy('publish_date', $order);
         /*Set limit offset */
-        $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
+        $posts = $posts->offset(intval($data['start'] ?? 0))->limit(intval($data['length'] ?? 9));
         $posts = $posts->get();
-        $posts->append(["post_details", "account_detail", "publish_datetime", "domain_name", "status_view", "action"]);
+        $posts->append(["post_details", "account_detail", "publish_datetime", "domain_name", "status_view", "action", "published_at_formatted"]);
+        
+        // Add account_name to each post for the card view
+        $posts->transform(function ($post) {
+            if ($post->social_type == 'facebook' && $post->page) {
+                $post->account_name = $post->page->name;
+            } elseif ($post->social_type == 'pinterest' && $post->board) {
+                $post->account_name = $post->board->name;
+            } else {
+                $post->account_name = 'Unknown';
+            }
+            return $post;
+        });
 
         return response()->json([
-            'draw' => intval($data['draw']),
+            'draw' => intval($data['draw'] ?? 1),
             'iTotalRecords' => $iTotalRecords->count(),
             'iTotalDisplayRecords' => $totalRecordswithFilter->count(),
             'scheduled_till' => $scheduledTill,
             'last_fetch' => $lastFetch,
-            'aaData' => $posts,
+            'data' => $posts,
         ]);
     }
 
@@ -311,13 +323,26 @@ class AutomationController extends Controller
                 $type = $request->type;
                 if ($type == "pinterest") {
                     $post = $this->post->with("board.pinterest")->notPublished()->findOrFail($id);
-                    $pinterest = $post->board->pinterest;
-                    if (!$pinterest->validToken()) {
-                        $token = $this->pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-                        $access_token = $token["access_token"];
-                    } else {
-                        $access_token = $pinterest->access_token;
+                    $board = $post->board;
+
+                    if (!$board) {
+                        return response()->json([
+                            "success" => false,
+                            "message" => "Pinterest board not found."
+                        ]);
                     }
+
+                    // Use validateToken for proper error handling
+                    $tokenResponse = PinterestService::validateToken($board);
+                    
+                    if (!$tokenResponse['success']) {
+                        return response()->json([
+                            "success" => false,
+                            "message" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token."
+                        ]);
+                    }
+
+                    $access_token = $tokenResponse['access_token'];
                     $postData = PostService::postTypeBody($post);
                     PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
                     $response = array(
@@ -329,27 +354,30 @@ class AutomationController extends Controller
                     $post = $this->post->with(relations: "page.facebook")->notPublished()->where("id", $id)->firstOrFail();
                     $page = $post->page;
 
-                    if (!$page->validToken()) {
-                        $token = $this->facebookService->refreshAccessToken($page->access_token, $page->id);
-                        if ($token["success"]) {
-                            $data = $token["data"];
-                            $access_token = $data["access_token"];
-                            $response = array(
-                                "success" => true,
-                                "message" => "Your post is being Published!"
-                            );
-                        } else {
-                            $response = array(
-                                "success" => false,
-                                "message" => $token["message"]
-                            );
-                            return response()->json($response);
-                        }
-                    } else {
-                        $access_token = $page->access_token;
+                    if (!$page) {
+                        return response()->json([
+                            "success" => false,
+                            "message" => "Facebook page not found."
+                        ]);
                     }
+
+                    // Use validateToken for proper error handling
+                    $tokenResponse = FacebookService::validateToken($page);
+                    
+                    if (!$tokenResponse['success']) {
+                        return response()->json([
+                            "success" => false,
+                            "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
+                        ]);
+                    }
+
+                    $access_token = $tokenResponse['access_token'];
                     $postData = PostService::postTypeBody($post);
                     PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link");
+                    $response = array(
+                        "success" => true,
+                        "message" => "Your post is being Published!"
+                    );
                 } else {
                     $response = array(
                         "success" => false,

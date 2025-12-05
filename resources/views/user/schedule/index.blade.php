@@ -17,34 +17,50 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            @foreach ($accounts as $account)
-                                @if ($account->type == 'facebook')
-                                    <button
-                                        class="btn btn-sm btn-rounded border-right rounded-lg mr-1 account 
-                                        @if ($account->schedule_status == 'active') shadow border-success @endif"
-                                        data-type="{{ $account->type }}" data-id="{{ $account->id }}">
-                                        <img style="width:35px;height:35px;" src="{{ $account->facebook?->profile_image }}"
-                                            class="rounded-circle" alt="{{ social_logo('facebook') }}"
-                                            onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
-                                        <img src="{{ social_logo('facebook') }}" alt=""
-                                            style="width: 15px; position:relative;">
-                                        <b>{{ $account->name }}</b>
-                                    </button>
-                                @elseif($account->type == 'pinterest')
-                                    <button
-                                        class="btn btn-sm btn-rounded border-right rounded-lg mr-1 account 
-                                    @if ($account->schedule_status == 'active') shadow border-success @endif"
-                                        data-type="{{ $account->type }}" data-id="{{ $account->id }}">
-                                        <img style="width:35px;height:35px;" src="{{ $account->pinterest?->profile_image }}"
-                                            class="rounded-circle" alt="{{ social_logo('pinterest') }}"
-                                            onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
-                                        <img src="{{ social_logo('pinterest') }}" alt=""
-                                            style="width: 15px; position:relative;">
-                                        <b>{{ $account->name }}</b>
-                                    </button>
-                                @endif
-                            @endforeach
+                        <div class="accounts-container">
+                            <div class="accounts-grid">
+                                @foreach ($accounts as $account)
+                                    @if ($account->type == 'facebook')
+                                        <div class="account-card has-tooltip @if ($account->schedule_status == 'active') active @endif"
+                                            data-type="{{ $account->type }}" data-id="{{ $account->id }}"
+                                            data-tooltip="{{ $account->facebook?->username }}">
+                                            <div class="account-card-inner">
+                                                <div class="account-avatar">
+                                                    <img src="{{ $account->facebook?->profile_image }}"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
+                                                    <span class="platform-badge facebook">
+                                                        <i class="fab fa-facebook-f"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-details">
+                                                    <span class="account-name">{{ Str::limit($account->name, 18) }}</span>
+                                                    <span
+                                                        class="account-username">{{ Str::limit($account->facebook?->username, 15) }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @elseif($account->type == 'pinterest')
+                                        <div class="account-card has-tooltip @if ($account->schedule_status == 'active') active @endif"
+                                            data-type="{{ $account->type }}" data-id="{{ $account->id }}"
+                                            data-tooltip="{{ $account->pinterest?->username }}">
+                                            <div class="account-card-inner">
+                                                <div class="account-avatar">
+                                                    <img src="{{ $account->pinterest?->profile_image }}"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
+                                                    <span class="platform-badge pinterest">
+                                                        <i class="fab fa-pinterest-p"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-details">
+                                                    <span class="account-name">{{ Str::limit($account->name, 18) }}</span>
+                                                    <span
+                                                        class="account-username">{{ Str::limit($account->pinterest?->username, 15) }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
+                                @endforeach
+                            </div>
                         </div>
                         <div class="card-body px-0">
                             <div class="row">
@@ -95,26 +111,26 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="row m-0 p-0 mb-5">
+                        <div class="row m-0 p-0 mb-4">
                             <div class="col-md-3">
-                                <label for="account">Account</label>
-                                <select name="account" id="account" class="form-control select2 filter" multiple>
+                                <label for="filter_account">Account</label>
+                                <select name="filter_account" id="filter_account" class="form-control select2 filter" multiple>
                                     @foreach ($accounts as $account)
                                         <option value="{{ $account->id }}">{{ ucfirst($account->name) }}</option>
                                     @endforeach
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="type">Social type</label>
-                                <select name="type" id="type" class="form-control select2 filter" multiple>
+                                <label for="filter_type">Social type</label>
+                                <select name="filter_type" id="filter_type" class="form-control select2 filter" multiple>
                                     @foreach (get_options('social_accounts') as $social_account)
                                         <option value="{{ $social_account }}">{{ ucfirst($social_account) }}</option>
                                     @endforeach
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="post_type">Post Type</label>
-                                <select name="post_type" id="post_type" class="form-control select2 filter" multiple>
+                                <label for="filter_post_type">Post Type</label>
+                                <select name="filter_post_type" id="filter_post_type" class="form-control select2 filter" multiple>
                                     <option value="photo">Image</option>
                                     <option value="content_only">Quote</option>
                                     <option value="link">Link</option>
@@ -122,26 +138,30 @@
                                 </select>
                             </div>
                             <div class="col-md-3">
-                                <label for="status">Status</label>
-                                <select name="status" id="status" class="form-control select2 filter" multiple>
+                                <label for="filter_status">Status</label>
+                                <select name="filter_status" id="filter_status" class="form-control select2 filter" multiple>
                                     <option value="0" selected>Pending</option>
                                     <option value="1">Published</option>
                                     <option value="-1">Failed</option>
                                 </select>
                             </div>
                         </div>
-                        <table class="table table-bordered mt-3" id="postsTable">
-                            <thead>
-                                <tr>
-                                    <th>Post <small>(Details)</small> </th>
-                                    <th>Account</th>
-                                    <th>Publish Date/Time</th>
-                                    <th>Status</th>
-                                    <th style="max-width:200px;">Response</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                        </table>
+
+                        {{-- Posts Grid --}}
+                        <div id="postsGrid" class="schedule-posts-grid">
+                            <div class="loading-state text-center py-5">
+                                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                                <p class="mt-2 text-muted">Loading posts...</p>
+                            </div>
+                        </div>
+
+                        {{-- Pagination --}}
+                        <div id="postsPagination" class="d-flex justify-content-between align-items-center mt-4">
+                            <div class="pagination-info text-muted"></div>
+                            <nav>
+                                <ul class="pagination pagination-sm mb-0"></ul>
+                            </nav>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -150,6 +170,18 @@
     @include('user.schedule.modals.settings-modal')
     @include('user.schedule.modals.schedule-modal')
     @include('user.schedule.modals.edit-post-modal')
+    
+    {{-- Image Lightbox Modal --}}
+    <div class="image-lightbox" id="imageLightbox">
+        <div class="lightbox-backdrop"></div>
+        <div class="lightbox-content">
+            <button class="lightbox-close" id="lightboxClose">
+                <i class="fas fa-times"></i>
+            </button>
+            <img src="" alt="Full size image" id="lightboxImage">
+            <div class="lightbox-caption" id="lightboxCaption"></div>
+        </div>
+    </div>
 @endsection
 
 @push('styles')

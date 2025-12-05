@@ -1,14 +1,4 @@
 <div class="pinterest_card">
-    @if ($post->source == 'rss')
-        <div class="d-flex justify-content-end">
-            <div class="col-md-6 m-1 d-flex justify-content-end">
-                <button class="btn btn-outline-info btn-sm fix-post" data-post-id="{{ $post->id }}"
-                    title="Fix this Post!">
-                    <i class="fa fa-tools"></i>
-                </button>
-            </div>
-        </div>
-    @endif
     <!-- IMAGE/MEDIA SECTION -->
     <div class="image-container">
         <!-- Placeholder Image matching the aspect ratio and theme -->
@@ -18,8 +8,7 @@
     <!-- CONTENT SECTION -->
     <div class="card-content">
         <div class="mb-2">
-            <img src="{{ $post->account_profile }}" class="rounded-circle me-2 social_profile"
-                style="object-fit: cover;"
+            <img src="{{ $post->account_profile }}" class="rounded-circle me-2 social_profile" style="object-fit: cover;"
                 onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';">
             <span>
                 <strong>

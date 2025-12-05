@@ -204,17 +204,12 @@ class PostController extends BaseController
             return $this->errorResponse('Pinterest account not found', 404);
         }
 
-        // Check if token is valid, refresh if needed
-        $pinterestService = new PinterestService();
-        if (!$pinterest->validToken()) {
-            $token = $pinterestService->refreshAccessToken($pinterest->refresh_token, $pinterest->id);
-            if (!$token || !isset($token['access_token'])) {
-                return $this->errorResponse('Pinterest access token has expired. Please reconnect your Pinterest account.', 401);
-            }
-            $accessToken = $token['access_token'];
-        } else {
-            $accessToken = $pinterest->access_token;
+        // Use validateToken for proper error handling
+        $tokenResponse = PinterestService::validateToken($board);
+        if (!$tokenResponse['success']) {
+            return $this->errorResponse($tokenResponse['message'] ?? 'Pinterest access token has expired. Please reconnect your Pinterest account.', 401);
         }
+        $accessToken = $tokenResponse['access_token'];
 
         // Determine publish date and scheduled status
         $publishDate = $publishNow ? now() : $scheduledAt;

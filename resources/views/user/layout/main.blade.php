@@ -108,7 +108,9 @@
     </script>
     <script>
         window.toastr.options = {
-            "maxOpened": 1,
+            "maxOpened": 5,
+            "autoDismiss": true,
+            "newestOnTop": true,
             "preventOpenDuplicates": true
         }
     </script>

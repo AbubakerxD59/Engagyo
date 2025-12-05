@@ -8,11 +8,12 @@
         // character count
         getCharacterCount($('.check_count'));
         // account status
-        $(".account").on("click", function() {
-            $(this).toggleClass("shadow border-success");
-            var type = $(this).data("type");
-            var id = $(this).data("id");
-            var status = $(this).hasClass("shadow border-success") ? 1 : 0;
+        $(".account-card").on("click", function() {
+            var $card = $(this);
+            $card.toggleClass("active");
+            var type = $card.data("type");
+            var id = $card.data("id");
+            var status = $card.hasClass("active") ? 1 : 0;
             $.ajax({
                 url: "{{ route('panel.schedule.account.status') }}",
                 type: "GET",
@@ -25,12 +26,12 @@
                     if (response.success) {
                         toastr.success(response.message);
                     } else {
-                        $(this).toggleClass("shadow border-success");
+                        $card.toggleClass("active");
                         toastr.error(response.message);
                     }
                 },
                 error: function(response) {
-                    $(this).toggleClass("shadow border-success");
+                    $card.toggleClass("active");
                     toastr.error("Something went Wrong!");
                 }
             });
@@ -201,8 +202,8 @@
         // check accounts status
         var checkAccounts = function() {
             var account = false;
-            $('.account').each(function() {
-                if ($(this).hasClass("shadow border-success")) {
+            $('.account-card').each(function() {
+                if ($(this).hasClass("active")) {
                     account = true;
                 }
             });
@@ -456,69 +457,249 @@
         $(document).on('click', '.close-btn-placeholder', function() {
             resetPostArea();
         });
-        // posts datatable
-        var postsdataTable = $('#postsTable').DataTable({
-            "paging": true,
-            "lengthChange": true,
-            "searching": false,
-            "ordering": false,
-            "info": true,
-            "autoWidth": true,
-            "responsive": true,
-            "processing": true,
-            "serverSide": true,
-            "pageLength": 10,
-            "ajax": {
-                "url": "{{ route('panel.schedule.posts.listing') }}",
-                data: function(d) {
-                    d.account_id = $('#account').val();
-                    d.type = $('#type').val();
-                    d.post_type = $('#post_type').val();
-                    d.status = $('#status').val();
-                    return d;
+        // Posts Grid Variables
+        var currentPage = 1;
+        var perPage = 9;
+        var totalPosts = 0;
+
+        // Load posts
+        function loadPosts(page = 1) {
+            currentPage = page;
+
+            $('#postsGrid').html(`
+                <div class="loading-state text-center py-5" style="grid-column: 1/-1;">
+                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
+                    <p class="mt-2 text-muted">Loading posts...</p>
+                </div>
+            `);
+
+            $.ajax({
+                url: "{{ route('panel.schedule.posts.listing') }}",
+                type: "GET",
+                data: {
+                    draw: 1,
+                    start: (page - 1) * perPage,
+                    length: perPage,
+                    account_id: $("#filter_account").val(),
+                    type: $("#filter_type").val(),
+                    post_type: $("#filter_post_type").val(),
+                    status: $("#filter_status").val(),
                 },
-            },
-            columns: [{
-                    data: 'post_details',
-                    name: 'post_details'
+                success: function(response) {
+                    totalPosts = response.iTotalDisplayRecords;
+                    renderPosts(response.data);
+                    renderPagination();
                 },
-                {
-                    data: 'account_detail',
-                    name: 'account_detail',
-                    className: 'dt-nowrap'
-                },
-                {
-                    data: 'publish_datetime',
-                    name: 'publish_datetime',
-                    className: 'dt-nowrap'
-                },
-                {
-                    data: 'status_view',
-                    name: 'status_view',
-                    className: 'dt-nowrap'
-                },
-                {
-                    data: 'response',
-                    name: 'response',
-                    className: 'fixed-width-100'
-                },
-                {
-                    data: 'action',
-                    name: 'action',
-                    className: 'dt-nowrap'
-                },
-            ],
+                error: function() {
+                    $('#postsGrid').html(`
+                        <div class="empty-state">
+                            <i class="fas fa-exclamation-circle"></i>
+                            <p>Failed to load posts. Please try again.</p>
+                        </div>
+                    `);
+                }
+            });
+        }
+
+        // Render posts grid
+        function renderPosts(posts) {
+            if (posts.length === 0) {
+                $('#postsGrid').html(`
+                    <div class="empty-state">
+                        <i class="fas fa-inbox"></i>
+                        <p>No posts found</p>
+                        <small>Create a new post using the form above</small>
+                    </div>
+                `);
+                return;
+            }
+
+            var html = '';
+            posts.forEach(function(post) {
+                html += renderPostCard(post);
+            });
+            $('#postsGrid').html(html);
+        }
+
+        // Render single post card
+        function renderPostCard(post) {
+            var statusClass = post.status == 1 ? 'published' : (post.status == -1 ? 'failed' : 'pending');
+            var statusText = post.status == 1 ? 'Published' : (post.status == -1 ? 'Failed' : 'Pending');
+            var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' : 'fab fa-pinterest-p';
+            var platformClass = post.social_type;
+
+            // Source badge
+            var sourceBadge = '';
+            if (post.source) {
+                var sourceIcon = post.source === 'rss' ? 'fa-rss' : (post.source === 'api' ? 'fa-code' :
+                    'fa-edit');
+                var sourceClass = post.source === 'rss' ? 'rss' : (post.source === 'api' ? 'api' : 'manual');
+                sourceBadge =
+                    `<span class="source-badge ${sourceClass}"><i class="fas ${sourceIcon}"></i> ${post.source.toUpperCase()}</span>`;
+            }
+
+            var publishedAt = post.status == 1 && post.published_at ?
+                `<div class="published-at">Published at: ${post.published_at_formatted || post.published_at}</div>` :
+                '';
+
+            var responseHtml = '';
+            if (post.response) {
+                var responseClass = post.status == 1 ? 'success' : (post.status == -1 ? 'error' : '');
+                var responseText = post.response.length > 100 ? post.response.substring(0, 100) + '...' : post
+                    .response;
+                responseHtml = `
+                    <div class="response-section">
+                        <div class="response-label">Response</div>
+                        <div class="response-text ${responseClass}">${responseText}</div>
+                    </div>
+                `;
+            }
+
+            var actionButtons = '';
+            if (post.status == 0) {
+                actionButtons = `
+                    <button class="btn btn-outline-primary btn-sm edit_btn" data-id="${post.id}" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-success btn-sm publish_now_btn" data-id="${post.id}" title="Publish Now">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                    <button class="btn btn-outline-danger btn-sm delete_btn" data-id="${post.id}" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+            } else {
+                actionButtons = `
+                    <button class="btn btn-outline-danger btn-sm delete_btn" data-id="${post.id}" title="Delete">
+                        <i class="fas fa-trash"></i> Delete
+                    </button>
+                `;
+            }
+
+            return `
+                <div class="schedule-post-card">
+                    <div class="post-preview">
+                        ${post.post_details}
+                    </div>
+                    <div class="post-meta">
+                        <div class="post-meta-row">
+                            <div class="post-account-badge">
+                                <span class="platform-icon ${platformClass}">
+                                    <i class="${platformIcon}"></i>
+                                </span>
+                                <span class="post-account-name">${post.account_name || 'Unknown'}</span>
+                            </div>
+                            ${sourceBadge}
+                        </div>
+                        <div class="post-meta-row">
+                            <div class="datetime-info">
+                                <span class="label">Scheduled:</span>
+                                <span class="value">${post.publish_datetime}</span>
+                            </div>
+                            <div>
+                                <span class="status-badge ${statusClass}">
+                                    <i class="fas fa-${post.status == 1 ? 'check-circle' : (post.status == -1 ? 'times-circle' : 'clock')}"></i>
+                                    ${statusText}
+                                </span>
+                                ${publishedAt}
+                            </div>
+                        </div>
+                        ${responseHtml}
+                        <div class="post-actions-bar">
+                            ${actionButtons}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // Render pagination
+        function renderPagination() {
+            var totalPages = Math.ceil(totalPosts / perPage);
+            var start = (currentPage - 1) * perPage + 1;
+            var end = Math.min(currentPage * perPage, totalPosts);
+
+            if (totalPosts === 0) {
+                $('.pagination-info').html('');
+                $('.pagination').html('');
+                return;
+            }
+
+            $('.pagination-info').html(`Showing ${start} to ${end} of ${totalPosts} posts`);
+
+            var paginationHtml = '';
+
+            // Previous button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage - 1}">
+                        <i class="fas fa-chevron-left"></i>
+                    </a>
+                </li>
+            `;
+
+            // Page numbers
+            var startPage = Math.max(1, currentPage - 2);
+            var endPage = Math.min(totalPages, currentPage + 2);
+
+            if (startPage > 1) {
+                paginationHtml +=
+                `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+                if (startPage > 2) {
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+            }
+
+            for (var i = startPage; i <= endPage; i++) {
+                paginationHtml += `
+                    <li class="page-item ${i === currentPage ? 'active' : ''}">
+                        <a class="page-link" href="#" data-page="${i}">${i}</a>
+                    </li>
+                `;
+            }
+
+            if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                    paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
+                }
+                paginationHtml +=
+                    `<li class="page-item"><a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a></li>`;
+            }
+
+            // Next button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage + 1}">
+                        <i class="fas fa-chevron-right"></i>
+                    </a>
+                </li>
+            `;
+
+            $('.pagination').html(paginationHtml);
+        }
+
+        // Pagination click
+        $(document).on('click', '.pagination .page-link', function(e) {
+            e.preventDefault();
+            var page = $(this).data('page');
+            if (page && !$(this).parent().hasClass('disabled') && !$(this).parent().hasClass(
+                'active')) {
+                loadPosts(page);
+            }
         });
+
+        // Filter change
         $(document).on('change', '.filter', function() {
-            reloadDatatable();
+            loadPosts(1);
         });
-        // reload datatable
-        var reloadDatatable = function() {
-            postsdataTable.ajax.reload();
+
+        // Reload posts function (for use after actions)
+        var reloadPosts = function() {
+            loadPosts(currentPage);
         }
-        var drawDataTable = function() {
-            postsdataTable.draw('full-hold');
-        }
+
+        // Initial load
+        loadPosts(1)
         // delete post
         $(document).on('click', '.delete_btn', function() {
             if (confirm(
@@ -532,7 +713,7 @@
                     },
                     success: function(response) {
                         if (response.success) {
-                            drawDataTable();
+                            reloadPosts();
                             toastr.success(response.message);
                         } else {
                             toastr.error(response.message);
@@ -603,7 +784,7 @@
                     success: function(response) {
                         if (response.success) {
                             modal.modal("hide");
-                            drawDataTable();
+                            reloadPosts();
                             toastr.success(response.message);
                         } else {
                             toastr.error(response.message);
@@ -624,7 +805,7 @@
                     },
                     success: function(response) {
                         if (response.success) {
-                            reloadDatatable();
+                            reloadPosts();
                             toastr.success(response.message);
                         } else {
                             toastr.error(response.message);
@@ -635,5 +816,49 @@
                 return;
             }
         });
+
+        // Image Lightbox functionality for posts grid
+        $(document).on('click',
+            '.schedule-post-card .pinterest_card .image-container img.post-image, .schedule-post-card .facebook_card .pronunciation-image-container img',
+            function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                var imgSrc = $(this).attr('src');
+                var imgAlt = $(this).attr('alt') || '';
+
+                // Get post title from the card
+                var $card = $(this).closest('.pinterest_card, .facebook_card');
+                var caption = $card.find('.card-content span:last, .mb-3.px-3 span').first().text().trim();
+
+                $('#lightboxImage').attr('src', imgSrc);
+                $('#lightboxCaption').text(caption || imgAlt);
+                $('#imageLightbox').addClass('active');
+
+                // Prevent body scroll
+                $('body').css('overflow', 'hidden');
+            });
+
+        // Close lightbox on close button click
+        $('#lightboxClose').on('click', function() {
+            closeLightbox();
+        });
+
+        // Close lightbox on backdrop click
+        $('.lightbox-backdrop').on('click', function() {
+            closeLightbox();
+        });
+
+        // Close lightbox on ESC key
+        $(document).on('keydown', function(e) {
+            if (e.key === 'Escape' && $('#imageLightbox').hasClass('active')) {
+                closeLightbox();
+            }
+        });
+
+        function closeLightbox() {
+            $('#imageLightbox').removeClass('active');
+            $('body').css('overflow', '');
+        }
     });
 </script>

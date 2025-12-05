@@ -19,8 +19,13 @@ class Page extends Model
         "status",
         "last_fetch",
         "shuffle",
+        "rss_paused",
         "access_token",
         "expires_in",
+    ];
+
+    protected $casts = [
+        'rss_paused' => 'boolean',
     ];
 
     protected $appends = ["type"];

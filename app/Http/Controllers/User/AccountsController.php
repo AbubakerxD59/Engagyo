@@ -205,4 +205,51 @@ class AccountsController extends Controller
             return back()->with('error', 'Something went Wrong!');
         }
     }
+
+    /**
+     * Toggle RSS pause status for a page or board
+     */
+    public function toggleRssPause(Request $request)
+    {
+        try {
+            $type = $request->type;
+            $id = $request->id;
+
+            if ($type === 'facebook') {
+                $page = $this->page->findOrFail($id);
+                $page->rss_paused = !$page->rss_paused;
+                $page->save();
+
+                return response()->json([
+                    "success" => true,
+                    "message" => $page->rss_paused 
+                        ? "RSS automation paused for this page." 
+                        : "RSS automation resumed for this page.",
+                    "paused" => $page->rss_paused
+                ]);
+            } elseif ($type === 'pinterest') {
+                $board = $this->board->findOrFail($id);
+                $board->rss_paused = !$board->rss_paused;
+                $board->save();
+
+                return response()->json([
+                    "success" => true,
+                    "message" => $board->rss_paused 
+                        ? "RSS automation paused for this board." 
+                        : "RSS automation resumed for this board.",
+                    "paused" => $board->rss_paused
+                ]);
+            }
+
+            return response()->json([
+                "success" => false,
+                "message" => "Invalid account type."
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => $e->getMessage()
+            ]);
+        }
+    }
 }

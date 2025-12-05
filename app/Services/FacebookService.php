@@ -100,35 +100,83 @@ class FacebookService
     public function refreshAccessToken($access_token, $page_id)
     {
         try {
+            // Find the page first
+            $page = Page::find($page_id);
+            
+            if (!$page) {
+                return [
+                    "success" => false,
+                    "message" => "Facebook page not found. Please reconnect your Facebook account.",
+                ];
+            }
+
             $getOAuth2Client = $this->facebook->getOAuth2Client();
-            $access_token = $getOAuth2Client->getLongLivedAccessToken($access_token);
-            $tokenMetadata = $getOAuth2Client->debugToken($access_token);
-            $access_token = $access_token->getValue();
-            $page = Page::find($page_id)->first();
+            
+            // Try to get a long-lived access token
+            $longLivedToken = $getOAuth2Client->getLongLivedAccessToken($access_token);
+            
+            if (!$longLivedToken) {
+                return [
+                    "success" => false,
+                    "message" => "Failed to refresh access token. The token may have expired. Please reconnect your Facebook account.",
+                ];
+            }
+            
+            // Debug the new token to get metadata
+            $tokenMetadata = $getOAuth2Client->debugToken($longLivedToken);
+            
+            // Check if token is valid
+            if (!$tokenMetadata->getIsValid()) {
+                return [
+                    "success" => false,
+                    "message" => "The refreshed token is invalid. Please reconnect your Facebook account.",
+                ];
+            }
+            
+            $newAccessToken = $longLivedToken->getValue();
+            
+            // Get expiration time
+            $expiresAt = $tokenMetadata->getField("data_access_expires_at");
+            
+            // Update the page with new token
             $page->update([
-                "access_token" => $access_token,
-                "expires_in" => $tokenMetadata->getField("data_access_expires_at"),
+                "access_token" => $newAccessToken,
+                "expires_in" => $expiresAt,
             ]);
+            
             $response = [
                 "success" => true,
                 "data" => [
                     "metadata" => $tokenMetadata,
-                    "access_token" => $access_token
+                    "access_token" => $newAccessToken
                 ],
             ];
+            
+            info("Facebook token refreshed successfully for page ID: {$page_id}");
+            
         } catch (FacebookResponseException $e) {
             // When Graph returns an error
             $error = $e->getMessage();
+            info("Facebook token refresh error (FacebookResponseException) for page ID {$page_id}: " . $error);
             $response = [
                 "success" => false,
-                "message" => $error,
+                "message" => "Facebook API error: " . $error,
             ];
         } catch (FacebookSDKException $e) {
             // When validation fails or other local issues
             $error = $e->getMessage();
+            info("Facebook token refresh error (FacebookSDKException) for page ID {$page_id}: " . $error);
             $response = [
                 "success" => false,
-                "message" => $error,
+                "message" => "Facebook SDK error: " . $error,
+            ];
+        } catch (\Exception $e) {
+            // Catch any other unexpected errors
+            $error = $e->getMessage();
+            info("Facebook token refresh error (Exception) for page ID {$page_id}: " . $error);
+            $response = [
+                "success" => false,
+                "message" => "Unexpected error while refreshing token: " . $error,
             ];
         }
         return $response;
@@ -433,18 +481,54 @@ class FacebookService
 
     public static function validateToken($account)
     {
-        $access_token = $account->access_token;
-        $response = ["success" => true, "access_token" => $access_token];
-        if (!$account->validToken()) {
-            $service = new FacebookService();
-            $token = $service->refreshAccessToken($access_token, $account->id);
-            if ($token["success"]) {
-                $data = $token["data"];
-                $response = ["success" => true, "access_token" => $data["access_token"]];
-            } else {
-                $response = ["success" => false, "message" => $token["message"]];
+        try {
+            // Check if account exists
+            if (!$account) {
+                return [
+                    "success" => false,
+                    "message" => "Facebook account not found."
+                ];
             }
+
+            // Check if access token exists
+            if (empty($account->access_token)) {
+                return [
+                    "success" => false,
+                    "message" => "Facebook access token is missing. Please reconnect your Facebook account."
+                ];
+            }
+
+            $access_token = $account->access_token;
+            $response = ["success" => true, "access_token" => $access_token];
+
+            // If token is expired or invalid, try to refresh it
+            if (!$account->validToken()) {
+                info("Facebook token expired for account ID: {$account->id}. Attempting to refresh...");
+                
+                $service = new FacebookService();
+                $token = $service->refreshAccessToken($access_token, $account->id);
+                
+                if ($token["success"]) {
+                    $data = $token["data"];
+                    $response = ["success" => true, "access_token" => $data["access_token"]];
+                    info("Facebook token refreshed successfully for account ID: {$account->id}");
+                } else {
+                    $response = [
+                        "success" => false,
+                        "message" => $token["message"] ?? "Failed to refresh Facebook token. Please reconnect your account."
+                    ];
+                    info("Facebook token refresh failed for account ID: {$account->id}. Error: " . ($token["message"] ?? "Unknown error"));
+                }
+            }
+
+            return $response;
+
+        } catch (\Exception $e) {
+            info("Facebook validateToken error for account ID: " . ($account->id ?? 'unknown') . ". Error: " . $e->getMessage());
+            return [
+                "success" => false,
+                "message" => "Error validating Facebook token: " . $e->getMessage()
+            ];
         }
-        return $response;
     }
 }

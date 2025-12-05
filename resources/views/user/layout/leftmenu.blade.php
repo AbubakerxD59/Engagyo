@@ -30,17 +30,6 @@
                         <p>Automation</p>
                     </a>
                 </li>
-                {{-- Accounts --}}
-                <?php
-                $account = ['panel.accounts', 'panel.accounts.pinterest', 'panel.accounts.facebook'];
-                ?>
-                <li class="nav-item">
-                    <a href="{{ route('panel.accounts') }}"
-                        class="nav-link {{ in_array(request()->route()->getName(), $account) ? 'active' : '' }}">
-                        <i class="nav-icon fas fa-user-circle"></i>
-                        <p>Accounts</p>
-                    </a>
-                </li>
                 {{-- API Posts --}}
                 <?php
                 $apiPosts = ['panel.api-posts'];
@@ -50,6 +39,17 @@
                         class="nav-link {{ in_array(request()->route()->getName(), $apiPosts) ? 'active' : '' }}">
                         <i class="nav-icon fas fa-code"></i>
                         <p>API Posts</p>
+                    </a>
+                </li>
+                {{-- Accounts --}}
+                <?php
+                $account = ['panel.accounts', 'panel.accounts.pinterest', 'panel.accounts.facebook'];
+                ?>
+                <li class="nav-item">
+                    <a href="{{ route('panel.accounts') }}"
+                        class="nav-link {{ in_array(request()->route()->getName(), $account) ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-user-circle"></i>
+                        <p>Accounts</p>
                     </a>
                 </li>
             </ul>
