@@ -3,7 +3,7 @@
 namespace App\Services;
 
 use Exception;
-use App\Models\TikTok as TikTokModel;
+use App\Models\Tiktok as TikTokModel;
 use App\Services\HttpService;
 use TikTok\Authentication\Authentication;
 use GuzzleHttp\Exception\RequestException;

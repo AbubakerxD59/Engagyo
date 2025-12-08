@@ -1,9 +1,5 @@
 <?php
 
-use App\Models\Post;
-use App\Services\PostService;
-use App\Jobs\PublishFacebookPost;
-use App\Services\FacebookService;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\Admin\AuthController;

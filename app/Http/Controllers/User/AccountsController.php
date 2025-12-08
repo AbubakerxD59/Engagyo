@@ -9,7 +9,7 @@ use App\Models\Board;
 use App\Models\Domain;
 use App\Models\Facebook;
 use App\Models\Pinterest;
-use App\Models\TikTok;
+use App\Models\Tiktok;
 use Illuminate\Http\Request;
 use App\Services\FacebookService;
 use App\Services\PinterestService;

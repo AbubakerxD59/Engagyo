@@ -3,7 +3,7 @@
 namespace App\Http\Controllers\FrontEnd;
 
 use App\Models\User;
-use App\Models\TikTok;
+use App\Models\Tiktok;
 use Illuminate\Http\Request;
 use App\Services\TikTokService;
 use App\Http\Controllers\Controller;
