@@ -84,7 +84,8 @@ Route::prefix('v1')->group(function () {
         Route::prefix('posts')->group(function () {
             // Create and publish a post to Facebook or Pinterest
             Route::post('/', [PostController::class, 'create']);
-
+            //  Create and publish a video to Facebook or Pinterest
+            Route::post('/video', [PostController::class, 'publishVideo']);
             // Get post status by ID
             Route::get('/status/{id}', [PostController::class, 'status']);
         });

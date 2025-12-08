@@ -9,9 +9,11 @@ use App\Models\Board;
 use App\Models\Domain;
 use App\Models\Facebook;
 use App\Models\Pinterest;
+use App\Models\TikTok;
 use Illuminate\Http\Request;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
+use App\Services\TikTokService;
 use App\Http\Controllers\Controller;
 use Exception;
 use Illuminate\Support\Facades\Auth;
@@ -20,18 +22,22 @@ class AccountsController extends Controller
 {
     private $pinterestService;
     private $facebookService;
+    private $tiktokService;
     private $pinterest;
     private $facebook;
+    private $tiktok;
     private $board;
     private $page;
     private $post;
     private $domain;
-    public function __construct(Pinterest $pinterest, Facebook $facebook, Board $board, Page $page, Post $post, Domain $domain)
+    public function __construct(Pinterest $pinterest, Facebook $facebook, TikTok $tiktok, Board $board, Page $page, Post $post, Domain $domain)
     {
         $this->pinterestService = new PinterestService();
         $this->facebookService = new FacebookService();
+        $this->tiktokService = new TikTokService();
         $this->pinterest = $pinterest;
         $this->facebook = $facebook;
+        $this->tiktok = $tiktok;
         $this->board = $board;
         $this->page = $page;
         $this->post = $post;
@@ -39,10 +45,11 @@ class AccountsController extends Controller
     }
     public function index()
     {
-        $user = User::with("facebook", "pinterest")->findOrFail(Auth::id());
+        $user = User::with("facebook", "pinterest", "tiktok")->findOrFail(Auth::id());
         $facebookUrl = $this->facebookService->getLoginUrl();
         $pinterestUrl = $this->pinterestService->getLoginUrl();
-        return view("user.accounts.index", compact("user", "facebookUrl", "pinterestUrl"));
+        $tiktokUrl = $this->tiktokService->getLoginUrl();
+        return view("user.accounts.index", compact("user", "facebookUrl", "pinterestUrl", "tiktokUrl"));
     }
 
     public function pinterestDelete($id = null)
@@ -250,6 +257,23 @@ class AccountsController extends Controller
                 "success" => false,
                 "message" => $e->getMessage()
             ]);
+        }
+    }
+
+    public function tiktokDelete($id = null)
+    {
+        if (!empty($id)) {
+            $user = Auth::user();
+            $tiktok = $this->tiktok->search($id)->first();
+            if ($tiktok) {
+                // TikTok account
+                $tiktok->delete();
+                return back()->with("success", "TikTok Account deleted Successfully!");
+            } else {
+                return back()->with("error", "Something went Wrong!");
+            }
+        } else {
+            return back()->with("error", "Something went Wrong!");
         }
     }
 }

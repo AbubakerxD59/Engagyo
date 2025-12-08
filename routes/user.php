@@ -42,6 +42,8 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
             Route::post("add-page", "addPage")->name("addPage");
             Route::delete('facebook-delete/{id?}', 'facebookDelete')->name('facebook.delete');
             Route::delete('page-delete/{id?}', 'pageDelete')->name("page.delete");
+            // TikTok
+            Route::delete('tiktok-delete/{id?}', 'tiktokDelete')->name('tiktok.delete');
             // Toggle RSS Pause
             Route::post("toggle-rss-pause", "toggleRssPause")->name("toggleRssPause");
         });

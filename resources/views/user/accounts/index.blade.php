@@ -21,53 +21,64 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="accounts-grid">
-                            @forelse ($user->facebook as $fb)
-                                <article class="account-card facebook-card has-tooltip" data-tooltip="{{ $fb->username }}">
-                                    <div class="account-card-accent"></div>
-                                    <a href="{{ route('panel.accounts.facebook', $fb->fb_id) }}" class="account-card-link">
-                                        <div class="account-card-content">
-                                            <div class="account-avatar-wrapper">
-                                                <img src="{{ $fb->profile_image }}" class="account-avatar"
-                                                    onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
-                                                <span class="platform-indicator facebook-indicator">
-                                                    <i class="fab fa-facebook-f"></i>
-                                                </span>
-                                            </div>
-                                            <div class="account-info">
-                                                <div class="account-username">
-                                                    {{ Str::limit($fb->username, 12) }}
+                        <div class="accounts-grid-wrapper">
+                            <div class="accounts-grid" data-platform="facebook">
+                                @forelse ($user->facebook as $index => $fb)
+                                    <article class="account-card facebook-card has-tooltip" @style(['display:none;' => $index >= 12])
+                                        data-tooltip="{{ $fb->username }}" data-index="{{ $index }}">
+                                        <div class="account-card-accent"></div>
+                                        <a href="{{ route('panel.accounts.facebook', $fb->fb_id) }}"
+                                            class="account-card-link">
+                                            <div class="account-card-content">
+                                                <div class="account-avatar-wrapper">
+                                                    <img src="{{ $fb->profile_image }}" class="account-avatar"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
+                                                    <span class="platform-indicator facebook-indicator">
+                                                        <i class="fab fa-facebook-f"></i>
+                                                    </span>
                                                 </div>
-                                                <div class="account-type">Facebook Account</div>
+                                                <div class="account-info">
+                                                    <div class="account-username">
+                                                        {{ Str::limit($fb->username, 12) }}
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </a>
-                                    <div class="account-card-actions">
-                                        <button class="btn-account-delete" onclick="confirmDelete(event)"
-                                            title="Delete Account">
-                                            <i class="fa fa-trash"></i>
-                                        </button>
-                                        <form action="{{ route('panel.accounts.facebook.delete', $fb->fb_id) }}"
-                                            method="POST" class="delete_form">
-                                            @csrf
-                                            @method('DELETE')
-                                        </form>
-                                    </div>
-                                </article>
-                            @empty
-                                <div class="empty-state-wrapper">
-                                    <div class="empty-state">
-                                        <div class="empty-state-icon facebook-empty">
-                                            <i class="fab fa-facebook-f"></i>
-                                        </div>
-                                        <h4>No Facebook Account Connected</h4>
-                                        <p>Connect your Facebook account to start scheduling and publishing posts.</p>
-                                        <a href="{{ $facebookUrl }}" class="btn btn-facebook">
-                                            <i class="fab fa-facebook-f mr-2"></i> Connect Facebook
                                         </a>
+                                        <div class="account-card-actions">
+                                            <button class="btn-account-delete" onclick="confirmDelete(event)"
+                                                title="Delete Account">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                            <form action="{{ route('panel.accounts.facebook.delete', $fb->fb_id) }}"
+                                                method="POST" class="delete_form">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
+                                        </div>
+                                    </article>
+                                @empty
+                                    <div class="empty-state-wrapper">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon facebook-empty">
+                                                <i class="fab fa-facebook-f"></i>
+                                            </div>
+                                            <h4>No Facebook Account Connected</h4>
+                                            <p>Connect your Facebook account to start scheduling and publishing posts.</p>
+                                            <a href="{{ $facebookUrl }}" class="btn btn-facebook">
+                                                <i class="fab fa-facebook-f mr-2"></i> Connect Facebook
+                                            </a>
+                                        </div>
                                     </div>
+                                @endforelse
+                            </div>
+                            @if (count($user->facebook) > 12)
+                                <div class="accounts-toggle-wrapper">
+                                    <button class="btn-accounts-toggle" data-platform="facebook" type="button">
+                                        <span class="toggle-text">Show All</span>
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </button>
                                 </div>
-                            @endforelse
+                            @endif
                         </div>
                     </div>
                 </div>
@@ -87,67 +98,76 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="accounts-grid">
-                            @forelse ($user->pinterest as $pin)
-                                <article class="account-card pinterest-card has-tooltip"
-                                    data-tooltip="{{ $pin->username }}">
-                                    <div class="account-card-accent"></div>
-                                    <a href="{{ route('panel.accounts.pinterest', $pin->pin_id) }}"
-                                        class="account-card-link">
-                                        <div class="account-card-content">
-                                            <div class="account-avatar-wrapper">
-                                                <img src="{{ $pin->profile_image }}" class="account-avatar"
-                                                    onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
-                                                <span class="platform-indicator pinterest-indicator">
-                                                    <i class="fab fa-pinterest-p"></i>
-                                                </span>
-                                            </div>
-                                            <div class="account-info">
-                                                <div class="account-username">
-                                                    {{ Str::limit($pin->username, 12) }}
+                        <div class="accounts-grid-wrapper">
+                            <div class="accounts-grid" data-platform="pinterest">
+                                @forelse ($user->pinterest as $index => $pin)
+                                    <article class="account-card pinterest-card has-tooltip" @style(['display:none;' => $index >= 12])
+                                        data-tooltip="{{ $pin->username }}" data-index="{{ $index }}">
+                                        <div class="account-card-accent"></div>
+                                        <a href="{{ route('panel.accounts.pinterest', $pin->pin_id) }}"
+                                            class="account-card-link">
+                                            <div class="account-card-content">
+                                                <div class="account-avatar-wrapper">
+                                                    <img src="{{ $pin->profile_image }}" class="account-avatar"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
+                                                    <span class="platform-indicator pinterest-indicator">
+                                                        <i class="fab fa-pinterest-p"></i>
+                                                    </span>
                                                 </div>
-                                                <div class="account-type">Pinterest Account</div>
+                                                <div class="account-info">
+                                                    <div class="account-username">
+                                                        {{ Str::limit($pin->username, 12) }}
+                                                    </div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </a>
-                                    <div class="account-card-actions">
-                                        <button class="btn-account-delete" onclick="confirmDelete(event)"
-                                            title="Delete Account">
-                                            <i class="fa fa-trash"></i>
-                                        </button>
-                                        <form action="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}"
-                                            method="POST" class="delete_form">
-                                            @csrf
-                                            @method('DELETE')
-                                        </form>
-                                    </div>
-                                </article>
-                            @empty
-                                <div class="empty-state-wrapper">
-                                    <div class="empty-state">
-                                        <div class="empty-state-icon pinterest-empty">
-                                            <i class="fab fa-pinterest-p"></i>
-                                        </div>
-                                        <h4>No Pinterest Account Connected</h4>
-                                        <p>Connect your Pinterest account to start scheduling pins to your boards.</p>
-                                        <a href="{{ $pinterestUrl }}" class="btn btn-pinterest">
-                                            <i class="fab fa-pinterest-p mr-2"></i> Connect Pinterest
                                         </a>
+                                        <div class="account-card-actions">
+                                            <button class="btn-account-delete" onclick="confirmDelete(event)"
+                                                title="Delete Account">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                            <form action="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}"
+                                                method="POST" class="delete_form">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
+                                        </div>
+                                    </article>
+                                @empty
+                                    <div class="empty-state-wrapper">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon pinterest-empty">
+                                                <i class="fab fa-pinterest-p"></i>
+                                            </div>
+                                            <h4>No Pinterest Account Connected</h4>
+                                            <p>Connect your Pinterest account to start scheduling pins to your boards.</p>
+                                            <a href="{{ $pinterestUrl }}" class="btn btn-pinterest">
+                                                <i class="fab fa-pinterest-p mr-2"></i> Connect Pinterest
+                                            </a>
+                                        </div>
                                     </div>
+                                @endforelse
+                            </div>
+                            @if (count($user->pinterest) > 12)
+                                <div class="accounts-toggle-wrapper">
+                                    <button class="btn-accounts-toggle" data-platform="pinterest" type="button">
+                                        <span class="toggle-text">Show All</span>
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </button>
                                 </div>
-                            @endforelse
+                            @endif
                         </div>
                     </div>
                 </div>
                 {{-- TikTok --}}
-                {{-- <div class="card">
+                <div class="card platform-card">
                     <div class="card-header with-border clearfix">
                         <div class="card-title">
-                            <input type="hidden" id="pinterestAcc" value="{{ session_check('pinterest_auth') ? 1 : 0 }}">
-                            <img src="{{ social_logo('pinterest') }}">
-                            <span>Pinterest</span>
+                            <input type="hidden" id="tiktokAcc" value="{{ session_check('tiktok_auth') ? 1 : 0 }}">
+                            <img src="{{ social_logo('tiktok') }}">
+                            <span>TikTok</span>
                         </div>
-                        <a href="{{ $pinterestUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
+                        <a href="{{ $tiktokUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
                                 <i class="fas fa-minus"></i>
@@ -155,34 +175,66 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <div class="row">
-                            @foreach ($user->pinterest as $pin)
-                                <article class="account_box col-md-3 m-1">
-                                    <a href="{{ route('panel.accounts.pinterest', $pin->pin_id) }}">
-                                        <div class="d-flex align-items-center">
-                                            <picture>
-                                                <img src="{{ $pin->profile_image }}" class="rounded-pill logo"
-                                                    onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
-                                            </picture>
-                                            <div class="account_name has-tooltip" data-tooltip="{{ $pin->username }}">{{ Str::limit($pin->username, 25) }}</div>
+                        <div class="accounts-grid-wrapper">
+                            <div class="accounts-grid" data-platform="tiktok">
+                                @forelse ($user->tiktok as $index => $tiktok)
+                                    <article class="account-card tiktok-card has-tooltip" @style(['display:none;' => $index >= 12])
+                                        data-tooltip="{{ $tiktok->username }}" data-index="{{ $index }}">
+                                        <div class="account-card-accent"></div>
+                                        <div class="account-card-link">
+                                            <div class="account-card-content">
+                                                <div class="account-avatar-wrapper">
+                                                    <img src="{{ $tiktok->profile_image }}" class="account-avatar"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';">
+                                                    <span class="platform-indicator tiktok-indicator">
+                                                        <i class="fab fa-tiktok"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-info">
+                                                    <div class="account-username">
+                                                        {{ Str::limit($tiktok->username, 12) }}
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
-                                    </a>
-                                    <div>
-                                        <button class="btn btn-outline-danger btn-sm delete-btn border-0"
-                                            onclick="confirmDelete(event)">
-                                            <i class="fa fa-trash px-2"></i>
-                                        </button>
-                                        <form action="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}"
-                                            method="POST" class="delete_form">
-                                            @csrf
-                                            @method('DELETE')
-                                        </form>
+                                        <div class="account-card-actions">
+                                            <button class="btn-account-delete" onclick="confirmDelete(event)"
+                                                title="Delete Account">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                            <form action="{{ route('panel.accounts.tiktok.delete', $tiktok->tiktok_id) }}"
+                                                method="POST" class="delete_form">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
+                                        </div>
+                                    </article>
+                                @empty
+                                    <div class="empty-state-wrapper">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon tiktok-empty">
+                                                <i class="fab fa-tiktok"></i>
+                                            </div>
+                                            <h4>No TikTok Account Connected</h4>
+                                            <p>Connect your TikTok account to start scheduling and publishing videos.</p>
+                                            <a href="{{ $tiktokUrl }}" class="btn btn-tiktok">
+                                                <i class="fab fa-tiktok mr-2"></i> Connect TikTok
+                                            </a>
+                                        </div>
                                     </div>
-                                </article>
-                            @endforeach
+                                @endforelse
+                            </div>
+                            @if (count($user->tiktok) > 12)
+                                <div class="accounts-toggle-wrapper">
+                                    <button class="btn-accounts-toggle" data-platform="tiktok" type="button">
+                                        <span class="toggle-text">Show All</span>
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </button>
+                                </div>
+                            @endif
                         </div>
                     </div>
-                </div> --}}
+                </div>
 
             </div>
         </section>
@@ -196,6 +248,8 @@
             @include('user.accounts.modals.facebook_pages_modal', [
                 'facebook' => $user->facebook()->latest()->first(),
             ])
+        @elseif(session_get('account') == 'TikTok')
+            {{-- TikTok doesn't need a modal like Pinterest/Facebook --}}
         @endif
     @endif
 @endsection
@@ -236,10 +290,77 @@
             padding: 1.25rem;
         }
 
+        .accounts-grid-wrapper {
+            position: relative;
+        }
+
         .accounts-grid {
             display: grid;
             grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
             gap: 16px;
+            position: relative;
+            overflow: visible;
+        }
+
+        .accounts-grid-wrapper {
+            overflow: visible;
+        }
+
+        /* Ensure smooth transitions for account cards */
+        .account-card {
+            transition: opacity 0.3s ease, transform 0.3s ease;
+        }
+
+        /* Tooltip Styling */
+        .has-tooltip {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .has-tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 8px 12px;
+            background: #333;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            border-radius: 6px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+            transform: translateX(-50%) translateY(-5px);
+            z-index: 9999;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            visibility: hidden;
+            min-width: max-content;
+        }
+
+        .has-tooltip::before {
+            content: '';
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent;
+            border-top-color: #333;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+            transform: translateX(-50%) translateY(-5px);
+            z-index: 10000;
+            visibility: hidden;
+        }
+
+        .has-tooltip:hover::after,
+        .has-tooltip:hover::before {
+            opacity: 1;
+            transform: translateX(-50%) translateY(0);
+            visibility: visible;
         }
 
         .account-card {
@@ -248,7 +369,7 @@
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
             border: 1px solid #e8e8e8;
-            overflow: hidden;
+            overflow: visible;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: flex;
             align-items: stretch;
@@ -267,6 +388,8 @@
             width: 4px;
             height: 100%;
             transition: width 0.3s ease;
+            z-index: 1;
+            border-radius: 12px 0 0 12px;
         }
 
         .facebook-card .account-card-accent {
@@ -478,6 +601,75 @@
             box-shadow: 0 4px 12px rgba(230, 0, 35, 0.35);
         }
 
+        .btn-tiktok {
+            background: #000000;
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-tiktok:hover {
+            background: #333333;
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        }
+
+        .tiktok-card .account-card-accent {
+            background: linear-gradient(180deg, #000000, #333333);
+        }
+
+        .tiktok-card:hover .account-avatar {
+            border-color: #000000;
+        }
+
+        .tiktok-indicator {
+            background: #000000;
+        }
+
+        .empty-state-icon.tiktok-empty {
+            background: linear-gradient(135deg, #e8e8e8, #d4d4d4);
+            color: #000000;
+        }
+
+        /* Toggle Button Styling */
+        .accounts-toggle-wrapper {
+            text-align: center;
+            margin-top: 20px;
+            padding-top: 16px;
+            border-top: 1px solid #e8e8e8;
+        }
+
+        .btn-accounts-toggle {
+            background: transparent;
+            border: 1px solid #d0d0d0;
+            color: #666;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-accounts-toggle:hover {
+            background: #f5f5f5;
+            border-color: #999;
+            color: #333;
+        }
+
+        .btn-accounts-toggle .toggle-icon {
+            transition: transform 0.3s ease;
+            font-size: 12px;
+        }
+
         /* Responsive adjustments */
         @media (max-width: 576px) {
             .accounts-grid {
@@ -498,7 +690,30 @@
 @push('scripts')
     <script>
         $(document).ready(function() {
+            // Initialize tooltips for account cards
+            function initAccountTooltips() {
+                $('.has-tooltip').each(function() {
+                    var $element = $(this);
+                    var tooltipText = $element.data('tooltip');
+
+                    if (tooltipText) {
+                        // Ensure tooltip text is set
+                        $element.attr('data-tooltip', tooltipText);
+                    }
+                });
+            }
+
             // Initialize tooltips
+            initAccountTooltips();
+
+            // Re-initialize tooltips after toggle (for newly shown cards)
+            $(document).on('click', '.btn-accounts-toggle', function() {
+                setTimeout(function() {
+                    initAccountTooltips();
+                }, 450); // After fade animation completes
+            });
+
+            // Legacy tooltip initialization if function exists
             if (typeof initTooltips === 'function') {
                 initTooltips();
             }
@@ -572,6 +787,19 @@
             $("#connectFacebookModal").on("hide.bs.modal", function() {
                 {{ session_delete('account') }}
                 {{ session_delete('items') }}
+            });
+
+            // Accounts Toggle Functionality
+            $('.btn-accounts-toggle').on('click', function() {
+                var $button = $(this);
+                var platform = $button.data('platform');
+                var $grid = $('.accounts-grid[data-platform="' + platform + '"]');
+                var $hiddenCards = $grid.find('.account-card[data-index]').filter(function() {
+                    return parseInt($(this).data('index')) >= 12;
+                });
+                $button.find('.toggle-icon').toggleClass('fa-chevron-down fa-chevron-up');
+                $hiddenCards.toggle();
+                $button.find('.toggle-text').text($hiddenCards.is(':visible') ? 'Show Less' : 'Show All');
             });
 
         });

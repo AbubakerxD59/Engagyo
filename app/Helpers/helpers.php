@@ -365,6 +365,8 @@ function social_logo($type = null)
         $logo = asset("assets/img/icons/instagram.png");
     } elseif ($type == 'pinterest') {
         $logo = asset("assets/img/icons/pinterest-circle.svg");
+    } elseif ($type == 'tiktok') {
+        $logo = asset("assets/img/icons/tiktok-circle.svg");
     } else {
         $logo = "";
     }
@@ -380,6 +382,8 @@ function social_icon($type = null)
         $logo = '<i class="fa-brands fa-instagram"></i>';
     } elseif ($type == 'pinterest') {
         $logo = '<i class="fa-brands fa-pinterest"></i>';
+    } elseif ($type == 'tiktok') {
+        $logo = '<i class="fa-brands fa-tiktok"></i>';
     } else {
         $logo = "";
     }
@@ -751,7 +755,7 @@ function getApiEndpoints()
         "id" => "posts-create",
         "method" => "POST",
         "endpoint" => "/posts",
-        "description" => "Create and publish a post to Facebook or Pinterest",
+        "description" => "Create and publish a post (photo or link) to Facebook or Pinterest. If scheduled_at is provided, the post will be scheduled for the specified date and time. If not provided, the post will be published immediately.",
         "category" => "Posts",
         "parameters" => [
             ["name" => "platform", "type" => "string", "required" => true, "description" => "Target platform: 'facebook' or 'pinterest'"],
@@ -760,7 +764,7 @@ function getApiEndpoints()
             ["name" => "title", "type" => "string", "required" => true, "description" => "Post title/message (max 500 characters)"],
             ["name" => "description", "type" => "string", "required" => false, "description" => "Additional description (max 2000 characters)"],
             ["name" => "link", "type" => "string", "required" => false, "description" => "Destination URL for link posts"],
-            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Schedule post for future (format: Y-m-d H:i:s). If not provided, post is published immediately"]
+            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Optional. Schedule post for future date and time (format: Y-m-d H:i:s). If provided, the post will be scheduled for the given date and time. If not provided, the post will be published immediately."]
         ],
         "request" => [
             "headers" => [
@@ -798,61 +802,7 @@ function getApiEndpoints()
                 ]
             ]
         ],
-        "notes" => "If scheduled_at is not provided, the post will be published immediately. Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id."
-    ];
-
-    $endpoints[] = [
-        "id" => "posts-create-immediate",
-        "method" => "POST",
-        "endpoint" => "/posts",
-        "description" => "Create and publish a post immediately",
-        "category" => "Posts",
-        "parameters" => [
-            ["name" => "platform", "type" => "string", "required" => true, "description" => "Target platform: 'facebook' or 'pinterest'"],
-            ["name" => "account_id", "type" => "string", "required" => true, "description" => "Page ID (Facebook) or Board ID (Pinterest)"],
-            ["name" => "image_url", "type" => "string", "required" => true, "description" => "Publicly accessible URL of the image to post"],
-            ["name" => "title", "type" => "string", "required" => true, "description" => "Post title/message (max 500 characters)"],
-            ["name" => "description", "type" => "string", "required" => false, "description" => "Additional description (max 2000 characters)"],
-            ["name" => "link", "type" => "string", "required" => false, "description" => "Destination URL for link posts"]
-        ],
-        "request" => [
-            "headers" => [
-                "Authorization" => "Bearer your_api_key_here",
-                "Content-Type" => "application/json"
-            ],
-            "body" => [
-                "platform" => "pinterest",
-                "account_id" => "board_123456789",
-                "image_url" => "https://example.com/images/my-pin.jpg",
-                "title" => "Beautiful sunset photography",
-                "description" => "Captured this amazing sunset at the beach.",
-                "link" => "https://example.com/photos/sunset"
-            ],
-            "curl" => 'curl -X POST "{base_url}/posts" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"pinterest","account_id":"board_123","image_url":"https://example.com/image.jpg","title":"My Pin"}\''
-        ],
-        "response" => [
-            "success" => true,
-            "message" => "Post is being published to Pinterest",
-            "data" => [
-                "post" => [
-                    "id" => 124,
-                    "platform" => "pinterest",
-                    "status" => "publishing",
-                    "type" => "link",
-                    "created_at" => "2025-12-04T10:35:00+00:00"
-                ],
-                "account" => [
-                    "type" => "pinterest_board",
-                    "board_id" => "board_123456789",
-                    "board_name" => "Travel Photos",
-                    "pinterest_account" => [
-                        "username" => "johndoe",
-                        "profile_image" => "https://example.com/pinterest-profile.jpg"
-                    ]
-                ]
-            ]
-        ],
-        "notes" => "When no scheduled_at is provided, the post is queued for immediate publishing. Status will be 'publishing' until the job completes."
+        "notes" => "Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id. When scheduled_at is provided, status will be 'scheduled'. When not provided, status will be 'publishing' and the post will be queued for immediate publishing."
     ];
 
     $endpoints[] = [
@@ -895,6 +845,59 @@ function getApiEndpoints()
             ]
         ],
         "notes" => "Status values: 'pending' (waiting to publish), 'scheduled' (scheduled for future), 'publishing' (being processed), 'published' (successfully posted), 'failed' (error occurred). If status is 'failed', an 'error' field will be included with the error message."
+    ];
+
+    // Video Endpoints
+    $endpoints[] = [
+        "id" => "videos-create",
+        "method" => "POST",
+        "endpoint" => "/posts/video",
+        "description" => "Create and publish a video to Facebook or Pinterest. If scheduled_at is provided, the video will be scheduled for the specified date and time. If not provided, the video will be published immediately.",
+        "category" => "Videos",
+        "parameters" => [
+            ["name" => "platform", "type" => "string", "required" => true, "description" => "Target platform: 'facebook' or 'pinterest'"],
+            ["name" => "account_id", "type" => "string", "required" => true, "description" => "Page ID (Facebook) or Board ID (Pinterest)"],
+            ["name" => "video_url", "type" => "string", "required" => true, "description" => "Publicly accessible URL of the video to post"],
+            ["name" => "title", "type" => "string", "required" => true, "description" => "Video title/description (max 500 characters)"],
+            ["name" => "description", "type" => "string", "required" => false, "description" => "Additional description (max 2000 characters)"],
+            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Optional. Schedule video for future date and time (format: Y-m-d H:i:s). If provided, the video will be scheduled for the given date and time. If not provided, the video will be published immediately."]
+        ],
+        "request" => [
+            "headers" => [
+                "Authorization" => "Bearer your_api_key_here",
+                "Content-Type" => "application/json"
+            ],
+            "body" => [
+                "platform" => "facebook",
+                "account_id" => "123456789012345",
+                "video_url" => "https://example.com/videos/my-video.mp4",
+                "title" => "Check out this amazing video!",
+                "description" => "This is an optional description for the video.",
+                "scheduled_at" => "2025-12-25 10:00:00"
+            ],
+            "curl" => 'curl -X POST "{base_url}/posts/video" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"facebook","account_id":"123456789","video_url":"https://example.com/video.mp4","title":"My Video"}\''
+        ],
+        "response" => [
+            "success" => true,
+            "message" => "Video scheduled successfully for Dec 25, 2025 at 10:00 AM",
+            "data" => [
+                "post" => [
+                    "id" => 125,
+                    "platform" => "facebook",
+                    "status" => "scheduled",
+                    "type" => "video",
+                    "scheduled_at" => "2025-12-25 10:00:00",
+                    "created_at" => "2025-12-04T10:30:00+00:00"
+                ],
+                "account" => [
+                    "type" => "facebook_page",
+                    "page_id" => "123456789012345",
+                    "name" => "My Business Page",
+                    "profile_image" => "https://example.com/fb-profile.jpg"
+                ]
+            ]
+        ],
+        "notes" => "Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id. The video_url must be publicly accessible. For Pinterest, the video will be downloaded from the URL, uploaded to S3, and then published. Supported video formats: mp4, mov, avi, mkv, webm, flv. When scheduled_at is provided, status will be 'scheduled'. When not provided, status will be 'publishing' and the video will be queued for immediate publishing."
     ];
 
     return $endpoints;

@@ -74,6 +74,11 @@ class User extends Authenticatable
         return $this->hasMany(Facebook::class, 'user_id', 'id');
     }
 
+    public function tiktok()
+    {
+        return $this->hasMany(TikTok::class, 'user_id', 'id');
+    }
+
     public function domains()
     {
         return $this->hasMany(Domain::class, 'user_id', 'id');
