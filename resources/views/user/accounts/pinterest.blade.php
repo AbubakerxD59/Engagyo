@@ -27,7 +27,8 @@
                                     <td>Name</td>
                                     <td>Pin ID</td>
                                     <td>Board ID</td>
-                                    <td>Status</td>
+                                    <td>Token Status</td>
+                                    <td>Token Expires</td>
                                     <td>Action</td>
                                 </tr>
                             </thead>
@@ -38,7 +39,20 @@
                                         <td>{{ $board->name }}</td>
                                         <td>{{ $board->pin_id }}</td>
                                         <td>{{ $board->board_id }}</td>
-                                        <td>{!! get_status_view($board->status) !!}</td>
+                                        <td>
+                                            @if($pinterest->validToken())
+                                                <span class="badge badge-success">Valid</span>
+                                            @else
+                                                <span class="badge badge-danger">Expired</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($pinterest->expires_in)
+                                                {{ date('Y-m-d H:i:s', $pinterest->expires_in) }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        </td>
                                         <td>
                                             <div>
                                                 <button class="btn btn-outline-danger btn-sm delete-btn"

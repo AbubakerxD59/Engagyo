@@ -27,7 +27,8 @@
                                     <td>Name</td>
                                     <td>Facebook ID</td>
                                     <td>Page ID</td>
-                                    <td>Status</td>
+                                    <td>Token Status</td>
+                                    <td>Token Expires</td>
                                     <td>Action</td>
                                 </tr>
                             </thead>
@@ -38,7 +39,20 @@
                                         <td>{{ $page->name }}</td>
                                         <td>{{ $page->fb_id }}</td>
                                         <td>{{ $page->page_id }}</td>
-                                        <td>{!! get_status_view($page->status) !!}</td>
+                                        <td>
+                                            @if($facebook->validToken())
+                                                <span class="badge badge-success">Valid</span>
+                                            @else
+                                                <span class="badge badge-danger">Expired</span>
+                                            @endif
+                                        </td>
+                                        <td>
+                                            @if($facebook->expires_in)
+                                                {{ date('Y-m-d H:i:s', $facebook->expires_in) }}
+                                            @else
+                                                N/A
+                                            @endif
+                                        </td>
                                         <td>
                                             <div>
                                                 <button class="btn btn-outline-danger btn-sm delete-btn"
