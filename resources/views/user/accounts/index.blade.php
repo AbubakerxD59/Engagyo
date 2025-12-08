@@ -181,7 +181,8 @@
                                     <article class="account-card tiktok-card has-tooltip" @style(['display:none;' => $index >= 12])
                                         data-tooltip="{{ $tiktok->username }}" data-index="{{ $index }}">
                                         <div class="account-card-accent"></div>
-                                        <div class="account-card-link">
+                                        <a href="{{ route('panel.accounts.tiktok', $tiktok->tiktok_id) }}"
+                                            class="account-card-link">
                                             <div class="account-card-content">
                                                 <div class="account-avatar-wrapper">
                                                     <img src="{{ $tiktok->profile_image }}" class="account-avatar"
@@ -196,7 +197,7 @@
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
+                                        </a>
                                         <div class="account-card-actions">
                                             <button class="btn-account-delete" onclick="confirmDelete(event)"
                                                 title="Delete Account">

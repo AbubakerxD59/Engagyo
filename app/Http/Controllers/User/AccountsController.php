@@ -260,6 +260,21 @@ class AccountsController extends Controller
         }
     }
 
+    public function tiktok($id = null)
+    {
+        if (!empty($id)) {
+            $tiktokUrl = $this->tiktokService->getLoginUrl();
+            $tiktok = $this->tiktok->search($id)->first();
+            if ($tiktok) {
+                return view('user.accounts.tiktok', compact('tiktokUrl', 'tiktok'));
+            } else {
+                return back()->with('error', 'Something went Wrong!');
+            }
+        } else {
+            return back()->with('error', 'Something went Wrong!');
+        }
+    }
+
     public function tiktokDelete($id = null)
     {
         if (!empty($id)) {
