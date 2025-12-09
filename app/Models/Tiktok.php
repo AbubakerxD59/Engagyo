@@ -23,6 +23,7 @@ class Tiktok extends Model
         "expires_in",
         "refresh_token",
         "refresh_token_expires_in",
+        "schedule_status",
     ];
 
     protected $appends = ["type"];
@@ -30,6 +31,16 @@ class Tiktok extends Model
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');
+    }
+
+    public function timeslots()
+    {
+        return $this->hasMany(Timeslot::class, "account_id", "id")->where("account_type", "tiktok");
+    }
+
+    public function scopeWhereScheduledActive($query)
+    {
+        $query->where("schedule_status", "active");
     }
 
     public function scopeSearch($query, $search)

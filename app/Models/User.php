@@ -153,8 +153,10 @@ class User extends Authenticatable
         $boards = $this->boards()->with("pinterest", "timeslots")->get();
         // Facebook Pages
         $pages = $this->pages()->with("facebook", "timeslots")->get();
+        // TikTok Accounts
+        $tiktoks = $this->tiktok()->with("timeslots")->get();
         $accounts = collect();
-        $accounts = $boards->concat($pages);
+        $accounts = $boards->concat($pages)->concat($tiktoks);
         return $accounts;
     }
 
@@ -180,8 +182,10 @@ class User extends Authenticatable
         $boards = $this->boards()->with("pinterest")->whereScheduledActive()->get();
         // Facebook Pages
         $pages = $this->pages()->with("facebook")->whereScheduledActive()->get();
+        // TikTok Accounts
+        $tiktoks = $this->tiktok()->whereScheduledActive()->get();
         $accounts = collect();
-        $accounts = $boards->concat($pages);
+        $accounts = $boards->concat($pages)->concat($tiktoks);
         return $accounts;
     }
 }

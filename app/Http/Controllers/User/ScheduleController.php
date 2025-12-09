@@ -14,8 +14,11 @@ use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
 use App\Services\PinterestService;
+use App\Services\TikTokService;
+use App\Jobs\PublishTikTokPost;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\Tiktok;
 use App\Services\PostService;
 use Illuminate\Support\Facades\Auth;
 
@@ -23,16 +26,18 @@ class  ScheduleController extends Controller
 {
     protected $facebookService;
     protected $pinterestService;
+    protected $tiktokService;
     protected $source;
     public function __construct()
     {
         $this->facebookService = new FacebookService();
         $this->pinterestService = new PinterestService();
+        $this->tiktokService = new TikTokService();
         $this->source = "schedule";
     }
     public function index()
     {
-        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
+        $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->find(Auth::id());
         $accounts = $user->getAccounts();
         return view("user.schedule.index", compact("accounts"));
     }
@@ -61,6 +66,21 @@ class  ScheduleController extends Controller
             if ($board) {
                 $board->schedule_status = $status == 1 ? "active" : "inactive";
                 $board->save();
+                $response = [
+                    "success" => true,
+                    "message" => "Status changed Successfully!"
+                ];
+            } else {
+                $response = array(
+                    "success" => false,
+                    "message" => "Something went Wrong!"
+                );
+            }
+        } else if ($type == "tiktok") {
+            $tiktok = Tiktok::find($id);
+            if ($tiktok) {
+                $tiktok->schedule_status = $status == 1 ? "active" : "inactive";
+                $tiktok->save();
                 $response = [
                     "success" => true,
                     "message" => "Status changed Successfully!"
@@ -190,6 +210,39 @@ class  ScheduleController extends Controller
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
                     }
                 }
+                if ($account->type == "tiktok") {
+                    $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
+                    if ($file) {
+                        // store in db
+                        $type = !empty($image) ? "photo" : "video";
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "tiktok",
+                            "type" => $type,
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "video" => $video,
+                            "status" => 0,
+                            "publish_date" => date("Y-m-d H:i"),
+                        ];
+                        $post = PostService::create($data);
+
+                        // Use validateToken for proper error handling
+                        $tokenResponse = TikTokService::validateToken($account);
+                        if (!$tokenResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
+                            );
+                        }
+                        $access_token = $tokenResponse['access_token'];
+                        $postData = PostService::postTypeBody($post);
+                        PublishTikTokPost::dispatch($post->id, $postData, $access_token, $type);
+                    }
+                }
             }
             $response = array(
                 "success" => true,
@@ -260,6 +313,28 @@ class  ScheduleController extends Controller
                                 "user_id" => $user->id,
                                 "account_id" => $account->id,
                                 "social_type" => "pinterest",
+                                "type" => $type,
+                                "source" => $this->source,
+                                "title" => $content,
+                                "comment" => $comment,
+                                "image" => $image,
+                                "video" => $video,
+                                "status" => 0,
+                                "publish_date" => $nextTime,
+                            ];
+                            PostService::create($data);
+                        }
+                    }
+                    if ($account->type == "tiktok") {
+                        Tiktok::where("id", $account->id)->firstOrFail();
+                        if ($file) {
+                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots);
+                            // store in db
+                            $type = !empty($image) ? "photo" : "video";
+                            $data = [
+                                "user_id" => $user->id,
+                                "account_id" => $account->id,
+                                "social_type" => "tiktok",
                                 "type" => $type,
                                 "source" => $this->source,
                                 "title" => $content,
@@ -361,6 +436,28 @@ class  ScheduleController extends Controller
                         PostService::create($data);
                     }
                 }
+                if ($account->type == "tiktok") {
+                    Tiktok::where("id", $account->id)->firstOrFail();
+                    if ($file) {
+                        // store in db
+                        $type = !empty($image) ? "photo" : "video";
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "tiktok",
+                            "type" => $type,
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "video" => $video,
+                            "status" => 0,
+                            "publish_date" => $scheduleDateTime,
+                            "scheduled" => 1
+                        ];
+                        PostService::create($data);
+                    }
+                }
                 $response = array(
                     "success" => true,
                     "message" => "Your posts are scheduled for Later!"
@@ -446,6 +543,36 @@ class  ScheduleController extends Controller
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
+                    }
+                    if ($account->type == "tiktok") {
+                        $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
+                        // store in db
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "tiktok",
+                            "type" => "link",
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "url" => $url,
+                            "image" => $image,
+                            "status" => 0,
+                            "publish_date" => date("Y-m-d H:i"),
+                        ];
+                        $post = PostService::create($data);
+
+                        // Use validateToken for proper error handling
+                        $tokenResponse = TikTokService::validateToken($account);
+                        if (!$tokenResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
+                            );
+                        }
+                        $access_token = $tokenResponse['access_token'];
+                        $postData = PostService::postTypeBody($post);
+                        PublishTikTokPost::dispatch($post->id, $postData, $access_token, "link");
                     }
                 }
                 $response = array(
@@ -542,6 +669,39 @@ class  ScheduleController extends Controller
                             $access_token = $tokenResponse['access_token'];
                             $postData = PostService::postTypeBody($post);
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
+                        }
+                    }
+                    if ($account->type == "tiktok") {
+                        $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
+                        if ($tiktok) {
+                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots);
+                            // store in db
+                            $data = [
+                                "user_id" => $user->id,
+                                "account_id" => $account->id,
+                                "social_type" => "tiktok",
+                                "type" => "link",
+                                "source" => $this->source,
+                                "title" => $content,
+                                "comment" => $comment,
+                                "url" => $url,
+                                "image" => $image,
+                                "status" => 0,
+                                "publish_date" => $nextTime,
+                            ];
+                            $post = PostService::create($data);
+
+                            // Use validateToken for proper error handling
+                            $tokenResponse = TikTokService::validateToken($account);
+                            if (!$tokenResponse['success']) {
+                                return array(
+                                    "success" => false,
+                                    "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
+                                );
+                            }
+                            $access_token = $tokenResponse['access_token'];
+                            $postData = PostService::postTypeBody($post);
+                            PublishTikTokPost::dispatch($post->id, $postData, $access_token, "link");
                         }
                     }
                 }
@@ -642,6 +802,38 @@ class  ScheduleController extends Controller
                             PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                         }
                     }
+                    if ($account->type == "tiktok") {
+                        $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
+                        if ($tiktok) {
+                            // store in db
+                            $data = [
+                                "user_id" => $user->id,
+                                "account_id" => $account->id,
+                                "social_type" => "tiktok",
+                                "type" => "link",
+                                "source" => $this->source,
+                                "title" => $content,
+                                "comment" => $comment,
+                                "url" => $url,
+                                "image" => $image,
+                                "status" => 0,
+                                "publish_date" => $scheduleDateTime,
+                            ];
+                            $post = PostService::create($data);
+
+                            // Use validateToken for proper error handling
+                            $tokenResponse = TikTokService::validateToken($account);
+                            if (!$tokenResponse['success']) {
+                                return array(
+                                    "success" => false,
+                                    "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
+                                );
+                            }
+                            $access_token = $tokenResponse['access_token'];
+                            $postData = PostService::postTypeBody($post);
+                            PublishTikTokPost::dispatch($post->id, $postData, $access_token, "link");
+                        }
+                    }
                 }
                 $response = array(
                     "success" => true,
@@ -686,6 +878,9 @@ class  ScheduleController extends Controller
                 $account_id = $account->id;
             } else if ($type == "pinterest") {
                 $account = Board::with("timeslots")->where("id", $id)->firstOrFail();
+                $account_id = $account->id;
+            } else if ($type == "tiktok") {
+                $account = Tiktok::with("timeslots")->where("id", $id)->firstOrFail();
                 $account_id = $account->id;
             }
             if ($account) {

@@ -259,4 +259,102 @@ class TikTokService
             ];
         }
     }
+
+    /**
+     * Publish a video to TikTok
+     *
+     * @param int $id Post ID
+     * @param array $post Post data
+     * @param string $access_token TikTok access token
+     * @return void
+     */
+    public function video($id, $post, $access_token)
+    {
+        $header = array("Content-Type" => "application/json", "Authorization" => "Bearer " . $access_token);
+        $post_row = \App\Models\Post::find($id);
+        
+        try {
+            // TikTok video publishing implementation
+            // This is a placeholder - implement actual TikTok API calls here
+            // TikTok API typically requires:
+            // 1. Initialize upload
+            // 2. Upload video file
+            // 3. Publish video with metadata
+            
+            $post_row->update([
+                "status" => -1,
+                "published_at" => date("Y-m-d H:i:s"),
+                "response" => "TikTok video publishing not yet implemented"
+            ]);
+        } catch (Exception $e) {
+            $post_row->update([
+                "status" => -1,
+                "published_at" => date("Y-m-d H:i:s"),
+                "response" => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Publish a photo to TikTok
+     *
+     * @param int $id Post ID
+     * @param array $post Post data
+     * @param string $access_token TikTok access token
+     * @return void
+     */
+    public function photo($id, $post, $access_token)
+    {
+        $header = array("Content-Type" => "application/json", "Authorization" => "Bearer " . $access_token);
+        $post_row = \App\Models\Post::find($id);
+        
+        try {
+            // TikTok photo publishing implementation
+            // Note: TikTok primarily supports videos, photos may need to be converted to video
+            // This is a placeholder - implement actual TikTok API calls here
+            
+            $post_row->update([
+                "status" => -1,
+                "published_at" => date("Y-m-d H:i:s"),
+                "response" => "TikTok photo publishing not yet implemented"
+            ]);
+        } catch (Exception $e) {
+            $post_row->update([
+                "status" => -1,
+                "published_at" => date("Y-m-d H:i:s"),
+                "response" => $e->getMessage()
+            ]);
+        }
+    }
+
+    /**
+     * Publish a link to TikTok
+     *
+     * @param int $id Post ID
+     * @param array $post Post data
+     * @param string $access_token TikTok access token
+     * @return void
+     */
+    public function link($id, $post, $access_token)
+    {
+        $header = array("Content-Type" => "application/json", "Authorization" => "Bearer " . $access_token);
+        $post_row = \App\Models\Post::find($id);
+        
+        try {
+            // TikTok link publishing implementation
+            // This is a placeholder - implement actual TikTok API calls here
+            
+            $post_row->update([
+                "status" => -1,
+                "published_at" => date("Y-m-d H:i:s"),
+                "response" => "TikTok link publishing not yet implemented"
+            ]);
+        } catch (Exception $e) {
+            $post_row->update([
+                "status" => -1,
+                "published_at" => date("Y-m-d H:i:s"),
+                "response" => $e->getMessage()
+            ]);
+        }
+    }
 }
