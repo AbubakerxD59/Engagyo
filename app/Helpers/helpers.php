@@ -860,6 +860,7 @@ function getApiEndpoints()
             ["name" => "video_url", "type" => "string", "required" => true, "description" => "Publicly accessible URL of the video to post"],
             ["name" => "title", "type" => "string", "required" => true, "description" => "Video title/description (max 500 characters)"],
             ["name" => "description", "type" => "string", "required" => false, "description" => "Additional description (max 2000 characters)"],
+            ["name" => "link", "type" => "string", "required" => false, "description" => "Optional. Destination URL for the video post"],
             ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Optional. Schedule video for future date and time (format: Y-m-d H:i:s). If provided, the video will be scheduled for the given date and time. If not provided, the video will be published immediately."]
         ],
         "request" => [
@@ -873,6 +874,7 @@ function getApiEndpoints()
                 "video_url" => "https://example.com/videos/my-video.mp4",
                 "title" => "Check out this amazing video!",
                 "description" => "This is an optional description for the video.",
+                "link" => "https://example.com/my-article",
                 "scheduled_at" => "2025-12-25 10:00:00"
             ],
             "curl" => 'curl -X POST "{base_url}/posts/video" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"facebook","account_id":"123456789","video_url":"https://example.com/video.mp4","title":"My Video"}\''
