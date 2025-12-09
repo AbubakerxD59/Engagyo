@@ -409,7 +409,7 @@
             flex: 1;
             text-decoration: none;
             color: inherit;
-            padding: 16px 12px 16px 20px;
+            padding: 10px 12px 10px 20px;
         }
 
         .account-card-link:hover {
