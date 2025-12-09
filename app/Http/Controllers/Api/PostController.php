@@ -421,6 +421,7 @@ class PostController extends BaseController
             'video_url' => 'required|url',
             'title' => 'required|string|max:500',
             'description' => 'nullable|string|max:2000',
+            'link' => 'nullable|url',
             'scheduled_at' => 'nullable|date|after:now',
         ]);
 
@@ -435,14 +436,15 @@ class PostController extends BaseController
         $videoUrl = $request->input('video_url');
         $title = $request->input('title');
         $description = $request->input('description', '');
+        $link = $request->input('link');
         $scheduledAt = $request->input('scheduled_at');
 
         // Determine if this is a scheduled post or immediate publish
         $publishNow = empty($scheduledAt);
 
         return match ($platform) {
-            Platform::FACEBOOK => $this->publishVideoToFacebook($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $publishNow, $scheduledAt),
-            Platform::PINTEREST => $this->publishVideoToPinterest($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $publishNow, $scheduledAt),
+            Platform::FACEBOOK => $this->publishVideoToFacebook($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link, $publishNow, $scheduledAt),
+            Platform::PINTEREST => $this->publishVideoToPinterest($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link, $publishNow, $scheduledAt),
             default => $this->errorResponse('Platform not supported for video posting', 400),
         };
     }
@@ -456,11 +458,12 @@ class PostController extends BaseController
      * @param string $videoUrl
      * @param string $title
      * @param string $description
+     * @param string|null $link
      * @param bool $publishNow
      * @param string|null $scheduledAt
      * @return \Illuminate\Http\JsonResponse
      */
-    private function publishVideoToFacebook($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $publishNow, $scheduledAt = null)
+    private function publishVideoToFacebook($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link = null, $publishNow, $scheduledAt = null)
     {
         // Find the page by page_id (belongs to user)
         $page = Page::withoutGlobalScopes()
@@ -562,11 +565,12 @@ class PostController extends BaseController
      * @param string $videoUrl
      * @param string $title
      * @param string $description
+     * @param string|null $link
      * @param bool $publishNow
      * @param string|null $scheduledAt
      * @return \Illuminate\Http\JsonResponse
      */
-    private function publishVideoToPinterest($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $publishNow, $scheduledAt = null)
+    private function publishVideoToPinterest($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link = null, $publishNow, $scheduledAt = null)
     {
         // Find the board by board_id (belongs to user)
         $board = Board::withoutGlobalScopes()
@@ -591,7 +595,77 @@ class PostController extends BaseController
         }
         $accessToken = $tokenResponse['access_token'];
 
-        // Download video from URL and upload to S3
+        // If link is present, post as link instead of video
+        if ($link) {
+            // Determine publish date and scheduled status
+            $publishDate = $publishNow ? now() : $scheduledAt;
+            $isScheduled = !$publishNow;
+
+            // Create the post record as link type
+            $post = Post::create([
+                'user_id' => $user->id,
+                'api_key_id' => $apiKeyId,
+                'account_id' => $board->id,
+                'social_type' => 'pinterest',
+                'type' => 'link',
+                'source' => 'api',
+                'title' => $title,
+                'description' => $description,
+                'url' => $link,
+                'image' => $videoUrl, // Use video_url as the image/thumbnail
+                'publish_date' => $publishDate,
+                'status' => 0, // pending
+                'scheduled' => $isScheduled ? 1 : 0,
+            ]);
+
+            if ($publishNow) {
+                // Prepare link post data for Pinterest
+                $postData = [
+                    'title' => $title,
+                    'description' => $description ?? $title,
+                    'board_id' => (string) $accountId,
+                    'media_source' => [
+                        'source_type' => 'image_url',
+                        'url' => $videoUrl, // Use video_url as the image/thumbnail
+                    ],
+                    'link' => $link, // The link destination
+                ];
+
+                // Dispatch the job to publish as photo (link post with image)
+                PublishPinterestPost::dispatch(
+                    $post->id,
+                    $postData,
+                    $accessToken,
+                    'photo'
+                );
+
+                return $this->successResponse([
+                    'post' => [
+                        'id' => $post->id,
+                        'platform' => 'pinterest',
+                        'status' => 'publishing',
+                        'type' => 'link',
+                        'created_at' => $post->created_at->toIso8601String(),
+                    ],
+                    'account' => $this->formatPinterestAccount($board, $pinterest),
+                ], 'Link is being published to Pinterest');
+            }
+
+            // Scheduled post response
+            return $this->successResponse([
+                'post' => [
+                    'id' => $post->id,
+                    'platform' => 'pinterest',
+                    'status' => 'scheduled',
+                    'type' => 'link',
+                    'scheduled_at' => $post->publish_date,
+                    'created_at' => $post->created_at->toIso8601String(),
+                ],
+                'account' => $this->formatPinterestAccount($board, $pinterest),
+            ], 'Link scheduled successfully for ' . date('M d, Y \a\t h:i A', strtotime($scheduledAt)));
+        }
+
+        // Download video from URL and upload to S3 (only when link is not present)
         try {
             $videoKey = $this->downloadAndUploadVideoToS3($videoUrl);
             if (!$videoKey) {
