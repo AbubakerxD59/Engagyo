@@ -479,31 +479,40 @@ class PostController extends BaseController
         }
         $accessToken = $tokenResponse['access_token'];
 
+        // Download video from URL to local storage
+        try {
+            $localVideoPath = $this->downloadVideoToLocal($videoUrl);
+            if (!$localVideoPath) {
+                return $this->errorResponse('Failed to download video from URL. Please ensure the URL is accessible and points to a valid video file.', 400);
+            }
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error processing video: ' . $e->getMessage(), 500);
+        }
+
         // Determine publish date and scheduled status
         $publishDate = $publishNow ? now() : $scheduledAt;
         $isScheduled = !$publishNow;
 
-        // Create the post record
+        // Create the post record - store local path instead of URL
         $post = Post::create([
             'user_id' => $user->id,
             'api_key_id' => $apiKeyId,
             'account_id' => $page->id,
-            'social_type' => 'facebook',
             'type' => 'video',
             'source' => 'api',
             'title' => $title,
             'description' => $description,
-            'video' => $videoUrl,
+            'video' => $localVideoPath,
             'publish_date' => $publishDate,
             'status' => 0, // pending
             'scheduled' => $isScheduled ? 1 : 0,
         ]);
 
         if ($publishNow) {
-            // Prepare video post data for Facebook
+            // Prepare video post data for Facebook - use local file path
             $postData = [
                 'description' => $title,
-                'file_url' => $videoUrl,
+                'source' => $localVideoPath, // Facebook SDK accepts file path via 'source' parameter
             ];
 
             if (!empty($description)) {
@@ -687,6 +696,49 @@ class PostController extends BaseController
             return null;
         } catch (\Exception $e) {
             Log::error('Error downloading/uploading video: ' . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Download video from URL to local storage.
+     *
+     * @param string $videoUrl
+     * @return string|null Local file path or null on failure
+     */
+    private function downloadVideoToLocal(string $videoUrl): ?string
+    {
+        try {
+            // Download video from URL
+            $response = Http::timeout(300)->get($videoUrl);
+
+            if (!$response->successful()) {
+                Log::error('Failed to download video from URL: ' . $videoUrl . ' - Status: ' . $response->status());
+                return null;
+            }
+
+            // Get video content
+            $videoContent = $response->body();
+
+            // Generate a unique filename
+            $extension = $this->getVideoExtensionFromUrl($videoUrl);
+            $fileName = 'videos/' . time() . '_' . rand(1000, 9999) . '.' . $extension;
+
+            // Save to local storage (using 'public' disk)
+            $disk = Storage::disk('public');
+            $saved = $disk->put($fileName, $videoContent);
+
+            if ($saved) {
+                // Return the full absolute path to the file
+                // For 'public' disk, files are stored in storage/app/public/
+                $fullPath = storage_path('app/public/' . $fileName);
+                return $fullPath;
+            }
+
+            Log::error('Failed to save video to local storage: ' . $fileName);
+            return null;
+        } catch (\Exception $e) {
+            Log::error('Error downloading video to local: ' . $e->getMessage());
             return null;
         }
     }

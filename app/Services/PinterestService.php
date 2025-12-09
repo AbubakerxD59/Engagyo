@@ -328,7 +328,7 @@ class PinterestService
             if ($status === 'succeeded') {
                 $mediaReady = true;
             } elseif ($status === 'failed') {
-                $details = $response['details'] ?? 'Unknown error';
+                $details = isset($response['details']) ? $response['details'] :  'Unknown error';
                 $error =  "Video processing failed on Pinterest side. Status: " . $details;
             }
         }
