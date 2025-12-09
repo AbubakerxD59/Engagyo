@@ -447,6 +447,9 @@ class Post extends Model
         if ($this->social_type == "pinterest") {
             $view = view("user.schedule.dataTable.pinterest_post_details")->with("post", $this);
         }
+        if ($this->social_type == "tiktok") {
+            $view = view("user.schedule.dataTable.pinterest_post_details")->with("post", $this);
+        }
         return $view->render();
     }
 

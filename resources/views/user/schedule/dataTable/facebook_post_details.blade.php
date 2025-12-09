@@ -34,6 +34,21 @@
                     </div>
                 </div>
             </div>
+        @elseif ($post->type == 'video')
+            <div class="col-12 content-block">
+                <div class="content-block-inner text-center">
+                    <div class="pronunciation-image-container video-thumbnail-placeholder">
+                        <div class="video-placeholder-icon">
+                            <i class="fas fa-video"></i>
+                        </div>
+                        <div class="video-play-overlay">
+                            <div class="video-play-button">
+                                <i class="fas fa-play"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
         @endif
     </div>
 

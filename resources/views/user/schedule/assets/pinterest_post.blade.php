@@ -176,4 +176,69 @@
     .pinterest_card .comment-icon:hover {
         color: var(--icon-color);
     }
+
+    /* Video Thumbnail Placeholder Styles for Pinterest */
+    .pinterest_card .video-thumbnail-placeholder {
+        position: relative;
+        width: 100%;
+        min-height: 300px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 20px 20px 0px 0px;
+    }
+
+    .pinterest_card .video-placeholder-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 64px;
+        opacity: 0.8;
+        z-index: 1;
+    }
+
+    .pinterest_card .video-play-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.3s ease;
+        z-index: 2;
+    }
+
+    .pinterest_card .video-thumbnail-placeholder:hover .video-play-overlay {
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .pinterest_card .video-play-button {
+        width: 70px;
+        height: 70px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .pinterest_card .video-play-button i {
+        color: #333;
+        font-size: 24px;
+        margin-left: 4px;
+    }
+
+    .pinterest_card .video-thumbnail-placeholder:hover .video-play-button {
+        transform: scale(1.1);
+        background: rgba(255, 255, 255, 1);
+    }
 </style>

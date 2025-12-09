@@ -160,5 +160,74 @@
         width: 35px !important;
     }
 
+    /* Video Thumbnail Placeholder Styles for Facebook */
+    .facebook_card .pronunciation-image-container.video-thumbnail-placeholder {
+        position: relative;
+        padding-top: 100%;
+        min-height: auto;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    }
+
+    .facebook_card .pronunciation-image-container.video-thumbnail-placeholder .video-placeholder-icon,
+    .facebook_card .pronunciation-image-container.video-thumbnail-placeholder .video-play-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .facebook_card .video-placeholder-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 64px;
+        opacity: 0.8;
+        z-index: 1;
+    }
+
+    .facebook_card .video-play-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.3);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: background 0.3s ease;
+        z-index: 2;
+    }
+
+    .facebook_card .video-thumbnail-placeholder:hover .video-play-overlay {
+        background: rgba(0, 0, 0, 0.5);
+    }
+
+    .facebook_card .video-play-button {
+        width: 70px;
+        height: 70px;
+        background: rgba(255, 255, 255, 0.9);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .facebook_card .video-play-button i {
+        color: #333;
+        font-size: 24px;
+        margin-left: 4px;
+    }
+
+    .facebook_card .video-thumbnail-placeholder:hover .video-play-button {
+        transform: scale(1.1);
+        background: rgba(255, 255, 255, 1);
+    }
+
     /* facebook post */
 </style>

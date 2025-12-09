@@ -1,9 +1,23 @@
 <div class="pinterest_card">
     <!-- IMAGE/MEDIA SECTION -->
     <div class="image-container">
-        <!-- Placeholder Image matching the aspect ratio and theme -->
-        <img src="{{ $post->image }}" alt="Product post image" class="post-image"
-            onerror="this.onerror=null; this.src='{{ no_image() }}';">
+        @if ($post->type == 'video')
+            <!-- Video Thumbnail Placeholder -->
+            <div class="video-thumbnail-placeholder">
+                <div class="video-placeholder-icon">
+                    <i class="fas fa-video"></i>
+                </div>
+                <div class="video-play-overlay">
+                    <div class="video-play-button">
+                        <i class="fas fa-play"></i>
+                    </div>
+                </div>
+            </div>
+        @else
+            <!-- Regular Image -->
+            <img src="{{ $post->image }}" alt="Product post image" class="post-image"
+                onerror="this.onerror=null; this.src='{{ no_image() }}';">
+        @endif
     </div>
     <!-- CONTENT SECTION -->
     <div class="card-content">
