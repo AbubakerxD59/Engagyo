@@ -441,15 +441,8 @@ class Post extends Model
 
     public function getPostDetailsAttribute()
     {
-        if ($this->social_type == "facebook") {
-            $view = view("user.schedule.dataTable.facebook_post_details")->with("post", $this);
-        }
-        if ($this->social_type == "pinterest") {
-            $view = view("user.schedule.dataTable.pinterest_post_details")->with("post", $this);
-        }
-        if ($this->social_type == "tiktok") {
-            $view = view("user.schedule.dataTable.pinterest_post_details")->with("post", $this);
-        }
+        // Use pinterest_post_details for all social types
+        $view = view("user.schedule.dataTable.pinterest_post_details")->with("post", $this);
         return $view->render();
     }
 
