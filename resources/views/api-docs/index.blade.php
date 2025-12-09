@@ -330,6 +330,30 @@
             margin-top: 2px;
         }
 
+        .endpoint-copy-btn-header {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 6px 8px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+            flex-shrink: 0;
+        }
+
+        .endpoint-copy-btn-header:hover {
+            color: var(--accent-blue);
+            background: var(--bg-tertiary);
+            border-color: var(--accent-blue);
+        }
+
+        .endpoint-copy-btn-header:active {
+            transform: scale(0.95);
+        }
+
         /* Main Content */
         .main-content {
             flex: 1;
@@ -395,9 +419,16 @@
         .detail-header h2 {
             font-size: 28px;
             font-weight: 600;
-            margin-bottom: 8px;
+            margin: 0;
             font-family: 'JetBrains Mono', monospace;
             color: var(--text-primary);
+        }
+
+        .detail-header .endpoint-title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 8px;
         }
 
         .detail-header p {
@@ -812,7 +843,17 @@
                             <span class="method-badge method-{{ strtolower($endpoint['method']) }}">
                                 {{ $endpoint['method'] }}
                             </span>
-                            <h2>{{ $endpoint['endpoint'] }}</h2>
+                            <div class="endpoint-title-wrapper">
+                                <h2>{{ $endpoint['endpoint'] }}</h2>
+                                <button class="endpoint-copy-btn-header" 
+                                    onclick="copyEndpointUrl('{{ $baseUrl }}{{ $endpoint['endpoint'] }}')" 
+                                    title="Copy full endpoint URL">
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                    </svg>
+                                </button>
+                            </div>
                             <p>{{ $endpoint['description'] }}</p>
                         </div>
 
@@ -1030,6 +1071,10 @@
                 document.body.removeChild(textArea);
                 showToast();
             });
+        }
+
+        function copyEndpointUrl(url) {
+            copyToClipboard(url);
         }
 
         function copyCode(button, text) {

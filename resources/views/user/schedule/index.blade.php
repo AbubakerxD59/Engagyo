@@ -133,7 +133,8 @@
                         <div class="row m-0 p-0 mb-4">
                             <div class="col-md-3">
                                 <label for="filter_account">Account</label>
-                                <select name="filter_account" id="filter_account" class="form-control select2 filter" multiple>
+                                <select name="filter_account" id="filter_account" class="form-control select2 filter"
+                                    multiple>
                                     @foreach ($accounts as $account)
                                         <option value="{{ $account->id }}">{{ ucfirst($account->name) }}</option>
                                     @endforeach
@@ -149,7 +150,8 @@
                             </div>
                             <div class="col-md-3">
                                 <label for="filter_post_type">Post Type</label>
-                                <select name="filter_post_type" id="filter_post_type" class="form-control select2 filter" multiple>
+                                <select name="filter_post_type" id="filter_post_type" class="form-control select2 filter"
+                                    multiple>
                                     <option value="photo">Image</option>
                                     <option value="content_only">Quote</option>
                                     <option value="link">Link</option>
@@ -158,7 +160,8 @@
                             </div>
                             <div class="col-md-3">
                                 <label for="filter_status">Status</label>
-                                <select name="filter_status" id="filter_status" class="form-control select2 filter" multiple>
+                                <select name="filter_status" id="filter_status" class="form-control select2 filter"
+                                    multiple>
                                     <option value="0" selected>Pending</option>
                                     <option value="1">Published</option>
                                     <option value="-1">Failed</option>
@@ -189,7 +192,7 @@
     @include('user.schedule.modals.settings-modal')
     @include('user.schedule.modals.schedule-modal')
     @include('user.schedule.modals.edit-post-modal')
-    
+
     {{-- Image Lightbox Modal --}}
     <div class="image-lightbox" id="imageLightbox">
         <div class="lightbox-backdrop"></div>

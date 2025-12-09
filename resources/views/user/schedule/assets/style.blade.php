@@ -1,7 +1,7 @@
  <style>
      /* --- Accounts Container Styling --- */
      .accounts-container {
-         max-height: 280px;
+         /* max-height: 280px; */
          overflow-y: auto;
          padding: 10px 5px;
          margin-bottom: 10px;

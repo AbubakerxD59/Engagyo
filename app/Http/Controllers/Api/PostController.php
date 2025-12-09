@@ -595,77 +595,7 @@ class PostController extends BaseController
         }
         $accessToken = $tokenResponse['access_token'];
 
-        // If link is present, post as link instead of video
-        if ($link) {
-            // Determine publish date and scheduled status
-            $publishDate = $publishNow ? now() : $scheduledAt;
-            $isScheduled = !$publishNow;
-
-            // Create the post record as link type
-            $post = Post::create([
-                'user_id' => $user->id,
-                'api_key_id' => $apiKeyId,
-                'account_id' => $board->id,
-                'social_type' => 'pinterest',
-                'type' => 'link',
-                'source' => 'api',
-                'title' => $title,
-                'description' => $description,
-                'url' => $link,
-                'image' => $videoUrl, // Use video_url as the image/thumbnail
-                'publish_date' => $publishDate,
-                'status' => 0, // pending
-                'scheduled' => $isScheduled ? 1 : 0,
-            ]);
-
-            if ($publishNow) {
-                // Prepare link post data for Pinterest
-                $postData = [
-                    'title' => $title,
-                    'description' => $description ?? $title,
-                    'board_id' => (string) $accountId,
-                    'media_source' => [
-                        'source_type' => 'image_url',
-                        'url' => $videoUrl, // Use video_url as the image/thumbnail
-                    ],
-                    'link' => $link, // The link destination
-                ];
-
-                // Dispatch the job to publish as photo (link post with image)
-                PublishPinterestPost::dispatch(
-                    $post->id,
-                    $postData,
-                    $accessToken,
-                    'photo'
-                );
-
-                return $this->successResponse([
-                    'post' => [
-                        'id' => $post->id,
-                        'platform' => 'pinterest',
-                        'status' => 'publishing',
-                        'type' => 'link',
-                        'created_at' => $post->created_at->toIso8601String(),
-                    ],
-                    'account' => $this->formatPinterestAccount($board, $pinterest),
-                ], 'Link is being published to Pinterest');
-            }
-
-            // Scheduled post response
-            return $this->successResponse([
-                'post' => [
-                    'id' => $post->id,
-                    'platform' => 'pinterest',
-                    'status' => 'scheduled',
-                    'type' => 'link',
-                    'scheduled_at' => $post->publish_date,
-                    'created_at' => $post->created_at->toIso8601String(),
-                ],
-                'account' => $this->formatPinterestAccount($board, $pinterest),
-            ], 'Link scheduled successfully for ' . date('M d, Y \a\t h:i A', strtotime($scheduledAt)));
-        }
-
-        // Download video from URL and upload to S3 (only when link is not present)
+        // Download video from URL and upload to S3
         try {
             $videoKey = $this->downloadAndUploadVideoToS3($videoUrl);
             if (!$videoKey) {
@@ -689,6 +619,7 @@ class PostController extends BaseController
             'source' => 'api',
             'title' => $title,
             'description' => $description,
+            'link' => $link,
             'video' => $videoKey,
             'publish_date' => $publishDate,
             'status' => 0, // pending
@@ -700,6 +631,7 @@ class PostController extends BaseController
             $postData = [
                 'title' => $title,
                 'board_id' => (string) $accountId,
+                'link' => $link ?? null,
                 'video_key' => $videoKey,
             ];
 

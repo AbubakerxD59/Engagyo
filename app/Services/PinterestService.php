@@ -355,6 +355,9 @@ class PinterestService
                 "cover_image_key_frame_time" => 1
             ]
         ];
+        if (isset($postData['link']) && !empty($postData['link'])) {
+            $payload['link'] = $postData['link'];
+        }
 
         // Sanitize the payload
         $payload = $this->sanitizePinData($payload);
