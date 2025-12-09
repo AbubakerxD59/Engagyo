@@ -1,14 +1,15 @@
  <style>
-     /* --- Accounts Container Styling --- */
-     .accounts-container {
-         /* max-height: 280px; */
-         overflow-y: auto;
-         padding: 10px 5px;
-         margin-bottom: 10px;
-         border: 1px solid #e9ecef;
-         border-radius: 10px;
-         background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
-     }
+    /* --- Accounts Container Styling --- */
+    .accounts-container {
+        /* max-height: 280px; */
+        /* overflow-y: auto; */
+        overflow-x: hidden;
+        padding: 10px 5px;
+        margin-bottom: 10px;
+        border: 1px solid #e9ecef;
+        border-radius: 10px;
+        background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+    }
 
      .accounts-container::-webkit-scrollbar {
          width: 6px;
@@ -28,11 +29,13 @@
          background: #a1a1a1;
      }
 
-     .accounts-grid {
-         display: grid;
-         grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-         gap: 10px;
-     }
+    .accounts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+        gap: 10px;
+        width: 100%;
+        box-sizing: border-box;
+    }
 
      .account-card {
          background: #fff;

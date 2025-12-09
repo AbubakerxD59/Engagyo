@@ -361,6 +361,7 @@ class PinterestService
 
         // Sanitize the payload
         $payload = $this->sanitizePinData($payload);
+        info(json_encode($payload));
 
         $response = $this->client->postJson($this->baseUrl . "pins", $payload, $this->header);
         return $response;
