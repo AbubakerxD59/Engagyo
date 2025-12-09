@@ -59,7 +59,7 @@ class Post extends Model
 
     public function tiktok()
     {
-        return $this->belongsTo(Tiktok::class, 'account_id', 'id')->where("social_type", "tiktok");
+        return $this->belongsTo(Tiktok::class, 'account_id', 'id');
     }
 
     public function domain()
