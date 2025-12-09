@@ -57,6 +57,11 @@ class Post extends Model
         return $this->belongsTo(Page::class, 'account_id', 'id');
     }
 
+    public function tiktok()
+    {
+        return $this->belongsTo(Tiktok::class, 'account_id', 'id')->where("social_type", "tiktok");
+    }
+
     public function domain()
     {
         return $this->belongsTo(Domain::class, 'domain_id', 'id');
@@ -189,6 +194,9 @@ class Post extends Model
         if ($social_type == 'facebook') {
             $account = $this->page()->where("page_id", $id)->first();
         }
+        if ($social_type == 'tiktok') {
+            $account = $this->tiktok()->where("id", $id)->first();
+        }
         return $account;
     }
 
@@ -317,6 +325,9 @@ class Post extends Model
             if ($social_type == 'facebook') {
                 $account = Page::findOrFail($account);
             }
+            if ($social_type == 'tiktok') {
+                $account = Tiktok::findOrFail($account);
+            }
             $post = $post->where("account_id", $account->id);
         }
         if (count($domain) > 0) {
@@ -422,6 +433,9 @@ class Post extends Model
         }
         if ($social_type == "pinterest") {
             $account_name = $this->board?->name;
+        }
+        if ($social_type == "tiktok") {
+            $account_name = $this->tiktok?->display_name;
         }
         return $account_name;
     }
