@@ -65,7 +65,7 @@ class PinterestService
 
             // Find the Pinterest account first
             $pinterest = PinterestModel::find($pinterest_id);
-            
+
             if (!$pinterest) {
                 info("Pinterest refresh token error: Pinterest account not found for ID: {$pinterest_id}");
                 return [
@@ -139,7 +139,6 @@ class PinterestService
                 "refresh_token" => $token["refresh_token"] ?? $refresh_token,
                 "refresh_token_expires_in" => $token["refresh_token_expires_in"] ?? null,
             ];
-
         } catch (RequestException $e) {
             // Handle Guzzle HTTP exceptions
             $errorMessage = $e->getMessage();
@@ -329,7 +328,8 @@ class PinterestService
             if ($status === 'succeeded') {
                 $mediaReady = true;
             } elseif ($status === 'failed') {
-                $error =  "Video processing failed on Pinterest side. Status: " . $response['details'];
+                $details = $response['details'] ?? 'Unknown error';
+                $error =  "Video processing failed on Pinterest side. Status: " . $details;
             }
         }
         if ($mediaReady) {
@@ -367,14 +367,14 @@ class PinterestService
     public function delete($post)
     {
         $board = $post->board;
-        
+
         if (!$board) {
             info("Pinterest delete error: Board not found for post ID: {$post->id}");
             return false;
         }
 
         $pinterest = $board->pinterest;
-        
+
         if (!$pinterest) {
             info("Pinterest delete error: Pinterest account not found for post ID: {$post->id}");
             return false;
@@ -382,7 +382,7 @@ class PinterestService
 
         // Use validateToken for proper error handling
         $tokenResponse = self::validateToken($board);
-        
+
         if (!$tokenResponse['success']) {
             info("Pinterest delete error: " . ($tokenResponse['message'] ?? 'Failed to validate token') . " for post ID: {$post->id}");
             return false;
@@ -390,7 +390,7 @@ class PinterestService
 
         $access_token = $tokenResponse['access_token'];
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
-        
+
         try {
             $response = $this->client->delete($this->baseUrl . "pins/" . $post->post_id, [], $this->header);
             return true;
@@ -515,7 +515,6 @@ class PinterestService
             }
 
             return $response;
-
         } catch (\Exception $e) {
             info("Pinterest validateToken error: " . $e->getMessage());
             return [
