@@ -76,7 +76,7 @@ class User extends Authenticatable
 
     public function tiktok()
     {
-        return $this->hasMany(TikTok::class, 'user_id', 'id');
+        return $this->hasMany(Tiktok::class, 'user_id', 'id');
     }
 
     public function domains()

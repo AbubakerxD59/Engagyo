@@ -30,7 +30,7 @@ class AccountsController extends Controller
     private $page;
     private $post;
     private $domain;
-    public function __construct(Pinterest $pinterest, Facebook $facebook, TikTok $tiktok, Board $board, Page $page, Post $post, Domain $domain)
+    public function __construct(Pinterest $pinterest, Facebook $facebook, Tiktok $tiktok, Board $board, Page $page, Post $post, Domain $domain)
     {
         $this->pinterestService = new PinterestService();
         $this->facebookService = new FacebookService();
