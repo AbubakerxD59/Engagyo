@@ -22,7 +22,8 @@
     <!-- CONTENT SECTION -->
     <div class="card-content">
         <div class="mb-2">
-            <img src="{{ $post->account_profile }}" class="rounded-circle me-2 social_profile" style="object-fit: cover;"
+            <img src="{{ $post->account_profile }}" class="rounded-circle me-2 social_profile"
+                style="object-fit: cover;"
                 onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';">
             <span>
                 <strong>

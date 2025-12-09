@@ -245,6 +245,10 @@
             background: #E60023;
         }
 
+        .account-badge .platform-icon.tiktok {
+            background: #000000;
+        }
+
         .account-badge .account-name {
             font-size: 12px;
             font-weight: 600;
@@ -640,7 +644,7 @@
             function renderPostCard(post) {
                 var statusClass = post.status == 1 ? 'published' : (post.status == -1 ? 'failed' : 'pending');
                 var statusText = post.status == 1 ? 'Published' : (post.status == -1 ? 'Failed' : 'Pending');
-                var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' : 'fab fa-pinterest-p';
+                var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' : (post.social_type === 'pinterest' ? 'fab fa-pinterest-p' : 'fab fa-tiktok');
                 var platformClass = post.social_type;
 
                 var apiKeyBadge = post.api_key_name && post.api_key_name !== '-' ?

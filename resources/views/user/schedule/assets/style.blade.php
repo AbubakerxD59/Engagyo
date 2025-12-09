@@ -595,6 +595,7 @@
 
      .post-account-badge .platform-icon.facebook { background: #1877F2; }
      .post-account-badge .platform-icon.pinterest { background: #E60023; }
+     .post-account-badge .platform-icon.tiktok { background: #000000; }
 
      .post-account-badge .post-account-name {
          font-size: 12px;

@@ -336,6 +336,7 @@
 
         .post-account-badge .platform-icon.facebook { background: #1877F2; }
         .post-account-badge .platform-icon.pinterest { background: #E60023; }
+        .post-account-badge .platform-icon.tiktok { background: #000000; }
 
         .post-account-badge .post-account-name {
             font-size: 12px;
@@ -728,7 +729,7 @@
         function renderPostCard(post) {
             var statusClass = post.status == 1 ? 'published' : (post.status == -1 ? 'failed' : 'pending');
             var statusText = post.status == 1 ? 'Published' : (post.status == -1 ? 'Failed' : 'Pending');
-            var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' : 'fab fa-pinterest-p';
+            var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' : (post.social_type === 'pinterest' ? 'fab fa-pinterest-p' : 'fab fa-tiktok');
             var platformClass = post.social_type;
 
             // Domain badge
