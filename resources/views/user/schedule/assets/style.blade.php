@@ -112,11 +112,15 @@
          background: #1877F2;
      }
 
-     .platform-badge.pinterest {
-         background: #E60023;
-     }
+    .platform-badge.pinterest {
+        background: #E60023;
+    }
 
-     .account-details {
+    .platform-badge.tiktok {
+        background: #000000;
+    }
+
+    .account-details {
          display: flex;
          flex-direction: column;
          min-width: 0;

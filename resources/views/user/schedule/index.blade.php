@@ -58,6 +58,25 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    @elseif($account->type == 'tiktok')
+                                        <div class="account-card has-tooltip @if ($account->schedule_status == 'active') active @endif"
+                                            data-type="{{ $account->type }}" data-id="{{ $account->id }}"
+                                            data-tooltip="{{ $account->username }}">
+                                            <div class="account-card-inner">
+                                                <div class="account-avatar">
+                                                    <img src="{{ $account->profile_image }}"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';">
+                                                    <span class="platform-badge tiktok">
+                                                        <i class="fab fa-tiktok"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-details">
+                                                    <span class="account-name">{{ Str::limit($account->name, 18) }}</span>
+                                                    <span
+                                                        class="account-username">{{ Str::limit($account->username, 15) }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     @endif
                                 @endforeach
                             </div>

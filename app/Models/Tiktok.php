@@ -113,6 +113,16 @@ class Tiktok extends Model
         return $expires_in >= $now ? true : false;
     }
 
+    public function getAccountIdAttribute()
+    {
+        return $this->tiktok_id;
+    }
+
+    public function getNameAttribute()
+    {
+        return $this->display_name ?? $this->username;
+    }
+
     protected static function booted()
     {
         static::addGlobalScope(new UserScope);

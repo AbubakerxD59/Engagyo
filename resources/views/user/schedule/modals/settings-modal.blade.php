@@ -35,6 +35,13 @@
                                             onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
                                         <img src="{{ social_logo('pinterest') }}" alt=""
                                             style="width: 15px; position:relative;">
+                                    @elseif($account->type == 'tiktok')
+                                        <img style="width:35px;height:35px;"
+                                            src="{{ $account->profile_image }}" class="rounded-circle"
+                                            alt="{{ social_logo('tiktok') }}"
+                                            onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';">
+                                        <img src="{{ social_logo('tiktok') }}" alt=""
+                                            style="width: 15px; position:relative;">
                                     @endif
                                     <b>{{ $account->name }}</b>
                                 </div>
