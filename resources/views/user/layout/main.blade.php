@@ -166,18 +166,11 @@
             // Show confirm pop-up on delete button
             $(document).on('click', '.delete-btn', function(event) {
                 if (confirm('Are you sure you want to delete?')) {
-                    return true;
+                    $(this).closest('form').submit();
                 } else {
                     event.preventDefault();
                 }
             });
-            var confirmDelete = function(event) {
-                if (confirm('Are you sure you want to delete?')) {
-                    return true;
-                } else {
-                    event.preventDefault();
-                }
-            }
             // Show confrm pop-up on submit button
             function confirmSubmit(event) {
                 if (confirm('Do you wish to submit?')) {
