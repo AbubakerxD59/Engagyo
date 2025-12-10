@@ -48,12 +48,19 @@ class PinterestController extends Controller
                         "refresh_token" => $token["refresh_token"],
                         "refresh_token_expires_in" => $token["refresh_token_expires_in"],
                     ];
-                    $user->pinterest()->updateOrCreate(["pin_id" => $me["id"]], $data);
+                    $pinterestAccount = $user->pinterest()->updateOrCreate(["pin_id" => $me["id"]], $data);
 
                     $boards = $this->pinterestService->getBoards($token["access_token"]);
                     if (isset($boards['items'])) {
+                        // Get the Pinterest account's database ID (not the API pin_id)
+                        $pinterestDbId = $pinterestAccount->id;
+                        
                         foreach ($boards["items"] as $key => $board) {
-                            $connected = $this->board->connected(['pin_id' => $me["id"], 'board_id' => $board["id"]])->first() ? true : false;
+                            // Check if board is already connected using the Pinterest account's database ID
+                            $connected = $this->board->connected([
+                                'pin_id' => $pinterestDbId, 
+                                'board_id' => $board["id"]
+                            ])->first() ? true : false;
                             $boards["items"][$key]["connected"] = $connected;
                         }
                         session_set('pinterest_auth', '1');

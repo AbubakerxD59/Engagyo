@@ -41,7 +41,7 @@
                                 </div>
                             </div>
                             <div class="account-item-action">
-                                @if (@$item['connected'])
+                                @if (!empty($item['connected']) && $item['connected'] === true)
                                     <button class="btn btn-connected" disabled>
                                         <i class="fas fa-check-circle"></i>
                                         <span>Connected</span>

@@ -47,15 +47,19 @@ class FacebookController extends Controller
                     "access_token" => $access_token,
                     "expires_in" => $meta_data->getField("data_access_expires_at")
                 ];
-                $user->facebook()->updateOrCreate(["fb_id" => $me["id"]], $data);
+                $facebookAccount = $user->facebook()->updateOrCreate(["fb_id" => $me["id"]], $data);
 
                 $pages = $this->facebookService->pages($access_token);
                 if ($pages["success"]) {
                     $items = $pages["data"];
                     $pages = [];
                     $key = 0;
+                    // Get the Facebook account's database ID (not the API fb_id)
+                    $facebookDbId = $facebookAccount->id;
+                    
                     foreach ($items as $page) {
-                        $connected = $this->page->connected(['fb_id' => $me["id"], 'page_id' => $page->getField("id")])->first() ? true : false;
+                        // Check if page is already connected using the Facebook account's database ID
+                        $connected = $this->page->connected(['fb_id' => $facebookDbId, 'page_id' => $page->getField("id")])->first() ? true : false;
                         $profile_image = $this->facebookService->pageProfileImage($access_token, $page->getField("id"));
                         if ($profile_image["success"]) {
                             $profile_image = $profile_image["data"];
