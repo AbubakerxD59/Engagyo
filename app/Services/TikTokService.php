@@ -270,27 +270,109 @@ class TikTokService
      */
     public function video($id, $post, $access_token)
     {
-        $header = array("Content-Type" => "application/json", "Authorization" => "Bearer " . $access_token);
+        $header = array(
+            "Content-Type" => "application/json",
+            "Authorization" => "Bearer " . $access_token
+        );
         $post_row = \App\Models\Post::find($id);
 
         try {
-            // TikTok video publishing implementation
-            // This is a placeholder - implement actual TikTok API calls here
-            // TikTok API typically requires:
-            // 1. Initialize upload
-            // 2. Upload video file
-            // 3. Publish video with metadata
+            // Ensure video URL is publicly accessible
+            $videoUrl = $post['file_url'] ?? null;
+            
+            if (empty($videoUrl)) {
+                throw new Exception("Video URL is required for TikTok video post");
+            }
 
+            // Ensure the URL is absolute and publicly accessible
+            if (!filter_var($videoUrl, FILTER_VALIDATE_URL)) {
+                // If it's a relative path, convert it to absolute URL
+                if (strpos($videoUrl, 'http') !== 0) {
+                    $videoUrl = url($videoUrl);
+                }
+            }
+
+            // Prepare the request body for TikTok Content Posting API
+            $requestBody = [
+                "media_type" => "VIDEO",
+                "post_mode" => "DIRECT_POST",
+                "post_info" => [
+                    "title" => $post['title'] ?? "",
+                    "privacy_level" => "PUBLIC_TO_EVERYONE",
+                    "disable_duet" => false,
+                    "disable_comment" => false,
+                    "disable_stitch" => false,
+                    "video_cover_timestamp_ms" => 1000
+                ],
+                "source_info" => [
+                    "source" => "PULL_FROM_URL",
+                    "video_urls" => [$videoUrl]
+                ]
+            ];
+
+            // Make API call to TikTok Content Posting API
+            $endpoint = $this->baseUrl . "post/publish/content/init/";
+            $response = $this->client->postJson($endpoint, $requestBody, $header);
+
+            if ($response && isset($response['data'])) {
+                $publishId = $response['data']['publish_id'] ?? null;
+                
+                if ($publishId) {
+                    // Post was successfully published
+                    $post_row->update([
+                        "status" => 1,
+                        "published_at" => date("Y-m-d H:i:s"),
+                        "response" => json_encode([
+                            "success" => true,
+                            "publish_id" => $publishId,
+                            "message" => "Video published successfully to TikTok"
+                        ])
+                    ]);
+                } else {
+                    // Check if there's an error in the response
+                    $errorMessage = $response['error']['message'] ?? $response['error']['log_id'] ?? "Unknown error occurred";
+                    throw new Exception("TikTok API error: " . $errorMessage);
+                }
+            } else {
+                // Handle error response
+                $errorMessage = "Failed to publish video to TikTok";
+                if (isset($response['error'])) {
+                    $errorMessage = $response['error']['message'] ?? $response['error']['log_id'] ?? $errorMessage;
+                } elseif (isset($response['message'])) {
+                    $errorMessage = $response['message'];
+                }
+                throw new Exception($errorMessage);
+            }
+
+        } catch (RequestException $e) {
+            // Handle HTTP exceptions
+            $errorMessage = $e->getMessage();
+            if ($e->hasResponse()) {
+                $responseBody = $e->getResponse()->getBody()->getContents();
+                $decoded = json_decode($responseBody, true);
+                if (isset($decoded['error']['message'])) {
+                    $errorMessage = $decoded['error']['message'];
+                } elseif (isset($decoded['error']['log_id'])) {
+                    $errorMessage = "TikTok API error (Log ID: " . $decoded['error']['log_id'] . ")";
+                }
+            }
+            
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => "TikTok video publishing not yet implemented"
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $errorMessage
+                ])
             ]);
         } catch (Exception $e) {
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => $e->getMessage()
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $e->getMessage()
+                ])
             ]);
         }
     }
@@ -415,6 +497,8 @@ class TikTokService
 
     /**
      * Publish a link to TikTok
+     * Note: TikTok doesn't support clickable links in posts.
+     * This method posts the image with the link included in the caption.
      *
      * @param int $id Post ID
      * @param array $post Post data
@@ -423,23 +507,121 @@ class TikTokService
      */
     public function link($id, $post, $access_token)
     {
-        $header = array("Content-Type" => "application/json", "Authorization" => "Bearer " . $access_token);
+        $header = array(
+            "Content-Type" => "application/json",
+            "Authorization" => "Bearer " . $access_token
+        );
         $post_row = \App\Models\Post::find($id);
 
         try {
-            // TikTok link publishing implementation
-            // This is a placeholder - implement actual TikTok API calls here
+            // Get link and image URL
+            $linkUrl = $post['link'] ?? null;
+            $imageUrl = $post['url'] ?? null;
+            
+            if (empty($imageUrl)) {
+                throw new Exception("Image URL is required for TikTok link post");
+            }
 
+            if (empty($linkUrl)) {
+                throw new Exception("Link URL is required for TikTok link post");
+            }
+
+            // Ensure the image URL is absolute and publicly accessible
+            if (!filter_var($imageUrl, FILTER_VALIDATE_URL)) {
+                // If it's a relative path, convert it to absolute URL
+                if (strpos($imageUrl, 'http') !== 0) {
+                    $imageUrl = url($imageUrl);
+                }
+            }
+
+            // Combine title with link (TikTok doesn't support clickable links, so we include it in the caption)
+            $title = $post['title'] ?? "";
+            $caption = trim($title . "\n\n" . $linkUrl);
+
+            // Prepare the request body for TikTok Content Posting API
+            // Since TikTok doesn't support clickable links, we post as a photo with the link in the caption
+            $requestBody = [
+                "media_type" => "PHOTO",
+                "post_mode" => "DIRECT_POST",
+                "post_info" => [
+                    "title" => $caption,
+                    "privacy_level" => "PUBLIC_TO_EVERYONE",
+                    "disable_duet" => false,
+                    "disable_comment" => false,
+                    "disable_stitch" => false,
+                    "auto_add_music" => true
+                ],
+                "source_info" => [
+                    "source" => "PULL_FROM_URL",
+                    "photo_cover_index" => 0,
+                    "photo_images" => [$imageUrl]
+                ]
+            ];
+
+            // Make API call to TikTok Content Posting API
+            $endpoint = $this->baseUrl . "post/publish/content/init/";
+            $response = $this->client->postJson($endpoint, $requestBody, $header);
+
+            if ($response && isset($response['data'])) {
+                $publishId = $response['data']['publish_id'] ?? null;
+                
+                if ($publishId) {
+                    // Post was successfully published
+                    $post_row->update([
+                        "status" => 1,
+                        "published_at" => date("Y-m-d H:i:s"),
+                        "response" => json_encode([
+                            "success" => true,
+                            "publish_id" => $publishId,
+                            "message" => "Link post published successfully to TikTok (link included in caption - not clickable)",
+                            "note" => "TikTok API does not support clickable links. The link has been included in the post caption."
+                        ])
+                    ]);
+                } else {
+                    // Check if there's an error in the response
+                    $errorMessage = $response['error']['message'] ?? $response['error']['log_id'] ?? "Unknown error occurred";
+                    throw new Exception("TikTok API error: " . $errorMessage);
+                }
+            } else {
+                // Handle error response
+                $errorMessage = "Failed to publish link post to TikTok";
+                if (isset($response['error'])) {
+                    $errorMessage = $response['error']['message'] ?? $response['error']['log_id'] ?? $errorMessage;
+                } elseif (isset($response['message'])) {
+                    $errorMessage = $response['message'];
+                }
+                throw new Exception($errorMessage);
+            }
+
+        } catch (RequestException $e) {
+            // Handle HTTP exceptions
+            $errorMessage = $e->getMessage();
+            if ($e->hasResponse()) {
+                $responseBody = $e->getResponse()->getBody()->getContents();
+                $decoded = json_decode($responseBody, true);
+                if (isset($decoded['error']['message'])) {
+                    $errorMessage = $decoded['error']['message'];
+                } elseif (isset($decoded['error']['log_id'])) {
+                    $errorMessage = "TikTok API error (Log ID: " . $decoded['error']['log_id'] . ")";
+                }
+            }
+            
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => "TikTok link publishing not yet implemented"
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $errorMessage
+                ])
             ]);
         } catch (Exception $e) {
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => $e->getMessage()
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $e->getMessage()
+                ])
             ]);
         }
     }
