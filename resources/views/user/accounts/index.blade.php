@@ -266,22 +266,6 @@
             font-weight: 600
         }
 
-        .acc_title {
-            font-weight: 600
-        }
-
-        .item_count {
-            padding: 10px;
-            margin-block: 5px;
-            border: 1px solid grey;
-            border-radius: 10px;
-            font-weight: 600
-        }
-
-        .pinterest_connect,
-        .facebook_connect {
-            color: #008100 !important;
-        }
 
         /* New Account Cards Styling */
         .platform-card .card-body {
@@ -683,6 +667,341 @@
                 height: 44px;
             }
         }
+
+        /* Connect Account Modal Styles */
+        .connect-account-modal {
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+        }
+
+        .connect-account-modal .modal-header {
+            background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);
+            border-bottom: 1px solid #e9ecef;
+            padding: 24px 30px;
+        }
+
+        .modal-header-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            width: 100%;
+        }
+
+        .modal-title-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .platform-icon-wrapper {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .platform-icon-wrapper.facebook-icon {
+            background: linear-gradient(135deg, #1877f2, #0d65d9);
+        }
+
+        .platform-icon-wrapper.pinterest-icon {
+            background: linear-gradient(135deg, #e60023, #bd081c);
+        }
+
+        .modal-title-info {
+            flex: 1;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 700;
+            color: #1a1a1a;
+            margin: 0;
+            line-height: 1.2;
+        }
+
+        .modal-subtitle {
+            font-size: 13px;
+            color: #6c757d;
+            margin: 4px 0 0 0;
+        }
+
+        .connect-account-modal .modal-body {
+            padding: 24px 30px;
+            max-height: 60vh;
+            overflow-y: auto;
+        }
+
+        .connect-account-modal .modal-body::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .connect-account-modal .modal-body::-webkit-scrollbar-thumb {
+            background: #ddd;
+            border-radius: 3px;
+        }
+
+        .accounts-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .account-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 20px;
+            background: #fff;
+            border: 2px solid #e9ecef;
+            border-radius: 12px;
+            transition: all 0.3s ease;
+        }
+
+        .account-item:hover {
+            border-color: #d0d7de;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+            transform: translateY(-2px);
+        }
+
+        .account-item-content {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            flex: 1;
+            min-width: 0;
+        }
+
+        .account-avatar-section {
+            flex-shrink: 0;
+        }
+
+        .account-item-avatar {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            object-fit: cover;
+            border: 2px solid #f0f0f0;
+        }
+
+        .account-item-avatar-placeholder {
+            width: 56px;
+            height: 56px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            color: #6c757d;
+            font-size: 24px;
+        }
+
+        .account-item-avatar-placeholder.pinterest-placeholder {
+            background: linear-gradient(135deg, #fce8eb, #fcd4da);
+            color: #e60023;
+        }
+
+        .account-item-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .account-item-name {
+            font-size: 16px;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin: 0 0 4px 0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .account-item-type {
+            font-size: 12px;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            font-weight: 500;
+        }
+
+        .account-item-action {
+            flex-shrink: 0;
+            margin-left: 16px;
+        }
+
+        .btn-connect {
+            background: linear-gradient(135deg, #1877f2, #0d65d9);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .btn-connect:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(24, 119, 242, 0.4);
+            color: #fff;
+        }
+
+        .btn-connect:active {
+            transform: translateY(0);
+        }
+
+        .btn-connect.pinterest_connect {
+            background: linear-gradient(135deg, #e60023, #bd081c);
+        }
+
+        .btn-connect.pinterest_connect:hover {
+            box-shadow: 0 6px 20px rgba(230, 0, 35, 0.4);
+        }
+
+        .btn-connect:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .btn-connected {
+            background: linear-gradient(135deg, #10b981, #059669);
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 14px;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            cursor: default;
+            min-width: 120px;
+            justify-content: center;
+        }
+
+        .btn-connected i {
+            font-size: 16px;
+        }
+
+        .connect-account-modal .modal-footer {
+            background: #f8f9fa;
+            border-top: 1px solid #e9ecef;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: flex-end;
+        }
+
+        .btn-continue {
+            background: linear-gradient(135deg, #1877f2, #0d65d9);
+            color: #fff;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 15px;
+            display: inline-flex;
+            align-items: center;
+            transition: all 0.3s ease;
+        }
+
+        .btn-continue:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(24, 119, 242, 0.4);
+            color: #fff;
+        }
+
+        .connect-account-modal .close {
+            font-size: 28px;
+            font-weight: 300;
+            color: #6c757d;
+            opacity: 0.7;
+            transition: all 0.2s ease;
+            padding: 0;
+            margin: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+        }
+
+        .connect-account-modal .close:hover {
+            opacity: 1;
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        /* Loading state for connect button */
+        .btn-connect.loading {
+            position: relative;
+            color: transparent;
+            pointer-events: none;
+        }
+
+        .btn-connect.loading::after {
+            content: '';
+            position: absolute;
+            width: 18px;
+            height: 18px;
+            top: 50%;
+            left: 50%;
+            margin-left: -9px;
+            margin-top: -9px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 0.6s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Success animation */
+        .account-item.connecting .btn-connect {
+            background: linear-gradient(135deg, #10b981, #059669);
+        }
+
+        @media (max-width: 768px) {
+            .connect-account-modal .modal-dialog {
+                margin: 10px;
+            }
+
+            .connect-account-modal .modal-header,
+            .connect-account-modal .modal-body,
+            .connect-account-modal .modal-footer {
+                padding: 20px;
+            }
+
+            .account-item {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+
+            .account-item-action {
+                width: 100%;
+                margin-left: 0;
+            }
+
+            .btn-connect,
+            .btn-connected {
+                width: 100%;
+            }
+        }
     </style>
 @endpush
 @push('scripts')
@@ -719,15 +1038,23 @@
             // Pinterest Modal
             var pinAcc = $('#pinterestAcc').val();
             if (pinAcc == 1) {
-                $('#connectPinterestModal').modal('toggle');
+                $('#connectPinterestModal').modal('show');
                 {{ session_delete('pinterest_auth') }}
             }
-            $('.pinterest_connect').on('click', function() {
+            
+            // Pinterest Connect Handler
+            $(document).on('click', '.pinterest_connect', function() {
                 var button = $(this);
+                var $accountItem = button.closest('.account-item');
                 var id = button.data('id');
                 var pin_id = button.data('pin-id');
                 var board_data = button.data('board-data');
                 var token = $('meta[name="csrf-token"]').attr('content');
+                
+                // Disable button and show loading state
+                button.addClass('loading').prop('disabled', true);
+                $accountItem.addClass('connecting');
+                
                 $.ajax({
                     url: "{{ route('panel.accounts.addBoard') }}",
                     type: 'POST',
@@ -739,30 +1066,54 @@
                     },
                     success: function(response) {
                         if (response.success) {
+                            // Update button to connected state
+                            button.removeClass('pinterest_connect loading')
+                                .addClass('btn-connected')
+                                .html('<i class="fas fa-check-circle"></i><span>Connected</span>')
+                                .prop('disabled', true);
+                            
+                            $accountItem.removeClass('connecting');
                             toastr.success("Board Connected Successfully!");
-                            button.text('Connected').removeClass('pinterest_connect pointer');
                         } else {
-                            toastr.error(response.message);
+                            button.removeClass('loading').prop('disabled', false);
+                            $accountItem.removeClass('connecting');
+                            toastr.error(response.message || "Failed to connect board");
                         }
                     },
+                    error: function(xhr) {
+                        button.removeClass('loading').prop('disabled', false);
+                        $accountItem.removeClass('connecting');
+                        var errorMsg = xhr.responseJSON?.message || "Something went wrong. Please try again.";
+                        toastr.error(errorMsg);
+                    }
                 });
             });
+            
             $("#connectPinterestModal").on("hide.bs.modal", function() {
                 {{ session_delete('account') }}
                 {{ session_delete('items') }}
             });
+            
             // Facebook Modal
             var facAcc = $('#facebookAcc').val();
             if (facAcc == 1) {
-                $('#connectFacebookModal').modal('toggle');
+                $('#connectFacebookModal').modal('show');
                 {{ session_delete('facebook_auth') }}
             }
-            $('.facebook_connect').on('click', function() {
+            
+            // Facebook Connect Handler
+            $(document).on('click', '.facebook_connect', function() {
                 var button = $(this);
+                var $accountItem = button.closest('.account-item');
                 var id = button.data('id');
                 var fb_id = button.data('fb-id');
                 var page_data = button.data('page-data');
                 var token = $('meta[name="csrf-token"]').attr('content');
+                
+                // Disable button and show loading state
+                button.addClass('loading').prop('disabled', true);
+                $accountItem.addClass('connecting');
+                
                 $.ajax({
                     url: "{{ route('panel.accounts.addPage') }}",
                     type: 'POST',
@@ -774,14 +1125,29 @@
                     },
                     success: function(response) {
                         if (response.success) {
+                            // Update button to connected state
+                            button.removeClass('facebook_connect loading')
+                                .addClass('btn-connected')
+                                .html('<i class="fas fa-check-circle"></i><span>Connected</span>')
+                                .prop('disabled', true);
+                            
+                            $accountItem.removeClass('connecting');
                             toastr.success("Page Connected Successfully!");
-                            button.text('Connected').removeClass('facebook_connect pointer');
                         } else {
-                            toastr.error(response.message);
+                            button.removeClass('loading').prop('disabled', false);
+                            $accountItem.removeClass('connecting');
+                            toastr.error(response.message || "Failed to connect page");
                         }
                     },
+                    error: function(xhr) {
+                        button.removeClass('loading').prop('disabled', false);
+                        $accountItem.removeClass('connecting');
+                        var errorMsg = xhr.responseJSON?.message || "Something went wrong. Please try again.";
+                        toastr.error(errorMsg);
+                    }
                 });
             });
+            
             $("#connectFacebookModal").on("hide.bs.modal", function() {
                 {{ session_delete('account') }}
                 {{ session_delete('items') }}
