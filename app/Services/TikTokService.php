@@ -274,7 +274,7 @@ class TikTokService
         try {
             // Check if it's already a URL or an S3 key
             $isUrl = filter_var($s3KeyOrUrl, FILTER_VALIDATE_URL);
-            
+
             if ($isUrl) {
                 // If it's a URL, check if it's from S3
                 if (strpos($s3KeyOrUrl, 'amazonaws.com') !== false || strpos($s3KeyOrUrl, 's3.') !== false) {
@@ -296,7 +296,7 @@ class TikTokService
 
             // Download file from S3
             $fileContents = Storage::disk('s3')->get($s3Key);
-            
+
             if (!$fileContents) {
                 throw new Exception("Failed to download file from S3");
             }
@@ -312,14 +312,14 @@ class TikTokService
             $localPublicPath = $localDir . '/' . uniqid('tiktok_', true) . '.' . $extension;
             $fullPath = public_path($localPublicPath);
             $directory = dirname($fullPath);
-            
+
             if (!file_exists($directory)) {
                 mkdir($directory, 0755, true);
             }
 
             // Save file locally
             $bytesWritten = file_put_contents($fullPath, $fileContents);
-            
+
             if ($bytesWritten === false) {
                 throw new Exception("Failed to save file to local storage");
             }
@@ -387,7 +387,7 @@ class TikTokService
 
             // Download from S3 to local storage if needed
             $downloadResult = $this->downloadFromS3ToLocal($videoSource, 'video');
-            
+
             if (!$downloadResult['success']) {
                 throw new Exception("Failed to download video: " . ($downloadResult['message'] ?? "Unknown error"));
             }
@@ -399,7 +399,7 @@ class TikTokService
             // Reference: https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
             $requestBody = [
                 "post_info" => [
-                    "privacy_level" => "PUBLIC_TO_EVERYONE", // Required: PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY
+                    "privacy_level" => "SELF_ONLY", // Required: PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY
                     "title" => $post['title'] ?? "", // Optional: Video caption (max 2200 UTF-16 runes)
                 ],
                 "source_info" => [
@@ -515,7 +515,7 @@ class TikTokService
 
             // Download from S3 to local storage if needed
             $downloadResult = $this->downloadFromS3ToLocal($imageSource, 'image');
-            
+
             if (!$downloadResult['success']) {
                 throw new Exception("Failed to download image: " . ($downloadResult['message'] ?? "Unknown error"));
             }
@@ -529,7 +529,7 @@ class TikTokService
                 "post_mode" => "DIRECT_POST",
                 "post_info" => [
                     "title" => $post['title'] ?? "",
-                    "privacy_level" => "PUBLIC_TO_EVERYONE",
+                    "privacy_level" => "SELF_ONLY",
                 ],
                 "source_info" => [
                     "source" => "PULL_FROM_URL",
@@ -641,7 +641,7 @@ class TikTokService
 
             // Download from S3 to local storage if needed
             $downloadResult = $this->downloadFromS3ToLocal($imageSource, 'image');
-            
+
             if (!$downloadResult['success']) {
                 throw new Exception("Failed to download image: " . ($downloadResult['message'] ?? "Unknown error"));
             }
@@ -660,7 +660,7 @@ class TikTokService
                 "post_mode" => "DIRECT_POST",
                 "post_info" => [
                     "title" => $caption,
-                    "privacy_level" => "PUBLIC_TO_EVERYONE",
+                    "privacy_level" => "SELF_ONLY",
                 ],
                 "source_info" => [
                     "source" => "PULL_FROM_URL",
