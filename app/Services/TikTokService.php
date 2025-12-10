@@ -271,7 +271,7 @@ class TikTokService
     public function video($id, $post, $access_token)
     {
         $header = array(
-            "Content-Type" => "application/json",
+            "Content-Type" => "application/json; charset=UTF-8",
             "Authorization" => "Bearer " . $access_token
         );
         $post_row = \App\Models\Post::find($id);
@@ -279,7 +279,7 @@ class TikTokService
         try {
             // Ensure video URL is publicly accessible
             $videoUrl = $post['file_url'] ?? null;
-            
+
             if (empty($videoUrl)) {
                 throw new Exception("Video URL is required for TikTok video post");
             }
@@ -292,32 +292,32 @@ class TikTokService
                 }
             }
 
-            // Prepare the request body for TikTok Content Posting API
+            // Prepare the request body according to TikTok API documentation
+            // Reference: https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
             $requestBody = [
-                "media_type" => "VIDEO",
-                "post_mode" => "DIRECT_POST",
                 "post_info" => [
-                    "title" => $post['title'] ?? "",
-                    "privacy_level" => "PUBLIC_TO_EVERYONE",
-                    "disable_duet" => false,
-                    "disable_comment" => false,
-                    "disable_stitch" => false,
-                    "video_cover_timestamp_ms" => 1000
+                    "privacy_level" => "PUBLIC_TO_EVERYONE", // Required: PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY
+                    "title" => $post['title'] ?? "", // Optional: Video caption (max 2200 UTF-16 runes)
                 ],
                 "source_info" => [
-                    "source" => "PULL_FROM_URL",
-                    "video_urls" => [$videoUrl]
+                    "source" => "PULL_FROM_URL", // Required: PULL_FROM_URL or FILE_UPLOAD
+                    "video_url" => $videoUrl // Required for PULL_FROM_URL: Public-accessible URL
                 ]
             ];
 
-            // Make API call to TikTok Content Posting API
-            $endpoint = $this->baseUrl . "post/publish/content/init/";
+            // Make API call to TikTok Video Posting API
+            // Endpoint: /v2/post/publish/video/init/
+            $endpoint = $this->baseUrl . "post/publish/video/init/";
             $response = $this->client->postJson($endpoint, $requestBody, $header);
 
+            // Check response according to TikTok API documentation
+            // Response structure: { "data": { "publish_id": "...", "upload_url": "..." }, "error": { "code": "ok", "message": "", "log_id": "..." } }
             if ($response && isset($response['data'])) {
                 $publishId = $response['data']['publish_id'] ?? null;
-                
-                if ($publishId) {
+                $errorCode = $response['error']['code'] ?? null;
+
+                // Check if error code is "ok" (success) or if publish_id exists
+                if ($errorCode === "ok" && $publishId) {
                     // Post was successfully published
                     $post_row->update([
                         "status" => 1,
@@ -329,21 +329,26 @@ class TikTokService
                         ])
                     ]);
                 } else {
-                    // Check if there's an error in the response
-                    $errorMessage = $response['error']['message'] ?? $response['error']['log_id'] ?? "Unknown error occurred";
-                    throw new Exception("TikTok API error: " . $errorMessage);
+                    // Error occurred - check error details
+                    $errorMessage = $response['error']['message'] ?? "Unknown error occurred";
+                    $logId = $response['error']['log_id'] ?? null;
+                    $errorCode = $response['error']['code'] ?? "unknown_error";
+
+                    throw new Exception("TikTok API error ({$errorCode}): {$errorMessage}" . ($logId ? " [Log ID: {$logId}]" : ""));
                 }
             } else {
-                // Handle error response
+                // Handle error response when data is missing
                 $errorMessage = "Failed to publish video to TikTok";
                 if (isset($response['error'])) {
-                    $errorMessage = $response['error']['message'] ?? $response['error']['log_id'] ?? $errorMessage;
+                    $errorCode = $response['error']['code'] ?? "unknown_error";
+                    $errorMessage = $response['error']['message'] ?? $errorMessage;
+                    $logId = $response['error']['log_id'] ?? null;
+                    $errorMessage = "TikTok API error ({$errorCode}): {$errorMessage}" . ($logId ? " [Log ID: {$logId}]" : "");
                 } elseif (isset($response['message'])) {
                     $errorMessage = $response['message'];
                 }
                 throw new Exception($errorMessage);
             }
-
         } catch (RequestException $e) {
             // Handle HTTP exceptions
             $errorMessage = $e->getMessage();
@@ -356,7 +361,7 @@ class TikTokService
                     $errorMessage = "TikTok API error (Log ID: " . $decoded['error']['log_id'] . ")";
                 }
             }
-            
+
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
@@ -396,7 +401,7 @@ class TikTokService
         try {
             // Ensure image URL is publicly accessible
             $imageUrl = $post['url'] ?? null;
-            
+
             if (empty($imageUrl)) {
                 throw new Exception("Image URL is required for TikTok photo post");
             }
@@ -416,10 +421,6 @@ class TikTokService
                 "post_info" => [
                     "title" => $post['title'] ?? "",
                     "privacy_level" => "PUBLIC_TO_EVERYONE",
-                    "disable_duet" => false,
-                    "disable_comment" => false,
-                    "disable_stitch" => false,
-                    "auto_add_music" => true
                 ],
                 "source_info" => [
                     "source" => "PULL_FROM_URL",
@@ -434,7 +435,7 @@ class TikTokService
 
             if ($response && isset($response['data'])) {
                 $publishId = $response['data']['publish_id'] ?? null;
-                
+
                 if ($publishId) {
                     // Post was successfully published
                     $post_row->update([
@@ -461,7 +462,6 @@ class TikTokService
                 }
                 throw new Exception($errorMessage);
             }
-
         } catch (RequestException $e) {
             // Handle HTTP exceptions
             $errorMessage = $e->getMessage();
@@ -474,7 +474,7 @@ class TikTokService
                     $errorMessage = "TikTok API error (Log ID: " . $decoded['error']['log_id'] . ")";
                 }
             }
-            
+
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
@@ -517,7 +517,7 @@ class TikTokService
             // Get link and image URL
             $linkUrl = $post['link'] ?? null;
             $imageUrl = $post['url'] ?? null;
-            
+
             if (empty($imageUrl)) {
                 throw new Exception("Image URL is required for TikTok link post");
             }
@@ -546,10 +546,6 @@ class TikTokService
                 "post_info" => [
                     "title" => $caption,
                     "privacy_level" => "PUBLIC_TO_EVERYONE",
-                    "disable_duet" => false,
-                    "disable_comment" => false,
-                    "disable_stitch" => false,
-                    "auto_add_music" => true
                 ],
                 "source_info" => [
                     "source" => "PULL_FROM_URL",
@@ -564,7 +560,7 @@ class TikTokService
 
             if ($response && isset($response['data'])) {
                 $publishId = $response['data']['publish_id'] ?? null;
-                
+
                 if ($publishId) {
                     // Post was successfully published
                     $post_row->update([
@@ -592,7 +588,6 @@ class TikTokService
                 }
                 throw new Exception($errorMessage);
             }
-
         } catch (RequestException $e) {
             // Handle HTTP exceptions
             $errorMessage = $e->getMessage();
@@ -605,7 +600,7 @@ class TikTokService
                     $errorMessage = "TikTok API error (Log ID: " . $decoded['error']['log_id'] . ")";
                 }
             }
-            
+
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
