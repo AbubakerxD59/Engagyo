@@ -45,7 +45,7 @@
                                             </div>
                                         </a>
                                         <div class="account-card-actions">
-                                            <button class="btn-account-delete" onclick="confirmDelete(event)"
+                                            <button class="btn-account-delete delete-btn" onclick="confirmDelete(event)"
                                                 title="Delete Account">
                                                 <i class="fa fa-trash"></i>
                                             </button>
@@ -122,7 +122,7 @@
                                             </div>
                                         </a>
                                         <div class="account-card-actions">
-                                            <button class="btn-account-delete" onclick="confirmDelete(event)"
+                                            <button class="btn-account-delete delete-btn" onclick="confirmDelete(event)"
                                                 title="Delete Account">
                                                 <i class="fa fa-trash"></i>
                                             </button>
@@ -199,7 +199,7 @@
                                             </div>
                                         </a>
                                         <div class="account-card-actions">
-                                            <button class="btn-account-delete" onclick="confirmDelete(event)"
+                                            <button class="btn-account-delete delete-btn" onclick="confirmDelete(event)"
                                                 title="Delete Account">
                                                 <i class="fa fa-trash"></i>
                                             </button>
