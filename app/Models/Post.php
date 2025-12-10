@@ -166,6 +166,11 @@ class Post extends Model
         $query->where("social_type", "like", "%facebook%");
     }
 
+    public function scopeTiktok($query)
+    {
+        $query->where("social_type", "like", "%tiktok%");
+    }
+
     public function scopePast($query, $date_time)
     {
         $query->where("publish_date", "<=", $date_time);

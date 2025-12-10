@@ -17,13 +17,15 @@ class Kernel extends ConsoleKernel
     protected function schedule(Schedule $schedule): void
     {
         // Command to fetch latest posts for each domain
-        $schedule->command('rss:feed')->everyTwoHours();
+        $schedule->command('rss:feed')->everySixHours();
         // Command to publish RSS posts (within 2 hour window)
         $schedule->command('rss:publish')->everyFiveMinutes();
         // Command to publish Pinterest posts
         $schedule->command('pinterest:publish')->everyFiveMinutes();
         // Command to publish Facebook posts
-        // $schedule->command('facebook:publish')->everyFiveMinutes();
+        $schedule->command('facebook:publish')->everyFiveMinutes();
+        // Command to publish TikTok posts
+        $schedule->command('tiktok:publish')->everyFiveMinutes();
         // Command to publish Scheduled posts
         $schedule->command('schedule:publish')->everyMinute();
         // Command to download photos

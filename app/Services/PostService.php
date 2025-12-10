@@ -142,6 +142,27 @@ class PostService
                 ];
             }
         }
+        if ($post->social_type == "tiktok") { //TikTok
+            if ($post->type == "photo") {
+                $postData = [
+                    "title" => $post->title,
+                    "url" => $post->image
+                ];
+            }
+            if ($post->type == "video") {
+                $postData = [
+                    "title" => $post->title,
+                    "file_url" => $post->video_key
+                ];
+            }
+            if ($post->type == "link") {
+                $postData = [
+                    "title" => $post->title,
+                    "link" => $post->url,
+                    "url" => $post->image
+                ];
+            }
+        }
         return $postData;
     }
 }

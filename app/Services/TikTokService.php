@@ -272,7 +272,7 @@ class TikTokService
     {
         $header = array("Content-Type" => "application/json", "Authorization" => "Bearer " . $access_token);
         $post_row = \App\Models\Post::find($id);
-        
+
         try {
             // TikTok video publishing implementation
             // This is a placeholder - implement actual TikTok API calls here
@@ -280,7 +280,7 @@ class TikTokService
             // 1. Initialize upload
             // 2. Upload video file
             // 3. Publish video with metadata
-            
+
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
@@ -307,12 +307,12 @@ class TikTokService
     {
         $header = array("Content-Type" => "application/json", "Authorization" => "Bearer " . $access_token);
         $post_row = \App\Models\Post::find($id);
-        
+
         try {
             // TikTok photo publishing implementation
             // Note: TikTok primarily supports videos, photos may need to be converted to video
             // This is a placeholder - implement actual TikTok API calls here
-            
+
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
@@ -339,11 +339,11 @@ class TikTokService
     {
         $header = array("Content-Type" => "application/json", "Authorization" => "Bearer " . $access_token);
         $post_row = \App\Models\Post::find($id);
-        
+
         try {
             // TikTok link publishing implementation
             // This is a placeholder - implement actual TikTok API calls here
-            
+
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
