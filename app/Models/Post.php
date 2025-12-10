@@ -362,7 +362,7 @@ class Post extends Model
                 if (!empty($value) && str_contains($value, "http")) {
                     return $value;
                 } else {
-                    $image = !empty($value) ? url(getImage('', $value)) : no_image();
+                    $image = !empty($value) ? url(getImage('', $value)) : automation_placeholder_image();
                     return $image;
                 }
             }
