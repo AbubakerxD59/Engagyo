@@ -134,6 +134,82 @@ function saveImageFromUrl($url)
     }
 }
 
+/**
+ * Generate or download a placeholder image for automation posts
+ * This is used when posts don't have images fetched yet (images are fetched after 5 minutes)
+ * 
+ * @param string $title Optional title text to include in the placeholder
+ * @return string URL to the placeholder image
+ */
+function automation_placeholder_image($title = null)
+{
+    // Create images directory if it doesn't exist
+    $imagesDir = public_path() . "/images" . '/';
+    if (!is_dir($imagesDir)) {
+        if (!mkdir($imagesDir, 0755, true)) {
+            return no_image();
+        }
+    }
+
+    // Check if a generic placeholder already exists
+    $placeholderFileName = 'automation-placeholder.png';
+    $placeholderPath = $imagesDir . $placeholderFileName;
+    
+    // If placeholder doesn't exist, download/create it
+    if (!file_exists($placeholderPath)) {
+        // Use a reliable placeholder service with automation-related text
+        $width = 1200;
+        $height = 630; // Standard social media image size (1.91:1 ratio)
+        $bgColor = '4A90E2'; // Nice blue color for automation/tech theme
+        $textColor = 'FFFFFF';
+        $text = urlencode('Automation Post');
+        
+        // Try dummyimage.com first (more reliable)
+        $placeholderUrl = "https://dummyimage.com/{$width}x{$height}/{$bgColor}/{$textColor}.png&text={$text}";
+        
+        // Download the placeholder image
+        $context = stream_context_create([
+            "http" => [
+                "header" => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+                "timeout" => 10
+            ],
+            "ssl" => [
+                "verify_peer" => false,
+                "verify_peer_name" => false,
+            ],
+        ]);
+        
+        $imageData = @file_get_contents($placeholderUrl, false, $context);
+        
+        // If first attempt fails, try placeholder.com
+        if ($imageData === false || strlen($imageData) < 100) {
+            $placeholderUrl = "https://via.placeholder.com/{$width}x{$height}/{$bgColor}/{$textColor}?text={$text}";
+            $imageData = @file_get_contents($placeholderUrl, false, $context);
+        }
+        
+        if ($imageData !== false && strlen($imageData) > 100) {
+            // Verify it's actually an image (PNG files start with specific bytes or contain PNG signature)
+            $isImage = substr($imageData, 0, 8) === "\x89PNG\r\n\x1a\n" || 
+                      strpos($imageData, 'PNG') !== false || 
+                      strpos($imageData, 'JFIF') !== false ||
+                      strpos($imageData, 'image') !== false;
+            
+            if ($isImage) {
+                // Save the placeholder image
+                if (file_put_contents($placeholderPath, $imageData)) {
+                    return asset("images/{$placeholderFileName}");
+                }
+            }
+        }
+        
+        // If all downloads fail, return no_image as fallback
+        return no_image();
+    }
+    
+    // Return the existing placeholder
+    return asset("images/{$placeholderFileName}");
+}
+
 function saveVideo($folderName, $file)
 {
     $fileName = strtotime(date('Y-m-d H:i:s')) . '.' . $file->extension();

@@ -50,7 +50,7 @@ class FeedService
                                 "title" => $item["title"],
                                 "domain_id" => $this->data["domain_id"],
                                 "url" => $item["link"],
-                                "image" => isset($item["image"]) ? $item["image"] : no_image(),
+                                "image" => isset($item["image"]) ? $item["image"] : automation_placeholder_image($item["title"] ?? null),
                                 "publish_date" => newDateTime($nextTime, $this->data["time"]),
                                 "status" => 0,
                             ]);
