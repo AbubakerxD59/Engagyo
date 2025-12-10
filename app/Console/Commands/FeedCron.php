@@ -28,7 +28,7 @@ class FeedCron extends Command
      */
     public function handle(Domain $domain)
     {
-        $domains = $domain->with("user", "board.pinterest", "page.facebook")->where("id",28)->get();
+        $domains = $domain->with("user", "board.pinterest", "page.facebook")->get();
         foreach ($domains as $key => $value) {
             $type = $value->type;
             $times = $value->time;
@@ -69,15 +69,15 @@ class FeedCron extends Command
 
                     // Always set exist to false to fetch posts from Feed
                     $exist = false;
-                    
+
                     // Determine the link URL (always use domain + category if available)
                     $link = !empty($category) ? $urlDomain . $category : $urlDomain;
-                    
+
                     // Update last_fetch on the account (board/page)
                     $sub_account->update([
                         "last_fetch" => date("Y-m-d H:i A")
                     ]);
-                    
+
                     foreach ($times as $time) {
                         $data = [
                             "protocol" => $protocol,
@@ -92,7 +92,7 @@ class FeedCron extends Command
                             "time" => $time,
                             "exist" => false // Always set to false
                         ];
-                        
+
                         // Always use FeedService to fetch posts from Feed
                         $feedService = new FeedService($data);
                         $feedUrl = $feedService->fetch();
