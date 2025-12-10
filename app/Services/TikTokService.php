@@ -7,6 +7,8 @@ use App\Models\Tiktok as TikTokModel;
 use App\Services\HttpService;
 use TikTok\Authentication\Authentication;
 use GuzzleHttp\Exception\RequestException;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Log;
 
 class TikTokService
 {
@@ -261,6 +263,104 @@ class TikTokService
     }
 
     /**
+     * Download file from S3 to local storage and return public URL
+     *
+     * @param string $s3KeyOrUrl S3 key or URL
+     * @param string $type File type: 'video' or 'image'
+     * @return array ['success' => bool, 'local_url' => string, 'local_path' => string]
+     */
+    private function downloadFromS3ToLocal($s3KeyOrUrl, $type = 'video')
+    {
+        try {
+            // Check if it's already a URL or an S3 key
+            $isUrl = filter_var($s3KeyOrUrl, FILTER_VALIDATE_URL);
+            
+            if ($isUrl) {
+                // If it's a URL, check if it's from S3
+                if (strpos($s3KeyOrUrl, 'amazonaws.com') !== false || strpos($s3KeyOrUrl, 's3.') !== false) {
+                    // Extract S3 key from URL
+                    $parsedUrl = parse_url($s3KeyOrUrl);
+                    $s3Key = ltrim($parsedUrl['path'], '/');
+                } else {
+                    // It's already a public URL, return as is
+                    return [
+                        'success' => true,
+                        'local_url' => $s3KeyOrUrl,
+                        'local_path' => null
+                    ];
+                }
+            } else {
+                // It's an S3 key
+                $s3Key = $s3KeyOrUrl;
+            }
+
+            // Download file from S3
+            $fileContents = Storage::disk('s3')->get($s3Key);
+            
+            if (!$fileContents) {
+                throw new Exception("Failed to download file from S3");
+            }
+
+            // Determine file extension
+            $extension = pathinfo($s3Key, PATHINFO_EXTENSION);
+            if (empty($extension)) {
+                $extension = $type === 'video' ? 'mp4' : 'jpg';
+            }
+
+            // Create local directory
+            $localDir = $type === 'video' ? 'uploads/videos' : 'uploads/images';
+            $localPublicPath = $localDir . '/' . uniqid('tiktok_', true) . '.' . $extension;
+            $fullPath = public_path($localPublicPath);
+            $directory = dirname($fullPath);
+            
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+
+            // Save file locally
+            $bytesWritten = file_put_contents($fullPath, $fileContents);
+            
+            if ($bytesWritten === false) {
+                throw new Exception("Failed to save file to local storage");
+            }
+
+            // Generate public URL
+            $localUrl = url($localPublicPath);
+
+            return [
+                'success' => true,
+                'local_url' => $localUrl,
+                'local_path' => $fullPath
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'local_url' => null,
+                'local_path' => null
+            ];
+        }
+    }
+
+    /**
+     * Delete local file if it exists
+     *
+     * @param string $filePath Full path to the file
+     * @return void
+     */
+    private function deleteLocalFile($filePath)
+    {
+        if ($filePath && file_exists($filePath)) {
+            try {
+                unlink($filePath);
+            } catch (Exception $e) {
+                // Log error but don't throw
+                Log::warning("Failed to delete local file: " . $e->getMessage());
+            }
+        }
+    }
+
+    /**
      * Publish a video to TikTok
      *
      * @param int $id Post ID
@@ -275,22 +375,25 @@ class TikTokService
             "Authorization" => "Bearer " . $access_token
         );
         $post_row = \App\Models\Post::find($id);
+        $localFilePath = null;
 
         try {
-            // Ensure video URL is publicly accessible
-            $videoUrl = $post['file_url'] ?? null;
+            // Get video URL or S3 key
+            $videoSource = $post['file_url'] ?? null;
 
-            if (empty($videoUrl)) {
+            if (empty($videoSource)) {
                 throw new Exception("Video URL is required for TikTok video post");
             }
 
-            // Ensure the URL is absolute and publicly accessible
-            if (!filter_var($videoUrl, FILTER_VALIDATE_URL)) {
-                // If it's a relative path, convert it to absolute URL
-                if (strpos($videoUrl, 'http') !== 0) {
-                    $videoUrl = url($videoUrl);
-                }
+            // Download from S3 to local storage if needed
+            $downloadResult = $this->downloadFromS3ToLocal($videoSource, 'video');
+            
+            if (!$downloadResult['success']) {
+                throw new Exception("Failed to download video: " . ($downloadResult['message'] ?? "Unknown error"));
             }
+
+            $videoUrl = $downloadResult['local_url'];
+            $localFilePath = $downloadResult['local_path'];
 
             // Prepare the request body according to TikTok API documentation
             // Reference: https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
@@ -379,6 +482,9 @@ class TikTokService
                     "error" => $e->getMessage()
                 ])
             ]);
+        } finally {
+            // Always delete local file after processing
+            $this->deleteLocalFile($localFilePath);
         }
     }
 
@@ -397,22 +503,25 @@ class TikTokService
             "Authorization" => "Bearer " . $access_token
         );
         $post_row = \App\Models\Post::find($id);
+        $localFilePath = null;
 
         try {
-            // Ensure image URL is publicly accessible
-            $imageUrl = $post['url'] ?? null;
+            // Get image URL or S3 key
+            $imageSource = $post['url'] ?? null;
 
-            if (empty($imageUrl)) {
+            if (empty($imageSource)) {
                 throw new Exception("Image URL is required for TikTok photo post");
             }
 
-            // Ensure the URL is absolute and publicly accessible
-            if (!filter_var($imageUrl, FILTER_VALIDATE_URL)) {
-                // If it's a relative path, convert it to absolute URL
-                if (strpos($imageUrl, 'http') !== 0) {
-                    $imageUrl = url($imageUrl);
-                }
+            // Download from S3 to local storage if needed
+            $downloadResult = $this->downloadFromS3ToLocal($imageSource, 'image');
+            
+            if (!$downloadResult['success']) {
+                throw new Exception("Failed to download image: " . ($downloadResult['message'] ?? "Unknown error"));
             }
+
+            $imageUrl = $downloadResult['local_url'];
+            $localFilePath = $downloadResult['local_path'];
 
             // Prepare the request body for TikTok Content Posting API
             $requestBody = [
@@ -492,6 +601,9 @@ class TikTokService
                     "error" => $e->getMessage()
                 ])
             ]);
+        } finally {
+            // Always delete local file after processing
+            $this->deleteLocalFile($localFilePath);
         }
     }
 
@@ -512,13 +624,14 @@ class TikTokService
             "Authorization" => "Bearer " . $access_token
         );
         $post_row = \App\Models\Post::find($id);
+        $localFilePath = null;
 
         try {
-            // Get link and image URL
+            // Get link and image URL or S3 key
             $linkUrl = $post['link'] ?? null;
-            $imageUrl = $post['url'] ?? null;
+            $imageSource = $post['url'] ?? null;
 
-            if (empty($imageUrl)) {
+            if (empty($imageSource)) {
                 throw new Exception("Image URL is required for TikTok link post");
             }
 
@@ -526,13 +639,15 @@ class TikTokService
                 throw new Exception("Link URL is required for TikTok link post");
             }
 
-            // Ensure the image URL is absolute and publicly accessible
-            if (!filter_var($imageUrl, FILTER_VALIDATE_URL)) {
-                // If it's a relative path, convert it to absolute URL
-                if (strpos($imageUrl, 'http') !== 0) {
-                    $imageUrl = url($imageUrl);
-                }
+            // Download from S3 to local storage if needed
+            $downloadResult = $this->downloadFromS3ToLocal($imageSource, 'image');
+            
+            if (!$downloadResult['success']) {
+                throw new Exception("Failed to download image: " . ($downloadResult['message'] ?? "Unknown error"));
             }
+
+            $imageUrl = $downloadResult['local_url'];
+            $localFilePath = $downloadResult['local_path'];
 
             // Combine title with link (TikTok doesn't support clickable links, so we include it in the caption)
             $title = $post['title'] ?? "";
@@ -618,6 +733,9 @@ class TikTokService
                     "error" => $e->getMessage()
                 ])
             ]);
+        } finally {
+            // Always delete local file after processing
+            $this->deleteLocalFile($localFilePath);
         }
     }
 }
