@@ -28,7 +28,7 @@ class FeedCron extends Command
      */
     public function handle(Domain $domain)
     {
-        $domains = $domain->with("user", "board.pinterest", "page.facebook")->get();
+        $domains = $domain->with("user", "board.pinterest", "page.facebook")->where("id",28)->get();
         foreach ($domains as $key => $value) {
             $type = $value->type;
             $times = $value->time;
