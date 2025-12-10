@@ -13,8 +13,16 @@
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle user-dropdown-toggle" href="#" id="userDropdown"
                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <img src="{{ asset(auth()->user()->profile_pic) }}" alt="User Image"
-                    class="user-nav-image rounded-circle" width="32px" height="32px">
+                @php
+                    $user = auth()->user();
+                    $rawProfilePic = $user->getAttributes()['profile_pic'] ?? null;
+                    $profilePic = !empty($rawProfilePic) && file_exists(public_path($rawProfilePic)) 
+                        ? asset($rawProfilePic) 
+                        : default_user_avatar($user->id, $user->full_name);
+                @endphp
+                <img src="{{ $profilePic }}" alt="User Image"
+                    class="user-nav-image rounded-circle" width="32px" height="32px"
+                    onerror="this.onerror=null; this.src='{{ default_user_avatar($user->id, $user->full_name) }}';">
                 <span class="user-nav-name text-muted">{{ auth()->user()->full_name }}</span>
                 <i class="fas fa-chevron-down user-nav-arrow text-muted"></i>
             </a>

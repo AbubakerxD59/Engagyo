@@ -34,6 +34,40 @@ function no_image()
     return $image;
 }
 
+function default_user_avatar($userId = null, $userName = null)
+{
+    // If user ID is provided, use it to consistently select an avatar
+    if ($userId) {
+        $avatarNumber = ($userId % 5) + 1; // Cycle through 5 default avatars (1-5)
+        $avatarPath = "assets/img/avatars/default-{$avatarNumber}.png";
+
+        // Check if file exists, if not use UI Avatars API
+        if (file_exists(public_path($avatarPath))) {
+            return asset($avatarPath);
+        }
+    }
+
+    // Fallback: Use UI Avatars API to generate avatar based on name
+    if ($userName) {
+        $name = urlencode(trim($userName));
+        if (!empty($name)) {
+            $colors = ['0D8ABC', '7B9F35', 'E74C3C', '9B59B6', 'F39C12'];
+            $colorIndex = $userId ? ($userId % count($colors)) : rand(0, count($colors) - 1);
+            $backgroundColor = $colors[$colorIndex];
+            return "https://ui-avatars.com/api/?name={$name}&size=128&background={$backgroundColor}&color=fff&bold=true";
+        }
+    }
+
+    // Final fallback: use default-1.png
+    $defaultPath = "assets/img/avatars/default-1.png";
+    if (file_exists(public_path($defaultPath))) {
+        return asset($defaultPath);
+    }
+
+    // Ultimate fallback: use no_image() if default avatars don't exist
+    return no_image();
+}
+
 function saveImage($file)
 {
     $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.' . $file->extension();

@@ -13,8 +13,15 @@
         <li class="nav-item">
             <div class="user-panel d-flex">
                 <div class="image">
-                    <img src="{{ auth()->user()->profile_pic ? getImage('users', auth()->user()->profile_pic) : '' }}"
-                        class="userimg" alt="User Image">
+                    @php
+                        $user = auth()->user();
+                        $rawProfilePic = $user->getAttributes()['profile_pic'] ?? null;
+                        $profilePic = !empty($rawProfilePic) && file_exists(public_path('uploads/users/' . $rawProfilePic)) 
+                            ? getImage('users', $rawProfilePic) 
+                            : default_user_avatar($user->id, $user->full_name);
+                    @endphp
+                    <img src="{{ $profilePic }}" class="userimg" alt="User Image"
+                        onerror="this.onerror=null; this.src='{{ default_user_avatar($user->id, $user->full_name) }}';">
                 </div>
                 <div class="info">
                     <a class="nav-link" href="{{ route('admin.users.edit', auth()->id()) }}"
