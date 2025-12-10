@@ -6,7 +6,10 @@
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-NFNLPJERLD"></script>
     <script>
         window.dataLayer = window.dataLayer || [];
-        function gtag(){dataLayer.push(arguments);}
+
+        function gtag() {
+            dataLayer.push(arguments);
+        }
         gtag('js', new Date());
         gtag('config', 'G-NFNLPJERLD');
     </script>
@@ -162,12 +165,19 @@
             });
             // Show confirm pop-up on delete button
             $(document).on('click', '.delete-btn', function(event) {
-                if (confirm('Are you sure you want to Delete?')) {
-                    $(this).next().submit();
+                if (confirm('Are you sure you want to delete?')) {
+                    return true;
                 } else {
                     event.preventDefault();
                 }
-            })
+            });
+            var confirmDelete = function(event) {
+                if (confirm('Are you sure you want to delete?')) {
+                    return true;
+                } else {
+                    event.preventDefault();
+                }
+            }
             // Show confrm pop-up on submit button
             function confirmSubmit(event) {
                 if (confirm('Do you wish to submit?')) {
