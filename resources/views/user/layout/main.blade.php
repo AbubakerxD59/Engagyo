@@ -165,8 +165,14 @@
             });
             // Show confirm pop-up on delete button
             $(document).on('click', '.delete-btn', function(event) {
+                var btn = $(this);
+                var form = btn.next('form');
+                console.log('here');
+                console.log(form);
                 if (confirm('Are you sure you want to delete?')) {
-                    $(this).closest('form').submit();
+                    btn.prop('disabled', true);
+                    form.submit();
+                    btn.prop('disabled', false);
                 } else {
                     event.preventDefault();
                 }
