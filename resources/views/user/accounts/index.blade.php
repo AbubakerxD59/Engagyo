@@ -45,8 +45,7 @@
                                             </div>
                                         </a>
                                         <div class="account-card-actions">
-                                            <button class="btn-account-delete delete-btn" onclick="confirmDelete(event)"
-                                                title="Delete Account">
+                                            <button class="btn-account-delete delete-btn" title="Delete Account">
                                                 <i class="fa fa-trash"></i>
                                             </button>
                                             <form action="{{ route('panel.accounts.facebook.delete', $fb->fb_id) }}"
@@ -122,8 +121,7 @@
                                             </div>
                                         </a>
                                         <div class="account-card-actions">
-                                            <button class="btn-account-delete delete-btn" onclick="confirmDelete(event)"
-                                                title="Delete Account">
+                                            <button class="btn-account-delete delete-btn" title="Delete Account">
                                                 <i class="fa fa-trash"></i>
                                             </button>
                                             <form action="{{ route('panel.accounts.pinterest.delete', $pin->pin_id) }}"
@@ -199,8 +197,7 @@
                                             </div>
                                         </a>
                                         <div class="account-card-actions">
-                                            <button class="btn-account-delete delete-btn" onclick="confirmDelete(event)"
-                                                title="Delete Account">
+                                            <button class="btn-account-delete delete-btn" title="Delete Account">
                                                 <i class="fa fa-trash"></i>
                                             </button>
                                             <form action="{{ route('panel.accounts.tiktok.delete', $tiktok->tiktok_id) }}"

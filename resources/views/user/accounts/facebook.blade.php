@@ -40,14 +40,14 @@
                                         <td>{{ $page->fb_id }}</td>
                                         <td>{{ $page->page_id }}</td>
                                         <td>
-                                            @if($facebook->validToken())
+                                            @if ($facebook->validToken())
                                                 <span class="badge badge-success">Valid</span>
                                             @else
                                                 <span class="badge badge-danger">Expired</span>
                                             @endif
                                         </td>
                                         <td>
-                                            @if($facebook->expires_in)
+                                            @if ($facebook->expires_in)
                                                 {{ date('Y-m-d H:i:s', $facebook->expires_in) }}
                                             @else
                                                 N/A
@@ -55,8 +55,7 @@
                                         </td>
                                         <td>
                                             <div>
-                                                <button class="btn btn-outline-danger btn-sm delete-btn"
-                                                    onclick="confirmDelete(event)">Delete</button>
+                                                <button class="btn btn-outline-danger btn-sm delete-btn">Delete</button>
                                                 <form action="{{ route('panel.accounts.page.delete', $page->page_id) }}"
                                                     method="POST" class="delete_form">
                                                     @csrf

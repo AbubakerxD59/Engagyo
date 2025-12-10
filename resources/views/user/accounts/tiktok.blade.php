@@ -39,14 +39,14 @@
                                     <td>{{ $tiktok->display_name ?? 'N/A' }}</td>
                                     <td>{{ $tiktok->tiktok_id }}</td>
                                     <td>
-                                        @if($tiktok->validToken())
+                                        @if ($tiktok->validToken())
                                             <span class="badge badge-success">Valid</span>
                                         @else
                                             <span class="badge badge-danger">Expired</span>
                                         @endif
                                     </td>
                                     <td>
-                                        @if($tiktok->expires_in)
+                                        @if ($tiktok->expires_in)
                                             {{ date('Y-m-d H:i:s', $tiktok->expires_in) }}
                                         @else
                                             N/A
@@ -54,8 +54,7 @@
                                     </td>
                                     <td>
                                         <div>
-                                            <button class="btn btn-outline-danger btn-sm delete-btn"
-                                                onclick="confirmDelete(event)">Delete</button>
+                                            <button class="btn btn-outline-danger btn-sm delete-btn">Delete</button>
                                             <form action="{{ route('panel.accounts.tiktok.delete', $tiktok->tiktok_id) }}"
                                                 method="POST" class="delete_form">
                                                 @csrf
@@ -114,4 +113,3 @@
         });
     </script>
 @endpush
-

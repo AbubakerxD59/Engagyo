@@ -40,14 +40,14 @@
                                         <td>{{ $board->pin_id }}</td>
                                         <td>{{ $board->board_id }}</td>
                                         <td>
-                                            @if($pinterest->validToken())
+                                            @if ($pinterest->validToken())
                                                 <span class="badge badge-success">Valid</span>
                                             @else
                                                 <span class="badge badge-danger">Expired</span>
                                             @endif
                                         </td>
                                         <td>
-                                            @if($pinterest->expires_in)
+                                            @if ($pinterest->expires_in)
                                                 {{ date('Y-m-d H:i:s', $pinterest->expires_in) }}
                                             @else
                                                 N/A
@@ -55,8 +55,7 @@
                                         </td>
                                         <td>
                                             <div>
-                                                <button class="btn btn-outline-danger btn-sm delete-btn"
-                                                    onclick="confirmDelete(event)">Delete</button>
+                                                <button class="btn btn-outline-danger btn-sm delete-btn">Delete</button>
                                                 <form action="{{ route('panel.accounts.board.delete', $board->board_id) }}"
                                                     method="POST" class="delete_form">
                                                     @csrf
