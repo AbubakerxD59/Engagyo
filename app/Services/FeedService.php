@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Exception;
 use App\Models\Post;
+use App\Models\Notification;
 use SimpleXMLElement;
 
 class FeedService
@@ -12,6 +13,35 @@ class FeedService
     private $dom;
     private $data;
     private $body;
+
+    /**
+     * Create a success notification
+     */
+    private function successNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'success', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
+
+    /**
+     * Create an error notification
+     */
+    private function errorNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'error', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
+
     public function __construct($data)
     {
         $this->post = new Post();
@@ -68,7 +98,7 @@ class FeedService
                     $errorMessage = "Posts not Fetched!";
                     // Create error notification (background job)
                     $platform = ucfirst($this->data["social_type"] ?? "Social Media");
-                    createErrorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. No new posts found.");
+                    $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. No new posts found.");
                     return array(
                         "success" => false,
                         "message" => $errorMessage
@@ -78,7 +108,7 @@ class FeedService
                 $errorMessage = $e->getMessage();
                 // Create error notification (background job)
                 $platform = ucfirst($this->data["social_type"] ?? "Social Media");
-                createErrorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage);
+                $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage);
                 return array(
                     "success" => false,
                     "message" => $errorMessage
@@ -88,7 +118,7 @@ class FeedService
             $errorMessage = $feedUrls["message"] ?? "Failed to fetch RSS feed.";
             // Create error notification (background job)
             $platform = ucfirst($this->data["social_type"] ?? "Social Media");
-            createErrorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage);
+            $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage);
             return array(
                 "success" => false,
                 "message" => $errorMessage

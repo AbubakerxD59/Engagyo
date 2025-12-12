@@ -9,6 +9,8 @@ class Notification extends Model
 {
     use HasFactory;
 
+    protected $table =  "notifications";
+
     protected $fillable = [
         "user_id",
         "title",
@@ -53,12 +55,12 @@ class Notification extends Model
      */
     public function scopeForUser($query, $userId)
     {
-        return $query->where(function($q) use ($userId) {
+        return $query->where(function ($q) use ($userId) {
             $q->where('user_id', $userId)
-              ->orWhere(function($q2) {
-                  $q2->where('is_system', true)
-                     ->whereNull('user_id');
-              });
+                ->orWhere(function ($q2) {
+                    $q2->where('is_system', true)
+                        ->whereNull('user_id');
+                });
         });
     }
 
@@ -68,12 +70,12 @@ class Notification extends Model
      */
     public function scopeVisibleTo($query, $userId)
     {
-        return $query->where(function($q) use ($userId) {
+        return $query->where(function ($q) use ($userId) {
             $q->where('user_id', $userId)
-              ->orWhere(function($q2) {
-                  $q2->where('is_system', true)
-                     ->whereNull('user_id');
-              });
+                ->orWhere(function ($q2) {
+                    $q2->where('is_system', true)
+                        ->whereNull('user_id');
+                });
         });
     }
 

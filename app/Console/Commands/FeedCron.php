@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Domain;
+use App\Models\Notification;
 use App\Services\FeedService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
@@ -22,6 +23,34 @@ class FeedCron extends Command
      * @var string
      */
     protected $description = 'This command is used to fetch RSS Feed for each domain.';
+
+    /**
+     * Create a success notification
+     */
+    private function successNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'success', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
+
+    /**
+     * Create an error notification
+     */
+    private function errorNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'error', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
 
     /**
      * Execute the console command.
@@ -108,13 +137,13 @@ class FeedCron extends Command
                             Log::warning("Failed to fetch feed for domain {$value->id}: " . $errorMessage);
                             // Create error notification (cron job)
                             $platform = ucfirst($type);
-                            createErrorNotification($user->id, "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed for domain '{$urlDomain}'. " . $errorMessage);
+                            $this->errorNotification($user->id, "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed for domain '{$urlDomain}'. " . $errorMessage);
                         } else {
                             // Create success notification (cron job)
                             $platform = ucfirst($type);
                             $postCount = isset($feedUrl['items']) ? count($feedUrl['items']) : 0;
                             if ($postCount > 0) {
-                                createSuccessNotification($user->id, "RSS Feed Fetched", "Successfully fetched {$postCount} new post(s) from {$platform} RSS feed for domain '{$urlDomain}'.");
+                                $this->successNotification($user->id, "RSS Feed Fetched", "Successfully fetched {$postCount} new post(s) from {$platform} RSS feed for domain '{$urlDomain}'.");
                             }
                         }
                     }

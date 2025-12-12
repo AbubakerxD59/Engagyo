@@ -4,6 +4,7 @@ namespace App\Services;
 
 use Exception;
 use App\Models\Tiktok as TikTokModel;
+use App\Models\Notification;
 use App\Services\HttpService;
 use TikTok\Authentication\Authentication;
 use GuzzleHttp\Exception\RequestException;
@@ -17,6 +18,34 @@ class TikTokService
     private $redirectUrl;
     private $scopes;
     private $baseUrl = "https://open.tiktokapis.com/v2/";
+
+    /**
+     * Create a success notification
+     */
+    private function successNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'success', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
+
+    /**
+     * Create an error notification
+     */
+    private function errorNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'error', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
 
     public function __construct()
     {
@@ -433,7 +462,7 @@ class TikTokService
                         ])
                     ]);
                     // Create success notification (background job)
-                    createSuccessNotification($post_row->user_id, "Post Published", "Your TikTok video has been published successfully.");
+                    $this->successNotification($post_row->user_id, "Post Published", "Your TikTok video has been published successfully.");
                 } else {
                     // Error occurred - check error details
                     $errorMessage = $response['error']['message'] ?? "Unknown error occurred";
@@ -477,7 +506,7 @@ class TikTokService
                 ])
             ]);
             // Create error notification (background job)
-            createErrorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok video. " . $errorMessage);
+            $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok video. " . $errorMessage);
         } catch (Exception $e) {
             $errorMessage = $e->getMessage();
             $post_row->update([
@@ -489,7 +518,7 @@ class TikTokService
                 ])
             ]);
             // Create error notification (background job)
-            createErrorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok video. " . $errorMessage);
+            $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok video. " . $errorMessage);
         } finally {
             // Always delete local file after processing
             $this->deleteLocalFile($localFilePath);
@@ -566,7 +595,7 @@ class TikTokService
                         ])
                     ]);
                     // Create success notification (background job)
-                    createSuccessNotification($post_row->user_id, "Post Published", "Your TikTok photo has been published successfully.");
+                    $this->successNotification($post_row->user_id, "Post Published", "Your TikTok photo has been published successfully.");
                 } else {
                     // Check if there's an error in the response
                     $errorMessage = $response['error']['message'] ?? $response['error']['log_id'] ?? "Unknown error occurred";
@@ -604,7 +633,7 @@ class TikTokService
                 ])
             ]);
             // Create error notification (background job)
-            createErrorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok photo. " . $errorMessage);
+            $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok photo. " . $errorMessage);
         } catch (Exception $e) {
             $errorMessage = $e->getMessage();
             $post_row->update([
@@ -616,7 +645,7 @@ class TikTokService
                 ])
             ]);
             // Create error notification (background job)
-            createErrorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok photo. " . $errorMessage);
+            $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok photo. " . $errorMessage);
         } finally {
             // Always delete local file after processing
             $this->deleteLocalFile($localFilePath);
@@ -706,7 +735,7 @@ class TikTokService
                         ])
                     ]);
                     // Create success notification (background job)
-                    createSuccessNotification($post_row->user_id, "Post Published", "Your TikTok link post has been published successfully.");
+                    $this->successNotification($post_row->user_id, "Post Published", "Your TikTok link post has been published successfully.");
                 } else {
                     // Check if there's an error in the response
                     $errorMessage = $response['error']['message'] ?? $response['error']['log_id'] ?? "Unknown error occurred";
@@ -744,7 +773,7 @@ class TikTokService
                 ])
             ]);
             // Create error notification (background job)
-            createErrorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok link post. " . $errorMessage);
+            $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok link post. " . $errorMessage);
         } catch (Exception $e) {
             $errorMessage = $e->getMessage();
             $post_row->update([
@@ -756,7 +785,7 @@ class TikTokService
                 ])
             ]);
             // Create error notification (background job)
-            createErrorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok link post. " . $errorMessage);
+            $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok link post. " . $errorMessage);
         } finally {
             // Always delete local file after processing
             $this->deleteLocalFile($localFilePath);

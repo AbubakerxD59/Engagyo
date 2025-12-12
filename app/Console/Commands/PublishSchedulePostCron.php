@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Post;
+use App\Models\Notification;
 use App\Services\PostService;
 use Illuminate\Console\Command;
 use App\Jobs\PublishFacebookPost;
@@ -25,6 +26,34 @@ class PublishSchedulePostCron extends Command
      * @var string
      */
     protected $description = 'This command is used to publish scheduled posts.';
+
+    /**
+     * Create a success notification
+     */
+    private function successNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'success', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
+
+    /**
+     * Create an error notification
+     */
+    private function errorNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'error', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
 
     /**
      * Execute the console command.
@@ -53,7 +82,7 @@ class PublishSchedulePostCron extends Command
                 ]);
                 // Create error notification (cron job)
                 $platform = ucfirst($post->social_type);
-                createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled {$platform} post. " . $errorMessage);
+                $this->errorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled {$platform} post. " . $errorMessage);
             }
         }
     }
@@ -72,7 +101,7 @@ class PublishSchedulePostCron extends Command
                 "response" => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
             return;
         }
 
@@ -85,7 +114,7 @@ class PublishSchedulePostCron extends Command
                 "response" => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
             return;
         }
 
@@ -99,7 +128,7 @@ class PublishSchedulePostCron extends Command
                 "response" => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
             return;
         }
 
@@ -115,7 +144,7 @@ class PublishSchedulePostCron extends Command
                 "response" => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
         }
     }
 
@@ -133,7 +162,7 @@ class PublishSchedulePostCron extends Command
                 "response" => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
             return;
         }
 
@@ -146,7 +175,7 @@ class PublishSchedulePostCron extends Command
                 "response" => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
             return;
         }
 
@@ -160,7 +189,7 @@ class PublishSchedulePostCron extends Command
                 "response" => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
             return;
         }
 
@@ -176,7 +205,7 @@ class PublishSchedulePostCron extends Command
                 "response" => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
         }
     }
 }

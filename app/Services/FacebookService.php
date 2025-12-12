@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Page;
 use App\Models\Post;
+use App\Models\Notification;
 use Facebook\Facebook;
 use Illuminate\Support\Facades\Storage;
 use Facebook\Exceptions\FacebookSDKException;
@@ -17,6 +18,35 @@ class FacebookService
     private $helper;
     private $scopes;
     private $response = "Post Published Successfully!";
+
+    /**
+     * Create a success notification
+     */
+    private function successNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'success', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
+
+    /**
+     * Create an error notification
+     */
+    private function errorNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'error', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
+
     public function __construct()
     {
         $this->facebook = new Facebook([
@@ -297,7 +327,7 @@ class FacebookService
                 ]),
             ]);
             // Create success notification (background job)
-            createSuccessNotification($post->user_id, "Post Published", "Your Facebook post has been published successfully.");
+            $this->successNotification($post->user_id, "Post Published", "Your Facebook post has been published successfully.");
         } else {
             $errorMessage = $response["message"] ?? "Failed to publish post to Facebook.";
             $post->update([
@@ -309,7 +339,7 @@ class FacebookService
                 ])
             ]);
             // Create error notification (background job)
-            createErrorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook post. " . $errorMessage);
         }
         return $response;
     }
@@ -351,7 +381,7 @@ class FacebookService
                 ]),
             ]);
             // Create success notification (background job)
-            createSuccessNotification($post->user_id, "Post Published", "Your Facebook post has been published successfully.");
+            $this->successNotification($post->user_id, "Post Published", "Your Facebook post has been published successfully.");
         } else {
             $errorMessage = $response["message"] ?? "Failed to publish post to Facebook.";
             $post->update([
@@ -363,7 +393,7 @@ class FacebookService
                 ])
             ]);
             // Create error notification (background job)
-            createErrorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook post. " . $errorMessage);
         }
         return $response;
     }
@@ -407,7 +437,7 @@ class FacebookService
                 ]),
             ]);
             // Create success notification (background job)
-            createSuccessNotification($post->user_id, "Post Published", "Your Facebook photo has been published successfully.");
+            $this->successNotification($post->user_id, "Post Published", "Your Facebook photo has been published successfully.");
         } else {
             $errorMessage = $response["message"] ?? "Failed to publish photo to Facebook.";
             $post->update([
@@ -419,7 +449,7 @@ class FacebookService
                 ])
             ]);
             // Create error notification (background job)
-            createErrorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook photo. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook photo. " . $errorMessage);
         }
         return $response;
     }
@@ -461,7 +491,7 @@ class FacebookService
                 ]),
             ]);
             // Create success notification (background job)
-            createSuccessNotification($post_row->user_id, "Post Published", "Your Facebook video has been published successfully.");
+            $this->successNotification($post_row->user_id, "Post Published", "Your Facebook video has been published successfully.");
         } else {
             $errorMessage = $response["message"] ?? "Failed to publish video to Facebook.";
             $post_row->update([
@@ -473,7 +503,7 @@ class FacebookService
                 ])
             ]);
             // Create error notification (background job)
-            createErrorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Facebook video. " . $errorMessage);
+            $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Facebook video. " . $errorMessage);
         }
         return $response;
     }

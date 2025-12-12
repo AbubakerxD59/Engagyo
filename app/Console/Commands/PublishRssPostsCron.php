@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Exception;
 use App\Models\Post;
+use App\Models\Notification;
 use App\Services\PostService;
 use Illuminate\Console\Command;
 use App\Jobs\PublishFacebookPost;
@@ -27,6 +28,34 @@ class PublishRssPostsCron extends Command
      * @var string
      */
     protected $description = 'Publish pending RSS posts that are due for publishing (within 2 hours window).';
+
+    /**
+     * Create a success notification
+     */
+    private function successNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'success', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
+
+    /**
+     * Create an error notification
+     */
+    private function errorNotification($userId, $title, $message)
+    {
+        Notification::create([
+            'user_id' => $userId,
+            'title' => $title,
+            'body' => ['type' => 'error', 'message' => $message],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
 
     /**
      * Execute the console command.
@@ -59,7 +88,7 @@ class PublishRssPostsCron extends Command
                 ]);
                 // Create error notification (cron job)
                 $platform = ucfirst($post->social_type);
-                createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish {$platform} RSS post. " . $errorMessage);
+                $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish {$platform} RSS post. " . $errorMessage);
             }
         }
 
@@ -97,7 +126,7 @@ class PublishRssPostsCron extends Command
                 'response' => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage);
             return;
         }
 
@@ -110,7 +139,7 @@ class PublishRssPostsCron extends Command
             ]);
             info("RSS Publish: Post ID {$post->id} skipped - RSS automation is paused for Facebook page '{$page->name}'.");
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage);
             return;
         }
 
@@ -124,7 +153,7 @@ class PublishRssPostsCron extends Command
                 'response' => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage);
             return;
         }
 
@@ -162,7 +191,7 @@ class PublishRssPostsCron extends Command
                 'response' => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
             return;
         }
 
@@ -175,7 +204,7 @@ class PublishRssPostsCron extends Command
             ]);
             info("RSS Publish: Post ID {$post->id} skipped - RSS automation is paused for Pinterest board '{$board->name}'.");
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
             return;
         }
 
@@ -189,7 +218,7 @@ class PublishRssPostsCron extends Command
                 'response' => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
             return;
         }
 
@@ -205,7 +234,7 @@ class PublishRssPostsCron extends Command
                 'response' => $errorMessage
             ]);
             // Create error notification (cron job)
-            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
             return;
         }
 
