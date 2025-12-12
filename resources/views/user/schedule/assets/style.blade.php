@@ -60,7 +60,7 @@
          box-shadow: 0 2px 8px rgba(40, 167, 69, 0.15);
      }
 
-     .account-card.active::after {
+     .account-card.active::before {
          content: '\f00c';
          font-family: 'Font Awesome 5 Free';
          font-weight: 900;
@@ -76,6 +76,7 @@
          display: flex;
          align-items: center;
          justify-content: center;
+         z-index: 100;
      }
 
      .account-card-inner {
@@ -192,6 +193,34 @@
          transition: opacity 0.3s ease, visibility 0.3s ease;
          z-index: 10001;
          visibility: hidden;
+     }
+
+     /* For active cards, hide the tooltip arrow (::before) and only show checkmark */
+     .account-card.active.has-tooltip::before {
+         content: '\f00c';
+         font-family: 'Font Awesome 5 Free';
+         font-weight: 900;
+         position: absolute;
+         top: -6px;
+         right: -6px;
+         bottom: auto;
+         left: auto;
+         transform: none;
+         background: #28a745;
+         color: #fff;
+         width: 18px;
+         height: 18px;
+         border-radius: 50%;
+         font-size: 10px;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         border: none;
+         border-width: 0;
+         opacity: 1;
+         visibility: visible;
+         z-index: 100;
+         pointer-events: auto;
      }
 
      .account-card.has-tooltip:hover::after,
