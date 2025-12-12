@@ -51,11 +51,15 @@ class PublishRssPostsCron extends Command
                 $this->processPost($post, $pinterestService, $facebookService);
             } catch (Exception $e) {
                 // Log the error and update post status
-                info("RSS Publish Cron Error for Post ID {$post->id}: " . $e->getMessage());
+                $errorMessage = $e->getMessage();
+                info("RSS Publish Cron Error for Post ID {$post->id}: " . $errorMessage);
                 $post->update([
                     'status' => -1,
-                    'response' => "Error: " . $e->getMessage()
+                    'response' => "Error: " . $errorMessage
                 ]);
+                // Create error notification (cron job)
+                $platform = ucfirst($post->social_type);
+                createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish {$platform} RSS post. " . $errorMessage);
             }
         }
 
@@ -87,20 +91,26 @@ class PublishRssPostsCron extends Command
 
         // Check if page exists
         if (!$page) {
+            $errorMessage = "Error: Facebook page not found. The page may have been disconnected.";
             $post->update([
                 'status' => -1,
-                'response' => "Error: Facebook page not found. The page may have been disconnected."
+                'response' => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage);
             return;
         }
 
         // Check if RSS automation is paused for this page
         if ($page->rss_paused) {
+            $errorMessage = "RSS automation is paused for this Facebook page. Enable RSS automation to publish posts.";
             $post->update([
                 'status' => -1,
-                'response' => "RSS automation is paused for this Facebook page. Enable RSS automation to publish posts."
+                'response' => $errorMessage
             ]);
             info("RSS Publish: Post ID {$post->id} skipped - RSS automation is paused for Facebook page '{$page->name}'.");
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage);
             return;
         }
 
@@ -108,10 +118,13 @@ class PublishRssPostsCron extends Command
         $tokenResponse = FacebookService::validateToken($page);
 
         if (!$tokenResponse['success']) {
+            $errorMessage = $tokenResponse['message'] ?? "Error: Failed to validate Facebook access token.";
             $post->update([
                 'status' => -1,
-                'response' => $tokenResponse['message'] ?? "Error: Failed to validate Facebook access token."
+                'response' => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage);
             return;
         }
 
@@ -143,20 +156,26 @@ class PublishRssPostsCron extends Command
 
         // Check if board exists
         if (!$board) {
+            $errorMessage = "Error: Pinterest board not found. The board may have been disconnected.";
             $post->update([
                 'status' => -1,
-                'response' => "Error: Pinterest board not found. The board may have been disconnected."
+                'response' => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
             return;
         }
 
         // Check if RSS automation is paused for this board
         if ($board->rss_paused) {
+            $errorMessage = "RSS automation is paused for this Pinterest board. Enable RSS automation to publish posts.";
             $post->update([
                 'status' => -1,
-                'response' => "RSS automation is paused for this Pinterest board. Enable RSS automation to publish posts."
+                'response' => $errorMessage
             ]);
             info("RSS Publish: Post ID {$post->id} skipped - RSS automation is paused for Pinterest board '{$board->name}'.");
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
             return;
         }
 
@@ -164,10 +183,13 @@ class PublishRssPostsCron extends Command
         $tokenResponse = PinterestService::validateToken($board);
 
         if (!$tokenResponse['success']) {
+            $errorMessage = $tokenResponse['message'] ?? "Error: Failed to validate Pinterest access token.";
             $post->update([
                 'status' => -1,
-                'response' => $tokenResponse['message'] ?? "Error: Failed to validate Pinterest access token."
+                'response' => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
             return;
         }
 
@@ -177,10 +199,13 @@ class PublishRssPostsCron extends Command
         try {
             $postData = PostService::postTypeBody($post);
         } catch (Exception $e) {
+            $errorMessage = "Error preparing post data: " . $e->getMessage();
             $post->update([
                 'status' => -1,
-                'response' => "Error preparing post data: " . $e->getMessage()
+                'response' => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage);
             return;
         }
 

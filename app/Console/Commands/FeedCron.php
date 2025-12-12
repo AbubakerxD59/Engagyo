@@ -104,7 +104,18 @@ class FeedCron extends Command
                         $feedService = new FeedService($data);
                         $feedUrl = $feedService->fetch();
                         if (!$feedUrl['success']) {
-                            Log::warning("Failed to fetch feed for domain {$value->id}: " . ($feedUrl['message'] ?? 'Unknown error'));
+                            $errorMessage = $feedUrl['message'] ?? 'Unknown error';
+                            Log::warning("Failed to fetch feed for domain {$value->id}: " . $errorMessage);
+                            // Create error notification (cron job)
+                            $platform = ucfirst($type);
+                            createErrorNotification($user->id, "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed for domain '{$urlDomain}'. " . $errorMessage);
+                        } else {
+                            // Create success notification (cron job)
+                            $platform = ucfirst($type);
+                            $postCount = isset($feedUrl['items']) ? count($feedUrl['items']) : 0;
+                            if ($postCount > 0) {
+                                createSuccessNotification($user->id, "RSS Feed Fetched", "Successfully fetched {$postCount} new post(s) from {$platform} RSS feed for domain '{$urlDomain}'.");
+                            }
                         }
                     }
                 }

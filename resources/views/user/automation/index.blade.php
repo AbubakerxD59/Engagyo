@@ -297,10 +297,6 @@
             transform: translateY(-1px);
         }
 
-        .toggle-control-item.rss_toggle {
-            border: 2px solid rgba(220, 53, 69, 0.3);
-        }
-
         .toggle-label-text {
             font-weight: 600;
             color: #495057;

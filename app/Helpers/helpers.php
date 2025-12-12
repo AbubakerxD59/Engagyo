@@ -154,7 +154,7 @@ function automation_placeholder_image($title = null)
     // Check if a generic placeholder already exists
     $placeholderFileName = 'automation-placeholder.png';
     $placeholderPath = $imagesDir . $placeholderFileName;
-    
+
     // If placeholder doesn't exist, download/create it
     if (!file_exists($placeholderPath)) {
         // Use a reliable placeholder service with automation-related text
@@ -163,10 +163,10 @@ function automation_placeholder_image($title = null)
         $bgColor = '4A90E2'; // Nice blue color for automation/tech theme
         $textColor = 'FFFFFF';
         $text = urlencode('Automation Post');
-        
+
         // Try dummyimage.com first (more reliable)
         $placeholderUrl = "https://dummyimage.com/{$width}x{$height}/{$bgColor}/{$textColor}.png&text={$text}";
-        
+
         // Download the placeholder image
         $context = stream_context_create([
             "http" => [
@@ -178,22 +178,22 @@ function automation_placeholder_image($title = null)
                 "verify_peer_name" => false,
             ],
         ]);
-        
+
         $imageData = @file_get_contents($placeholderUrl, false, $context);
-        
+
         // If first attempt fails, try placeholder.com
         if ($imageData === false || strlen($imageData) < 100) {
             $placeholderUrl = "https://via.placeholder.com/{$width}x{$height}/{$bgColor}/{$textColor}?text={$text}";
             $imageData = @file_get_contents($placeholderUrl, false, $context);
         }
-        
+
         if ($imageData !== false && strlen($imageData) > 100) {
             // Verify it's actually an image (PNG files start with specific bytes or contain PNG signature)
-            $isImage = substr($imageData, 0, 8) === "\x89PNG\r\n\x1a\n" || 
-                      strpos($imageData, 'PNG') !== false || 
-                      strpos($imageData, 'JFIF') !== false ||
-                      strpos($imageData, 'image') !== false;
-            
+            $isImage = substr($imageData, 0, 8) === "\x89PNG\r\n\x1a\n" ||
+                strpos($imageData, 'PNG') !== false ||
+                strpos($imageData, 'JFIF') !== false ||
+                strpos($imageData, 'image') !== false;
+
             if ($isImage) {
                 // Save the placeholder image
                 if (file_put_contents($placeholderPath, $imageData)) {
@@ -201,11 +201,11 @@ function automation_placeholder_image($title = null)
                 }
             }
         }
-        
+
         // If all downloads fail, return no_image as fallback
         return no_image();
     }
-    
+
     // Return the existing placeholder
     return asset("images/{$placeholderFileName}");
 }
@@ -481,6 +481,48 @@ function social_logo($type = null)
         $logo = "";
     }
     return $logo;
+}
+
+/**
+ * Create a notification for a user
+ * 
+ * @param int|null $userId User ID (null for system notifications)
+ * @param string $title Notification title
+ * @param string|array $body Notification body (can be string or array)
+ * @param bool $isSystem Whether this is a system notification (shown to all users)
+ * @return \App\Models\Notification
+ */
+function createNotification($userId, $title, $body, $isSystem = false)
+{
+    return Notification::create([
+        'user_id' => $isSystem ? null : $userId,
+        'title' => $title,
+        'body' => is_array($body) ? $body : ['message' => $body],
+        'is_read' => false,
+        'is_system' => $isSystem,
+    ]);
+}
+
+/**
+ * Create a success notification
+ */
+function createSuccessNotification($userId, $title, $message, $isSystem = false)
+{
+    return createNotification($userId, $title, [
+        'type' => 'success',
+        'message' => $message
+    ], $isSystem);
+}
+
+/**
+ * Create an error notification
+ */
+function createErrorNotification($userId, $title, $message, $isSystem = false)
+{
+    return createNotification($userId, $title, [
+        'type' => 'error',
+        'message' => $message
+    ], $isSystem);
 }
 
 function social_icon($type = null)

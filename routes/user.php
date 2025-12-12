@@ -7,6 +7,7 @@ use App\Http\Controllers\User\AutomationController;
 use App\Http\Controllers\User\ApiKeysController;
 use App\Http\Controllers\User\ApiPostsController;
 use App\Http\Controllers\User\SettingsController;
+use App\Http\Controllers\User\NotificationController;
 use App\Models\Post;
 
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(function () {
@@ -101,5 +102,11 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(functi
             Route::post("remove-profile-pic", "removeProfilePic")->name("removeProfilePic");
             Route::post("update-password", "updatePassword")->name("updatePassword");
         });
+    });
+    // Notifications Routes
+    Route::controller(NotificationController::class)->name("notifications.")->prefix("notifications/")->group(function () {
+        Route::get("fetch", "fetch")->name("fetch");
+        Route::post("mark-read/{id}", "markAsRead")->name("markRead");
+        Route::post("mark-all-read", "markAllAsRead")->name("markAllRead");
     });
 });

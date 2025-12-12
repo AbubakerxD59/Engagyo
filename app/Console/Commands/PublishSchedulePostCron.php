@@ -45,11 +45,15 @@ class PublishSchedulePostCron extends Command
                     $this->processPinterestPost($post);
                 }
             } catch (\Exception $e) {
-                info("Schedule Publish Error for Post ID {$post->id}: " . $e->getMessage());
+                $errorMessage = $e->getMessage();
+                info("Schedule Publish Error for Post ID {$post->id}: " . $errorMessage);
                 $post->update([
                     "status" => -1,
-                    "response" => "Error: " . $e->getMessage()
+                    "response" => "Error: " . $errorMessage
                 ]);
+                // Create error notification (cron job)
+                $platform = ucfirst($post->social_type);
+                createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled {$platform} post. " . $errorMessage);
             }
         }
     }
@@ -62,20 +66,26 @@ class PublishSchedulePostCron extends Command
         $page = $post->page;
         
         if (!$page) {
+            $errorMessage = "Error: Facebook page not found.";
             $post->update([
                 "status" => -1,
-                "response" => "Error: Facebook page not found."
+                "response" => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
             return;
         }
 
         $facebook = $page->facebook;
         
         if (!$facebook) {
+            $errorMessage = "Error: Facebook account not found. Please reconnect your Facebook account.";
             $post->update([
                 "status" => -1,
-                "response" => "Error: Facebook account not found. Please reconnect your Facebook account."
+                "response" => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
             return;
         }
 
@@ -83,10 +93,13 @@ class PublishSchedulePostCron extends Command
         $tokenResponse = FacebookService::validateToken($page);
         
         if (!$tokenResponse['success']) {
+            $errorMessage = $tokenResponse["message"] ?? "Error: Failed to validate Facebook access token.";
             $post->update([
                 "status" => -1,
-                "response" => $tokenResponse["message"] ?? "Error: Failed to validate Facebook access token."
+                "response" => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
             return;
         }
 
@@ -96,10 +109,13 @@ class PublishSchedulePostCron extends Command
             $postData = PostService::postTypeBody($post);
             PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
         } catch (\Exception $e) {
+            $errorMessage = "Error preparing post: " . $e->getMessage();
             $post->update([
                 "status" => -1,
-                "response" => "Error preparing post: " . $e->getMessage()
+                "response" => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Facebook post. " . $errorMessage);
         }
     }
 
@@ -111,20 +127,26 @@ class PublishSchedulePostCron extends Command
         $board = $post->board;
         
         if (!$board) {
+            $errorMessage = "Error: Pinterest board not found.";
             $post->update([
                 "status" => -1,
-                "response" => "Error: Pinterest board not found."
+                "response" => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
             return;
         }
 
         $pinterest = $board->pinterest;
         
         if (!$pinterest) {
+            $errorMessage = "Error: Pinterest account not found. Please reconnect your Pinterest account.";
             $post->update([
                 "status" => -1,
-                "response" => "Error: Pinterest account not found. Please reconnect your Pinterest account."
+                "response" => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
             return;
         }
 
@@ -132,10 +154,13 @@ class PublishSchedulePostCron extends Command
         $tokenResponse = PinterestService::validateToken($board);
         
         if (!$tokenResponse['success']) {
+            $errorMessage = $tokenResponse["message"] ?? "Error: Failed to validate Pinterest access token.";
             $post->update([
                 "status" => -1,
-                "response" => $tokenResponse["message"] ?? "Error: Failed to validate Pinterest access token."
+                "response" => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
             return;
         }
 
@@ -145,10 +170,13 @@ class PublishSchedulePostCron extends Command
             $postData = PostService::postTypeBody($post);
             PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
         } catch (\Exception $e) {
+            $errorMessage = "Error preparing post: " . $e->getMessage();
             $post->update([
                 "status" => -1,
-                "response" => "Error preparing post: " . $e->getMessage()
+                "response" => $errorMessage
             ]);
+            // Create error notification (cron job)
+            createErrorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage);
         }
     }
 }

@@ -162,6 +162,7 @@ class PostController extends BaseController
         }
 
         // Scheduled post response
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($scheduledAt));
         return $this->successResponse([
             'post' => [
                 'id' => $post->id,
@@ -172,7 +173,7 @@ class PostController extends BaseController
                 'created_at' => $post->created_at->toIso8601String(),
             ],
             'account' => $this->formatFacebookAccount($page),
-        ], 'Post scheduled successfully for ' . date('M d, Y \a\t h:i A', strtotime($scheduledAt)));
+        ], 'Post scheduled successfully for ' . $scheduledDate);
     }
 
     /**
@@ -273,6 +274,7 @@ class PostController extends BaseController
         }
 
         // Scheduled post response
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($scheduledAt));
         return $this->successResponse([
             'post' => [
                 'id' => $post->id,
@@ -543,6 +545,7 @@ class PostController extends BaseController
         }
 
         // Scheduled post response
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($scheduledAt));
         return $this->successResponse([
             'post' => [
                 'id' => $post->id,
@@ -656,6 +659,7 @@ class PostController extends BaseController
         }
 
         // Scheduled post response
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($scheduledAt));
         return $this->successResponse([
             'post' => [
                 'id' => $post->id,
@@ -666,7 +670,7 @@ class PostController extends BaseController
                 'created_at' => $post->created_at->toIso8601String(),
             ],
             'account' => $this->formatPinterestAccount($board, $pinterest),
-        ], 'Video scheduled successfully for ' . date('M d, Y \a\t h:i A', strtotime($scheduledAt)));
+        ], 'Video scheduled successfully for ' . $scheduledDate);
     }
 
     /**

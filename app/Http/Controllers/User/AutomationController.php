@@ -283,7 +283,7 @@ class AutomationController extends Controller
                         } else {
                             $response = array(
                                 "success" => false,
-                                "message" => $feedUrl['message']
+                                "message" => $feedUrl['message'] ?? "Failed to fetch RSS feed."
                             );
                         }
                     }

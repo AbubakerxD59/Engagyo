@@ -296,15 +296,20 @@ class FacebookService
                     "message" => "Post published successfully to Facebook"
                 ]),
             ]);
+            // Create success notification (background job)
+            createSuccessNotification($post->user_id, "Post Published", "Your Facebook post has been published successfully.");
         } else {
+            $errorMessage = $response["message"] ?? "Failed to publish post to Facebook.";
             $post->update([
                 "status" => -1,
                 "published_at" => date('Y-m-d H:i:s'),
                 "response" => json_encode([
                     "success" => false,
-                    "error" => $response["message"]
+                    "error" => $errorMessage
                 ])
             ]);
+            // Create error notification (background job)
+            createErrorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook post. " . $errorMessage);
         }
         return $response;
     }
@@ -345,15 +350,20 @@ class FacebookService
                     "message" => "Post published successfully to Facebook"
                 ]),
             ]);
+            // Create success notification (background job)
+            createSuccessNotification($post->user_id, "Post Published", "Your Facebook post has been published successfully.");
         } else {
+            $errorMessage = $response["message"] ?? "Failed to publish post to Facebook.";
             $post->update([
                 "status" => -1,
                 "published_at" => date('Y-m-d H:i:s'),
                 "response" => json_encode([
                     "success" => false,
-                    "error" => $response["message"]
+                    "error" => $errorMessage
                 ])
             ]);
+            // Create error notification (background job)
+            createErrorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook post. " . $errorMessage);
         }
         return $response;
     }
@@ -396,15 +406,20 @@ class FacebookService
                     "message" => "Photo published successfully to Facebook"
                 ]),
             ]);
+            // Create success notification (background job)
+            createSuccessNotification($post->user_id, "Post Published", "Your Facebook photo has been published successfully.");
         } else {
+            $errorMessage = $response["message"] ?? "Failed to publish photo to Facebook.";
             $post->update([
                 "status" => -1,
                 "published_at" => date('Y-m-d H:i:s'),
                 "response" => json_encode([
                     "success" => false,
-                    "error" => $response["message"]
+                    "error" => $errorMessage
                 ])
             ]);
+            // Create error notification (background job)
+            createErrorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook photo. " . $errorMessage);
         }
         return $response;
     }
@@ -445,15 +460,20 @@ class FacebookService
                     "message" => "Video published successfully to Facebook"
                 ]),
             ]);
+            // Create success notification (background job)
+            createSuccessNotification($post_row->user_id, "Post Published", "Your Facebook video has been published successfully.");
         } else {
+            $errorMessage = $response["message"] ?? "Failed to publish video to Facebook.";
             $post_row->update([
                 "status" => -1,
                 "published_at" => date('Y-m-d H:i:s'),
                 "response" => json_encode([
                     "success" => false,
-                    "error" => $response["message"]
+                    "error" => $errorMessage
                 ])
             ]);
+            // Create error notification (background job)
+            createErrorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Facebook video. " . $errorMessage);
         }
         return $response;
     }

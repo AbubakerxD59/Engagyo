@@ -10,18 +10,43 @@
     </ul>
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
+        <!-- Notifications Dropdown -->
+        <li class="nav-item dropdown notifications-dropdown">
+            <a class="nav-link" href="#" id="notificationsDropdown" data-toggle="dropdown" aria-haspopup="true"
+                aria-expanded="false">
+                <i class="fas fa-bell notification-icon"></i>
+                <span class="badge badge-danger notification-badge" id="notificationBadge"
+                    style="display: none;">0</span>
+            </a>
+            <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right notifications-menu"
+                aria-labelledby="notificationsDropdown">
+                <span class="dropdown-item dropdown-header">Notifications</span>
+                <div class="dropdown-divider"></div>
+                <div id="notificationsList" class="notifications-list">
+                    <div class="dropdown-item text-center text-muted py-3">
+                        <i class="fas fa-spinner fa-spin"></i> Loading notifications...
+                    </div>
+                </div>
+                <div class="dropdown-divider"></div>
+                <a href="#" class="dropdown-item dropdown-footer" id="markAllReadBtn" style="display: none;">
+                    <i class="fas fa-check-double mr-2"></i> Mark all as read
+                </a>
+            </div>
+        </li>
+        <!-- User Dropdown -->
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle user-dropdown-toggle" href="#" id="userDropdown"
                 data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
                 @php
                     $user = auth()->user();
                     $rawProfilePic = $user->getAttributes()['profile_pic'] ?? null;
-                    $profilePic = !empty($rawProfilePic) && file_exists(public_path($rawProfilePic)) 
-                        ? asset($rawProfilePic) 
-                        : default_user_avatar($user->id, $user->full_name);
+                    $profilePic =
+                        !empty($rawProfilePic) && file_exists(public_path($rawProfilePic))
+                            ? asset($rawProfilePic)
+                            : default_user_avatar($user->id, $user->full_name);
                 @endphp
-                <img src="{{ $profilePic }}" alt="User Image"
-                    class="user-nav-image rounded-circle" width="32px" height="32px"
+                <img src="{{ $profilePic }}" alt="User Image" class="user-nav-image rounded-circle" width="32px"
+                    height="32px"
                     onerror="this.onerror=null; this.src='{{ default_user_avatar($user->id, $user->full_name) }}';">
                 <span class="user-nav-name text-muted">{{ auth()->user()->full_name }}</span>
                 <i class="fas fa-chevron-down user-nav-arrow text-muted"></i>
@@ -118,6 +143,122 @@
     .user-dropdown-menu .dropdown-divider {
         margin: 4px 0;
     }
+
+    /* Notifications Styles */
+    .notifications-dropdown {
+        position: relative;
+    }
+
+    .notifications-dropdown .nav-link {
+        padding: 12px !important;
+        position: relative;
+        color: rgba(255, 255, 255, 0.8) !important;
+    }
+
+    .notifications-dropdown .nav-link:hover {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 8px;
+        color: #fff !important;
+    }
+
+    .notification-badge {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        font-size: 10px;
+        padding: 2px 5px;
+        border-radius: 10px;
+        min-width: 18px;
+        text-align: center;
+    }
+
+    .notifications-menu {
+        width: 350px;
+        max-height: 500px;
+        overflow-y: auto;
+        padding: 0;
+    }
+
+    .notifications-menu .dropdown-header {
+        background-color: #f8f9fa;
+        font-weight: 600;
+        padding: 10px 15px;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .notifications-list {
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    .notification-item {
+        padding: 12px 15px;
+        border-bottom: 1px solid #f0f0f0;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+
+    .notification-item:hover {
+        background-color: #f8f9fa;
+    }
+
+    .notification-item:last-child {
+        border-bottom: none;
+    }
+
+    .notification-item.unread {
+        background-color: #e7f3ff;
+        border-left: 3px solid #007bff;
+    }
+
+    .notification-item.unread:hover {
+        background-color: #d0e7ff;
+    }
+
+    .notification-title {
+        font-weight: 600;
+        font-size: 14px;
+        color: #333;
+        margin-bottom: 4px;
+    }
+
+    .notification-body {
+        font-size: 13px;
+        color: #666;
+        margin-bottom: 4px;
+        line-height: 1.4;
+    }
+
+    .notification-icon {
+        color: black;
+        font-size: 20px !important;
+
+    }
+
+    .notification-time {
+        font-size: 11px;
+        color: #999;
+    }
+
+    .notification-system {
+        border-left-color: #28a745 !important;
+    }
+
+    .notification-system .notification-title::before {
+        content: "🔔 ";
+    }
+
+    .no-notifications {
+        padding: 30px 15px;
+        text-align: center;
+        color: #999;
+    }
+
+    .no-notifications i {
+        font-size: 48px;
+        margin-bottom: 10px;
+        opacity: 0.5;
+    }
 </style>
 
 <script>
@@ -127,6 +268,161 @@
             e.preventDefault();
             if (confirm('Are you sure you want to logout?')) {
                 document.getElementById('logout_form').submit();
+            }
+        });
+
+        // Notifications System
+        let notificationRefreshInterval;
+        const NOTIFICATION_REFRESH_INTERVAL = 5000; // 5 seconds
+
+        function fetchNotifications() {
+            $.ajax({
+                url: '{{ route('panel.notifications.fetch') }}',
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        updateNotificationsUI(response.notifications, response.count);
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Failed to fetch notifications:', xhr);
+                }
+            });
+        }
+
+        function updateNotificationsUI(notifications, count) {
+            const $badge = $('#notificationBadge');
+            const $list = $('#notificationsList');
+            const $markAllBtn = $('#markAllReadBtn');
+
+            // Update badge
+            if (count > 0) {
+                $badge.text(count > 99 ? '99+' : count).show();
+            } else {
+                $badge.hide();
+            }
+
+            // Update list
+            if (notifications.length === 0) {
+                $list.html(`
+                    <div class="no-notifications">
+                        <i class="fas fa-bell-slash"></i>
+                        <p>No new notifications</p>
+                    </div>
+                `);
+                $markAllBtn.hide();
+            } else {
+                let html = '';
+                notifications.forEach(function(notification) {
+                    const isSystem = notification.is_system;
+                    const itemClass = 'notification-item' + (isSystem ? ' notification-system' : '');
+                    html += `
+                        <div class="${itemClass}" data-id="${notification.id}">
+                            <div class="notification-title">${escapeHtml(notification.title)}</div>
+                            <div class="notification-body">${formatNotificationBody(notification.body)}</div>
+                            <div class="notification-time">${notification.created_at}</div>
+                        </div>
+                    `;
+                });
+                $list.html(html);
+                $markAllBtn.show();
+
+                // Add click handlers
+                $('.notification-item').on('click', function() {
+                    const notificationId = $(this).data('id');
+                    markNotificationAsRead(notificationId);
+                });
+            }
+        }
+
+        function markNotificationAsRead(notificationId) {
+            $.ajax({
+                url: '{{ route('panel.notifications.markRead', ':id') }}'.replace(':id',
+                    notificationId),
+                method: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        // Remove the notification from UI
+                        $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
+                        // Refresh count
+                        fetchNotifications();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Failed to mark notification as read:', xhr);
+                }
+            });
+        }
+
+        function markAllAsRead() {
+            $.ajax({
+                url: '{{ route('panel.notifications.markAllRead') }}',
+                method: 'POST',
+                success: function(response) {
+                    if (response.success) {
+                        fetchNotifications();
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Failed to mark all notifications as read:', xhr);
+                }
+            });
+        }
+
+        function formatNotificationBody(body) {
+            if (!body) return '';
+            if (typeof body === 'string') {
+                return escapeHtml(body);
+            }
+            if (typeof body === 'object') {
+                // If body is an object, try to extract message
+                if (body.message) {
+                    return escapeHtml(body.message);
+                }
+                if (body.text) {
+                    return escapeHtml(body.text);
+                }
+                return escapeHtml(JSON.stringify(body));
+            }
+            return '';
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return String(text).replace(/[&<>"']/g, function(m) {
+                return map[m];
+            });
+        }
+
+        // Mark all as read button
+        $(document).on('click', '#markAllReadBtn', function(e) {
+            e.preventDefault();
+            markAllAsRead();
+        });
+
+        // Initial fetch
+        fetchNotifications();
+
+        // Set up auto-refresh
+        notificationRefreshInterval = setInterval(fetchNotifications, NOTIFICATION_REFRESH_INTERVAL);
+
+        // Clear interval when page is hidden (to save resources)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                if (notificationRefreshInterval) {
+                    clearInterval(notificationRefreshInterval);
+                }
+            } else {
+                // Restart when page becomes visible
+                fetchNotifications();
+                notificationRefreshInterval = setInterval(fetchNotifications,
+                    NOTIFICATION_REFRESH_INTERVAL);
             }
         });
     });

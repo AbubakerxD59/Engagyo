@@ -87,13 +87,13 @@ class FacebookController extends Controller
                 } else {
                     $response = [
                         "success" => "error",
-                        "message" => $pages["message"]
+                        "message" => $pages["message"] ?? "Failed to fetch Facebook pages."
                     ];
                 }
             } else {
                 $response = [
                     "success" => "error",
-                    "message" => $getAccessToken["message"]
+                    "message" => $getAccessToken["message"] ?? "Failed to get access token from Facebook."
                 ];
             }
         } else {

@@ -65,27 +65,33 @@ class FeedService
                         "items" => $items
                     );
                 } else {
-                    $this->body["message"] = "Posts not Fetched!";
-                    create_notification($this->data["user_id"], $this->body, "Automation");
+                    $errorMessage = "Posts not Fetched!";
+                    // Create error notification (background job)
+                    $platform = ucfirst($this->data["social_type"] ?? "Social Media");
+                    createErrorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. No new posts found.");
                     return array(
                         "success" => false,
-                        "message" =>  $this->body["message"]
+                        "message" => $errorMessage
                     );
                 }
             } catch (Exception $e) {
-                $this->body["message"] = $e->getMessage();
-                create_notification($this->data["user_id"], $this->body, "Automation");
+                $errorMessage = $e->getMessage();
+                // Create error notification (background job)
+                $platform = ucfirst($this->data["social_type"] ?? "Social Media");
+                createErrorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage);
                 return array(
                     "success" => false,
-                    "message" =>  $this->body["message"]
+                    "message" => $errorMessage
                 );
             }
         } else {
-            $this->body["message"] = $feedUrls["message"];
-            create_notification($this->data["user_id"], $this->body, "Automation");
+            $errorMessage = $feedUrls["message"] ?? "Failed to fetch RSS feed.";
+            // Create error notification (background job)
+            $platform = ucfirst($this->data["social_type"] ?? "Social Media");
+            createErrorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage);
             return array(
                 "success" => false,
-                "message" =>  $this->body["message"]
+                "message" => $errorMessage
             );
         }
     }
