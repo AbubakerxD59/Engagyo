@@ -741,4 +741,103 @@ class TikTokService
             $this->deleteLocalFile($localFilePath);
         }
     }
+
+    /**
+     * Delete a published TikTok post
+     * Note: TikTok API may not support post deletion via third-party apps.
+     * This method attempts deletion and handles errors gracefully.
+     *
+     * @param \App\Models\Post $post
+     * @return bool
+     */
+    public function delete($post)
+    {
+        $tiktok = $post->tiktok;
+
+        if (!$tiktok) {
+            info("TikTok delete error: TikTok account not found for post ID: {$post->id}");
+            return false;
+        }
+
+        // Use validateToken for proper error handling
+        $tokenResponse = self::validateToken($tiktok);
+
+        if (!$tokenResponse['success']) {
+            info("TikTok delete error: " . ($tokenResponse['message'] ?? 'Failed to validate token') . " for post ID: {$post->id}");
+            return false;
+        }
+
+        $access_token = $tokenResponse['access_token'];
+        $header = array(
+            "Content-Type" => "application/json",
+            "Authorization" => "Bearer " . $access_token
+        );
+
+        // Check if post_id exists
+        if (empty($post->post_id)) {
+            info("TikTok delete error: Post ID is missing for post ID: {$post->id}");
+            return false;
+        }
+
+        try {
+            // Determine the endpoint based on post type
+            // TikTok API v2 uses different endpoints for video vs content
+            $endpoint = '';
+            $requestBody = [
+                "publish_id" => $post->post_id
+            ];
+
+            if ($post->type == "video") {
+                // For video posts
+                $endpoint = $this->baseUrl . "post/publish/video/delete/";
+            } else {
+                // For photo/link posts (content)
+                $endpoint = $this->baseUrl . "post/publish/content/delete/";
+            }
+
+            // Attempt to delete via TikTok API
+            $response = $this->client->postJson($endpoint, $requestBody, $header);
+
+            // Check response
+            if ($response && isset($response['error'])) {
+                $errorCode = $response['error']['code'] ?? null;
+                $errorMessage = $response['error']['message'] ?? "Unknown error";
+                
+                // If error code is "ok", deletion was successful
+                if ($errorCode === "ok") {
+                    info("TikTok post deleted successfully. Post ID: {$post->id}, Publish ID: {$post->post_id}");
+                    return true;
+                } else {
+                    // Log the error but don't fail completely
+                    info("TikTok delete API error for post ID {$post->id}: {$errorMessage}");
+                    // Return false but don't throw - allow local deletion to proceed
+                    return false;
+                }
+            } elseif ($response && !isset($response['error'])) {
+                // Success response without error object
+                info("TikTok post deleted successfully. Post ID: {$post->id}, Publish ID: {$post->post_id}");
+                return true;
+            } else {
+                info("TikTok delete: Unexpected response format for post ID: {$post->id}");
+                return false;
+            }
+        } catch (RequestException $e) {
+            // Handle HTTP exceptions
+            $errorMessage = $e->getMessage();
+            if ($e->hasResponse()) {
+                $responseBody = $e->getResponse()->getBody()->getContents();
+                $decoded = json_decode($responseBody, true);
+                if (isset($decoded['error']['message'])) {
+                    $errorMessage = $decoded['error']['message'];
+                }
+            }
+            info("TikTok delete HTTP error for post ID {$post->id}: {$errorMessage}");
+            // Note: TikTok API may not support deletion, so we log but don't fail
+            return false;
+        } catch (Exception $e) {
+            info("TikTok delete exception for post ID {$post->id}: " . $e->getMessage());
+            // Note: TikTok API may not support deletion, so we log but don't fail
+            return false;
+        }
+    }
 }

@@ -94,6 +94,6 @@ class TikTokController extends Controller
             ];
         }
 
-        return redirect()->route("panel.accounts")->with($response);
+        return redirect()->route("panel.accounts")->with($response["success"], $response["message"]);
     }
 }
