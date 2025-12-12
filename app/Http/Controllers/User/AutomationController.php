@@ -200,6 +200,15 @@ class AutomationController extends Controller
                 $account = $this->page->findOrFail($request->account);
                 $account_id = $account->id;
             }
+            
+            // Check if RSS automation is paused for this page or board
+            if ($account->rss_paused) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "RSS automation is paused for this account. Please enable RSS automation to fetch posts."
+                ]);
+            }
+            
             foreach ($times as $time) {
                 foreach ($domains as $domain) {
                     $parsedUrl = parse_url($domain);

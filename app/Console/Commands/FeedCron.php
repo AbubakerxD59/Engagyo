@@ -46,6 +46,13 @@ class FeedCron extends Command
                 }
 
                 if ($sub_account && $account) {
+                    // Check if RSS automation is paused for this page or board
+                    if ($sub_account->rss_paused) {
+                        $accountName = $type == 'pinterest' ? $sub_account->name : $sub_account->name;
+                        Log::info("RSS Feed: Skipping domain {$value->id} - RSS automation is paused for {$type} account '{$accountName}'.");
+                        continue;
+                    }
+
                     // Parse domain name to extract protocol, host, and category
                     $domainName = $value->name;
                     $parsedUrl = parse_url($domainName);
