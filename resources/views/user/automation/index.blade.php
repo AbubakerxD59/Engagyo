@@ -62,11 +62,19 @@
                 </div>
                 {{-- Posts table --}}
                 <div class="card">
+                    <div class="card-header with-border">
+                        <div class="card-title">
+                            <span><i class="fas fa-filter mr-2"></i>Accounts</span>
+                        </div>
+                    </div>
                     <div class="card-body">
-                        <div class="row">
-                            <form id="adv_filter_form" class="row col-md-12">
+                        {{-- Filters Section --}}
+                        <form id="adv_filter_form" class="automation-filters">
+                            <div class="row">
                                 <div class="col-md-4 form-group">
-                                    <label for="account">Accounts</label>
+                                    <label for="account" class="filter-label">
+                                        <i class="fas fa-user-circle mr-1"></i>Account
+                                    </label>
                                     <select name="account" id="account" class="form-control adv_filter">
                                         <option value="">All Accounts</option>
                                         @foreach ($accounts as $key => $account)
@@ -80,7 +88,9 @@
                                     </select>
                                 </div>
                                 <div class="col-md-4 form-group">
-                                    <label for="domains">Domains</label>
+                                    <label for="domains" class="filter-label">
+                                        <i class="fas fa-globe mr-1"></i>Domains
+                                    </label>
                                     <input type="hidden" id="saved_domains"
                                         value="{{ isset($user->rss_filters['domain']) ? implode(',', $user->rss_filters['domain']) : '' }}">
                                     <div class="d-flex align-items-center">
@@ -94,7 +104,9 @@
                                     </div>
                                 </div>
                                 <div class="col-md-4 form-group">
-                                    <label for="status">Status</label>
+                                    <label for="status" class="filter-label">
+                                        <i class="fas fa-info-circle mr-1"></i>Status
+                                    </label>
                                     <select name="status" id="status" class="form-control adv_filter">
                                         <option value="">All Status</option>
                                         <option value="1">Published</option>
@@ -102,45 +114,53 @@
                                         <option value="-1">Failed</option>
                                     </select>
                                 </div>
-                            </form>
-                            <div class="col-md-12 row form-group justify-content-between">
-                                <div class="col-md-6">
-                                    <button id="clearFilters" class="btn btn-outline-secondary btn-sm ">Clear
-                                        Filters
+                            </div>
+                        </form>
+
+                        {{-- Control Panel Section --}}
+                        <div class="automation-control-panel">
+                            <div class="control-panel-left">
+                                <div class="action-buttons-group">
+                                    <button id="clearFilters" class="btn btn-outline-secondary btn-sm">
+                                        <i class="fas fa-eraser mr-1"></i>Clear Filters
                                     </button>
                                     <button id="deleteAll" class="btn btn-outline-danger btn-sm" style="display: none;">
-                                        Delete All
+                                        <i class="fas fa-trash-alt mr-1"></i>Delete All
                                     </button>
-                                    <div class="btn btn-info bg-transparent text-muted shuffle_toggle py-1 mx-1"
-                                        style="display: none;">
-                                        <div class="d-flex align-items-start">
-                                            <label for="toggle" class="pointer m-0">Shuffle</label>
-                                            <div class="toggle-switch mx-1">
-                                                <input class="toggle-input shuffle" id="toggle" type="checkbox">
-                                                <label class="toggle-label" for="toggle"></label>
-                                            </div>
+                                </div>
+                                <div class="toggle-controls-group">
+                                    <div class="toggle-control-item shuffle_toggle" style="display: none;">
+                                        <label for="toggle" class="toggle-label-text">
+                                            <i class="fas fa-random mr-1"></i>Shuffle
+                                        </label>
+                                        <div class="toggle-switch">
+                                            <input class="toggle-input shuffle" id="toggle" type="checkbox">
+                                            <label class="toggle-label" for="toggle"></label>
                                         </div>
                                     </div>
-                                    <div class="btn bg-transparent text-muted rss_toggle py-1 mx-1"
-                                        style="display: none;">
-                                        <div class="d-flex align-items-start">
-                                            <label for="rss_toggle" class="pointer m-0">RSS Automation</label>
-                                            <div class="toggle-switch mx-1">
-                                                <input class="toggle-input rss_automation" id="rss_toggle" type="checkbox">
-                                                <label class="toggle-label rss-label" for="rss_toggle"></label>
-                                            </div>
+                                    <div class="toggle-control-item rss_toggle" style="display: none;">
+                                        <label for="rss_toggle" class="toggle-label-text">
+                                            <i class="fas fa-rss mr-1"></i>RSS Automation
+                                        </label>
+                                        <div class="toggle-switch">
+                                            <input class="toggle-input rss_automation" id="rss_toggle" type="checkbox">
+                                            <label class="toggle-label rss-label" for="rss_toggle"></label>
                                         </div>
                                     </div>
                                 </div>
-                                <div class="col-md-6 form-group align-content-end">
-                                    <a class="btn btn-info btn-sm float-right">
-                                        Last Fetch:
-                                        <span class="last_fetch">NA</span>
-                                    </a>
-                                    <a class="btn btn-info btn-sm mx-1 float-right">
-                                        Scheduled Till:
-                                        <span class="scheduled_till">NA</span>
-                                    </a>
+                            </div>
+                            <div class="control-panel-right">
+                                <div class="info-badges">
+                                    <div class="info-badge">
+                                        <i class="fas fa-clock mr-1"></i>
+                                        <span class="info-label">Last Fetch:</span>
+                                        <span class="info-value last_fetch">NA</span>
+                                    </div>
+                                    <div class="info-badge">
+                                        <i class="fas fa-calendar-alt mr-1"></i>
+                                        <span class="info-label">Scheduled Till:</span>
+                                        <span class="info-value scheduled_till">NA</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -183,18 +203,264 @@
     @include('user.schedule.assets.facebook_post')
     @include('user.schedule.assets.pinterest_post')
     <style>
-        .rss_toggle {
-            border: 1px solid #dc3545;
-            border-radius: 5px;
+        /* Automation Filters Section */
+        .automation-filters {
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            margin-bottom: 20px;
         }
-        .rss_toggle.active {
-            border-color: #28a745;
+
+        .filter-label {
+            font-weight: 600;
+            color: #495057;
+            font-size: 13px;
+            margin-bottom: 6px;
+            display: block;
         }
-        .rss_toggle label[for="rss_toggle"] {
+
+        .filter-label i {
+            color: #6c757d;
+        }
+
+        /* Control Panel Section */
+        .automation-control-panel {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .control-panel-left {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-panel-right {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        /* Action Buttons Group */
+        .action-buttons-group {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .action-buttons-group .btn {
+            border-radius: 6px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+
+        .action-buttons-group .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Toggle Controls Group */
+        .toggle-controls-group {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .toggle-control-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+
+        .toggle-control-item:hover {
+            background: #fff;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            transform: translateY(-1px);
+        }
+
+        .toggle-control-item.rss_toggle {
+            border: 2px solid rgba(220, 53, 69, 0.3);
+        }
+
+        .toggle-control-item.rss_toggle.active {
+            border-color: rgba(40, 167, 69, 0.5);
+            background: rgba(40, 167, 69, 0.05);
+        }
+
+        .toggle-label-text {
+            font-weight: 600;
+            color: #495057;
+            font-size: 13px;
+            margin: 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            white-space: nowrap;
+        }
+
+        .toggle-label-text i {
+            color: #6c757d;
+        }
+
+        .toggle-control-item.rss_toggle .toggle-label-text {
             color: #dc3545;
         }
-        .rss_toggle.active label[for="rss_toggle"] {
+
+        .toggle-control-item.rss_toggle.active .toggle-label-text {
             color: #28a745;
+        }
+
+        /* Toggle Switch Styles */
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .toggle-switch .toggle-input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-switch .toggle-label {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: 0.4s;
+            border-radius: 26px;
+        }
+
+        .toggle-switch .toggle-label:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        }
+
+        .toggle-switch .toggle-input:checked + .toggle-label {
+            background-color: #28a745;
+        }
+
+        .toggle-switch .toggle-input:checked + .toggle-label:before {
+            transform: translateX(24px);
+        }
+
+        .toggle-switch .toggle-input:focus + .toggle-label {
+            box-shadow: 0 0 1px #28a745;
+        }
+
+        /* Info Badges */
+        .info-badges {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .info-badge {
+            display: flex;
+            align-items: center;
+            padding: 10px 16px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+
+        .info-badge i {
+            color: #667eea;
+            margin-right: 6px;
+        }
+
+        .info-label {
+            color: #6c757d;
+            font-weight: 500;
+            margin-right: 6px;
+        }
+
+        .info-value {
+            color: #495057;
+            font-weight: 600;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 992px) {
+            .automation-control-panel {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .control-panel-left,
+            .control-panel-right {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .toggle-controls-group {
+                flex-wrap: wrap;
+                justify-content: center;
+            }
+
+            .info-badges {
+                justify-content: center;
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .automation-filters {
+                padding: 15px;
+            }
+
+            .automation-control-panel {
+                padding: 15px;
+            }
+
+            .action-buttons-group {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            .action-buttons-group .btn {
+                width: 100%;
+            }
+
+            .toggle-control-item {
+                flex: 1;
+                justify-content: space-between;
+            }
+
+            .info-badge {
+                flex: 1;
+                min-width: 100%;
+            }
         }
 
         /* Automation Posts Grid Layout */
