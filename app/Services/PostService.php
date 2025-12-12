@@ -44,10 +44,11 @@ class PostService
                     $service = new PinterestService();
                     $service->delete($post);
                 }
-                if ($post->social_type == "tiktok") {
-                    $service = new TikTokService();
-                    $service->delete($post);
-                }
+                // TikTok delete API is disabled for now
+                // if ($post->social_type == "tiktok") {
+                //     $service = new TikTokService();
+                //     $service->delete($post);
+                // }
             }
             $post->delete();
         }
