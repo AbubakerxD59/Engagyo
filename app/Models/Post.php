@@ -35,7 +35,7 @@ class Post extends Model
         "response"
     ];
 
-    protected $appends = ["date", "time", "modal_time", "message"];
+    protected $appends = ["date", "time", "modal_time", "message", "response_message"];
 
     public function user()
     {
@@ -427,6 +427,171 @@ class Post extends Model
                 return $message;
             }
         );
+    }
+
+    /**
+     * Get a user-friendly response message for the post
+     * Returns success message if published, or error message if failed
+     * 
+     * @return string
+     */
+    public function getResponseMessageAttribute()
+    {
+        // If post is successfully published
+        if ($this->status == 1) {
+            $response = $this->response;
+            if (!empty($response)) {
+                $decoded = json_decode($response, true);
+                if (is_array($decoded) && isset($decoded['message'])) {
+                    return $decoded['message'];
+                }
+            }
+            // Default success message based on platform
+            $platform = ucfirst($this->social_type ?? 'social media');
+            return "Post published successfully to {$platform}";
+        }
+
+        // If post failed to publish
+        if ($this->status == -1) {
+            $response = $this->response;
+            if (empty($response)) {
+                return "Failed to publish post. Please try again.";
+            }
+
+            // Try to decode JSON response
+            $decoded = json_decode($response, true);
+
+            if (is_array($decoded)) {
+                // Check for error message in JSON
+                if (isset($decoded['error'])) {
+                    $error = $decoded['error'];
+                    return $this->formatErrorMessage($error);
+                }
+
+                // Check for message field
+                if (isset($decoded['message'])) {
+                    return $this->formatErrorMessage($decoded['message']);
+                }
+            }
+
+            // If response is a string, try to format it
+            if (is_string($response)) {
+                // Check if it's JSON string
+                $jsonDecoded = json_decode($response, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($jsonDecoded)) {
+                    if (isset($jsonDecoded['error'])) {
+                        return $this->formatErrorMessage($jsonDecoded['error']);
+                    }
+                    if (isset($jsonDecoded['message'])) {
+                        return $this->formatErrorMessage($jsonDecoded['message']);
+                    }
+                }
+
+                // If it's a plain string, format it
+                return $this->formatErrorMessage($response);
+            }
+
+            // Fallback
+            return "Failed to publish post. Please check your account connection and try again.";
+        }
+
+        // If post is pending
+        return "Post is scheduled and waiting to be published.";
+    }
+
+    /**
+     * Format error message to be user-friendly
+     * Removes technical codes, JSON formatting, and makes it readable
+     * 
+     * @param mixed $error
+     * @return string
+     */
+    private function formatErrorMessage($error)
+    {
+        if (is_array($error)) {
+            // If error is an array, try to extract message
+            if (isset($error['message'])) {
+                return $this->cleanErrorMessage($error['message']);
+            }
+            if (isset($error['error_description'])) {
+                return $this->cleanErrorMessage($error['error_description']);
+            }
+            if (isset($error['error'])) {
+                return $this->cleanErrorMessage($error['error']);
+            }
+            // If it's an array with numeric keys, join them
+            return $this->cleanErrorMessage(implode(', ', array_filter($error)));
+        }
+
+        if (is_object($error)) {
+            // If error is an object, try to get message property
+            if (isset($error->message)) {
+                return $this->cleanErrorMessage($error->message);
+            }
+            if (isset($error->error_description)) {
+                return $this->cleanErrorMessage($error->error_description);
+            }
+        }
+
+        // If error is a string, clean it
+        return $this->cleanErrorMessage((string) $error);
+    }
+
+    /**
+     * Clean error message to remove technical details and make it readable
+     * 
+     * @param string $message
+     * @return string
+     */
+    private function cleanErrorMessage($message)
+    {
+        if (empty($message)) {
+            return "An unknown error occurred. Please try again.";
+        }
+
+        $message = trim($message);
+
+        // Remove JSON-like structures
+        $message = preg_replace('/\{[^}]*\}/', '', $message);
+        $message = preg_replace('/\[[^\]]*\]/', '', $message);
+
+        // Remove common technical prefixes
+        $message = preg_replace('/^(Invalid request:\s*)/i', '', $message);
+        $message = preg_replace('/^(API error:\s*)/i', '', $message);
+        $message = preg_replace('/^(Error\s*\d+:\s*)/i', '', $message);
+        $message = preg_replace('/^(Exception:\s*)/i', '', $message);
+        $message = preg_replace('/^(Facebook\s*API\s*error:\s*)/i', '', $message);
+        $message = preg_replace('/^(Pinterest\s*API\s*error:\s*)/i', '', $message);
+        $message = preg_replace('/^(TikTok\s*API\s*error:\s*)/i', '', $message);
+
+        // Remove log IDs and technical codes
+        $message = preg_replace('/\s*\[Log\s*ID:\s*[^\]]+\]/i', '', $message);
+        $message = preg_replace('/\s*\(Log\s*ID:\s*[^\)]+\)/i', '', $message);
+        $message = preg_replace('/\s*\[code:\s*[^\]]+\]/i', '', $message);
+        $message = preg_replace('/\s*\(code:\s*[^\)]+\)/i', '', $message);
+
+        // Remove HTTP status codes
+        $message = preg_replace('/\s*\d{3}\s*/', ' ', $message);
+
+        // Clean up multiple spaces
+        $message = preg_replace('/\s+/', ' ', $message);
+        $message = trim($message);
+
+        // If message is still empty or too technical, provide a generic message
+        if (empty($message) || strlen($message) < 3) {
+            $platform = ucfirst($this->social_type ?? 'social media');
+            return "Failed to publish post to {$platform}. Please check your account connection and try again.";
+        }
+
+        // Capitalize first letter
+        $message = ucfirst($message);
+
+        // Add period if missing
+        if (!preg_match('/[.!?]$/', $message)) {
+            $message .= '.';
+        }
+
+        return $message;
     }
 
     public function getAccountNameAttribute()

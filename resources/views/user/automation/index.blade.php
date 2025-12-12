@@ -121,10 +121,10 @@
                         <div class="automation-control-panel">
                             <div class="control-panel-left">
                                 <div class="action-buttons-group">
-                                    <button id="clearFilters" class="btn btn-outline-secondary btn-sm">
+                                    <button id="clearFilters" class="btn btn-secondary">
                                         <i class="fas fa-eraser mr-1"></i>Clear Filters
                                     </button>
-                                    <button id="deleteAll" class="btn btn-outline-danger btn-sm" style="display: none;">
+                                    <button id="deleteAll" class="btn btn-danger" style="display: none;">
                                         <i class="fas fa-trash-alt mr-1"></i>Delete All
                                     </button>
                                 </div>
@@ -237,7 +237,6 @@
             gap: 20px;
         }
 
-        .automation-control-panel span,
         .automation-control-panel button {
             color: white !important;
         }
@@ -302,11 +301,6 @@
             border: 2px solid rgba(220, 53, 69, 0.3);
         }
 
-        .toggle-control-item.rss_toggle.active {
-            border-color: rgba(40, 167, 69, 0.5);
-            background: rgba(40, 167, 69, 0.05);
-        }
-
         .toggle-label-text {
             font-weight: 600;
             color: #495057;
@@ -320,14 +314,6 @@
 
         .toggle-label-text i {
             color: #6c757d;
-        }
-
-        .toggle-control-item.rss_toggle .toggle-label-text {
-            color: #dc3545;
-        }
-
-        .toggle-control-item.rss_toggle.active .toggle-label-text {
-            color: #28a745;
         }
 
         /* Toggle Switch Styles */

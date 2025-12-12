@@ -195,13 +195,21 @@ class PinterestService
                 "post_id" => $publish["id"],
                 "status" => 1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => $this->response,
+                "response" => json_encode([
+                    "success" => true,
+                    "post_id" => $publish["id"],
+                    "message" => "Post published successfully to Pinterest"
+                ]),
             ]);
         } else {
+            $errorMessage = $this->extractErrorMessage($publish);
             $post->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => $this->extractErrorMessage($publish)
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $errorMessage
+                ])
             ]);
         }
     }
@@ -229,34 +237,54 @@ class PinterestService
                             "post_id" => $upload_video["id"],
                             "status" => 1,
                             "published_at" => date("Y-m-d H:i:s"),
-                            "response" => $this->response,
+                            "response" => json_encode([
+                                "success" => true,
+                                "post_id" => $upload_video["id"],
+                                "message" => "Video published successfully to Pinterest"
+                            ]),
                         ]);
                     } else {
+                        $errorMessage = $this->extractErrorMessage($upload_video);
                         $post_row->update([
                             "status" => -1,
                             "published_at" => date("Y-m-d H:i:s"),
-                            "response" => $this->extractErrorMessage($upload_video)
+                            "response" => json_encode([
+                                "success" => false,
+                                "error" => $errorMessage
+                            ])
                         ]);
                     }
                 } else {
+                    $errorMessage = $this->extractErrorMessage($media_status);
                     $post_row->update([
                         "status" => -1,
                         "published_at" => date("Y-m-d H:i:s"),
-                        "response" => $this->extractErrorMessage($media_status)
+                        "response" => json_encode([
+                            "success" => false,
+                            "error" => $errorMessage
+                        ])
                     ]);
                 }
             } else {
+                $errorMessage = $this->extractErrorMessage($file);
                 $post_row->update([
                     "status" => -1,
                     "published_at" => date("Y-m-d H:i:s"),
-                    "response" => $this->extractErrorMessage($file)
+                    "response" => json_encode([
+                        "success" => false,
+                        "error" => $errorMessage
+                    ])
                 ]);
             }
         } else {
+            $errorMessage = $this->extractErrorMessage($response);
             $post_row->update([
                 "status" => -1,
                 "published_at" => date("Y-m-d H:i:s"),
-                "response" => $this->extractErrorMessage($response)
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $errorMessage
+                ])
             ]);
         }
         removeFromS3($post["video_key"]);

@@ -290,13 +290,20 @@ class FacebookService
                 "post_id" => $post_id,
                 "status" => 1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => $this->response,
+                "response" => json_encode([
+                    "success" => true,
+                    "post_id" => $post_id,
+                    "message" => "Post published successfully to Facebook"
+                ]),
             ]);
         } else {
             $post->update([
                 "status" => -1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => $response["message"]
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $response["message"]
+                ])
             ]);
         }
         return $response;
@@ -332,13 +339,20 @@ class FacebookService
                 "post_id" => $post_id,
                 "status" => 1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => $this->response,
+                "response" => json_encode([
+                    "success" => true,
+                    "post_id" => $post_id,
+                    "message" => "Post published successfully to Facebook"
+                ]),
             ]);
         } else {
             $post->update([
                 "status" => -1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => $response["message"]
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $response["message"]
+                ])
             ]);
         }
         return $response;
@@ -376,13 +390,20 @@ class FacebookService
                 "post_id" => $post_id,
                 "status" => 1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => $this->response,
+                "response" => json_encode([
+                    "success" => true,
+                    "post_id" => $post_id,
+                    "message" => "Photo published successfully to Facebook"
+                ]),
             ]);
         } else {
             $post->update([
                 "status" => -1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => $response["message"]
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $response["message"]
+                ])
             ]);
         }
         return $response;
@@ -418,13 +439,20 @@ class FacebookService
                 "post_id" => $post_id,
                 "status" => 1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => $this->response,
+                "response" => json_encode([
+                    "success" => true,
+                    "post_id" => $post_id,
+                    "message" => "Video published successfully to Facebook"
+                ]),
             ]);
         } else {
             $post_row->update([
                 "status" => -1,
                 "published_at" => date('Y-m-d H:i:s'),
-                "response" => $response["message"]
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $response["message"]
+                ])
             ]);
         }
         return $response;
