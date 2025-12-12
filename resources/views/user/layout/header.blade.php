@@ -181,6 +181,7 @@
         padding: 0;
         display: none;
         flex-direction: column;
+        border-radius: 20px;
     }
 
     #notificationsDropdown {

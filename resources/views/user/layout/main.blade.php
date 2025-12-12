@@ -119,10 +119,14 @@
     </script>
     <script>
         window.toastr.options = {
-            "maxOpened": 5,
+            "maxOpened": 3,
             "autoDismiss": true,
             "newestOnTop": true,
-            "preventOpenDuplicates": true
+            "preventOpenDuplicates": true,
+            "positionClass": "toast-top-center",
+            "tapToDismiss": true,
+            "timeOut": 2500,
+            "extendedTimeOut": 1000
         }
     </script>
     @if (Session::has('success'))

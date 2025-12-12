@@ -41,7 +41,18 @@
     <script src="{{ asset('assets/js/adminlte.min.js') }}"></script>
     <!--app JS-->
     <script src="{{ asset('assets/js/app.js') }}"></script>
-    <script type="text/javascript"></script>
+    <script>
+        window.toastr.options = {
+            "maxOpened": 3,
+            "autoDismiss": true,
+            "newestOnTop": true,
+            "preventOpenDuplicates": true,
+            "positionClass": "toast-top-center",
+            "tapToDismiss": true,
+            "timeOut": 2500,
+            "extendedTimeOut": 1000
+        }
+    </script>
     @if (Session::has('success'))
         <script type="text/javascript">
             toastr.success('{{ Session::get('success') }}');

@@ -618,3 +618,40 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
     opacity: 1;
     visibility: visible;
 }
+
+/* Toastr Custom Styles */
+#toast-container.toast-top-center {
+    top: 5px !important;
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    right: auto !important;
+    width: auto !important;
+}
+
+#toast-container.toast-top-center>div {
+    width: 600px !important;
+    max-width: 90vw !important;
+    margin-left: auto !important;
+    margin-right: auto !important;
+    cursor: pointer !important;
+    border-radius: 12px !important;
+    padding: 10px 15px 10px 50px !important;
+    min-height: auto !important;
+    overflow: visible !important;
+}
+
+#toast-container.toast-top-center>div .toast-title {
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    display: inline-block !important;
+    max-width: 100% !important;
+}
+
+#toast-container.toast-top-center>div .toast-message {
+    white-space: normal !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+    display: block !important;
+    max-width: 100% !important;
+}
