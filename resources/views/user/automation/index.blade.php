@@ -164,7 +164,7 @@
                                 </div>
                             </div>
                         </div>
-                        
+
                         {{-- Posts Grid --}}
                         <div id="postsGrid" class="automation-posts-grid">
                             <div class="loading-state text-center py-5">
@@ -186,7 +186,7 @@
         </section>
     </div>
     @include('user.automation.edit_post_modal')
-    
+
     {{-- Image Lightbox Modal --}}
     <div class="image-lightbox" id="imageLightbox">
         <div class="lightbox-backdrop"></div>
@@ -205,7 +205,7 @@
     <style>
         /* Automation Filters Section */
         .automation-filters {
-            padding: 20px;
+            padding: 5px 20px;
             background: #f8f9fa;
             border-radius: 8px;
             margin-bottom: 20px;
@@ -228,13 +228,18 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 20px;
+            padding: 5px 20px;
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             border-radius: 12px;
             margin-bottom: 25px;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
             flex-wrap: wrap;
             gap: 20px;
+        }
+
+        .automation-control-panel span,
+        .automation-control-panel button {
+            color: white !important;
         }
 
         .control-panel-left {
@@ -364,15 +369,15 @@
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
         }
 
-        .toggle-switch .toggle-input:checked + .toggle-label {
+        .toggle-switch .toggle-input:checked+.toggle-label {
             background-color: #28a745;
         }
 
-        .toggle-switch .toggle-input:checked + .toggle-label:before {
+        .toggle-switch .toggle-input:checked+.toggle-label:before {
             transform: translateX(24px);
         }
 
-        .toggle-switch .toggle-input:focus + .toggle-label {
+        .toggle-switch .toggle-input:focus+.toggle-label {
             box-shadow: 0 0 1px #28a745;
         }
 
@@ -513,7 +518,7 @@
             left: 0;
             right: 0;
             height: 30px;
-            background: linear-gradient(to bottom, transparent, rgba(255,255,255,0.9));
+            background: linear-gradient(to bottom, transparent, rgba(255, 255, 255, 0.9));
             pointer-events: none;
         }
 
@@ -600,9 +605,17 @@
             color: #fff;
         }
 
-        .post-account-badge .platform-icon.facebook { background: #1877F2; }
-        .post-account-badge .platform-icon.pinterest { background: #E60023; }
-        .post-account-badge .platform-icon.tiktok { background: #000000; }
+        .post-account-badge .platform-icon.facebook {
+            background: #1877F2;
+        }
+
+        .post-account-badge .platform-icon.pinterest {
+            background: #E60023;
+        }
+
+        .post-account-badge .platform-icon.tiktok {
+            background: #000000;
+        }
 
         .post-account-badge .post-account-name {
             font-size: 12px;
@@ -821,6 +834,7 @@
                 opacity: 0;
                 transform: scale(0.8);
             }
+
             to {
                 opacity: 1;
                 transform: scale(1);
@@ -948,7 +962,8 @@
                     start: (page - 1) * perPage,
                     length: perPage,
                     account: $("#account").find(":selected").val(),
-                    account_type: $("#account").find(":selected").val() ? $("#account").find(":selected").data("type") : 0,
+                    account_type: $("#account").find(":selected").val() ? $("#account").find(":selected").data(
+                        "type") : 0,
                     domain: $("#domains").val(),
                     status: $("#status").find(":selected").val(),
                 },
@@ -995,13 +1010,15 @@
         function renderPostCard(post) {
             var statusClass = post.status == 1 ? 'published' : (post.status == -1 ? 'failed' : 'pending');
             var statusText = post.status == 1 ? 'Published' : (post.status == -1 ? 'Failed' : 'Pending');
-            var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' : (post.social_type === 'pinterest' ? 'fab fa-pinterest-p' : 'fab fa-tiktok');
+            var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' : (post.social_type === 'pinterest' ?
+                'fab fa-pinterest-p' : 'fab fa-tiktok');
             var platformClass = post.social_type;
 
             // Domain badge
             var domainBadge = '';
             if (post.domain_name) {
-                domainBadge = `<span class="domain-badge" title="${post.domain_name}"><i class="fas fa-globe"></i> ${post.domain_name}</span>`;
+                domainBadge =
+                    `<span class="domain-badge" title="${post.domain_name}"><i class="fas fa-globe"></i> ${post.domain_name}</span>`;
             }
 
             var publishedAt = post.status == 1 && post.published_at_formatted ?
@@ -1128,7 +1145,8 @@
                 if (endPage < totalPages - 1) {
                     paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
                 }
-                paginationHtml += `<li class="page-item"><a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a></li>`;
+                paginationHtml +=
+                    `<li class="page-item"><a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a></li>`;
             }
 
             // Next button
@@ -1333,7 +1351,7 @@
                                 // Refresh domains dropdown
                                 var account_id = $("#account").find(":selected").val();
                                 var selected_type = $("#account").find(":selected").data(
-                                "type");
+                                    "type");
                                 var select = $('#domains');
                                 select.empty();
                                 if (account_id != '') {
@@ -1553,7 +1571,8 @@
                         if (response.success) {
                             toastr.success(response.message);
                             // Update the data attribute on the option
-                            $("#account").find(":selected").data('rss-paused', response.paused ? 1 : 0);
+                            $("#account").find(":selected").data('rss-paused', response.paused ?
+                                1 : 0);
                             // Update the visual state
                             if (response.paused) {
                                 rssToggleDiv.removeClass('active');
@@ -1642,7 +1661,7 @@
                     });
                 }
             }
-            
+
             // Trigger change event if account is pre-selected from saved filters
             var preSelectedAccount = $("#account").val();
             if (preSelectedAccount && preSelectedAccount !== '') {

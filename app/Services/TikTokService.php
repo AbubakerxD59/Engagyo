@@ -423,6 +423,7 @@ class TikTokService
                 if ($errorCode === "ok" && $publishId) {
                     // Post was successfully published
                     $post_row->update([
+                        "post_id" => $publishId,
                         "status" => 1,
                         "published_at" => date("Y-m-d H:i:s"),
                         "response" => json_encode([
@@ -548,6 +549,7 @@ class TikTokService
                 if ($publishId) {
                     // Post was successfully published
                     $post_row->update([
+                        "post_id" => $publishId,
                         "status" => 1,
                         "published_at" => date("Y-m-d H:i:s"),
                         "response" => json_encode([
@@ -679,6 +681,7 @@ class TikTokService
                 if ($publishId) {
                     // Post was successfully published
                     $post_row->update([
+                        "post_id" => $publishId,
                         "status" => 1,
                         "published_at" => date("Y-m-d H:i:s"),
                         "response" => json_encode([
