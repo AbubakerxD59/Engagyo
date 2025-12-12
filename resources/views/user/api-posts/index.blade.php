@@ -644,7 +644,8 @@
             function renderPostCard(post) {
                 var statusClass = post.status == 1 ? 'published' : (post.status == -1 ? 'failed' : 'pending');
                 var statusText = post.status == 1 ? 'Published' : (post.status == -1 ? 'Failed' : 'Pending');
-                var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' : (post.social_type === 'pinterest' ? 'fab fa-pinterest-p' : 'fab fa-tiktok');
+                var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' : (post.social_type ===
+                    'pinterest' ? 'fab fa-pinterest-p' : 'fab fa-tiktok');
                 var platformClass = post.social_type;
 
                 var apiKeyBadge = post.api_key_name && post.api_key_name !== '-' ?
@@ -658,8 +659,8 @@
                 var responseHtml = '';
                 if (post.response) {
                     var responseClass = post.status == 1 ? 'success' : (post.status == -1 ? 'error' : '');
-                    var responseText = post.response.length > 100 ? post.response.substring(0, 100) + '...' : post
-                        .response;
+                    var responseText = post.response_message;
+                    // var responseText = post.response.length > 100 ? post.response.substring(0, 100) + '...' : post.response;
                     responseHtml = `
                         <div class="response-section">
                             <div class="response-label">Response</div>
@@ -757,7 +758,7 @@
 
                 if (startPage > 1) {
                     paginationHtml +=
-                    `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
+                        `<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>`;
                     if (startPage > 2) {
                         paginationHtml += `<li class="page-item disabled"><span class="page-link">...</span></li>`;
                     }
@@ -796,7 +797,7 @@
                 e.preventDefault();
                 var page = $(this).data('page');
                 if (page && !$(this).parent().hasClass('disabled') && !$(this).parent().hasClass(
-                    'active')) {
+                        'active')) {
                     loadPosts(page);
                 }
             });

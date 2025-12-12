@@ -1013,7 +1013,8 @@
             var responseHtml = '';
             if (post.response) {
                 var responseClass = post.status == 1 ? 'success' : (post.status == -1 ? 'error' : '');
-                var responseText = post.response.length > 100 ? post.response.substring(0, 100) + '...' : post.response;
+                var responseText = post.response_message;
+                // var responseText = post.response.length > 100 ? post.response.substring(0, 100) + '...' : post.response;
                 responseHtml = `
                     <div class="response-section">
                         <div class="response-label">Response</div>
