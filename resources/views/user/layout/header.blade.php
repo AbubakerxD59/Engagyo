@@ -12,8 +12,8 @@
     <ul class="navbar-nav ml-auto">
         <!-- Notifications Dropdown -->
         <li class="nav-item dropdown notifications-dropdown">
-            <a class="nav-link" href="#" id="notificationsDropdown" data-toggle="dropdown" aria-haspopup="true"
-                aria-expanded="false">
+            <a class="nav-link" href="#" id="notificationsDropdown" aria-haspopup="true" aria-expanded="false"
+                role="button">
                 <i class="fas fa-bell notification-icon"></i>
                 <span class="badge badge-danger notification-badge" id="notificationBadge"
                     style="display: none;">0</span>
@@ -28,7 +28,8 @@
                     </div>
                 </div>
                 <div class="dropdown-divider" style="flex-shrink: 0;"></div>
-                <a href="#" class="dropdown-item dropdown-footer" id="markAllReadBtn" style="display: none; flex-shrink: 0; padding: 10px 15px; text-align: center; background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
+                <a href="#" class="dropdown-item dropdown-footer" id="markAllReadBtn"
+                    style="display: none; flex-shrink: 0; padding: 10px 15px; text-align: center; background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
                     <i class="fas fa-check-double mr-2"></i> Mark all as read
                 </a>
             </div>
@@ -174,12 +175,20 @@
 
     .notifications-menu {
         width: 380px;
-        height: calc(100vh - 60px);
-        max-height: calc(100vh - 60px);
+        height: 50vh;
+        max-height: 60vh;
         overflow: hidden;
         padding: 0;
-        display: flex;
+        display: none;
         flex-direction: column;
+    }
+
+    #notificationsDropdown {
+        line-height: 0px;
+    }
+
+    .notifications-menu.show {
+        display: flex !important;
     }
 
     .notifications-menu .dropdown-header {
@@ -307,6 +316,34 @@
         let notificationRefreshInterval;
         const NOTIFICATION_REFRESH_INTERVAL = 5000; // 5 seconds
 
+        // Handle dropdown toggle - prevent Bootstrap's default behavior
+        $('#notificationsDropdown').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const $menu = $('.notifications-menu');
+            const isExpanded = $(this).attr('aria-expanded') === 'true';
+
+            if (isExpanded) {
+                // Hide menu
+                $menu.removeClass('show').fadeOut(200);
+                $(this).attr('aria-expanded', 'false');
+            } else {
+                // Show menu
+                $menu.addClass('show').fadeIn(200);
+                $(this).attr('aria-expanded', 'true');
+                // Fetch notifications when opening
+                fetchNotifications();
+            }
+        });
+
+        // Close dropdown when clicking outside
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.notifications-dropdown').length) {
+                $('.notifications-menu').removeClass('show').fadeOut(200);
+                $('#notificationsDropdown').attr('aria-expanded', 'false');
+            }
+        });
+
         function fetchNotifications() {
             $.ajax({
                 url: '{{ route('panel.notifications.fetch') }}',
@@ -366,7 +403,7 @@
                     `;
                 });
                 $list.html(html);
-                
+
                 // Show mark all button only if there are unread notifications
                 if (count > 0) {
                     $markAllBtn.show();
