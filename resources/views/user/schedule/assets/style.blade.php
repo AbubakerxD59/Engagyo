@@ -3,7 +3,7 @@
     .accounts-container {
         /* max-height: 280px; */
         /* overflow-y: auto; */
-        overflow-x: hidden;
+        overflow: visible;
         padding: 10px 5px;
         margin-bottom: 10px;
         border: 1px solid #e9ecef;
@@ -45,6 +45,7 @@
          cursor: pointer;
          transition: all 0.2s ease;
          position: relative;
+         overflow: visible;
      }
 
      .account-card:hover {
@@ -147,6 +148,66 @@
          white-space: nowrap;
          overflow: hidden;
          text-overflow: ellipsis;
+     }
+
+     /* Tooltip Styling for Account Cards */
+     .account-card.has-tooltip {
+         position: relative;
+         overflow: visible;
+     }
+
+     .account-card.has-tooltip::after {
+         content: attr(data-tooltip);
+         position: absolute;
+         bottom: calc(100% + 10px);
+         left: 50%;
+         transform: translateX(-50%) translateY(-5px);
+         padding: 8px 12px;
+         background: #333;
+         color: #fff;
+         font-size: 12px;
+         font-weight: 500;
+         white-space: nowrap;
+         border-radius: 6px;
+         opacity: 0;
+         pointer-events: none;
+         transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+         z-index: 10000;
+         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+         visibility: hidden;
+         min-width: max-content;
+     }
+
+     .account-card.has-tooltip::before {
+         content: '';
+         position: absolute;
+         bottom: calc(100% + 4px);
+         left: 50%;
+         transform: translateX(-50%);
+         border-width: 6px;
+         border-style: solid;
+         border-color: #333 transparent transparent transparent;
+         opacity: 0;
+         pointer-events: none;
+         transition: opacity 0.3s ease, visibility 0.3s ease;
+         z-index: 10001;
+         visibility: hidden;
+     }
+
+     .account-card.has-tooltip:hover::after,
+     .account-card.has-tooltip:hover::before {
+         opacity: 1;
+         visibility: visible;
+         transform: translateX(-50%) translateY(0);
+     }
+
+     /* Ensure accounts container doesn't clip tooltips */
+     .accounts-container {
+         overflow: visible;
+     }
+
+     .accounts-grid {
+         position: relative;
      }
 
      /* Responsive adjustments */
