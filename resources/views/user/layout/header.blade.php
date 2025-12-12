@@ -27,8 +27,8 @@
                         <i class="fas fa-spinner fa-spin"></i> Loading notifications...
                     </div>
                 </div>
-                <div class="dropdown-divider"></div>
-                <a href="#" class="dropdown-item dropdown-footer" id="markAllReadBtn" style="display: none;">
+                <div class="dropdown-divider" style="flex-shrink: 0;"></div>
+                <a href="#" class="dropdown-item dropdown-footer" id="markAllReadBtn" style="display: none; flex-shrink: 0; padding: 10px 15px; text-align: center; background-color: #f8f9fa; border-top: 1px solid #dee2e6;">
                     <i class="fas fa-check-double mr-2"></i> Mark all as read
                 </a>
             </div>
@@ -173,22 +173,28 @@
     }
 
     .notifications-menu {
-        width: 350px;
-        max-height: 500px;
-        overflow-y: auto;
+        width: 380px;
+        height: calc(100vh - 60px);
+        max-height: calc(100vh - 60px);
+        overflow: hidden;
         padding: 0;
+        display: flex;
+        flex-direction: column;
     }
 
     .notifications-menu .dropdown-header {
         background-color: #f8f9fa;
         font-weight: 600;
-        padding: 10px 15px;
+        padding: 12px 15px;
         border-bottom: 1px solid #dee2e6;
+        flex-shrink: 0;
     }
 
     .notifications-list {
-        max-height: 400px;
+        flex: 1;
         overflow-y: auto;
+        overflow-x: hidden;
+        min-height: 0;
     }
 
     .notification-item {
@@ -206,6 +212,7 @@
         border-bottom: none;
     }
 
+    /* Unread notification styling */
     .notification-item.unread {
         background-color: #e7f3ff;
         border-left: 3px solid #007bff;
@@ -213,6 +220,31 @@
 
     .notification-item.unread:hover {
         background-color: #d0e7ff;
+    }
+
+    /* Read notification styling */
+    .notification-item.read {
+        background-color: #ffffff;
+        border-left: 3px solid transparent;
+        opacity: 0.85;
+    }
+
+    .notification-item.read:hover {
+        background-color: #f8f9fa;
+        opacity: 1;
+    }
+
+    .notification-item.read .notification-title {
+        color: #6c757d;
+        font-weight: 500;
+    }
+
+    .notification-item.read .notification-body {
+        color: #999;
+    }
+
+    .notification-item.read .notification-time {
+        color: #bbb;
     }
 
     .notification-title {
@@ -315,7 +347,16 @@
                 let html = '';
                 notifications.forEach(function(notification) {
                     const isSystem = notification.is_system;
-                    const itemClass = 'notification-item' + (isSystem ? ' notification-system' : '');
+                    const isRead = notification.is_read;
+                    let itemClass = 'notification-item';
+                    if (isSystem) {
+                        itemClass += ' notification-system';
+                    }
+                    if (isRead) {
+                        itemClass += ' read';
+                    } else {
+                        itemClass += ' unread';
+                    }
                     html += `
                         <div class="${itemClass}" data-id="${notification.id}">
                             <div class="notification-title">${escapeHtml(notification.title)}</div>
@@ -325,12 +366,21 @@
                     `;
                 });
                 $list.html(html);
-                $markAllBtn.show();
+                
+                // Show mark all button only if there are unread notifications
+                if (count > 0) {
+                    $markAllBtn.show();
+                } else {
+                    $markAllBtn.hide();
+                }
 
                 // Add click handlers
                 $('.notification-item').on('click', function() {
                     const notificationId = $(this).data('id');
-                    markNotificationAsRead(notificationId);
+                    const $item = $(this);
+                    if (!$item.hasClass('read')) {
+                        markNotificationAsRead(notificationId);
+                    }
                 });
             }
         }
@@ -342,8 +392,9 @@
                 method: 'POST',
                 success: function(response) {
                     if (response.success) {
-                        // Remove the notification from UI
-                        $(`.notification-item[data-id="${notificationId}"]`).removeClass('unread');
+                        // Update the notification styling to read
+                        const $item = $(`.notification-item[data-id="${notificationId}"]`);
+                        $item.removeClass('unread').addClass('read');
                         // Refresh count
                         fetchNotifications();
                     }

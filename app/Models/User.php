@@ -176,6 +176,17 @@ class User extends Authenticatable
         return $this->belongsTo(Timezone::class);
     }
 
+    /**
+     * Get the system notifications that this user has read
+     */
+    public function readSystemNotifications()
+    {
+        return $this->belongsToMany(Notification::class, 'notification_user')
+                    ->withPivot('is_read', 'read_at')
+                    ->withTimestamps()
+                    ->wherePivot('is_read', true);
+    }
+
     public function getScheduledActiveAccounts()
     {
         // Pinterest Boards

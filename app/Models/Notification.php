@@ -35,6 +35,16 @@ class Notification extends Model
     }
 
     /**
+     * Get the users that have read this system notification
+     */
+    public function users()
+    {
+        return $this->belongsToMany(User::class, 'notification_user')
+                    ->withPivot('is_read', 'read_at')
+                    ->withTimestamps();
+    }
+
+    /**
      * Scope to get unread notifications
      */
     public function scopeUnread($query)
