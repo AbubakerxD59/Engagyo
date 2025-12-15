@@ -90,26 +90,35 @@ class PostService
         if ($post->social_type == "facebook") { //Facebook
             if ($post->type == "content_only") {
                 $postData = [
-                    'message' => $post->title
+                    'message' => $post->title ?: ' ' // Facebook requires a message for content_only posts, use space if empty
                 ];
             }
             if ($post->type == "photo") {
                 $postData = [
-                    "caption" => $post->title,
                     "url" => $post->image
                 ];
+                // Only include message if title is not empty (Facebook prefers 'message' over 'caption')
+                if (!empty($post->title)) {
+                    $postData["message"] = $post->title;
+                }
             }
             if ($post->type == "video") {
                 $postData = [
-                    "description" => $post->title,
                     "file_url" => $post->video_key
                 ];
+                // Only include description if title is not empty
+                if (!empty($post->title)) {
+                    $postData["description"] = $post->title;
+                }
             }
             if ($post->type == "link") {
                 $postData = [
-                    'link' => $post->url,
-                    'message' => $post->title
+                    'link' => $post->url
                 ];
+                // Only include message if title is not empty (Facebook rejects empty messages)
+                if (!empty($post->title)) {
+                    $postData['message'] = $post->title;
+                }
             }
         }
         if ($post->social_type == "pinterest") { //Pinterest
