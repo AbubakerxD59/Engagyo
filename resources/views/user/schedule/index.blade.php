@@ -26,7 +26,7 @@
                                             data-tooltip="{{ $account->facebook?->username }}">
                                             <div class="account-card-inner">
                                                 <div class="account-avatar">
-                                                    <img src="{{ $account->facebook?->profile_image }}"
+                                                    <img src="{{ $account->profile_image }}"
                                                         onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
                                                     <span class="platform-badge facebook">
                                                         <i class="fab fa-facebook-f"></i>

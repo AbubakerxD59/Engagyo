@@ -615,7 +615,12 @@ class Post extends Model
         $social_type = $this->social_type;
         $profile_image = '';
         if ($social_type == "facebook") {
-            $profile_image = $this->page?->facebook ? $this->page->facebook->profile_image : null;
+            // Use page's profile image if available, otherwise fall back to parent Facebook account's profile image
+            if ($this->page && !empty($this->page->profile_image)) {
+                $profile_image = $this->page->profile_image;
+            } elseif ($this->page?->facebook) {
+                $profile_image = $this->page->facebook->profile_image;
+            }
         }
         if ($social_type == "pinterest") {
             $profile_image = $this->board?->pinterest ? $this->board->pinterest->profile_image : null;

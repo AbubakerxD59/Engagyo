@@ -84,6 +84,13 @@ class Page extends Model
         );
     }
 
+    protected function profileImage(): Attribute
+    {
+        return Attribute::make(
+            get: fn($value) => !empty($value) ? asset("images/" . $value) : no_image()
+        );
+    }
+
     protected function expiresIn(): Attribute
     {
         return Attribute::make(

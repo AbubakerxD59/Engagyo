@@ -23,7 +23,7 @@
                                 <div>
                                     @if ($account->type == 'facebook')
                                         <img style="width:35px;height:35px;"
-                                            src="{{ $account->facebook?->profile_image }}" class="rounded-circle"
+                                            src="{{ $account->profile_image }}" class="rounded-circle"
                                             alt="{{ social_logo('facebook') }}"
                                             onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
                                         <img src="{{ social_logo('facebook') }}" alt=""

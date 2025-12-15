@@ -371,13 +371,19 @@ class PostController extends BaseController
      */
     private function formatFacebookAccount(Page $page): array
     {
+        // Use page's profile image if available, otherwise fall back to parent Facebook account's profile image
+        $profileImage = null;
+        if (!empty($page->profile_image)) {
+            $profileImage = $page->profile_image; // Accessor will return full URL
+        } elseif ($page->facebook) {
+            $profileImage = $page->facebook->profile_image; // Accessor will return full URL
+        }
+        
         return [
             'type' => 'facebook_page',
             'page_id' => $page->page_id,
             'name' => $page->name,
-            'profile_image' => $page->facebook?->profile_image
-                ? url($page->facebook->profile_image)
-                : null,
+            'profile_image' => $profileImage,
         ];
     }
 
