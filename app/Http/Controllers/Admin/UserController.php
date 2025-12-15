@@ -148,7 +148,6 @@ class UserController extends Controller
         $roles = Role::get();
         $packages = Package::where('is_active', true)->orderBy('sort_order')->get();
         $featuresWithUsage = $user->getFeaturesWithUsage();
-        dd($featuresWithUsage);
         return view('admin.users.edit', compact('roles', 'user', 'packages', 'featuresWithUsage'));
     }
 

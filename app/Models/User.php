@@ -334,6 +334,7 @@ class User extends Authenticatable
             case 'social_accounts':
                 // Count all social accounts: Facebook pages + Pinterest boards + TikTok accounts
                 $accounts = $this->getAccounts();
+                dd($accounts, $this->id);
                 return $accounts->count();
 
             case 'scheduled_posts_per_account':
