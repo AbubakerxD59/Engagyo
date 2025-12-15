@@ -10,8 +10,8 @@
         @if ($packageInfo['status'])
             <small>
                 @if ($packageInfo['expires_at'])
-                    {{ $packageInfo['expires_at']->format('jS M, Y') }}
                     <br>
+                    {{ $packageInfo['expires_at']->format('jS M, Y') }}
                 @endif
             </small>
         @endif

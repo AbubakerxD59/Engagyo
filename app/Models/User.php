@@ -269,9 +269,23 @@ class User extends Authenticatable
 
     public function getActiveUserPackageAttribute()
     {
-        $package =  $this->userPackages()->where('is_active', true)->latest()->first();
+        // Check if relationship is already loaded
+        if ($this->relationLoaded('userPackages')) {
+            $package = $this->userPackages->where('is_active', true)->sortByDesc('id')->first();
+            if (!$package) {
+                $package = $this->userPackages->sortByDesc('id')->first();
+            }
+            // Ensure package relationship is loaded
+            if ($package && !$package->relationLoaded('package')) {
+                $package->load('package');
+            }
+            return $package;
+        }
+
+        // If not loaded, query the database
+        $package = $this->userPackages()->with('package')->where('is_active', true)->latest()->first();
         if (!$package) {
-            $package = $this->userPackages()->latest()->first();
+            $package = $this->userPackages()->with('package')->latest()->first();
         }
         return $package;
     }
@@ -309,21 +323,28 @@ class User extends Authenticatable
 
         if ($this->activeUserPackage && $this->activeUserPackage->package) {
             $package = $this->activeUserPackage->package;
+
+            // Query features with pivot data
             $features = $package->features()
                 ->wherePivot('is_enabled', true)
                 ->get()
                 ->map(function ($feature) {
                     return [
                         'id' => $feature->id,
-                        'key' => $feature->key,
-                        'name' => $feature->name,
-                        'type' => $feature->type,
-                        'description' => $feature->description,
-                        'limit_value' => $feature->pivot->limit_value,
-                        'is_enabled' => $feature->pivot->is_enabled,
+                        'key' => $feature->key ?? null,
+                        'name' => $feature->name ?? 'Unknown',
+                        'type' => $feature->type ?? 'boolean',
+                        'description' => $feature->description ?? '',
+                        'limit_value' => $feature->pivot->limit_value ?? null,
+                        'is_enabled' => $feature->pivot->is_enabled ?? false,
                         'is_unlimited' => $feature->pivot->is_unlimited ?? false,
                     ];
-                });
+                })
+                ->filter(function ($feature) {
+                    // Filter out features without a key
+                    return !empty($feature['key']);
+                })
+                ->values();
         }
 
         return $features;
@@ -334,33 +355,66 @@ class User extends Authenticatable
      */
     public function getFeatureUsage($featureKey)
     {
+        if (empty($featureKey)) {
+            return 0;
+        }
+
         switch ($featureKey) {
             case 'social_accounts':
                 // Count all social accounts: Facebook pages + Pinterest boards + TikTok accounts
-                $accounts = $this->getAccounts();
-                return $accounts->count();
+                try {
+                    $facebookCount = $this->pages()->count();
+                    $pinterestCount = $this->boards()->count();
+                    $tiktokCount = $this->tiktok()->count();
+                    return $facebookCount + $pinterestCount + $tiktokCount;
+                } catch (\Exception $e) {
+                    return 0;
+                }
 
             case 'scheduled_posts_per_account':
                 // Count scheduled posts (posts with scheduled = 1)
-                return \App\Models\Post::where('user_id', $this->id)
-                    ->where('scheduled', 1)
-                    ->count();
+                try {
+                    return Post::where('user_id', $this->id)
+                        ->where('scheduled', 1)
+                        ->count();
+                } catch (\Exception $e) {
+                    return 0;
+                }
 
             case 'rss_feed_automation':
                 // Count RSS feed automations (domains)
-                return $this->domains()->count();
+                try {
+                    return $this->domains()->count();
+                } catch (\Exception $e) {
+                    return 0;
+                }
 
             case 'video_publishing':
                 // Boolean feature - return 1 if user has any video posts capability
-                return 1; // Placeholder - would need actual video post tracking
+                // Check if user has any video posts
+                try {
+                    return \App\Models\Post::where('user_id', $this->id)
+                        ->where('type', 'video')
+                        ->count() > 0 ? 1 : 0;
+                } catch (\Exception $e) {
+                    return 0;
+                }
 
             case 'api_keys':
                 // Count API keys
-                return $this->apiKeys()->count();
+                try {
+                    return $this->apiKeys()->count();
+                } catch (\Exception $e) {
+                    return 0;
+                }
 
             case 'api_access':
-                // Boolean feature
-                return $this->apiKeys()->count() > 0 ? 1 : 0;
+                // Boolean feature - return 1 if user has any active API keys
+                try {
+                    return $this->apiKeys()->where('is_active', true)->count() > 0 ? 1 : 0;
+                } catch (\Exception $e) {
+                    return 0;
+                }
 
             default:
                 return 0;
@@ -375,22 +429,44 @@ class User extends Authenticatable
         $packageFeatures = $this->getPackageFeatures();
 
         return $packageFeatures->map(function ($feature) {
-            $usage = $this->getFeatureUsage($feature['key']);
-            $limit = $feature['limit_value'];
+            // Get usage count for the feature
+            $featureKey = $feature['key'] ?? null;
+            $usage = 0;
+
+            if (!empty($featureKey)) {
+                $usage = $this->getFeatureUsage($featureKey);
+            }
+
+            $limit = $feature['limit_value'] ?? null;
             $isUnlimited = $feature['is_unlimited'] ?? false;
 
+            // Determine if feature is truly unlimited
+            $isUnlimitedFeature = $isUnlimited || $feature['type'] === 'unlimited' || ($feature['type'] === 'numeric' && $limit === null);
+
+            // Calculate usage percentage (only for limited features)
+            $usagePercentage = 0;
+            if (!$isUnlimitedFeature && $limit && $limit > 0) {
+                $usagePercentage = round(($usage / $limit) * 100, 2);
+            }
+
+            // Check if over limit (only for limited features)
+            $isOverLimit = false;
+            if (!$isUnlimitedFeature && $limit && $limit > 0) {
+                $isOverLimit = $usage > $limit;
+            }
+
             return [
-                'id' => $feature['id'],
-                'key' => $feature['key'],
-                'name' => $feature['name'],
-                'type' => $feature['type'],
-                'description' => $feature['description'],
+                'id' => $feature['id'] ?? null,
+                'key' => $featureKey,
+                'name' => $feature['name'] ?? 'Unknown',
+                'type' => $feature['type'] ?? 'boolean',
+                'description' => $feature['description'] ?? '',
                 'limit' => $limit,
                 'usage' => $usage,
-                'is_unlimited' => $isUnlimited || $feature['type'] === 'unlimited' || ($feature['type'] === 'numeric' && $limit === null),
-                'is_boolean' => $feature['type'] === 'boolean',
-                'usage_percentage' => ($limit && $limit > 0 && !$isUnlimited) ? round(($usage / $limit) * 100, 2) : 0,
-                'is_over_limit' => ($limit && $limit > 0 && !$isUnlimited) ? $usage > $limit : false,
+                'is_unlimited' => $isUnlimitedFeature,
+                'is_boolean' => ($feature['type'] ?? 'boolean') === 'boolean',
+                'usage_percentage' => $usagePercentage,
+                'is_over_limit' => $isOverLimit,
             ];
         });
     }
