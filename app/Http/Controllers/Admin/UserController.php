@@ -144,10 +144,22 @@ class UserController extends Controller
      */
     public function edit(string $id)
     {
-        $user = User::with(['package', 'userPackages.package.features'])->find($id);
+        $user = User::with([
+            'package',
+            'userPackages.package.features',
+            'facebook',
+            'pinterest',
+            'tiktok',
+            'pages',
+            'boards',
+            'domains',
+            'posts',
+            'apiKeys',
+        ])->find($id);
         $roles = Role::get();
         $packages = Package::where('is_active', true)->orderBy('sort_order')->get();
         $featuresWithUsage = $user->getFeaturesWithUsage();
+        dd($featuresWithUsage);
         return view('admin.users.edit', compact('roles', 'user', 'packages', 'featuresWithUsage'));
     }
 
