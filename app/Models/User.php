@@ -95,6 +95,10 @@ class User extends Authenticatable
         return $this->hasMany(Page::class, 'user_id', 'id');
     }
 
+    public function posts()
+    {
+        return $this->hasMany(Post::class, 'user_id', 'id');
+    }
     public function scopeSearch($query, $value)
     {
         $query->where('first_name', 'like', "%{$value}%")->where('last_name', 'like', "%{$value}%")->orWhere('email', 'like', "%{$value}%");
