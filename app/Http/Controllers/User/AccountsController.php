@@ -176,15 +176,49 @@ class AccountsController extends Controller
     {
         $page = $request->page_data;
         if ($page) {
-            $user = Auth::user();
-            $facebook = $this->facebook->search($request->fb_id)->first();
-            $facebook->pages()->updateOrCreate(["user_id" => $user->id, "page_id" => $page["id"]], [
-                "name" => $page["name"],
-                "status" => 1,
-                "access_token" => $page["access_token"],
-                "expires_in" => time()
-            ]);
-            return response()->json(["success" => true, "message" => "Page connected Successfully!"]);
+            try {
+                $user = Auth::user();
+                $facebook = $this->facebook->search($request->fb_id)->first();
+
+                // Handle profile image - download if needed
+                $profileImage = null;
+
+                // If profile_image already exists in page_data as a filename, use it
+                // (profile_image is already downloaded and saved when pages are fetched)
+                if (!empty($page["profile_image"])) {
+                    $profileImage = $page["profile_image"];
+                } else {
+                    // Fetch profile image from Facebook API and download it as fallback
+                    $profileImageResponse = $this->facebookService->pageProfileImage($page["access_token"], $page["id"]);
+                    if ($profileImageResponse["success"]) {
+                        $profileImageData = $profileImageResponse["data"];
+                        $profileImageUrl = $profileImageData->getField("url");
+
+                        // Download the image
+                        if ($profileImageUrl) {
+                            $profileImage = saveImageFromUrl($profileImageUrl);
+                        }
+                    }
+                }
+
+                $pageData = [
+                    "name" => $page["name"],
+                    "status" => 1,
+                    "access_token" => $page["access_token"],
+                    "expires_in" => time()
+                ];
+
+                // Add profile_image if we have it
+                if ($profileImage) {
+                    $pageData["profile_image"] = $profileImage;
+                }
+
+                $facebook->pages()->updateOrCreate(["user_id" => $user->id, "page_id" => $page["id"]], $pageData);
+
+                return response()->json(["success" => true, "message" => "Page connected Successfully!"]);
+            } catch (Exception $e) {
+                return response()->json(["success" => false, "message" => "Failed to connect page: " . $e->getMessage()]);
+            }
         } else {
             return response()->json(["success" => false, "message" => "Something went Wrong!"]);
         }
@@ -229,8 +263,8 @@ class AccountsController extends Controller
 
                 return response()->json([
                     "success" => true,
-                    "message" => $page->rss_paused 
-                        ? "RSS automation paused for this page." 
+                    "message" => $page->rss_paused
+                        ? "RSS automation paused for this page."
                         : "RSS automation resumed for this page.",
                     "paused" => $page->rss_paused
                 ]);
@@ -241,8 +275,8 @@ class AccountsController extends Controller
 
                 return response()->json([
                     "success" => true,
-                    "message" => $board->rss_paused 
-                        ? "RSS automation paused for this board." 
+                    "message" => $board->rss_paused
+                        ? "RSS automation paused for this board."
                         : "RSS automation resumed for this board.",
                     "paused" => $board->rss_paused
                 ]);

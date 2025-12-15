@@ -16,6 +16,7 @@ class Page extends Model
         "fb_id",
         "page_id",
         "name",
+        "profile_image",
         "status",
         "last_fetch",
         "shuffle",
