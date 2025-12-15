@@ -132,7 +132,7 @@ class FacebookService
         try {
             // Find the page first
             $page = Page::find($page_id);
-            
+
             if (!$page) {
                 return [
                     "success" => false,
@@ -141,20 +141,20 @@ class FacebookService
             }
 
             $getOAuth2Client = $this->facebook->getOAuth2Client();
-            
+
             // Try to get a long-lived access token
             $longLivedToken = $getOAuth2Client->getLongLivedAccessToken($access_token);
-            
+
             if (!$longLivedToken) {
                 return [
                     "success" => false,
                     "message" => "Failed to refresh access token. The token may have expired. Please reconnect your Facebook account.",
                 ];
             }
-            
+
             // Debug the new token to get metadata
             $tokenMetadata = $getOAuth2Client->debugToken($longLivedToken);
-            
+
             // Check if token is valid
             if (!$tokenMetadata->getIsValid()) {
                 return [
@@ -162,18 +162,18 @@ class FacebookService
                     "message" => "The refreshed token is invalid. Please reconnect your Facebook account.",
                 ];
             }
-            
+
             $newAccessToken = $longLivedToken->getValue();
-            
+
             // Get expiration time
             $expiresAt = $tokenMetadata->getField("data_access_expires_at");
-            
+
             // Update the page with new token
             $page->update([
                 "access_token" => $newAccessToken,
                 "expires_in" => $expiresAt,
             ]);
-            
+
             $response = [
                 "success" => true,
                 "data" => [
@@ -181,9 +181,8 @@ class FacebookService
                     "access_token" => $newAccessToken
                 ],
             ];
-            
+
             info("Facebook token refreshed successfully for page ID: {$page_id}");
-            
         } catch (FacebookResponseException $e) {
             // When Graph returns an error
             $error = $e->getMessage();
@@ -582,10 +581,10 @@ class FacebookService
             // If token is expired or invalid, try to refresh it
             if (!$account->validToken()) {
                 info("Facebook token expired for account ID: {$account->id}. Attempting to refresh...");
-                
+
                 $service = new FacebookService();
                 $token = $service->refreshAccessToken($access_token, $account->id);
-                
+
                 if ($token["success"]) {
                     $data = $token["data"];
                     $response = ["success" => true, "access_token" => $data["access_token"]];
@@ -600,7 +599,6 @@ class FacebookService
             }
 
             return $response;
-
         } catch (\Exception $e) {
             info("Facebook validateToken error for account ID: " . ($account->id ?? 'unknown') . ". Error: " . $e->getMessage());
             return [

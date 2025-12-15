@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('pages', function (Blueprint $table) {
-            $table->longText('profile_image')->nullable()->after('name');
+            $table->longText('profile_image')->nullable()->change();
         });
     }
 
@@ -22,8 +22,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('pages', function (Blueprint $table) {
-            $table->dropColumn('profile_image');
+            $table->string('profile_image')->nullable()->change();
         });
     }
 };
-
