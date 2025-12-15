@@ -29,84 +29,36 @@
                         <p>{{ __('partials.left_menu_dashboard') }}</p>
                     </a>
                 </li>
-                {{-- Manage Users --}}
-                @if (check_permission('view_user') || check_permission('view_role') || check_permission('view_permission'))
-                    <?php
-                    $user = in_array(request()->route()->getName(), ['admin.users.index', 'admin.users.create', 'admin.users.edit', 'admin.roles.index', 'admin.roles.create', 'admin.roles.edit', 'admin.permissions.index']) ? true : false;
-                    ?>
-                    <li class="nav-item {{ $user ? 'menu-open' : '' }}">
-                        <a href="#" class="nav-link {{ $user ? 'active' : '' }}">
+                {{-- Users --}}
+                @can('view_user')
+                    <li class="nav-item">
+                        <a href="{{ route('admin.users.index') }}"
+                            class="nav-link {{ in_array(request()->route()->getName(), ['admin.users.index', 'admin.users.create', 'admin.users.edit']) ? 'active' : '' }}">
                             <i class="nav-icon fas fa-user"></i>
-                            <p>
-                                USERS
-                                <i class="right fas fa-angle-left"></i>
-                            </p>
+                            <p>Users</p>
                         </a>
-                        <ul class="nav nav-treeview">
-                            <li class="nav-item">
-                                @can('view_user')
-                                    <a href="{{ route('admin.users.index') }}"
-                                        class="nav-link {{ in_array(request()->route()->getName(), ['admin.users.index', 'admin.users.create', 'admin.users.edit']) ? 'active' : '' }}">
-                                        <i class="nav-icon far fa-dot-circle"></i>
-                                        <p>Users</p>
-                                    </a>
-                                @endcan
-                                @can('view_role')
-                                    <a href="{{ route('admin.roles.index') }}"
-                                        class="nav-link {{ in_array(request()->route()->getName(), ['admin.roles.index', 'admin.roles.create', 'admin.roles.edit']) ? 'active' : '' }}">
-                                        <i class="nav-icon far fa-dot-circle"></i>
-                                        <p>Roles</p>
-                                    </a>
-                                @endcan
-                                @can('view_permission')
-                                    <a href="{{ route('admin.permissions.index') }}"
-                                        class="nav-link {{ in_array(request()->route()->getName(), ['admin.permissions.index']) ? 'active' : '' }}">
-                                        <i class="nav-icon far fa-dot-circle"></i>
-                                        <p>Permissions</p>
-                                    </a>
-                                @endcan
-                            </li>
-                        </ul>
                     </li>
-                @endif
-                {{-- Manage Packages --}}
-                {{-- @if (check_permission('view_package') || check_permission('view_feature'))
-                    <?php
-                    $package = in_array(request()->route()->getName(), ['packages.index', 'packages.create', 'packages.edit', 'features.index', 'features.create', 'features.edit', 'promo-code.index', 'promo-code.create', 'promo-code.edit']) ? true : false;
-                    ?>
-                    <li class="nav-item {{ $package ? 'menu-open' : '' }}">
-                        <a href="#" class="nav-link {{ $package ? 'active' : '' }}">
+                @endcan
+                {{-- Packages --}}
+                @can('view_package')
+                    <li class="nav-item">
+                        <a href="{{ route('admin.packages.index') }}"
+                            class="nav-link {{ in_array(request()->route()->getName(), ['admin.packages.index', 'admin.packages.create', 'admin.packages.edit']) ? 'active' : '' }}">
                             <i class="nav-icon fas fa-credit-card"></i>
-                            <p>
-                                PACKAGES
-                                <i class="right fas fa-angle-left"></i>
-                            </p>
+                            <p>Packages</p>
                         </a>
-                        <ul class="nav nav-treeview">
-                            <li class="nav-item">
-                                @can('view_package')
-                                    <a href="{{ route('admin.packages.index') }}"
-                                        class="nav-link {{ in_array(request()->route()->getName(), ['packages.index', 'packages.create', 'packages.edit']) ? 'active' : '' }}">
-                                        <i class="nav-icon far fa-dot-circle"></i>
-                                        <p>Packages</p>
-                                    </a>
-                                @endcan
-                                @can('view_feature')
-                                    <a href="{{ route('admin.features.index') }}"
-                                        class="nav-link {{ in_array(request()->route()->getName(), ['features.index', 'features.create', 'features.edit']) ? 'active' : '' }}">
-                                        <i class="nav-icon far fa-dot-circle"></i>
-                                        <p>Services</p>
-                                    </a>
-                                @endcan
-                                <a href="{{ route('admin.promo-code.index') }}"
-                                    class="nav-link {{ in_array(request()->route()->getName(), ['promo-code.index', 'promo-code.create', 'promo-code.edit']) ? 'active' : '' }}">
-                                    <i class="nav-icon far fa-dot-circle"></i>
-                                    <p>Promo Codes</p>
-                                </a>
-                            </li>
-                        </ul>
                     </li>
-                @endif --}}
+                @endcan
+                {{-- Features --}}
+                @can('view_feature')
+                    <li class="nav-item">
+                        <a href="{{ route('admin.features.index') }}"
+                            class="nav-link {{ in_array(request()->route()->getName(), ['admin.features.index', 'admin.features.create', 'admin.features.edit']) ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-star"></i>
+                            <p>Features</p>
+                        </a>
+                    </li>
+                @endcan
             </ul>
         </nav>
     </div>

@@ -22,16 +22,13 @@
                                                 <div class="table-responsive">
                                                     <table class="table table-striped table-bordered" id="dataTable">
                                                         <thead>
-                                                            <th>Id</th>
-                                                            <th>Profile Pic</th>
-                                                            <th>Full Name</th>
-                                                            <th>Email</th>
-                                                            <th>Username</th>
-                                                            <th>Country</th>
-                                                            <th>City</th>
-                                                            <th>Role</th>
-                                                            <th>Status</th>
-                                                            <th>Action</th>
+                                                            <th data-data="id">ID</th>
+                                                            <th data-data="name_link">Full Name</th>
+                                                            <th data-data="email">Email</th>
+                                                            <th data-data="package">Package</th>
+                                                            <th data-data="role">Role</th>
+                                                            <th data-data="status_span">Status</th>
+                                                            <th data-data="action">Action</th>
                                                         </thead>
                                                         <tbody>
                                                             <tr>
@@ -60,7 +57,7 @@
             'iDisplayLength': 10,
             "lengthChange": true,
             "searching": true,
-            "ordering": false,
+            "ordering": true,
             "info": true,
             "autoWidth": false,
             "responsive": true,
@@ -69,35 +66,34 @@
             ajax: {
                 url: "{{ route('admin.users.dataTable') }}",
             },
+            order: [[0, 'desc']],
             columns: [{
                     data: 'id'
                 },
                 {
-                    data: 'profile',
-                },
-                {
-                    data: 'name_link'
+                    data: 'name_link',
+                    orderable: false
                 },
                 {
                     data: 'email'
                 },
                 {
-                    data: 'username'
+                    data: 'package_html',
+                    name: 'package_html',
+                    orderable: false
                 },
                 {
-                    data: 'country'
+                    data: 'role_name',
+                    name: 'role_name'
                 },
                 {
-                    data: 'city'
+                    data: 'status_span',
+                    orderable: false
                 },
                 {
-                    data: 'role'
-                },
-                {
-                    data: 'status_span'
-                },
-                {
-                    data: 'action'
+                    data: 'action',
+                    orderable: false,
+                    searchable: false
                 }
             ],
         });

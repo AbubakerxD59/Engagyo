@@ -11,8 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('pages', function (Blueprint $table) {
-            $table->longText('profile_image')->nullable()->change();
+        Schema::table('users', function (Blueprint $table) {
+            $table->foreignId('package_id')->nullable()->after('timezone_id')->constrained('packages')->onDelete('set null');
         });
     }
 
@@ -21,8 +21,9 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('pages', function (Blueprint $table) {
-            $table->string('profile_image')->nullable()->change();
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropForeign(['package_id']);
+            $table->dropColumn('package_id');
         });
     }
 };

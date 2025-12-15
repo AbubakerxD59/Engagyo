@@ -1,12 +1,13 @@
 @extends('admin.layouts.secure')
-@section('page_title', 'Add Feature')
+@section('page_title', 'Edit Feature')
 @section('page_content')
-    @can('add_feature')
+    @can('edit_feature')
         <div class="page-content">
-            <form method="POST" action="{{ route('admin.features.store') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('admin.features.update', $feature->id) }}" enctype="multipart/form-data">
                 @csrf
+                @method('PUT')
                 <div class="content-header clearfix">
-                    <h1 class="float-left"> Add Feature
+                    <h1 class="float-left"> Edit Feature
                         <small>
                             <i class="fas fa-arrow-circle-left"></i>
                             <a href="{{ route('admin.features.index') }}">back to Features list</a>
@@ -15,7 +16,7 @@
                     <div class="float-right">
                         <button type="submit" name="action" value="save" class="btn btn-primary">
                             <i class="far fa-save"></i>
-                            Save
+                            Update
                         </button>
                     </div>
                 </div>
@@ -43,7 +44,7 @@
                                             </div>
                                             <div class="col-md-9">
                                                 <input type="text" class="form-control" name="key" id="key"
-                                                    value="{{ old('key') }}" placeholder="e.g., facebook_accounts" required>
+                                                    value="{{ old('key', $feature->key) }}" placeholder="e.g., facebook_accounts" required>
                                                 <small class="form-text text-muted">Unique identifier for the feature (use lowercase with underscores)</small>
                                                 @error('key')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -57,7 +58,7 @@
                                             </div>
                                             <div class="col-md-9">
                                                 <input type="text" class="form-control" name="name" id="name"
-                                                    value="{{ old('name') }}" placeholder="Enter feature name" required>
+                                                    value="{{ old('name', $feature->name) }}" placeholder="Enter feature name" required>
                                                 @error('name')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror
@@ -70,9 +71,9 @@
                                             </div>
                                             <div class="col-md-9">
                                                 <select class="form-control" name="type" id="type" required>
-                                                    <option value="boolean" {{ old('type') == 'boolean' ? 'selected' : '' }}>Boolean</option>
-                                                    <option value="numeric" {{ old('type') == 'numeric' ? 'selected' : '' }}>Numeric</option>
-                                                    <option value="unlimited" {{ old('type') == 'unlimited' ? 'selected' : '' }}>Unlimited</option>
+                                                    <option value="boolean" {{ old('type', $feature->type) == 'boolean' ? 'selected' : '' }}>Boolean</option>
+                                                    <option value="numeric" {{ old('type', $feature->type) == 'numeric' ? 'selected' : '' }}>Numeric</option>
+                                                    <option value="unlimited" {{ old('type', $feature->type) == 'unlimited' ? 'selected' : '' }}>Unlimited</option>
                                                 </select>
                                                 <small class="form-text text-muted">Boolean: enabled/disabled, Numeric: limited quantity, Unlimited: no limit</small>
                                                 @error('type')
@@ -87,7 +88,7 @@
                                             </div>
                                             <div class="col-md-9">
                                                 <input type="number" class="form-control" name="default_value" id="default_value"
-                                                    value="{{ old('default_value') }}" placeholder="Enter default value">
+                                                    value="{{ old('default_value', $feature->default_value) }}" placeholder="Enter default value">
                                                 <small class="form-text text-muted">Default value for this feature (0 for boolean false, number for numeric)</small>
                                                 @error('default_value')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -101,7 +102,7 @@
                                             </div>
                                             <div class="col-md-9">
                                                 <textarea class="form-control" name="description" id="description" rows="3"
-                                                    placeholder="Enter feature description">{{ old('description') }}</textarea>
+                                                    placeholder="Enter feature description">{{ old('description', $feature->description) }}</textarea>
                                                 @error('description')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror
@@ -115,7 +116,7 @@
                                             <div class="col-md-9">
                                                 <div class="form-check">
                                                     <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1"
-                                                        {{ old('is_active', true) ? 'checked' : '' }}>
+                                                        {{ old('is_active', $feature->is_active) ? 'checked' : '' }}>
                                                     <label class="form-check-label" for="is_active">
                                                         Active
                                                     </label>
@@ -151,3 +152,4 @@
         });
     </script>
 @endpush
+

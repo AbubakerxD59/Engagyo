@@ -1,7 +1,7 @@
 @extends('admin.layouts.secure')
 @section('page_title', 'Packages')
 @section('page_content')
-    @can('view_user')
+    @can('view_package')
         <div class="page-content">
             <div class="content-header clearfix">
                 <h1 class="float-left">Packages</h1>

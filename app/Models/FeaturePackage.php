@@ -11,6 +11,13 @@ class FeaturePackage extends Model
 
     protected $fillable = [
         'package_id',
-        'feature_id'
+        'feature_id',
+        'limit_value',
+        'is_enabled'
+    ];
+
+    protected $casts = [
+        'is_enabled' => 'boolean',
+        'limit_value' => 'integer',
     ];
 }

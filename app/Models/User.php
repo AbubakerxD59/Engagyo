@@ -32,6 +32,7 @@ class User extends Authenticatable
         'status',
         'timezone_id',
         'rss_filters',
+        'package_id',
     ];
 
     /**
@@ -147,6 +148,82 @@ class User extends Authenticatable
         return $role ? $role->name : '';
     }
 
+    protected function nameLink(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => view('admin.users.dataTable.name_link', ['user' => $this])->render()
+        );
+    }
+
+    /**
+     * Get package status information for DataTable display
+     */
+    public function getPackageStatusInfo()
+    {
+        $info = [
+            'package_name' => null,
+            'expires_at' => null,
+            'status' => null, // 'expired', 'expiring_soon', 'active', 'full_access'
+            'badge_class' => null,
+            'badge_text' => null,
+        ];
+        if ($this->activeUserPackage && $this->activeUserPackage->package) {
+            $info['package_name'] = $this->activeUserPackage->package->name;
+
+            if (!empty($this->activeUserPackage->expires_at)) {
+                $expiresAt = $this->activeUserPackage->expires_at;
+                $info['expires_at'] = $expiresAt;
+
+                if ($expiresAt->isPast()) {
+                    $info['status'] = 'expired';
+                    $info['badge_class'] = 'badge-danger';
+                    $info['badge_text'] = 'Expired';
+                } elseif ($expiresAt->diffInDays(now()) <= 7) {
+                    $info['status'] = 'expiring_soon';
+                    $info['badge_class'] = 'badge-warning';
+                    $info['badge_text'] = 'Expiring Soon';
+                } else {
+                    $info['status'] = 'active';
+                    $info['badge_class'] = 'badge-success';
+                    $info['badge_text'] = 'Active';
+                }
+            } else {
+                $info['status'] = 'full_access';
+                $info['badge_class'] = 'badge-info';
+                $info['badge_text'] = 'Full Access';
+            }
+        } elseif ($this->package) {
+            $info['package_name'] = $this->package->name;
+        }
+
+        return $info;
+    }
+
+    protected function packageHtml(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => view('admin.users.dataTable.package', ['user' => $this])->render()
+        );
+    }
+
+    protected function statusSpan(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => view('admin.users.dataTable.status', ['user' => $this])->render()
+        );
+    }
+
+    protected function roleName(): Attribute
+    {
+        return Attribute::make(
+            get: fn() => $this->getRole()
+        );
+    }
+    public function getActionAttribute()
+    {
+        return view("admin.users.dataTable.action", ['user' => $this])->render();
+    }
+
     public function getAccounts()
     {
         // Pinterest Boards
@@ -176,15 +253,34 @@ class User extends Authenticatable
         return $this->belongsTo(Timezone::class);
     }
 
+    public function package()
+    {
+        return $this->belongsTo(Package::class);
+    }
+
+    public function userPackages()
+    {
+        return $this->hasMany(UserPackage::class);
+    }
+
+    public function getActiveUserPackageAttribute()
+    {
+        $package =  $this->userPackages()->where('is_active', true)->latest()->first();
+        if (!$package) {
+            $package = $this->userPackages()->latest()->first();
+        }
+        return $package;
+    }
+
     /**
      * Get the system notifications that this user has read
      */
     public function readSystemNotifications()
     {
         return $this->belongsToMany(Notification::class, 'notification_user')
-                    ->withPivot('is_read', 'read_at')
-                    ->withTimestamps()
-                    ->wherePivot('is_read', true);
+            ->withPivot('is_read', 'read_at')
+            ->withTimestamps()
+            ->wherePivot('is_read', true);
     }
 
     public function getScheduledActiveAccounts()
@@ -198,5 +294,100 @@ class User extends Authenticatable
         $accounts = collect();
         $accounts = $boards->concat($pages)->concat($tiktoks);
         return $accounts;
+    }
+
+    /**
+     * Get features available to the user from their active package
+     */
+    public function getPackageFeatures()
+    {
+        $features = collect();
+        
+        if ($this->activeUserPackage && $this->activeUserPackage->package) {
+            $package = $this->activeUserPackage->package;
+            $features = $package->features()
+                ->wherePivot('is_enabled', true)
+                ->get()
+                ->map(function ($feature) {
+                    return [
+                        'id' => $feature->id,
+                        'key' => $feature->key,
+                        'name' => $feature->name,
+                        'type' => $feature->type,
+                        'description' => $feature->description,
+                        'limit_value' => $feature->pivot->limit_value,
+                        'is_enabled' => $feature->pivot->is_enabled,
+                    ];
+                });
+        }
+        
+        return $features;
+    }
+
+    /**
+     * Get usage count for a specific feature by key
+     */
+    public function getFeatureUsage($featureKey)
+    {
+        switch ($featureKey) {
+            case 'social_accounts':
+                // Count all social accounts: Facebook pages + Pinterest boards + TikTok accounts
+                $facebookCount = $this->pages()->count();
+                $pinterestCount = $this->boards()->count();
+                $tiktokCount = $this->tiktok()->count();
+                return $facebookCount + $pinterestCount + $tiktokCount;
+                
+            case 'scheduled_posts_per_account':
+                // Count scheduled posts (posts with scheduled = 1)
+                return \App\Models\Post::where('user_id', $this->id)
+                    ->where('scheduled', 1)
+                    ->count();
+                
+            case 'rss_feed_automation':
+                // Count RSS feed automations (domains)
+                return $this->domains()->count();
+                
+            case 'video_publishing':
+                // Boolean feature - return 1 if user has any video posts capability
+                return 1; // Placeholder - would need actual video post tracking
+                
+            case 'api_keys':
+                // Count API keys
+                return $this->apiKeys()->count();
+                
+            case 'api_access':
+                // Boolean feature
+                return $this->apiKeys()->count() > 0 ? 1 : 0;
+                
+            default:
+                return 0;
+        }
+    }
+
+    /**
+     * Get feature usage information with limits
+     */
+    public function getFeaturesWithUsage()
+    {
+        $packageFeatures = $this->getPackageFeatures();
+        
+        return $packageFeatures->map(function ($feature) {
+            $usage = $this->getFeatureUsage($feature['key']);
+            $limit = $feature['limit_value'];
+            
+            return [
+                'id' => $feature['id'],
+                'key' => $feature['key'],
+                'name' => $feature['name'],
+                'type' => $feature['type'],
+                'description' => $feature['description'],
+                'limit' => $limit,
+                'usage' => $usage,
+                'is_unlimited' => $feature['type'] === 'unlimited' || ($feature['type'] === 'numeric' && $limit === null),
+                'is_boolean' => $feature['type'] === 'boolean',
+                'usage_percentage' => ($limit && $limit > 0) ? round(($usage / $limit) * 100, 2) : 0,
+                'is_over_limit' => ($limit && $limit > 0) ? $usage > $limit : false,
+            ];
+        });
     }
 }

@@ -122,8 +122,48 @@
                                                         @endforeach
                                                     @endif
                                                 </select>
-                                                </select>
                                                 @error('role')
+                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group row">
+                                            <div class="col-md-3">
+                                                <label for="package_id" class="form-label">Package</label>
+                                            </div>
+                                            <div class="col-md-9">
+                                                <select name="package_id" id="package_id" class="form-control">
+                                                    <option value="">Select Package (Optional)</option>
+                                                    @if (isset($packages) && count($packages) > 0)
+                                                        @foreach ($packages as $package)
+                                                            <option value="{{ $package->id }}" {{ old('package_id') == $package->id ? 'selected' : '' }}>
+                                                                {{ $package->name }} - ${{ number_format($package->price, 2) }}
+                                                            </option>
+                                                        @endforeach
+                                                    @endif
+                                                </select>
+                                                @error('package_id')
+                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group row" id="full_access_row" style="display: none;">
+                                            <div class="col-md-3">
+                                                <label for="full_access" class="form-label">Access Type</label>
+                                            </div>
+                                            <div class="col-md-9">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="full_access" id="full_access" value="1" {{ old('full_access') ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="full_access">
+                                                        <strong>Full Access</strong> (Never expires - for demo/admin users)
+                                                    </label>
+                                                </div>
+                                                <small class="form-text text-muted">
+                                                    Enable this for users who should have unlimited access without expiration (e.g., demo users, admin accounts)
+                                                </small>
+                                                @error('full_access')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror
                                             </div>
@@ -146,4 +186,24 @@
     @endcan
 @endsection
 @push('scripts')
+@endpush
+@push('scripts')
+    <script>
+        $(document).ready(function() {
+            $('#package_id').on('change', function() {
+                var packageId = $(this).val();
+                if (packageId) {
+                    $('#full_access_row').slideDown();
+                } else {
+                    $('#full_access_row').slideUp();
+                    $('#full_access').prop('checked', false);
+                }
+            });
+
+            // Trigger on page load if package is already selected
+            if ($('#package_id').val()) {
+                $('#full_access_row').show();
+            }
+        });
+    </script>
 @endpush

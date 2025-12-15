@@ -19,6 +19,11 @@ class Package extends Model
         'price',
         'stripe_product_id',
         'stripe_price_id',
+        'description',
+        'is_active',
+        'sort_order',
+        'monthly_price',
+        'trial_days',
     ];
 
     protected $appends = ['date_duration'];
@@ -49,7 +54,9 @@ class Package extends Model
 
     public function features()
     {
-        return $this->belongsToMany(Feature::class, 'feature_packages');
+        return $this->belongsToMany(Feature::class, 'feature_packages')
+            ->withPivot('limit_value', 'is_enabled')
+            ->withTimestamps();
     }
 
     public function getFeatures()
