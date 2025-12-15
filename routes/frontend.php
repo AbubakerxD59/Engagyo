@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Route;
 
 // Routes for frontend auth
 Route::name("frontend.")->controller(AuthController::class)->group(function () {
-    Route::middleware(["frontend_guest"])->group(function () {
+    Route::middleware(["frontend_guest", "redirect_if_admin"])->group(function () {
         Route::get("users/sign_in", "showLogin")->name("showLogin");
         Route::get("users/sign_up", "showRegister")->name("showRegister");
         Route::post("users/login", "login")->name("login");

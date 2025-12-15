@@ -4,15 +4,19 @@ namespace App\Http\Middleware;
 
 use Illuminate\Auth\Middleware\Authenticate as Middleware;
 use Illuminate\Http\Request;
+use App\Providers\RouteServiceProvider;
 
-class Authenticate extends Middleware
+/**
+ * Authenticate middleware for user guard
+ */
+class AuthenticateUser extends Middleware
 {
     /**
      * Get the path the user should be redirected to when they are not authenticated.
      */
     protected function redirectTo(Request $request): ?string
     {
-        return $request->expectsJson() ? null : route('login');
+        return $request->expectsJson() ? null : route('frontend.showLogin');
     }
 
     /**
@@ -21,8 +25,7 @@ class Authenticate extends Middleware
     protected function authenticate($request, array $guards)
     {
         if (empty($guards)) {
-            // Default to web guard if no guards specified
-            $guards = ['web'];
+            $guards = ['user'];
         }
 
         foreach ($guards as $guard) {
@@ -35,3 +38,4 @@ class Authenticate extends Middleware
         $this->unauthenticated($request, $guards);
     }
 }
+

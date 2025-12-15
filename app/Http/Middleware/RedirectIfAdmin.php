@@ -6,24 +6,26 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Symfony\Component\HttpFoundation\Response;
+use App\Providers\RouteServiceProvider;
 
-class FrontendGuest
+/**
+ * Redirect admin guard users away from user panel routes
+ * If user is logged in with admin guard, redirect to admin panel
+ */
+class RedirectIfAdmin
 {
     /**
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
      */
-    public function handle(Request $request, Closure $next, string ...$guards): Response
+    public function handle(Request $request, Closure $next): Response
     {
-        $guards = empty($guards) ? ['user'] : $guards;
-
-        foreach ($guards as $guard) {
-            if (Auth::guard($guard)->check()) {
-                return redirect(route("frontend.home"));
-            }
+        if (Auth::guard('admin')->check()) {
+            return redirect(RouteServiceProvider::ADMIN_HOME);
         }
 
         return $next($request);
     }
 }
+

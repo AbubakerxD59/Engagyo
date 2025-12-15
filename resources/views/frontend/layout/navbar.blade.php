@@ -118,15 +118,15 @@
                     </ul>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{route("frontend.pricing")}}">Pricing</a>
+                    <a class="nav-link" href="{{ route('frontend.pricing') }}">Pricing</a>
                 </li>
                 <li class="nav-item">
-                    <a class="nav-link" href="{{route("frontend.blogs")}}">Blog</a>
+                    <a class="nav-link" href="{{ route('frontend.blogs') }}">Blog</a>
                 </li>
             </ul>
 
             <div class="d-block d-lg-flex">
-                @if (Auth::check())
+                @if (Auth::guard('user')->check())
                     <a href="{{ route('panel.schedule') }}">
                         <button class="btn nav-btn btn-colored" type="button">
                             DASHBOARD

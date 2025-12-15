@@ -37,7 +37,7 @@ class AuthController extends Controller
             $role = $user->getRole();
             if ($role == 'User') {
                 $remember = $request->has("remember_me") && $request->remember_me == 'on' ? true : false;
-                if (Auth::attempt(['email' => $request->email, 'password' => $request->password], $remember)) {
+                if (Auth::guard('user')->attempt(['email' => $request->email, 'password' => $request->password], $remember)) {
                     $response = [
                         'success' => true,
                         'message' => 'Login successful!'
@@ -105,7 +105,7 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        Auth::logout();
+        Auth::guard('user')->logout();
         return redirect()->route('frontend.home')->with("success", "Session ended Successfully!");
     }
 }

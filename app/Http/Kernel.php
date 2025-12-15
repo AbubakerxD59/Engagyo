@@ -69,5 +69,9 @@ class Kernel extends HttpKernel
         'frontend_guest' => \App\Http\Middleware\FrontendGuest::class,
         'user_auth' => \App\Http\Middleware\UserAuthenticate::class,
         'auth.apikey' => \App\Http\Middleware\AuthenticateApiKey::class,
+        'redirect_if_admin' => \App\Http\Middleware\RedirectIfAdmin::class,
+        'redirect_if_user' => \App\Http\Middleware\RedirectIfUser::class,
+        'auth.admin' => \App\Http\Middleware\AuthenticateAdmin::class,
+        'auth.user' => \App\Http\Middleware\AuthenticateUser::class,
     ];
 }

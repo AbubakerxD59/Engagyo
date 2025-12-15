@@ -25,7 +25,7 @@ class AuthController extends Controller
             'email' => 'required|email',
             'password' => 'required',
         ]);
-        if (Auth::attempt(['email' => $request->email, 'password' => $request->password], $request->remember_me)) {
+        if (Auth::guard('admin')->attempt(['email' => $request->email, 'password' => $request->password], $request->remember_me)) {
             $response = [
                 'success' => true,
                 'message' => 'Login successful!'
@@ -46,8 +46,8 @@ class AuthController extends Controller
 
     public function logout()
     {
-        Auth::logout();
+        Auth::guard('admin')->logout();
         session()->flash('success', 'auth.logout_success');
-        return redirect()->route('admin.login');
+        return redirect()->route('admin.showLogin');
     }
 }

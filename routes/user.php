@@ -10,7 +10,7 @@ use App\Http\Controllers\User\SettingsController;
 use App\Http\Controllers\User\NotificationController;
 use App\Models\Post;
 
-Route::name("panel.")->prefix("panel/")->middleware(["user_auth"])->group(function () {
+Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_admin"])->group(function () {
     // Schedule Routes
     Route::controller(ScheduleController::class)->group(function () {
         Route::get("schedule", "index")->name("schedule");

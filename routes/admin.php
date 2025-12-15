@@ -13,12 +13,12 @@ Route::get("/admin", [AuthController::class, 'redirect']);
 // Admin Routes
 Route::prefix("admin/")->name("admin.")->group(function () {
     //    Auth Routes
-    Route::middleware(["guest"])->group(function () {
+    Route::middleware(["guest:admin", "redirect_if_user"])->group(function () {
         Route::get('/login', [AuthController::class, 'showLogin'])->name('showLogin');
         Route::post('/login', [AuthController::class, 'login'])->name('login');
     });
     // Panel Routes
-    Route::middleware(['auth'])->group(function () {
+    Route::middleware(['auth.admin', 'redirect_if_user'])->group(function () {
         Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
         Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
