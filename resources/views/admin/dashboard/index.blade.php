@@ -1,189 +1,157 @@
 @extends('admin.layouts.secure')
 @section('page_title', 'Dashboard')
 @section('page_content')
+    @php
+        use App\Models\Package;
+        use App\Models\Feature;
+        use App\Models\UserPackage;
+        use App\Models\Post;
+
+        $totalPackages = Package::where('is_active', true)->count();
+        $totalFeatures = Feature::where('is_active', true)->count();
+        $activeUserPackages = UserPackage::where('is_active', true)->count();
+        $totalScheduledPosts = Post::where('scheduled', 1)->count();
+    @endphp
+
     <div class="page-content">
-        <section class="content-header">
+        <section class="content">
             <div class="container-fluid">
-                <div class="row mb-2">
-                    <div class="col-sm-6">
-                        <h1>Dashboard</h1>
+                <!-- Page Header -->
+                <div class="row mb-4">
+                    <div class="col-12">
+                        <h1 class="h3 mb-0 text-dark font-weight-bold">DASHBOARD</h1>
+                    </div>
+                </div>
+
+                <!-- Stats Cards Row -->
+                <div class="row mb-4">
+                    <!-- Users Card -->
+                    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+                        <div class="stats-card card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="text-uppercase text-muted mb-2 font-weight-bold small">USERS</h6>
+                                        <h2 class="mb-0 font-weight-bold text-dark">{{ get_total_users() }}</h2>
+                                    </div>
+                                    <div class="stats-icon bg-info">
+                                        <i class="fas fa-users text-white"></i>
+                                    </div>
+                                </div>
+                                <a href="{{ route('admin.users.index') }}" class="stats-link text-decoration-none">
+                                    More info <i class="fas fa-arrow-circle-right ml-1"></i>
+                                </a>
+                            </div>
+                        </div>
                     </div>
 
+                    <!-- Packages Card -->
+                    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+                        <div class="stats-card card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="text-uppercase text-muted mb-2 font-weight-bold small">PACKAGES</h6>
+                                        <h2 class="mb-0 font-weight-bold text-dark">{{ $totalPackages }}</h2>
+                                    </div>
+                                    <div class="stats-icon bg-success">
+                                        <i class="fas fa-credit-card text-white"></i>
+                                    </div>
+                                </div>
+                                <a href="{{ route('admin.packages.index') }}" class="stats-link text-decoration-none">
+                                    More info <i class="fas fa-arrow-circle-right ml-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Features Card -->
+                    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+                        <div class="stats-card card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="text-uppercase text-muted mb-2 font-weight-bold small">FEATURES</h6>
+                                        <h2 class="mb-0 font-weight-bold text-dark">{{ $totalFeatures }}</h2>
+                                    </div>
+                                    <div class="stats-icon bg-warning">
+                                        <i class="fas fa-star text-white"></i>
+                                    </div>
+                                </div>
+                                <a href="{{ route('admin.features.index') }}" class="stats-link text-decoration-none">
+                                    More info <i class="fas fa-arrow-circle-right ml-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Active User Packages Card -->
+                    <div class="col-lg-3 col-md-6 col-sm-6 mb-4">
+                        <div class="stats-card card border-0 shadow-sm">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-3">
+                                    <div>
+                                        <h6 class="text-uppercase text-muted mb-2 font-weight-bold small">ACTIVE PACKAGES
+                                        </h6>
+                                        <h2 class="mb-0 font-weight-bold text-dark">{{ $activeUserPackages }}</h2>
+                                    </div>
+                                    <div class="stats-icon bg-danger">
+                                        <i class="fas fa-check-circle text-white"></i>
+                                    </div>
+                                </div>
+                                <a href="{{ route('admin.users.index') }}" class="stats-link text-decoration-none">
+                                    More info <i class="fas fa-arrow-circle-right ml-1"></i>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
                 </div>
+
+                <!-- Charts Row -->
                 <div class="row">
-                    <div class="col-lg-3 col-6">
-                        <div class="small-box bg-info">
-                            <div class="inner">
-                                <h3>{{ get_total_users() }}</h3>
-                                <p>USERS</p>
-                            </div>
-                            <div class="icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <a href="{{ route('admin.users.index') }}" class="small-box-footer">More info
-                                <i class="fas fa-arrow-circle-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-6">
-                        <div class="small-box bg-success">
-                            <div class="inner">
-                                <h3>10</h3>
-                                <p>Payments</p>
-                            </div>
-                            <div class="icon">
-                                <i class="fa fa-credit-card"></i>
-                            </div>
-                            <a href="" class="small-box-footer">More info
-                                <i class="fas fa-arrow-circle-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-6">
-                        <div class="small-box bg-danger">
-                            <div class="inner">
-                                <h3>500 £</h3>
-                                <p>Earnings</p>
-                            </div>
-                            <div class="icon">
-                                <i class="fa fa-wallet"></i>
-                            </div>
-                            <a href="#" class="small-box-footer">More info
-                                <i class="fas fa-arrow-circle-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                    <div class="col-lg-3 col-6">
-                        <div class="small-box bg-warning">
-                            <div class="inner">
-                                <h3>5</h3>
-                                <p>Orders</p>
-                            </div>
-                            <div class="icon">
-                                <i class="fa fa-store"></i>
-                            </div>
-                            <a href="#" class="small-box-footer">More info
-                                <i class="fas fa-arrow-circle-right"></i>
-                            </a>
-                        </div>
-                    </div>
-                </div>
-                <div class="row">
-                    <div class="col-sm-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <i class="fas fa-chart-line mr-1"></i>
-                                    Users
-                                </h3>
-                                <div class="card-tools">
-                                    <ul class="nav nav-pills ml-auto">
+                    <!-- Users Chart -->
+                    <div class="col-lg-12 col-md-12 mb-4">
+                        <div class="card border-0 shadow-sm">
+                            <div class="card-header bg-white border-bottom">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0 font-weight-bold text-dark">
+                                        <i class="fas fa-chart-line mr-2 text-primary"></i>USERS
+                                    </h5>
+                                    <ul class="nav nav-pills chart-tabs">
                                         <li class="nav-item">
-                                            <a class="nav-link active" href="#weekly-user-chart" data-toggle="tab">Week</a>
+                                            <a class="nav-link active" href="#weekly-user-chart" data-toggle="tab">WEEK</a>
                                         </li>
                                         <li class="nav-item">
-                                            <a class="nav-link" href="#monthly-user-chart" data-toggle="tab">Month</a>
+                                            <a class="nav-link" href="#monthly-user-chart" data-toggle="tab">MONTH</a>
                                         </li>
                                         <li class="nav-item">
-                                            <a class="nav-link" href="#yearly-user-chart" data-toggle="tab">Year</a>
+                                            <a class="nav-link" href="#yearly-user-chart" data-toggle="tab">YEAR</a>
                                         </li>
                                     </ul>
                                 </div>
                             </div>
-                            <!-- /.card-header -->
                             <div class="card-body">
-                                <div class="tab-content p-0">
+                                <div class="tab-content">
                                     <!-- Weekly Users Chart -->
-                                    <div class="chart tab-pane active" id="weekly-user-chart"
-                                        style="position: relative; height: 300px;">
-                                        <div class="chartjs-size-monitor">
-                                            <div class="chartjs-size-monitor-expand">
-                                                <div class=""></div>
-                                            </div>
-                                            <div class="chartjs-size-monitor-shrink">
-                                                <div class=""></div>
-                                            </div>
+                                    <div class="tab-pane fade show active" id="weekly-user-chart">
+                                        <div class="chart-container" style="position: relative; height: 300px;">
+                                            <canvas id="weekly-user-chart-canvas"></canvas>
                                         </div>
-                                        <canvas id="weekly-user-chart-canvas" height="300"
-                                            style="height: 300px; display: block; width: 475px;" width="475"
-                                            class="chartjs-render-monitor"></canvas>
                                     </div>
                                     <!-- Monthly Users Chart -->
-                                    <div class="chart tab-pane" id="monthly-user-chart"
-                                        style="position: relative; height: 300px;">
-                                        <canvas id="monthly-user-chart-canvas" height="0"
-                                            style="height: 0px; display: block; width: 0px;" class="chartjs-render-monitor"
-                                            width="0"></canvas>
+                                    <div class="tab-pane fade" id="monthly-user-chart">
+                                        <div class="chart-container" style="position: relative; height: 300px;">
+                                            <canvas id="monthly-user-chart-canvas"></canvas>
+                                        </div>
                                     </div>
                                     <!-- Yearly Users Chart -->
-                                    <div class="chart tab-pane" id="yearly-user-chart"
-                                        style="position: relative; height: 300px;">
-                                        <canvas id="yearly-user-chart-canvas" height="0"
-                                            style="height: 0px; display: block; width: 0px;" class="chartjs-render-monitor"
-                                            width="0"></canvas>
-                                    </div>
-                                </div>
-                            </div>
-                            <!-- /.card-body -->
-                        </div>
-                    </div>
-
-                    <div class="col-sm-6">
-                        <div class="card">
-                            <div class="card-header">
-                                <h3 class="card-title">
-                                    <i class="fas fa-chart-line mr-1"></i>
-                                    Orders
-                                </h3>
-                                <div class="card-tools">
-                                    <ul class="nav nav-pills ml-auto">
-                                        <li class="nav-item">
-                                            <a class="nav-link active" href="#weekly-order-chart" data-toggle="tab">Week</a>
-                                        </li>
-                                        <li class="nav-item">
-                                            <a class="nav-link" href="#monthly-order-chart" data-toggle="tab">Month</a>
-                                        </li>
-                                        <li class="nav-item">
-                                            <a class="nav-link" href="#yearly-order-chart" data-toggle="tab">Year</a>
-                                        </li>
-                                    </ul>
-                                </div>
-                            </div>
-                            <!-- /.card-header -->
-                            <div class="card-body">
-                                <div class="tab-content p-0">
-                                    <!-- Weekly Orders Chart -->
-                                    <div class="chart tab-pane active" id="weekly-order-chart"
-                                        style="position: relative; height: 300px;">
-                                        <div class="chartjs-size-monitor">
-                                            <div class="chartjs-size-monitor-expand">
-                                                <div class=""></div>
-                                            </div>
-                                            <div class="chartjs-size-monitor-shrink">
-                                                <div class=""></div>
-                                            </div>
+                                    <div class="tab-pane fade" id="yearly-user-chart">
+                                        <div class="chart-container" style="position: relative; height: 300px;">
+                                            <canvas id="yearly-user-chart-canvas"></canvas>
                                         </div>
-                                        <canvas id="weekly-order-chart-canvas" height="300"
-                                            style="height: 300px; display: block; width: 475px;" width="475"
-                                            class="chartjs-render-monitor"></canvas>
-                                    </div>
-                                    <!-- Monthly Orders Chart -->
-                                    <div class="chart tab-pane" id="monthly-order-chart"
-                                        style="position: relative; height: 300px;">
-                                        <canvas id="monthly-order-chart-canvas" height="0"
-                                            style="height: 0px; display: block; width: 0px;"
-                                            class="chartjs-render-monitor" width="0"></canvas>
-                                    </div>
-                                    <!-- Yearly Orders Chart -->
-                                    <div class="chart tab-pane" id="yearly-order-chart"
-                                        style="position: relative; height: 300px;">
-                                        <canvas id="yearly-order-chart-canvas" height="0"
-                                            style="height: 0px; display: block; width: 0px;"
-                                            class="chartjs-render-monitor" width="0"></canvas>
                                     </div>
                                 </div>
                             </div>
-                            <!-- /.card-body -->
                         </div>
                     </div>
                 </div>
@@ -191,21 +159,130 @@
         </section>
     </div>
 @endsection
+
+@push('styles')
+    <style>
+        .stats-card {
+            transition: transform 0.2s, box-shadow 0.2s;
+            border-radius: 8px;
+        }
+
+        .stats-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15) !important;
+        }
+
+        .stats-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .stats-link {
+            color: #6c757d;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .stats-link:hover {
+            color: #007bff;
+        }
+
+        .chart-tabs .nav-link {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #6c757d;
+            border-radius: 4px;
+            margin: 0 2px;
+            transition: all 0.2s;
+        }
+
+        .chart-tabs .nav-link:hover {
+            background-color: #f8f9fa;
+            color: #495057;
+        }
+
+        .chart-tabs .nav-link.active {
+            background-color: #007bff;
+            color: #ffffff;
+        }
+
+        .card-header {
+            padding: 1rem 1.25rem;
+        }
+
+        .card-body {
+            padding: 1.25rem;
+        }
+
+        h2 {
+            font-size: 2rem;
+        }
+
+        h6 {
+            font-size: 0.75rem;
+            letter-spacing: 0.5px;
+        }
+    </style>
+@endpush
+
 @push('scripts')
     <script>
         $(document).ready(function() {
+            // Store chart instances
+            const chartInstances = {};
+
             // Helper function to create a chart
             function createChart(canvasId, chartData, label) {
-                var ctx = document.getElementById(canvasId).getContext('2d');
-                return new Chart(ctx, {
+                const ctx = document.getElementById(canvasId);
+                if (!ctx) return null;
+
+                // Destroy existing chart if it exists
+                if (chartInstances[canvasId]) {
+                    chartInstances[canvasId].destroy();
+                }
+
+                const chart = new Chart(ctx.getContext('2d'), {
                     type: 'line',
                     data: chartData,
                     options: {
                         maintainAspectRatio: false,
                         responsive: true,
+                        interaction: {
+                            intersect: false,
+                            mode: 'index',
+                        },
                         plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 15,
+                                    font: {
+                                        size: 12,
+                                        weight: '500'
+                                    }
+                                }
+                            },
                             tooltip: {
                                 enabled: true,
+                                backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                                padding: 12,
+                                titleFont: {
+                                    size: 13,
+                                    weight: '600'
+                                },
+                                bodyFont: {
+                                    size: 12
+                                },
                                 callbacks: {
                                     title: function(tooltipItems) {
                                         return tooltipItems[0].label;
@@ -218,95 +295,111 @@
                         },
                         elements: {
                             point: {
-                                radius: 5, // Size of data points
-                                hoverRadius: 7, // Size of data points on hover
-                                backgroundColor: '#fff' // Color of the data points
+                                radius: 4,
+                                hoverRadius: 6,
+                                borderWidth: 2,
+                                backgroundColor: '#ffffff'
                             },
                             line: {
-                                tension: 0.1 // Smoothness of the line
+                                tension: 0.3,
+                                borderWidth: 2,
+                                fill: false
                             }
                         },
                         scales: {
-                            yAxes: [{
+                            y: {
+                                beginAtZero: true,
+                                min: 0,
                                 ticks: {
-                                    beginAtZero: true, // Start the y-axis at 0
-                                    min: 0, // Set the minimum value of the y-axis to 0
-                                    stepSize: 1, // Ensure the steps between labels are 1
-                                    callback: function(value) {
-                                        return value; // Ensure the label is a whole number
-                                    }
+                                    stepSize: 1,
+                                    precision: 0,
+                                    font: {
+                                        size: 11
+                                    },
+                                    color: '#6c757d'
+                                },
+                                grid: {
+                                    color: 'rgba(0, 0, 0, 0.05)',
+                                    drawBorder: false
                                 }
-                            }]
+                            },
+                            x: {
+                                ticks: {
+                                    font: {
+                                        size: 11
+                                    },
+                                    color: '#6c757d'
+                                },
+                                grid: {
+                                    display: false,
+                                    drawBorder: false
+                                }
+                            }
                         }
                     }
                 });
+
+                chartInstances[canvasId] = chart;
+                return chart;
             }
 
-            // Weekly Users Chart
+            // Initialize charts when tabs are shown
+            $('a[data-toggle="tab"]').on('shown.bs.tab', function(e) {
+                const target = $(e.target).attr('href');
+
+                // Users charts
+                if (target === '#weekly-user-chart' && !chartInstances['weekly-user-chart-canvas']) {
+                    createChart('weekly-user-chart-canvas', {
+                        labels: [{!! getPreviousWeekDates() !!}],
+                        datasets: [{
+                            label: 'Users',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: 'rgba(0, 123, 255, 1)',
+                            data: [{!! getPreviousWeeksUsers('users') !!}]
+                        }]
+                    }, 'Users');
+                } else if (target === '#monthly-user-chart' && !chartInstances[
+                    'monthly-user-chart-canvas']) {
+                    createChart('monthly-user-chart-canvas', {
+                        labels: [{!! getCurrentMonthDates() !!}],
+                        datasets: [{
+                            label: 'Users',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: 'rgba(0, 123, 255, 1)',
+                            data: [{!! getCurrentMonthUsers('users') !!}]
+                        }]
+                    }, 'Users');
+                } else if (target === '#yearly-user-chart' && !chartInstances['yearly-user-chart-canvas']) {
+                    createChart('yearly-user-chart-canvas', {
+                        labels: [{!! getPreviousMonths() !!}],
+                        datasets: [{
+                            label: 'Users',
+                            backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                            borderColor: 'rgba(0, 123, 255, 1)',
+                            pointBackgroundColor: '#ffffff',
+                            pointBorderColor: 'rgba(0, 123, 255, 1)',
+                            data: [{!! getPreviousMonthsUsers('users') !!}]
+                        }]
+                    }, 'Users');
+                }
+            });
+
+            // Initialize active chart on page load
             createChart('weekly-user-chart-canvas', {
                 labels: [{!! getPreviousWeekDates() !!}],
                 datasets: [{
                     label: 'Users',
-                    backgroundColor: 'rgba(60,141,188,0.9)',
-                    borderColor: 'rgba(60,141,188,0.8)',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    borderColor: 'rgba(0, 123, 255, 1)',
+                    pointBackgroundColor: '#ffffff',
+                    pointBorderColor: 'rgba(0, 123, 255, 1)',
                     data: [{!! getPreviousWeeksUsers('users') !!}]
                 }]
             }, 'Users');
-
-            // Monthly Users Chart
-            createChart('monthly-user-chart-canvas', {
-                labels: [{!! getCurrentMonthDates() !!}],
-                datasets: [{
-                    label: 'Users',
-                    backgroundColor: 'rgba(60,141,188,0.9)',
-                    borderColor: 'rgba(60,141,188,0.8)',
-                    data: [{!! getCurrentMonthUsers('users') !!}]
-                }]
-            }, 'Users');
-
-            // Yearly Users Chart
-            createChart('yearly-user-chart-canvas', {
-                labels: [{!! getPreviousMonths() !!}],
-                datasets: [{
-                    label: 'Users',
-                    backgroundColor: 'rgba(60,141,188,0.9)',
-                    borderColor: 'rgba(60,141,188,0.8)',
-                    data: [{!! getPreviousMonthsUsers('users') !!}]
-                }]
-            }, 'Users');
-
-            // Weekly Order Chart
-            createChart('weekly-order-chart-canvas', {
-                labels: [{!! getPreviousWeekDates() !!}],
-                datasets: [{
-                    label: 'Order',
-                    backgroundColor: 'rgba(255,159,64,0.9)',
-                    borderColor: 'rgba(255,159,64,0.8)',
-                    data: [{!! getPreviousWeeksUsers('users') !!}]
-                }]
-            }, 'Order');
-
-            // Monthly Order Chart
-            createChart('monthly-order-chart-canvas', {
-                labels: [{!! getCurrentMonthDates() !!}],
-                datasets: [{
-                    label: 'Order',
-                    backgroundColor: 'rgba(255,159,64,0.9)',
-                    borderColor: 'rgba(255,159,64,0.8)',
-                    data: [{!! getCurrentMonthUsers('users') !!}]
-                }]
-            }, 'Order');
-
-            // Yearly Order Chart
-            createChart('yearly-order-chart-canvas', {
-                labels: [{!! getPreviousMonths() !!}],
-                datasets: [{
-                    label: 'Order',
-                    backgroundColor: 'rgba(255,159,64,0.9)',
-                    borderColor: 'rgba(255,159,64,0.8)',
-                    data: [{!! getPreviousMonthsUsers('users') !!}]
-                }]
-            }, 'Order');
         });
     </script>
 @endpush
