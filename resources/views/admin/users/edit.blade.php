@@ -200,7 +200,7 @@
                         </div>
 
                         {{-- Features Usage Section --}}
-                        @if ($featuresWithUsage && $featuresWithUsage->count() > 0)
+                        @if ($user->getFeaturesWithUsage() && $featuresWithUsage->count() > 0)
                             <div class="row mt-3">
                                 <div class="col-12">
                                     <div class="card">
