@@ -345,6 +345,7 @@ class FacebookService
 
     public function contentOnly($id, $access_token, $post)
     {
+        info($post);
         try {
             $publish = $this->facebook->post('/me/feed', $post, $access_token);
             $response = [
@@ -399,6 +400,7 @@ class FacebookService
 
     public function photo($id, $access_token, $postData)
     {
+        info($postData);
         try {
             $post = Post::with("page.facebook")->findOrFail($id);
             $page_id = $post->page ? $post->page->page_id : null;
