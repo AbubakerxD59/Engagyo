@@ -20,7 +20,7 @@ class RoleSeeder extends Seeder
                     ['name' => $role],
                     array(
                         'name' => $role,
-                        'guard_name' => 'web',
+                        'guard_name' => $role == "User" ? 'web' : 'user',
                     )
                 );
             }
