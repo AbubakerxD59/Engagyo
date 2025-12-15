@@ -253,9 +253,7 @@
                                                                         </span>
                                                                     @else
                                                                         <strong>{{ $feature['usage'] }}</strong>
-                                                                        @if ($feature['is_unlimited'])
-                                                                            <span class="badge badge-info ml-2">Unlimited</span>
-                                                                        @elseif($feature['limit'])
+                                                                        @if (!$feature['is_unlimited'] && $feature['limit'])
                                                                             / {{ $feature['limit'] }}
                                                                         @endif
                                                                     @endif

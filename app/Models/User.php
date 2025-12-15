@@ -302,7 +302,7 @@ class User extends Authenticatable
     public function getPackageFeatures()
     {
         $features = collect();
-        
+
         if ($this->activeUserPackage && $this->activeUserPackage->package) {
             $package = $this->activeUserPackage->package;
             $features = $package->features()
@@ -321,7 +321,7 @@ class User extends Authenticatable
                     ];
                 });
         }
-        
+
         return $features;
     }
 
@@ -333,33 +333,31 @@ class User extends Authenticatable
         switch ($featureKey) {
             case 'social_accounts':
                 // Count all social accounts: Facebook pages + Pinterest boards + TikTok accounts
-                $facebookCount = $this->pages()->count();
-                $pinterestCount = $this->boards()->count();
-                $tiktokCount = $this->tiktok()->count();
-                return $facebookCount + $pinterestCount + $tiktokCount;
-                
+                $accounts = $this->getAccounts();
+                return $accounts->count();
+
             case 'scheduled_posts_per_account':
                 // Count scheduled posts (posts with scheduled = 1)
                 return \App\Models\Post::where('user_id', $this->id)
                     ->where('scheduled', 1)
                     ->count();
-                
+
             case 'rss_feed_automation':
                 // Count RSS feed automations (domains)
                 return $this->domains()->count();
-                
+
             case 'video_publishing':
                 // Boolean feature - return 1 if user has any video posts capability
                 return 1; // Placeholder - would need actual video post tracking
-                
+
             case 'api_keys':
                 // Count API keys
                 return $this->apiKeys()->count();
-                
+
             case 'api_access':
                 // Boolean feature
                 return $this->apiKeys()->count() > 0 ? 1 : 0;
-                
+
             default:
                 return 0;
         }
@@ -371,12 +369,12 @@ class User extends Authenticatable
     public function getFeaturesWithUsage()
     {
         $packageFeatures = $this->getPackageFeatures();
-        
+
         return $packageFeatures->map(function ($feature) {
             $usage = $this->getFeatureUsage($feature['key']);
             $limit = $feature['limit_value'];
             $isUnlimited = $feature['is_unlimited'] ?? false;
-            
+
             return [
                 'id' => $feature['id'],
                 'key' => $feature['key'],
