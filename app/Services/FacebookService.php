@@ -181,12 +181,9 @@ class FacebookService
                     "access_token" => $newAccessToken
                 ],
             ];
-
-            info("Facebook token refreshed successfully for page ID: {$page_id}");
         } catch (FacebookResponseException $e) {
             // When Graph returns an error
             $error = $e->getMessage();
-            info("Facebook token refresh error (FacebookResponseException) for page ID {$page_id}: " . $error);
             $response = [
                 "success" => false,
                 "message" => "Facebook API error: " . $error,
@@ -194,7 +191,6 @@ class FacebookService
         } catch (FacebookSDKException $e) {
             // When validation fails or other local issues
             $error = $e->getMessage();
-            info("Facebook token refresh error (FacebookSDKException) for page ID {$page_id}: " . $error);
             $response = [
                 "success" => false,
                 "message" => "Facebook SDK error: " . $error,
@@ -202,7 +198,6 @@ class FacebookService
         } catch (\Exception $e) {
             // Catch any other unexpected errors
             $error = $e->getMessage();
-            info("Facebook token refresh error (Exception) for page ID {$page_id}: " . $error);
             $response = [
                 "success" => false,
                 "message" => "Unexpected error while refreshing token: " . $error,
@@ -345,7 +340,6 @@ class FacebookService
 
     public function contentOnly($id, $access_token, $post)
     {
-        info($post);
         try {
             $publish = $this->facebook->post('/me/feed', $post, $access_token);
             $response = [
@@ -400,11 +394,10 @@ class FacebookService
 
     public function photo($id, $access_token, $postData)
     {
-        info($postData);
         try {
             $post = Post::with("page.facebook")->findOrFail($id);
             $page_id = $post->page ? $post->page->page_id : null;
-            $publish = $this->facebook->post('/' . $page_id . '/feed', $postData, $access_token);
+            $publish = $this->facebook->post('/' . $page_id . '/photos', $postData, $access_token);
             $response = [
                 "success" => true,
                 "data" => $publish
@@ -582,7 +575,6 @@ class FacebookService
 
             // If token is expired or invalid, try to refresh it
             if (!$account->validToken()) {
-                info("Facebook token expired for account ID: {$account->id}. Attempting to refresh...");
 
                 $service = new FacebookService();
                 $token = $service->refreshAccessToken($access_token, $account->id);
@@ -590,19 +582,16 @@ class FacebookService
                 if ($token["success"]) {
                     $data = $token["data"];
                     $response = ["success" => true, "access_token" => $data["access_token"]];
-                    info("Facebook token refreshed successfully for account ID: {$account->id}");
                 } else {
                     $response = [
                         "success" => false,
                         "message" => $token["message"] ?? "Failed to refresh Facebook token. Please reconnect your account."
                     ];
-                    info("Facebook token refresh failed for account ID: {$account->id}. Error: " . ($token["message"] ?? "Unknown error"));
                 }
             }
 
             return $response;
         } catch (\Exception $e) {
-            info("Facebook validateToken error for account ID: " . ($account->id ?? 'unknown') . ". Error: " . $e->getMessage());
             return [
                 "success" => false,
                 "message" => "Error validating Facebook token: " . $e->getMessage()
