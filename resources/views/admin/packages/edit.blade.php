@@ -233,12 +233,14 @@
                                             @php
                                                 $packageFeatures = $package->features->pluck('pivot.limit_value', 'id')->toArray();
                                                 $packageFeatureEnabled = $package->features->pluck('pivot.is_enabled', 'id')->toArray();
+                                                $packageFeatureUnlimited = $package->features->pluck('pivot.is_unlimited', 'id')->toArray();
                                             @endphp
                                             @foreach ($features as $feature)
                                                 @php
                                                     $isChecked = isset($packageFeatureEnabled[$feature->id]) && $packageFeatureEnabled[$feature->id];
+                                                    $isUnlimited = isset($packageFeatureUnlimited[$feature->id]) && $packageFeatureUnlimited[$feature->id];
                                                     $limitValue = $packageFeatures[$feature->id] ?? ($feature->default_value ?? '');
-                                                    $showLimitInput = in_array($feature->type, ['numeric', 'unlimited']) && $isChecked;
+                                                    $showLimitInput = in_array($feature->type, ['numeric', 'unlimited']) && $isChecked && !$isUnlimited;
                                                 @endphp
                                                 <div class="col-md-6 mb-3">
                                                     <div class="card feature-card {{ $isChecked ? 'border-primary' : '' }}"
@@ -262,18 +264,27 @@
                                                                 </p>
                                                             @endif
                                                             @if (in_array($feature->type, ['numeric', 'unlimited']))
-                                                                <div class="feature-limit-input" style="margin-left: 1.5rem; {{ !$isChecked ? 'display:none;' : '' }}">
-                                                                    <label class="form-label small">Limit:</label>
-                                                                    <input type="number" class="form-control form-control-sm"
-                                                                        name="features[{{ $feature->id }}][limit]"
-                                                                        id="feature_limit_{{ $feature->id }}"
-                                                                        value="{{ $isChecked ? $limitValue : '' }}"
-                                                                        placeholder="{{ $feature->type == 'unlimited' ? 'Unlimited' : 'Enter limit' }}"
-                                                                        min="0"
-                                                                        {{ $feature->type == 'unlimited' ? 'readonly' : '' }}>
-                                                                    @if ($feature->type == 'unlimited')
-                                                                        <small class="text-muted">Unlimited</small>
-                                                                    @endif
+                                                                <div class="feature-limit-controls" style="margin-left: 1.5rem; {{ !$isChecked ? 'display:none;' : '' }}">
+                                                                    <div class="form-check mb-2">
+                                                                        <input class="form-check-input unlimited-checkbox" type="checkbox"
+                                                                            name="features[{{ $feature->id }}][unlimited]"
+                                                                            id="feature_unlimited_{{ $feature->id }}"
+                                                                            value="1"
+                                                                            data-feature-id="{{ $feature->id }}"
+                                                                            {{ $isUnlimited ? 'checked' : '' }}>
+                                                                        <label class="form-check-label small font-weight-bold" for="feature_unlimited_{{ $feature->id }}">
+                                                                            Unlimited
+                                                                        </label>
+                                                                    </div>
+                                                                    <div class="feature-limit-input" style="{{ $isUnlimited ? 'display:none;' : '' }}">
+                                                                        <label class="form-label small">Limit:</label>
+                                                                        <input type="number" class="form-control form-control-sm"
+                                                                            name="features[{{ $feature->id }}][limit]"
+                                                                            id="feature_limit_{{ $feature->id }}"
+                                                                            value="{{ $isChecked && !$isUnlimited ? $limitValue : ($feature->default_value ?? '') }}"
+                                                                            placeholder="Enter limit"
+                                                                            min="0">
+                                                                    </div>
                                                                 </div>
                                                             @endif
                                                         </div>
@@ -323,24 +334,45 @@
                 var featureId = checkbox.data('feature-id');
                 var featureType = checkbox.data('feature-type');
                 var limitInput = $('#feature_limit_' + featureId);
-                var limitContainer = limitInput.closest('.feature-limit-input');
+                var limitContainer = limitInput.closest('.feature-limit-controls');
                 var featureCard = checkbox.closest('.feature-card');
+                var unlimitedCheckbox = $('#feature_unlimited_' + featureId);
 
                 if (checkbox.is(':checked')) {
                     limitContainer.slideDown();
-                    featureCard.removeClass('border-secondary').addClass('border-primary');
+                    featureCard.css('border-color', '#007bff');
                     
-                    // Set default value if empty and feature type is numeric
-                    if (featureType === 'numeric' && !limitInput.val()) {
-                        var defaultVal = limitInput.attr('data-default-value') || '';
-                        limitInput.val(defaultVal);
-                    } else if (featureType === 'unlimited') {
-                        limitInput.val('');
+                    // Check if unlimited is checked
+                    if (unlimitedCheckbox.is(':checked')) {
+                        $('#feature_limit_' + featureId).closest('.feature-limit-input').hide();
+                    } else {
+                        $('#feature_limit_' + featureId).closest('.feature-limit-input').show();
+                        // Set default value if empty and feature type is numeric
+                        if (featureType === 'numeric' && !limitInput.val()) {
+                            var defaultVal = limitInput.attr('data-default-value') || '';
+                            limitInput.val(defaultVal);
+                        }
                     }
                 } else {
                     limitContainer.slideUp();
-                    featureCard.removeClass('border-primary').addClass('border-secondary');
+                    featureCard.css('border-color', '#dee2e6');
                     limitInput.val('');
+                    unlimitedCheckbox.prop('checked', false);
+                }
+            });
+
+            // Unlimited checkbox toggle
+            $('.unlimited-checkbox').on('change', function() {
+                var unlimitedCheckbox = $(this);
+                var featureId = unlimitedCheckbox.data('feature-id');
+                var limitInput = $('#feature_limit_' + featureId);
+                var limitInputContainer = limitInput.closest('.feature-limit-input');
+
+                if (unlimitedCheckbox.is(':checked')) {
+                    limitInputContainer.slideUp();
+                    limitInput.val('');
+                } else {
+                    limitInputContainer.slideDown();
                 }
             });
 

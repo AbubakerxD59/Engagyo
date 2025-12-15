@@ -83,9 +83,11 @@ class PackageController extends Controller
             $featuresData = [];
             foreach ($request->features as $featureId => $featureData) {
                 if (isset($featureData['enabled'])) {
+                    $isUnlimited = isset($featureData['unlimited']) && $featureData['unlimited'] == '1';
                     $featuresData[$featureId] = [
-                        'limit_value' => isset($featureData['limit']) ? (int)$featureData['limit'] : null,
+                        'limit_value' => $isUnlimited ? null : (isset($featureData['limit']) ? (int)$featureData['limit'] : null),
                         'is_enabled' => true,
+                        'is_unlimited' => $isUnlimited,
                     ];
                 }
             }
@@ -165,9 +167,11 @@ class PackageController extends Controller
             if ($request->has('features')) {
                 foreach ($request->features as $featureId => $featureData) {
                     if (isset($featureData['enabled'])) {
+                        $isUnlimited = isset($featureData['unlimited']) && $featureData['unlimited'] == '1';
                         $featuresData[$featureId] = [
-                            'limit_value' => isset($featureData['limit']) ? (int)$featureData['limit'] : null,
+                            'limit_value' => $isUnlimited ? null : (isset($featureData['limit']) ? (int)$featureData['limit'] : null),
                             'is_enabled' => true,
+                            'is_unlimited' => $isUnlimited,
                         ];
                     }
                 }

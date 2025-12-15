@@ -55,7 +55,7 @@ class Package extends Model
     public function features()
     {
         return $this->belongsToMany(Feature::class, 'feature_packages')
-            ->withPivot('limit_value', 'is_enabled')
+            ->withPivot('limit_value', 'is_enabled', 'is_unlimited')
             ->withTimestamps();
     }
 

@@ -317,6 +317,7 @@ class User extends Authenticatable
                         'description' => $feature->description,
                         'limit_value' => $feature->pivot->limit_value,
                         'is_enabled' => $feature->pivot->is_enabled,
+                        'is_unlimited' => $feature->pivot->is_unlimited ?? false,
                     ];
                 });
         }
@@ -374,6 +375,7 @@ class User extends Authenticatable
         return $packageFeatures->map(function ($feature) {
             $usage = $this->getFeatureUsage($feature['key']);
             $limit = $feature['limit_value'];
+            $isUnlimited = $feature['is_unlimited'] ?? false;
             
             return [
                 'id' => $feature['id'],
@@ -383,10 +385,10 @@ class User extends Authenticatable
                 'description' => $feature['description'],
                 'limit' => $limit,
                 'usage' => $usage,
-                'is_unlimited' => $feature['type'] === 'unlimited' || ($feature['type'] === 'numeric' && $limit === null),
+                'is_unlimited' => $isUnlimited || $feature['type'] === 'unlimited' || ($feature['type'] === 'numeric' && $limit === null),
                 'is_boolean' => $feature['type'] === 'boolean',
-                'usage_percentage' => ($limit && $limit > 0) ? round(($usage / $limit) * 100, 2) : 0,
-                'is_over_limit' => ($limit && $limit > 0) ? $usage > $limit : false,
+                'usage_percentage' => ($limit && $limit > 0 && !$isUnlimited) ? round(($usage / $limit) * 100, 2) : 0,
+                'is_over_limit' => ($limit && $limit > 0 && !$isUnlimited) ? $usage > $limit : false,
             ];
         });
     }
