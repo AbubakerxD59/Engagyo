@@ -1,5 +1,7 @@
-@php $featuresWithUsage = $user->getFeaturesWithUsage(); @endphp
-@if ($featuresWithUsage && $featuresWithUsage->count() > 0)
+@php
+    $getAvailableFeaturesArray = $user->getAvailableFeaturesArray();
+@endphp
+@if (count($getAvailableFeaturesArray) > 0)
     <div class="table-responsive">
         <table class="table table-striped table-bordered">
             <thead>
@@ -12,53 +14,73 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach ($featuresWithUsage as $feature)
+                @foreach ($getAvailableFeaturesArray as $feature)
+                    @php
+                        $isBoolean = $feature['type'] === 'boolean';
+                        $isUnlimited = $feature['is_unlimited'] ?? false;
+                        $limitValue = $feature['limit_value'] ?? null;
+                        $usageCount = $feature['usage_count'] ?? 0;
+
+                        // Calculate usage percentage and over limit status for numeric features
+                        $usagePercentage = 0;
+                        $isOverLimit = false;
+
+                        if (!$isBoolean && !$isUnlimited && $limitValue && $limitValue > 0) {
+                            $usagePercentage = round(($usageCount / $limitValue) * 100, 2);
+                            $isOverLimit = $usageCount > $limitValue;
+                        }
+                    @endphp
                     <tr>
-                        <td><strong>{{ $feature['name'] }}</strong></td>
-                        <td>{{ $feature['description'] ?? '-' }}</td>
                         <td>
-                            @if ($feature['is_unlimited'])
+                            <strong>{{ $feature['name'] }}</strong>
+                            @if (!empty($feature['key']))
+                                <br><small class="text-muted">{{ $feature['key'] }}</small>
+                            @endif
+                        </td>
+                        <td>{{ $feature['description'] ?: '-' }}</td>
+                        <td>
+                            @if ($isUnlimited)
                                 <span class="badge badge-info">Unlimited</span>
-                            @elseif($feature['is_boolean'])
-                                <span
-                                    class="badge badge-{{ $feature['usage'] ? 'success' : 'secondary' }}">
-                                    {{ $feature['usage'] ? 'Enabled' : 'Disabled' }}
+                            @elseif ($isBoolean)
+                                <span class="badge badge-{{ $usageCount ? 'success' : 'secondary' }}">
+                                    {{ $usageCount ? 'Enabled' : 'Disabled' }}
                                 </span>
                             @else
-                                {{ $feature['limit'] ?? 'N/A' }}
+                                {{ $limitValue ?? 'N/A' }}
                             @endif
                         </td>
                         <td>
-                            @if ($feature['is_boolean'])
-                                <span
-                                    class="badge badge-{{ $feature['usage'] ? 'success' : 'secondary' }}">
-                                    {{ $feature['usage'] ? 'Yes' : 'No' }}
+                            @if ($isBoolean)
+                                <span class="badge badge-{{ $usageCount ? 'success' : 'secondary' }}">
+                                    {{ $usageCount ? 'Yes' : 'No' }}
                                 </span>
                             @else
-                                <strong>{{ $feature['usage'] }}</strong>
-                                @if (!$feature['is_unlimited'] && $feature['limit'])
-                                    / {{ $feature['limit'] }}
+                                <strong>{{ $usageCount }}</strong>
+                                @if (!$isUnlimited && $limitValue)
+                                    / {{ $limitValue }}
                                 @endif
                             @endif
                         </td>
                         <td>
-                            @if ($feature['is_unlimited'] || $feature['is_boolean'])
+                            @if ($isUnlimited || $isBoolean)
                                 <span class="badge badge-success">Active</span>
-                            @elseif($feature['is_over_limit'])
+                            @elseif ($isOverLimit)
                                 <span class="badge badge-danger">Over Limit</span>
-                            @elseif($feature['usage_percentage'] >= 80)
+                            @elseif ($usagePercentage >= 80)
                                 <span class="badge badge-warning">Near Limit</span>
                             @else
                                 <span class="badge badge-success">Active</span>
                             @endif
-                            @if (!$feature['is_unlimited'] && !$feature['is_boolean'] && $feature['limit'])
+
+                            @if (!$isUnlimited && !$isBoolean && $limitValue && $limitValue > 0)
                                 <div class="progress mt-1" style="height: 5px;">
                                     <div class="progress-bar 
-                                    {{ $feature['is_over_limit'] ? 'bg-danger' : ($feature['usage_percentage'] >= 80 ? 'bg-warning' : 'bg-success') }}"
-                                        role="progressbar"
-                                        style="width: {{ min($feature['usage_percentage'], 100) }}%">
+                                        {{ $isOverLimit ? 'bg-danger' : ($usagePercentage >= 80 ? 'bg-warning' : 'bg-success') }}"
+                                        role="progressbar" style="width: {{ min($usagePercentage, 100) }}%"
+                                        aria-valuenow="{{ $usagePercentage }}" aria-valuemin="0" aria-valuemax="100">
                                     </div>
                                 </div>
+                                <small class="text-muted">{{ $usagePercentage }}%</small>
                             @endif
                         </td>
                     </tr>
@@ -72,4 +94,3 @@
         No features are currently assigned to this user's package.
     </div>
 @endif
-

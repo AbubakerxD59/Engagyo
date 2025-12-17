@@ -46,11 +46,23 @@
                 $account = ['panel.accounts', 'panel.accounts.pinterest', 'panel.accounts.facebook'];
                 ?>
                 <li class="nav-item">
+                    @canUseFeature('social_accounts')
                     <a href="{{ route('panel.accounts') }}"
                         class="nav-link {{ in_array(request()->route()->getName(), $account) ? 'active' : '' }}">
                         <i class="nav-icon fas fa-user-circle"></i>
                         <p>Accounts</p>
                     </a>
+                @else
+                    <a href="#" class="nav-link disabled" style="opacity: 0.5; cursor: not-allowed;"
+                        onclick="event.preventDefault(); return false;"
+                        title="This feature is not available in your package">
+                        <i class="nav-icon fas fa-user-circle"></i>
+                        <p>
+                            Accounts
+                            <i class="fas fa-lock float-right mt-1" style="font-size: 0.8rem;"></i>
+                        </p>
+                    </a>
+                    @endcanUseFeature
                 </li>
             </ul>
         </nav>

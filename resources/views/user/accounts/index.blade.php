@@ -2,6 +2,7 @@
 @section('title', 'Accounts')
 @section('page_content')
     <div class="page-content">
+        @include('user.layout.feature-limit-alert')
         <div class="content-header clearfix"></div>
         <section class="content">
             <div class="container-fluid">

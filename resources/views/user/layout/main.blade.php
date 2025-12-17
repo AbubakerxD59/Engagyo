@@ -66,6 +66,7 @@
         <!--start header -->
         @include('user.layout.header')
         <!--end header -->
+        <!-- Feature Limit Alert (outside content wrapper to prevent blurring) -->
         <!--start page wrapper -->
         <div class="content-wrapper">
             @yield('page_content')

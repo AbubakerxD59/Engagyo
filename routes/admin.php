@@ -48,7 +48,7 @@ Route::prefix("admin/")->name("admin.")->group(function () {
         });
 
         // Features
-        Route::resource('features', FeatureController::class)->except('show');
+        Route::resource('features', FeatureController::class)->only(['index']);
         Route::controller(FeatureController::class)->prefix('features/')->name('features.')->group(function () {
             Route::get('dataTable', 'dataTable')->name('dataTable');
         });

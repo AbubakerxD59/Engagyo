@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Str;
+use App\Models\Scopes\UserScope;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class ApiKey extends Model
 {
@@ -112,5 +113,9 @@ class ApiKey extends Model
     {
         return static::where('key', $key)->active()->first();
     }
-}
 
+    protected static function booted()
+    {
+        static::addGlobalScope(new UserScope());
+    }
+}

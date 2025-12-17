@@ -53,7 +53,7 @@
                 @can('view_feature')
                     <li class="nav-item">
                         <a href="{{ route('admin.features.index') }}"
-                            class="nav-link {{ in_array(request()->route()->getName(), ['admin.features.index', 'admin.features.create', 'admin.features.edit']) ? 'active' : '' }}">
+                            class="nav-link {{ request()->route()->getName() == 'admin.features.index' ? 'active' : '' }}">
                             <i class="nav-icon fas fa-star"></i>
                             <p>Features</p>
                         </a>

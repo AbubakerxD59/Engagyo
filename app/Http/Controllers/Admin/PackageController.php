@@ -51,6 +51,7 @@ class PackageController extends Controller
             'trial_days' => 'nullable|integer|min:0',
             'sort_order' => 'nullable|integer',
             'is_active' => 'nullable|boolean',
+            'is_lifetime' => 'nullable|boolean',
             'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'stripe_product_id' => 'nullable|string',
             'stripe_price_id' => 'nullable|string',
@@ -66,6 +67,7 @@ class PackageController extends Controller
             'trial_days' => $request->trial_days ?? 0,
             'sort_order' => $request->sort_order ?? 0,
             'is_active' => $request->has('is_active') ? ($request->is_active ? true : false) : true,
+            'is_lifetime' => $request->has('is_lifetime') ? ($request->is_lifetime ? true : false) : false,
             'stripe_product_id' => $request->stripe_product_id,
             'stripe_price_id' => $request->stripe_price_id,
         ];
@@ -134,6 +136,7 @@ class PackageController extends Controller
             'trial_days' => 'nullable|integer|min:0',
             'sort_order' => 'nullable|integer',
             'is_active' => 'nullable|boolean',
+            'is_lifetime' => 'nullable|boolean',
             'icon' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
             'stripe_product_id' => 'nullable|string',
             'stripe_price_id' => 'nullable|string',
@@ -151,6 +154,7 @@ class PackageController extends Controller
             'trial_days' => $request->trial_days ?? 0,
             'sort_order' => $request->sort_order ?? 0,
             'is_active' => $request->has('is_active') ? ($request->is_active ? true : false) : true,
+            'is_lifetime' => $request->has('is_lifetime') ? ($request->is_lifetime ? true : false) : false,
             'stripe_product_id' => $request->stripe_product_id,
             'stripe_price_id' => $request->stripe_price_id,
         ];
@@ -177,7 +181,7 @@ class PackageController extends Controller
                 }
             }
             $package->features()->sync($featuresData);
-            
+
             return redirect(route('admin.packages.index'))->with('success', 'Package updated successfully!');
         } else {
             return back()->with('error', 'Unable to update Package!')->withInput();
@@ -190,7 +194,7 @@ class PackageController extends Controller
     public function destroy(string $id)
     {
         $package = Package::findOrFail($id);
-        
+
         if ($package->delete()) {
             return back()->with('success', 'Package deleted successfully!');
         } else {
@@ -205,14 +209,14 @@ class PackageController extends Controller
     {
         $data = $request->all();
         $search = @$data['search']['value'];
-        
+
         $iTotalRecords = Package::query();
         $packages = Package::query();
 
         if (!empty($search)) {
             $packages = $packages->search($search);
         }
-        
+
         $totalRecordswithFilter = clone $packages;
         $packages->orderBy('sort_order', 'ASC')->orderBy('id', 'ASC');
 
@@ -221,7 +225,7 @@ class PackageController extends Controller
         $packages = $packages->limit(intval($data['length']));
 
         $packages = $packages->get();
-        
+
         foreach ($packages as $k => $val) {
             $packages[$k]['icon_view'] = !empty($val->icon) ? "<img src='" . $val->icon . "' alt='Icon' width='50px'>" : '-';
             $packages[$k]['name'] = $val->name;
@@ -239,4 +243,3 @@ class PackageController extends Controller
         ]);
     }
 }
-

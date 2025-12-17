@@ -73,5 +73,6 @@ class Kernel extends HttpKernel
         'redirect_if_user' => \App\Http\Middleware\RedirectIfUser::class,
         'auth.admin' => \App\Http\Middleware\AuthenticateAdmin::class,
         'auth.user' => \App\Http\Middleware\AuthenticateUser::class,
+        'feature' => \App\Http\Middleware\CheckFeatureLimit::class,
     ];
 }

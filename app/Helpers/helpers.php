@@ -1056,3 +1056,76 @@ function getApiEndpoints()
 
     return $endpoints;
 }
+
+/**
+ * Track feature usage for the authenticated user
+ * 
+ * @param string $featureKey The feature key
+ * @param int $amount Amount to increment (default: 1)
+ * @return array Result array with allowed, usage, limit, remaining, message
+ */
+function trackFeatureUsage($featureKey, $amount = 1)
+{
+    $user = auth()->user();
+    if (!$user) {
+        return [
+            'allowed' => false,
+            'usage' => 0,
+            'limit' => null,
+            'remaining' => null,
+            'message' => 'User not authenticated.',
+        ];
+    }
+
+    $service = app(\App\Services\FeatureUsageService::class);
+    return $service->checkAndIncrement($user, $featureKey, $amount);
+}
+
+/**
+ * Get feature usage statistics for the authenticated user
+ * 
+ * @param string $featureKey The feature key
+ * @return array Usage statistics
+ */
+function getFeatureUsageStats($featureKey)
+{
+    $user = auth()->user();
+    if (!$user) {
+        return [];
+    }
+
+    $service = app(\App\Services\FeatureUsageService::class);
+    return $service->getUsageStats($user, $featureKey);
+}
+
+/**
+ * Check if user can use a feature (helper function)
+ * 
+ * @param string $featureKey The feature key
+ * @return bool
+ */
+function canUseFeature($featureKey)
+{
+    $user = User::find(auth()->user()->id);
+    if (!$user) {
+        return false;
+    }
+
+    return $user->canUseFeature($featureKey);
+}
+
+/**
+ * Get current feature usage count
+ * 
+ * @param string $featureKey The feature key
+ * @return int
+ */
+function getFeatureUsage($featureKey)
+{
+    $user = User::find(auth()->user()->id);
+    if (!$user) {
+        return 0;
+    }
+
+    return $user->getFeatureUsage($featureKey);
+}

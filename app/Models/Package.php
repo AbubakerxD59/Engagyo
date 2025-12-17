@@ -21,6 +21,7 @@ class Package extends Model
         'stripe_price_id',
         'description',
         'is_active',
+        'is_lifetime',
         'sort_order',
         'monthly_price',
         'trial_days',

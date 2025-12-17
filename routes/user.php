@@ -28,8 +28,8 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
             });
         });
     });
-    // Accounts Routes
-    Route::controller(AccountsController::class)->group(function () {
+    // Accounts Routes - Protected by feature middleware
+    Route::controller(AccountsController::class)->middleware(['feature:social_accounts'])->group(function () {
         Route::get("accounts", "index")->name("accounts");
         // Accounts sub Routes
         Route::name("accounts.")->group(function () {

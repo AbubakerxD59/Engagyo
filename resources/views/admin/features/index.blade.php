@@ -6,10 +6,10 @@
             <div class="content-header clearfix">
                 <h1 class="float-left">Features</h1>
                 <div class="float-right">
-                    @can('add_feature')
+                    {{-- @can('add_feature')
                         <a class="btn btn-primary" href="{{ route('admin.features.create') }}">
                             <i class="fas fa-plus-square"></i> Add new</a>
-                    @endcan
+                    @endcan --}}
                 </div>
             </div>
             <section class="content">
@@ -28,7 +28,7 @@
                                                             <th data-data="name">Name</th>
                                                             <th data-data="is_active">Status</th>
                                                             <th data-data="created">Created</th>
-                                                            <th data-data="action">Action</th>
+                                                            {{-- <th data-data="action">Action</th> --}}
                                                         </thead>
                                                     </table>
                                                 </div>
@@ -77,11 +77,11 @@
                 {
                     data: 'created'
                 },
-                {
-                    data: 'action',
-                    orderable: false,
-                    searchable: false
-                }
+                // {
+                //     data: 'action',
+                //     orderable: false,
+                //     searchable: false
+                // }
             ],
         });
     </script>

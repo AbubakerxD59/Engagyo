@@ -94,10 +94,12 @@
                                             </div>
                                             <div class="col-md-5">
                                                 <select class="form-control" name="date_type" id="date_type">
-                                                    <option value="day" {{ $package->date_type == 'day' ? 'selected' : '' }}>
+                                                    <option value="day"
+                                                        {{ $package->date_type == 'day' ? 'selected' : '' }}>
                                                         Day(s)</option>
                                                     <option value="month"
-                                                        {{ $package->date_type == 'month' ? 'selected' : '' }}>Month(s)</option>
+                                                        {{ $package->date_type == 'month' ? 'selected' : '' }}>Month(s)
+                                                    </option>
                                                     <option value="year"
                                                         {{ $package->date_type == 'year' ? 'selected' : '' }}>Year(s)</option>
                                                 </select>
@@ -112,8 +114,8 @@
                                                 <label for="price" class="form-label">Price</label>
                                             </div>
                                             <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" name="price" id="price"
-                                                    value="{{ old('price', $package->price) }}"
+                                                <input type="number" step="0.01" class="form-control" name="price"
+                                                    id="price" value="{{ old('price', $package->price) }}"
                                                     placeholder="Enter package price" required>
                                                 @error('price')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
@@ -126,8 +128,10 @@
                                                 <label for="monthly_price" class="form-label">Monthly Price</label>
                                             </div>
                                             <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control" name="monthly_price" id="monthly_price"
-                                                    value="{{ old('monthly_price', $package->monthly_price) }}" placeholder="Enter monthly price (optional)">
+                                                <input type="number" step="0.01" class="form-control"
+                                                    name="monthly_price" id="monthly_price"
+                                                    value="{{ old('monthly_price', $package->monthly_price) }}"
+                                                    placeholder="Enter monthly price (optional)">
                                                 @error('monthly_price')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror
@@ -140,7 +144,8 @@
                                             </div>
                                             <div class="col-md-9">
                                                 <input type="number" class="form-control" name="trial_days" id="trial_days"
-                                                    value="{{ old('trial_days', $package->trial_days ?? 0) }}" placeholder="Enter trial days" min="0">
+                                                    value="{{ old('trial_days', $package->trial_days ?? 0) }}"
+                                                    placeholder="Enter trial days" min="0">
                                                 @error('trial_days')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror
@@ -153,7 +158,8 @@
                                             </div>
                                             <div class="col-md-9">
                                                 <input type="number" class="form-control" name="sort_order" id="sort_order"
-                                                    value="{{ old('sort_order', $package->sort_order ?? 0) }}" placeholder="Enter sort order" min="0">
+                                                    value="{{ old('sort_order', $package->sort_order ?? 0) }}"
+                                                    placeholder="Enter sort order" min="0">
                                                 @error('sort_order')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror
@@ -166,12 +172,33 @@
                                             </div>
                                             <div class="col-md-9">
                                                 <div class="form-check">
-                                                    <input class="form-check-input" type="checkbox" name="is_active" id="is_active" value="1" {{ old('is_active', $package->is_active ?? true) ? 'checked' : '' }}>
+                                                    <input class="form-check-input" type="checkbox" name="is_active"
+                                                        id="is_active" value="1"
+                                                        {{ old('i s_active', $package->is_active ?? true) ? 'checked' : '' }}>
                                                     <label class="form-check-label" for="is_active">
                                                         Active
                                                     </label>
                                                 </div>
                                                 @error('is_active')
+                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                                @enderror
+                                            </div>
+                                        </div>
+
+                                        <div class="form-group row">
+                                            <div class="col-md-3">
+                                                <label for="is_lifetime" class="form-label">Lifetime</label>
+                                            </div>
+                                            <div class="col-md-9">
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" name="is_lifetime"
+                                                        id="is_lifetime" value="1"
+                                                        {{ old('is_lifetime', $package->is_lifetime ?? false) ? 'checked' : '' }}>
+                                                    <label class="form-check-label" for="is_lifetime">
+                                                        Yes
+                                                    </label>
+                                                </div>
+                                                @error('is_lifetime')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror
                                             </div>
@@ -229,76 +256,144 @@
                                         </div>
                                     </div>
                                     <div class="card-body">
-                                        <div class="row">
-                                            @php
-                                                $packageFeatures = $package->features->pluck('pivot.limit_value', 'id')->toArray();
-                                                $packageFeatureEnabled = $package->features->pluck('pivot.is_enabled', 'id')->toArray();
-                                                $packageFeatureUnlimited = $package->features->pluck('pivot.is_unlimited', 'id')->toArray();
-                                            @endphp
-                                            @foreach ($features as $feature)
-                                                @php
-                                                    $isChecked = isset($packageFeatureEnabled[$feature->id]) && $packageFeatureEnabled[$feature->id];
-                                                    $isUnlimited = isset($packageFeatureUnlimited[$feature->id]) && $packageFeatureUnlimited[$feature->id];
-                                                    $limitValue = $packageFeatures[$feature->id] ?? ($feature->default_value ?? '');
-                                                    $showLimitInput = in_array($feature->type, ['numeric', 'unlimited']) && $isChecked && !$isUnlimited;
-                                                @endphp
-                                                <div class="col-md-6 mb-3">
-                                                    <div class="card feature-card {{ $isChecked ? 'border-primary' : '' }}"
-                                                        style="border: 2px solid {{ $isChecked ? '#007bff' : '#dee2e6' }}; transition: all 0.3s;">
-                                                        <div class="card-body p-3">
-                                                            <div class="form-check mb-2">
-                                                                <input class="form-check-input feature-checkbox" type="checkbox"
-                                                                    name="features[{{ $feature->id }}][enabled]"
-                                                                    id="feature_{{ $feature->id }}"
-                                                                    value="1" {{ $isChecked ? 'checked' : '' }}
-                                                                    data-feature-id="{{ $feature->id }}"
-                                                                    data-feature-type="{{ $feature->type }}">
-                                                                <label class="form-check-label font-weight-bold" for="feature_{{ $feature->id }}"
-                                                                    style="cursor: pointer; font-size: 1.05rem;">
-                                                                    {{ $feature->name }}
-                                                                </label>
-                                                            </div>
-                                                            @if ($feature->description)
-                                                                <p class="text-muted mb-2" style="font-size: 0.875rem; margin-left: 1.5rem;">
-                                                                    {{ $feature->description }}
-                                                                </p>
-                                                            @endif
-                                                            @if (in_array($feature->type, ['numeric', 'unlimited']))
-                                                                <div class="feature-limit-controls" style="margin-left: 1.5rem; {{ !$isChecked ? 'display:none;' : '' }}">
-                                                                    <div class="form-check mb-2">
-                                                                        <input class="form-check-input unlimited-checkbox" type="checkbox"
-                                                                            name="features[{{ $feature->id }}][unlimited]"
-                                                                            id="feature_unlimited_{{ $feature->id }}"
-                                                                            value="1"
-                                                                            data-feature-id="{{ $feature->id }}"
-                                                                            {{ $isUnlimited ? 'checked' : '' }}>
-                                                                        <label class="form-check-label small font-weight-bold" for="feature_unlimited_{{ $feature->id }}">
-                                                                            Unlimited
-                                                                        </label>
-                                                                    </div>
-                                                                    <div class="feature-limit-input" style="{{ $isUnlimited ? 'display:none;' : '' }}">
-                                                                        <label class="form-label small">Limit:</label>
-                                                                        <input type="number" class="form-control form-control-sm"
-                                                                            name="features[{{ $feature->id }}][limit]"
-                                                                            id="feature_limit_{{ $feature->id }}"
-                                                                            value="{{ $isChecked && !$isUnlimited ? $limitValue : ($feature->default_value ?? '') }}"
-                                                                            placeholder="Enter limit"
-                                                                            min="0">
-                                                                    </div>
-                                                                </div>
-                                                            @endif
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            @endforeach
-                                            @if ($features->isEmpty())
-                                                <div class="col-12">
-                                                    <div class="alert alert-info">
-                                                        <i class="fas fa-info-circle"></i> No features available. Please create features first.
-                                                    </div>
-                                                </div>
-                                            @endif
-                                        </div>
+                                        @php
+                                            $packageFeatures = $package->features
+                                                ->pluck('pivot.limit_value', 'id')
+                                                ->toArray();
+                                            $packageFeatureEnabled = $package->features
+                                                ->pluck('pivot.is_enabled', 'id')
+                                                ->toArray();
+                                            $packageFeatureUnlimited = $package->features
+                                                ->pluck('pivot.is_unlimited', 'id')
+                                                ->toArray();
+                                        @endphp
+                                        
+                                        @if ($features->isEmpty())
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle"></i> No features available. Please create features first.
+                                            </div>
+                                        @else
+                                            <div class="table-responsive">
+                                                <table class="table table-hover">
+                                                    <thead>
+                                                        <tr>
+                                                            <th width="50">
+                                                                <input type="checkbox" id="selectAllFeatures" title="Select All">
+                                                            </th>
+                                                            <th>Feature</th>
+                                                            <th>Type</th>
+                                                            <th>Status</th>
+                                                            <th>Limit Configuration</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach ($features as $feature)
+                                                            @php
+                                                                $isChecked = isset($packageFeatureEnabled[$feature->id]) &&
+                                                                    $packageFeatureEnabled[$feature->id];
+                                                                $isUnlimited = isset($packageFeatureUnlimited[$feature->id]) &&
+                                                                    $packageFeatureUnlimited[$feature->id];
+                                                                $limitValue = $packageFeatures[$feature->id] ??
+                                                                    ($feature->default_value ?? '');
+                                                                $isBoolean = $feature->type === 'boolean';
+                                                                $isNumeric = $feature->type === 'numeric';
+                                                                $isUnlimitedType = $feature->type === 'unlimited';
+                                                            @endphp
+                                                            <tr class="feature-row {{ $isChecked ? 'table-primary' : '' }}">
+                                                                <td>
+                                                                    <input class="form-check-input feature-checkbox"
+                                                                        type="checkbox"
+                                                                        name="features[{{ $feature->id }}][enabled]"
+                                                                        id="feature_{{ $feature->id }}" value="1"
+                                                                        {{ $isChecked ? 'checked' : '' }}
+                                                                        data-feature-id="{{ $feature->id }}"
+                                                                        data-feature-type="{{ $feature->type }}">
+                                                                </td>
+                                                                <td>
+                                                                    <label class="mb-0 font-weight-bold" for="feature_{{ $feature->id }}" style="cursor: pointer;">
+                                                                        {{ $feature->name }}
+                                                                    </label>
+                                                                    @if ($feature->key)
+                                                                        <br><small class="text-muted">{{ $feature->key }}</small>
+                                                                    @endif
+                                                                    @if ($feature->description)
+                                                                        <br><small class="text-muted">{{ $feature->description }}</small>
+                                                                    @endif
+                                                                </td>
+                                                                <td>
+                                                                    <span class="badge badge-{{ $isBoolean ? 'info' : ($isNumeric ? 'warning' : 'success') }}">
+                                                                        {{ ucfirst($feature->type) }}
+                                                                    </span>
+                                                                </td>
+                                                                <td>
+                                                                    <span class="badge badge-{{ $isChecked ? 'success' : 'secondary' }}">
+                                                                        {{ $isChecked ? 'Enabled' : 'Disabled' }}
+                                                                    </span>
+                                                                </td>
+                                                                <td>
+                                                                    @if ($isBoolean)
+                                                                        <span class="text-muted">N/A</span>
+                                                                    @elseif ($isUnlimitedType)
+                                                                        <span class="badge badge-info">Unlimited</span>
+                                                                    @elseif ($isNumeric)
+                                                                        @if ($isChecked)
+                                                                            <div class="d-flex align-items-center gap-2">
+                                                                                <div class="form-check">
+                                                                                    <input class="form-check-input unlimited-checkbox"
+                                                                                        type="checkbox"
+                                                                                        name="features[{{ $feature->id }}][unlimited]"
+                                                                                        id="feature_unlimited_{{ $feature->id }}"
+                                                                                        value="1"
+                                                                                        data-feature-id="{{ $feature->id }}"
+                                                                                        {{ $isUnlimited ? 'checked' : '' }}>
+                                                                                    <label class="form-check-label small" for="feature_unlimited_{{ $feature->id }}">
+                                                                                        Unlimited
+                                                                                    </label>
+                                                                                </div>
+                                                                                <div class="feature-limit-input" style="{{ $isUnlimited ? 'display:none;' : '' }}">
+                                                                                    <input type="number"
+                                                                                        class="form-control form-control-sm d-inline-block"
+                                                                                        style="width: 100px;"
+                                                                                        name="features[{{ $feature->id }}][limit]"
+                                                                                        id="feature_limit_{{ $feature->id }}"
+                                                                                        value="{{ !$isUnlimited ? $limitValue : ($feature->default_value ?? '') }}"
+                                                                                        placeholder="Limit" min="0">
+                                                                                </div>
+                                                                            </div>
+                                                                        @else
+                                                                            <div class="d-flex align-items-center gap-2" style="display: none;">
+                                                                                <div class="form-check">
+                                                                                    <input class="form-check-input unlimited-checkbox"
+                                                                                        type="checkbox"
+                                                                                        name="features[{{ $feature->id }}][unlimited]"
+                                                                                        id="feature_unlimited_{{ $feature->id }}"
+                                                                                        value="1"
+                                                                                        data-feature-id="{{ $feature->id }}">
+                                                                                    <label class="form-check-label small" for="feature_unlimited_{{ $feature->id }}">
+                                                                                        Unlimited
+                                                                                    </label>
+                                                                                </div>
+                                                                                <div class="feature-limit-input">
+                                                                                    <input type="number"
+                                                                                        class="form-control form-control-sm d-inline-block"
+                                                                                        style="width: 100px;"
+                                                                                        name="features[{{ $feature->id }}][limit]"
+                                                                                        id="feature_limit_{{ $feature->id }}"
+                                                                                        value=""
+                                                                                        placeholder="Limit" min="0"
+                                                                                        data-default-value="{{ $feature->default_value }}">
+                                                                                </div>
+                                                                            </div>
+                                                                            <span class="text-muted">Enable to configure</span>
+                                                                        @endif
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        @endif
                                     </div>
                                 </div>
                             </div>
@@ -329,36 +424,60 @@
 
         // Feature checkbox toggle
         $(document).ready(function() {
+            // Select all features checkbox
+            $('#selectAllFeatures').on('change', function() {
+                $('.feature-checkbox').prop('checked', $(this).is(':checked')).trigger('change');
+            });
+
+            // Feature checkbox toggle
             $('.feature-checkbox').on('change', function() {
                 var checkbox = $(this);
                 var featureId = checkbox.data('feature-id');
                 var featureType = checkbox.data('feature-type');
+                var featureRow = checkbox.closest('.feature-row');
                 var limitInput = $('#feature_limit_' + featureId);
-                var limitContainer = limitInput.closest('.feature-limit-controls');
-                var featureCard = checkbox.closest('.feature-card');
+                var limitInputContainer = limitInput.closest('.feature-limit-input');
                 var unlimitedCheckbox = $('#feature_unlimited_' + featureId);
 
                 if (checkbox.is(':checked')) {
-                    limitContainer.slideDown();
-                    featureCard.css('border-color', '#007bff');
+                    featureRow.addClass('table-primary');
                     
-                    // Check if unlimited is checked
-                    if (unlimitedCheckbox.is(':checked')) {
-                        $('#feature_limit_' + featureId).closest('.feature-limit-input').hide();
-                    } else {
-                        $('#feature_limit_' + featureId).closest('.feature-limit-input').show();
-                        // Set default value if empty and feature type is numeric
-                        if (featureType === 'numeric' && !limitInput.val()) {
-                            var defaultVal = limitInput.attr('data-default-value') || '';
-                            limitInput.val(defaultVal);
+                    // Show limit controls for numeric features
+                    if (featureType === 'numeric') {
+                        var limitControlsContainer = limitInputContainer.closest('.d-flex');
+                        var statusText = featureRow.find('td:nth-child(5) .text-muted');
+                        
+                        if (limitControlsContainer.length) {
+                            statusText.hide();
+                            limitControlsContainer.show();
+                            if (unlimitedCheckbox.is(':checked')) {
+                                limitInputContainer.hide();
+                            } else {
+                                limitInputContainer.show();
+                                if (!limitInput.val()) {
+                                    var defaultVal = limitInput.attr('data-default-value') || '';
+                                    limitInput.val(defaultVal);
+                                }
+                            }
                         }
                     }
                 } else {
-                    limitContainer.slideUp();
-                    featureCard.css('border-color', '#dee2e6');
+                    featureRow.removeClass('table-primary');
                     limitInput.val('');
-                    unlimitedCheckbox.prop('checked', false);
+                    if (unlimitedCheckbox.length) {
+                        unlimitedCheckbox.prop('checked', false);
+                        var limitControlsContainer = limitInputContainer.closest('.d-flex');
+                        var statusText = featureRow.find('td:nth-child(5) .text-muted');
+                        if (limitControlsContainer.length) {
+                            limitControlsContainer.hide();
+                            statusText.show();
+                        }
+                    }
+                    limitInputContainer.hide();
                 }
+                
+                // Update select all checkbox state
+                updateSelectAllState();
             });
 
             // Unlimited checkbox toggle
@@ -376,34 +495,54 @@
                 }
             });
 
+            // Update select all checkbox state
+            function updateSelectAllState() {
+                var totalCheckboxes = $('.feature-checkbox').length;
+                var checkedCheckboxes = $('.feature-checkbox:checked').length;
+                $('#selectAllFeatures').prop('checked', totalCheckboxes === checkedCheckboxes && totalCheckboxes > 0);
+            }
+
             // Trigger change on page load to set initial state
             $('.feature-checkbox').each(function() {
                 if ($(this).is(':checked')) {
                     $(this).trigger('change');
                 }
             });
+            
+            updateSelectAllState();
         });
     </script>
     <style>
-        .feature-card {
-            transition: all 0.3s ease;
+        .feature-row {
+            transition: all 0.2s ease;
         }
 
-        .feature-card:hover {
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-            transform: translateY(-2px);
+        .feature-row:hover {
+            background-color: #f8f9fa;
         }
 
-        .feature-card.border-primary {
-            background-color: #f0f8ff;
+        .feature-row.table-primary {
+            background-color: #cfe2ff !important;
         }
 
         .feature-checkbox {
             cursor: pointer;
+            width: 18px;
+            height: 18px;
         }
 
         .feature-limit-input {
             transition: all 0.3s ease;
+        }
+
+        .gap-2 {
+            gap: 0.5rem;
+        }
+
+        #selectAllFeatures {
+            cursor: pointer;
+            width: 18px;
+            height: 18px;
         }
     </style>
 @endpush

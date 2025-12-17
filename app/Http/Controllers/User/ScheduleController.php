@@ -20,6 +20,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\Tiktok;
 use App\Services\PostService;
+use App\Services\FeatureUsageService;
 use Illuminate\Support\Facades\Auth;
 
 class  ScheduleController extends Controller
@@ -27,13 +28,125 @@ class  ScheduleController extends Controller
     protected $facebookService;
     protected $pinterestService;
     protected $tiktokService;
+    protected $featureUsageService;
     protected $source;
-    public function __construct()
+    public function __construct(FeatureUsageService $featureUsageService)
     {
         $this->facebookService = new FacebookService();
         $this->pinterestService = new PinterestService();
         $this->tiktokService = new TikTokService();
+        $this->featureUsageService = $featureUsageService;
         $this->source = "schedule";
+    }
+
+    /**
+     * Verify that a post's account belongs to the user
+     * 
+     * @param Post $post
+     * @param User $user
+     * @return bool
+     */
+    private function verifyPostAccountBelongsToUser(Post $post, User $user): bool
+    {
+        // Ensure post belongs to user
+        if ($post->user_id !== $user->id) {
+            return false;
+        }
+
+        // Check based on social type
+        switch ($post->social_type) {
+            case 'pinterest':
+                $board = Board::where('id', $post->account_id)
+                    ->where('user_id', $user->id)
+                    ->first();
+                return $board !== null;
+
+            case 'facebook':
+                $page = Page::where('id', $post->account_id)
+                    ->where('user_id', $user->id)
+                    ->first();
+                return $page !== null;
+
+            case 'tiktok':
+                $tiktok = Tiktok::where('id', $post->account_id)
+                    ->where('user_id', $user->id)
+                    ->first();
+                return $tiktok !== null;
+
+            default:
+                return false;
+        }
+    }
+
+    /**
+     * Check if user can create scheduled posts
+     * 
+     * @param User $user
+     * @param int $newPostsCount Number of new posts to be created
+     * @return array ['allowed' => bool, 'message' => string, 'usage' => int, 'limit' => int|null, 'remaining' => int|null]
+     */
+    private function checkScheduledPostsLimit(User $user, int $newPostsCount = 1): array
+    {
+        // Check if user can use the feature
+        if (!$user->canUseFeature('scheduled_posts_per_account')) {
+            return [
+                'allowed' => false,
+                'message' => 'Scheduled posts feature is not available in your package.',
+                'usage' => 0,
+                'limit' => null,
+                'remaining' => null,
+            ];
+        }
+
+        // Get usage stats
+        $usageStats = $this->featureUsageService->getUsageStats($user, 'scheduled_posts_per_account');
+
+        if (empty($usageStats)) {
+            return [
+                'allowed' => true,
+                'message' => 'Feature limit check passed.',
+                'usage' => 0,
+                'limit' => null,
+                'remaining' => null,
+            ];
+        }
+
+        $currentUsage = $usageStats['current_usage'] ?? 0;
+        $limit = $usageStats['limit'] ?? null;
+        $isUnlimited = $usageStats['is_unlimited'] ?? false;
+
+        // If unlimited, allow
+        if ($isUnlimited || $limit === null) {
+            return [
+                'allowed' => true,
+                'message' => 'Feature limit check passed.',
+                'usage' => $currentUsage,
+                'limit' => null,
+                'remaining' => null,
+            ];
+        }
+
+        // Check if adding new posts would exceed the limit
+        $totalAfterAdding = $currentUsage + $newPostsCount;
+
+        if ($totalAfterAdding > $limit) {
+            $remaining = max(0, $limit - $currentUsage);
+            return [
+                'allowed' => false,
+                'message' => "You have reached your limit of {$limit} scheduled posts per account. You have {$remaining} remaining. Please upgrade your package to schedule more posts.",
+                'usage' => $currentUsage,
+                'limit' => $limit,
+                'remaining' => $remaining,
+            ];
+        }
+
+        return [
+            'allowed' => true,
+            'message' => 'Feature limit check passed.',
+            'usage' => $currentUsage,
+            'limit' => $limit,
+            'remaining' => $limit - $totalAfterAdding,
+        ];
     }
     public function index()
     {
@@ -41,6 +154,11 @@ class  ScheduleController extends Controller
         $accounts = $user->getAccounts();
         return view("user.schedule.index", compact("accounts"));
     }
+    /**
+     * Summary of accountStatus
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function accountStatus(Request $request)
     {
         $type = $request->type;
@@ -94,7 +212,11 @@ class  ScheduleController extends Controller
         }
         return response()->json($response);
     }
-
+    /**
+     * Summary of processPost
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function processPost(Request $request)
     {
         $action = $request->get("action");
@@ -122,8 +244,12 @@ class  ScheduleController extends Controller
         }
         return response()->json($response);
     }
-    // publish post
-    private function publishPost($request)
+    /**
+     * Publish Post
+     * @param Request $request
+     * @return array
+     */
+    private function publishPost($request): array
     {
         try {
             $user = User::with("boards.pinterest", "pages.facebook")->findOrFail(Auth::id());
@@ -141,8 +267,22 @@ class  ScheduleController extends Controller
                     $image = saveImage($request->file("files"));
                 }
             }
+            // Count total posts to be created
+            $totalPostsToCreate = count($accounts);
+            
+            // Check scheduled posts limit before creating any posts
+            /** @var User $user */
+            $limitCheck = $this->checkScheduledPostsLimit($user, $totalPostsToCreate);
+            if (!$limitCheck['allowed']) {
+                return [
+                    "success" => false,
+                    "message" => $limitCheck['message']
+                ];
+            }
+
             foreach ($accounts as $account) {
                 if ($account->type == "facebook") {
+
                     Facebook::where("id", $account->fb_id)->firstOrFail();
                     // store in db
                     if ($file) {
@@ -164,6 +304,11 @@ class  ScheduleController extends Controller
                         "publish_date" => date("Y-m-d H:i"),
                     ];
                     $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                     // Use validateToken for proper error handling
                     $tokenResponse = FacebookService::validateToken($account);
@@ -195,7 +340,12 @@ class  ScheduleController extends Controller
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
                         ];
-                        $post = PostService::create($data);
+                    $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                         // Use validateToken for proper error handling
                         $tokenResponse = PinterestService::validateToken($account);
@@ -228,7 +378,12 @@ class  ScheduleController extends Controller
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
                         ];
-                        $post = PostService::create($data);
+                    $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                         // Use validateToken for proper error handling
                         $tokenResponse = TikTokService::validateToken($account);
@@ -277,6 +432,33 @@ class  ScheduleController extends Controller
                     $image = saveImage($request->file("files"));
                 }
             }
+
+            // Count how many posts will be created (accounts with timeslots)
+            $postsToCreate = 0;
+            foreach ($accounts as $account) {
+                if (count($account->timeslots) > 0) {
+                    if ($account->type == "facebook") {
+                        $postsToCreate++;
+                    } elseif ($account->type == "pinterest" && $file) {
+                        $postsToCreate++;
+                    } elseif ($account->type == "tiktok" && $file) {
+                        $postsToCreate++;
+                    }
+                }
+            }
+
+            // Check scheduled posts limit before creating any posts
+            if ($postsToCreate > 0) {
+                /** @var User $user */
+                $limitCheck = $this->checkScheduledPostsLimit($user, $postsToCreate);
+                if (!$limitCheck['allowed']) {
+                    return [
+                        "success" => false,
+                        "message" => $limitCheck['message']
+                    ];
+                }
+            }
+
             foreach ($accounts as $account) {
                 if (count($account->timeslots) > 0) {
                     if ($account->type == "facebook") {
@@ -301,7 +483,11 @@ class  ScheduleController extends Controller
                             "status" => 0,
                             "publish_date" => $nextTime,
                         ];
-                        PostService::create($data);
+                        $post = PostService::create($data);
+                        // Verify account belongs to user before incrementing
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        }
                     }
                     if ($account->type == "pinterest") {
                         Pinterest::where("id", $account->pin_id)->firstOrFail();
@@ -322,7 +508,11 @@ class  ScheduleController extends Controller
                                 "status" => 0,
                                 "publish_date" => $nextTime,
                             ];
-                            PostService::create($data);
+                            $post = PostService::create($data);
+                            // Verify account belongs to user before incrementing
+                            if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                                $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                            }
                         }
                     }
                     if ($account->type == "tiktok") {
@@ -344,7 +534,11 @@ class  ScheduleController extends Controller
                                 "status" => 0,
                                 "publish_date" => $nextTime,
                             ];
-                            PostService::create($data);
+                            $post = PostService::create($data);
+                            // Verify account belongs to user before incrementing
+                            if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                                $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                            }
                         }
                     }
                     $response = array(
@@ -388,6 +582,31 @@ class  ScheduleController extends Controller
                     $image = saveImage($request->file("files"));
                 }
             }
+
+            // Count how many posts will be created
+            $postsToCreate = 0;
+            foreach ($accounts as $account) {
+                if ($account->type == "facebook") {
+                    $postsToCreate++;
+                } elseif ($account->type == "pinterest" && $file) {
+                    $postsToCreate++;
+                } elseif ($account->type == "tiktok" && $file) {
+                    $postsToCreate++;
+                }
+            }
+
+            // Check scheduled posts limit before creating any posts
+            if ($postsToCreate > 0) {
+                /** @var User $user */
+                $limitCheck = $this->checkScheduledPostsLimit($user, $postsToCreate);
+                if (!$limitCheck['allowed']) {
+                    return [
+                        "success" => false,
+                        "message" => $limitCheck['message']
+                    ];
+                }
+            }
+
             foreach ($accounts as $account) {
                 $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
                 if ($account->type == "facebook") {
@@ -412,7 +631,11 @@ class  ScheduleController extends Controller
                         "publish_date" => $scheduleDateTime,
                         "scheduled" => 1
                     ];
-                    PostService::create($data);
+                    $post = PostService::create($data);
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
                 }
                 if ($account->type == "pinterest") {
                     Pinterest::where("id", $account->pin_id)->firstOrFail();
@@ -433,7 +656,11 @@ class  ScheduleController extends Controller
                             "publish_date" => $scheduleDateTime,
                             "scheduled" => 1
                         ];
-                        PostService::create($data);
+                        $post = PostService::create($data);
+                        // Verify account belongs to user before incrementing
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        }
                     }
                 }
                 if ($account->type == "tiktok") {
@@ -455,7 +682,11 @@ class  ScheduleController extends Controller
                             "publish_date" => $scheduleDateTime,
                             "scheduled" => 1
                         ];
-                        PostService::create($data);
+                        $post = PostService::create($data);
+                        // Verify account belongs to user before incrementing
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        }
                     }
                 }
                 $response = array(
@@ -483,6 +714,19 @@ class  ScheduleController extends Controller
             $url = $request->get("url") ?? null;
             $image = $request->get("image") ?? null;
             if (!empty($url) && !empty($image)) {
+                // Count total posts to be created
+                $totalPostsToCreate = count($accounts);
+                
+                // Check scheduled posts limit before creating any posts
+                /** @var User $user */
+                $limitCheck = $this->checkScheduledPostsLimit($user, $totalPostsToCreate);
+                if (!$limitCheck['allowed']) {
+                    return [
+                        "success" => false,
+                        "message" => $limitCheck['message']
+                    ];
+                }
+
                 foreach ($accounts as $account) {
                     if ($account->type == "facebook") {
                         Facebook::where("id", $account->fb_id)->firstOrFail();
@@ -500,7 +744,12 @@ class  ScheduleController extends Controller
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
                         ];
-                        $post = PostService::create($data);
+                    $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                         // Use validateToken for proper error handling
                         $tokenResponse = FacebookService::validateToken($account);
@@ -530,7 +779,12 @@ class  ScheduleController extends Controller
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
                         ];
-                        $post = PostService::create($data);
+                    $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                         // Use validateToken for proper error handling
                         $tokenResponse = PinterestService::validateToken($account);
@@ -560,7 +814,12 @@ class  ScheduleController extends Controller
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
                         ];
-                        $post = PostService::create($data);
+                    $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                         // Use validateToken for proper error handling
                         $tokenResponse = TikTokService::validateToken($account);
@@ -606,6 +865,26 @@ class  ScheduleController extends Controller
             $url = $request->get("url") ?? null;
             $image = $request->get("image") ?? null;
             if (!empty($url) && !empty($image)) {
+                // Count how many posts will be created (accounts with timeslots)
+                $postsToCreate = 0;
+                foreach ($accounts as $account) {
+                    if (count($account->timeslots) > 0) {
+                        $postsToCreate++;
+                    }
+                }
+
+                // Check scheduled posts limit before creating any posts
+                if ($postsToCreate > 0) {
+                    /** @var User $user */
+                    $limitCheck = $this->checkScheduledPostsLimit($user, $postsToCreate);
+                    if (!$limitCheck['allowed']) {
+                        return [
+                            "success" => false,
+                            "message" => $limitCheck['message']
+                        ];
+                    }
+                }
+
                 foreach ($accounts as $account) {
                     if ($account->type == "facebook") {
                         Facebook::where("id", $account->fb_id)->firstOrFail();
@@ -624,7 +903,12 @@ class  ScheduleController extends Controller
                             "status" => 0,
                             "publish_date" => $nextTime
                         ];
-                        $post = PostService::create($data);
+                    $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                         // Use validateToken for proper error handling
                         $tokenResponse = FacebookService::validateToken($account);
@@ -656,7 +940,12 @@ class  ScheduleController extends Controller
                                 "status" => 0,
                                 "publish_date" => $nextTime,
                             ];
-                            $post = PostService::create($data);
+                    $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                             // Use validateToken for proper error handling
                             $tokenResponse = PinterestService::validateToken($account);
@@ -689,7 +978,12 @@ class  ScheduleController extends Controller
                                 "status" => 0,
                                 "publish_date" => $nextTime,
                             ];
-                            $post = PostService::create($data);
+                    $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                             // Use validateToken for proper error handling
                             $tokenResponse = TikTokService::validateToken($account);
@@ -738,6 +1032,19 @@ class  ScheduleController extends Controller
             $url = $request->get("url") ?? null;
             $image = $request->get("image") ?? null;
             if (!empty($url) && !empty($image)) {
+                // Count total posts to be created
+                $totalPostsToCreate = count($accounts);
+                
+                // Check scheduled posts limit before creating any posts
+                /** @var User $user */
+                $limitCheck = $this->checkScheduledPostsLimit($user, $totalPostsToCreate);
+                if (!$limitCheck['allowed']) {
+                    return [
+                        "success" => false,
+                        "message" => $limitCheck['message']
+                    ];
+                }
+
                 foreach ($accounts as $account) {
                     $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
                     if ($account->type == "facebook") {
@@ -756,7 +1063,12 @@ class  ScheduleController extends Controller
                             "status" => 0,
                             "publish_date" => $scheduleDateTime,
                         ];
-                        $post = PostService::create($data);
+                    $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                         // Use validateToken for proper error handling
                         $tokenResponse = FacebookService::validateToken($account);
@@ -787,7 +1099,12 @@ class  ScheduleController extends Controller
                                 "status" => 0,
                                 "publish_date" => $scheduleDateTime,
                             ];
-                            $post = PostService::create($data);
+                    $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                             // Use validateToken for proper error handling
                             $tokenResponse = PinterestService::validateToken($account);
@@ -819,7 +1136,12 @@ class  ScheduleController extends Controller
                                 "status" => 0,
                                 "publish_date" => $scheduleDateTime,
                             ];
-                            $post = PostService::create($data);
+                    $post = PostService::create($data);
+                    
+                    // Verify account belongs to user before incrementing
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
 
                             // Use validateToken for proper error handling
                             $tokenResponse = TikTokService::validateToken($account);
@@ -951,6 +1273,12 @@ class  ScheduleController extends Controller
     {
         try {
             $post = Post::findOrFail($request->id);
+            $user = User::findOrFail($post->user_id);
+            // Decrement feature usage if this is a scheduled post and account belongs to user
+            if ($post->source === 'schedule' && $this->verifyPostAccountBelongsToUser($post, $user)) {
+                $user->decrementFeatureUsage('scheduled_posts_per_account', 1);
+            }
+            
             $post->photo()->delete();
             PostService::delete($post->id);
             $response = [

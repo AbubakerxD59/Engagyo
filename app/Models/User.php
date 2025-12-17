@@ -8,6 +8,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Carbon\Carbon;
 use PDO;
 
 class User extends Authenticatable
@@ -267,27 +268,13 @@ class User extends Authenticatable
         return $this->hasMany(UserPackage::class);
     }
 
-    public function getActiveUserPackageAttribute()
+    /**
+     * Get the user feature usages
+     * @return \Illuminate\Database\Eloquent\Relations\HasMany The user feature usages
+     */
+    public function userFeatureUsages()
     {
-        // Check if relationship is already loaded
-        if ($this->relationLoaded('userPackages')) {
-            $package = $this->userPackages->where('is_active', true)->sortByDesc('id')->first();
-            if (!$package) {
-                $package = $this->userPackages->sortByDesc('id')->first();
-            }
-            // Ensure package relationship is loaded
-            if ($package && !$package->relationLoaded('package')) {
-                $package->load('package');
-            }
-            return $package;
-        }
-
-        // If not loaded, query the database
-        $package = $this->userPackages()->with('package')->where('is_active', true)->latest()->first();
-        if (!$package) {
-            $package = $this->userPackages()->with('package')->latest()->first();
-        }
-        return $package;
+        return $this->hasMany(UserFeatureUsage::class);
     }
 
     /**
@@ -301,6 +288,11 @@ class User extends Authenticatable
             ->wherePivot('is_read', true);
     }
 
+    /**
+     * Get the scheduled active accounts
+     * 
+     * @return \Illuminate\Database\Eloquent\Collection The scheduled active accounts
+     */
     public function getScheduledActiveAccounts()
     {
         // Pinterest Boards
@@ -315,159 +307,267 @@ class User extends Authenticatable
     }
 
     /**
-     * Get features available to the user from their active package
+     * Get the active user package
+     * 
+     * @return \App\Models\UserPackage The active user package
      */
-    public function getPackageFeatures()
+    public function getActiveUserPackageAttribute()
     {
-        $features = collect();
-
-        if ($this->activeUserPackage && $this->activeUserPackage->package) {
-            $package = $this->activeUserPackage->package;
-
-            // Query features with pivot data
-            $features = $package->features()
-                ->wherePivot('is_enabled', true)
-                ->get()
-                ->map(function ($feature) {
-                    return [
-                        'id' => $feature->id,
-                        'key' => $feature->key ?? null,
-                        'name' => $feature->name ?? 'Unknown',
-                        'type' => $feature->type ?? 'boolean',
-                        'description' => $feature->description ?? '',
-                        'limit_value' => $feature->pivot->limit_value ?? null,
-                        'is_enabled' => $feature->pivot->is_enabled ?? false,
-                        'is_unlimited' => $feature->pivot->is_unlimited ?? false,
-                    ];
-                })
-                ->filter(function ($feature) {
-                    // Filter out features without a key
-                    return !empty($feature['key']);
-                })
-                ->values();
+        // Check if relationship is already loaded
+        if ($this->relationLoaded('userPackages')) {
+            $package = $this->userPackages->where('is_active', true)->sortByDesc('id')->first();
+            // Ensure package relationship is loaded
+            if ($package && !$package->relationLoaded('package')) {
+                $package->load('package');
+            }
+            return $package;
         }
+        // If not loaded, query the database
+        $package = $this->userPackages()->with('package')->active()->latest()->first();
+        return $package;
+    }
 
+    /**
+     * Get all features available for the user based on their package as an array
+     * 
+     * @return array Array of features with their details
+     */
+    public function getAvailableFeaturesArray()
+    {
+        $features = [];
+        // Get the active user package
+        $activePackage = $this->activeUserPackage;
+        if (!$activePackage || !$activePackage->package) {
+            return $features;
+        }
+        $package = $activePackage->package;
+        // Get all enabled features from the package
+        $packageFeatures = $package->features()
+            ->wherePivot('is_enabled', true)
+            ->where('is_active', true)
+            ->get();
+        foreach ($packageFeatures as $feature) {
+            $features[] = [
+                'id' => $feature->id,
+                'key' => $feature->key,
+                'name' => $feature->name,
+                'type' => $feature->type,
+                'description' => $feature->description ?? '',
+                'default_value' => $feature->default_value,
+                'limit_value' => $feature->pivot->limit_value,
+                'is_enabled' => $feature->pivot->is_enabled,
+                'is_unlimited' => $feature->pivot->is_unlimited ?? false,
+                'usage_count' => $this->getFeatureUsage($feature->key),
+            ];
+        }
         return $features;
     }
 
     /**
-     * Get usage count for a specific feature by key
+     * Get feature usage count for a user by feature key
+     * 
+     * @param string $featureKey The feature key to check usage for
+     * @return int The usage count for the feature (0 if not found)
      */
-    public function getFeatureUsage($featureKey)
+    public function getFeatureUsage($featureKey, $periodStart = null)
     {
-        if (empty($featureKey)) {
+        // Find the feature by key
+        $feature = Feature::where('key', $featureKey)->first();
+        if (!$feature) {
             return 0;
         }
 
-        switch ($featureKey) {
-            case 'social_accounts':
-                // Count all social accounts: Facebook pages + Pinterest boards + TikTok accounts
-                try {
-                    $facebookCount = $this->pages()->count();
-                    $pinterestCount = $this->boards()->count();
-                    $tiktokCount = $this->tiktok()->count();
-                    return $facebookCount + $pinterestCount + $tiktokCount;
-                } catch (\Exception $e) {
-                    return 0;
-                }
-
-            case 'scheduled_posts_per_account':
-                // Count scheduled posts (posts with scheduled = 1)
-                try {
-                    return Post::where('user_id', $this->id)
-                        ->where('scheduled', 1)
-                        ->count();
-                } catch (\Exception $e) {
-                    return 0;
-                }
-
-            case 'rss_feed_automation':
-                // Count RSS feed automations (domains)
-                try {
-                    return $this->domains()->count();
-                } catch (\Exception $e) {
-                    return 0;
-                }
-
-            case 'video_publishing':
-                // Boolean feature - return 1 if user has any video posts capability
-                // Check if user has any video posts
-                try {
-                    return \App\Models\Post::where('user_id', $this->id)
-                        ->where('type', 'video')
-                        ->count() > 0 ? 1 : 0;
-                } catch (\Exception $e) {
-                    return 0;
-                }
-
-            case 'api_keys':
-                // Count API keys
-                try {
-                    return $this->apiKeys()->count();
-                } catch (\Exception $e) {
-                    return 0;
-                }
-
-            case 'api_access':
-                // Boolean feature - return 1 if user has any active API keys
-                try {
-                    return $this->apiKeys()->where('is_active', true)->count() > 0 ? 1 : 0;
-                } catch (\Exception $e) {
-                    return 0;
-                }
-
-            default:
-                return 0;
+        // Use current month if no period specified
+        if (!$periodStart) {
+            $periodStart = now()->startOfMonth();
+        } else {
+            $periodStart = $periodStart instanceof \Carbon\Carbon
+                ? $periodStart->startOfMonth()
+                : \Carbon\Carbon::parse($periodStart)->startOfMonth();
         }
+
+        // Get the usage record for this user, feature, and current period
+        $featureUsage = $this->userFeatureUsages()
+            ->where('feature_id', $feature->id)
+            ->where('period_start', $periodStart)
+            ->where('is_archived', false)
+            ->first();
+
+        if ($featureUsage) {
+            return $featureUsage->usage_count ?? 0;
+        }
+
+        return 0;
     }
 
     /**
-     * Get feature usage information with limits
+     * Increment feature usage count for a user
+     * 
+     * @param string $featureKey The feature key
+     * @param int $amount The amount to increment (default: 1)
+     * @return bool Success status
      */
-    public function getFeaturesWithUsage()
+    public function incrementFeatureUsage($featureKey, $amount = 1)
     {
-        $packageFeatures = $this->getPackageFeatures();
+        $feature = Feature::where('key', $featureKey)->first();
+        if (!$feature) {
+            return false;
+        }
 
-        return $packageFeatures->map(function ($feature) {
-            // Get usage count for the feature
-            $featureKey = $feature['key'] ?? null;
-            $usage = 0;
+        $periodStart = now()->startOfMonth();
 
-            if (!empty($featureKey)) {
-                $usage = $this->getFeatureUsage($featureKey);
-            }
+        // Get or create usage record for current period
+        $featureUsage = $this->userFeatureUsages()
+            ->where('feature_id', $feature->id)
+            ->where('period_start', $periodStart)
+            ->where('is_archived', false)
+            ->first();
 
-            $limit = $feature['limit_value'] ?? null;
-            $isUnlimited = $feature['is_unlimited'] ?? false;
+        if (!$featureUsage) {
+            $featureUsage = UserFeatureUsage::create([
+                'user_id' => $this->id,
+                'feature_id' => $feature->id,
+                'usage_count' => 0,
+                'is_unlimited' => false,
+                'period_start' => $periodStart,
+                'period_end' => $periodStart->copy()->endOfMonth(),
+                'is_archived' => false,
+            ]);
+        }
 
-            // Determine if feature is truly unlimited
-            $isUnlimitedFeature = $isUnlimited || $feature['type'] === 'unlimited' || ($feature['type'] === 'numeric' && $limit === null);
+        // Increment usage count (can be negative for decrement)
+        $newCount = $featureUsage->usage_count + $amount;
+        $featureUsage->update(['usage_count' => max(0, $newCount)]);
 
-            // Calculate usage percentage (only for limited features)
-            $usagePercentage = 0;
-            if (!$isUnlimitedFeature && $limit && $limit > 0) {
-                $usagePercentage = round(($usage / $limit) * 100, 2);
-            }
+        return true;
+    }
 
-            // Check if over limit (only for limited features)
-            $isOverLimit = false;
-            if (!$isUnlimitedFeature && $limit && $limit > 0) {
-                $isOverLimit = $usage > $limit;
-            }
+    /**
+     * Decrement feature usage count for a user (for rollback scenarios)
+     * 
+     * @param string $featureKey The feature key
+     * @param int $amount The amount to decrement (default: 1)
+     * @return bool Success status
+     */
+    public function decrementFeatureUsage($featureKey, $amount = 1)
+    {
+        return $this->incrementFeatureUsage($featureKey, -$amount);
+    }
 
-            return [
-                'id' => $feature['id'] ?? null,
-                'key' => $featureKey,
-                'name' => $feature['name'] ?? 'Unknown',
-                'type' => $feature['type'] ?? 'boolean',
-                'description' => $feature['description'] ?? '',
-                'limit' => $limit,
-                'usage' => $usage,
-                'is_unlimited' => $isUnlimitedFeature,
-                'is_boolean' => ($feature['type'] ?? 'boolean') === 'boolean',
-                'usage_percentage' => $usagePercentage,
-                'is_over_limit' => $isOverLimit,
-            ];
-        });
+    /**
+     * Get historical feature usage for a specific period
+     * 
+     * @param string $featureKey The feature key
+     * @param \Carbon\Carbon|string $periodStart The period start date
+     * @return int The usage count for that period
+     */
+    public function getHistoricalFeatureUsage($featureKey, $periodStart)
+    {
+        $feature = Feature::where('key', $featureKey)->first();
+        if (!$feature) {
+            return 0;
+        }
+
+        if (!$periodStart instanceof \Carbon\Carbon) {
+            $periodStart = \Carbon\Carbon::parse($periodStart)->startOfMonth();
+        } else {
+            $periodStart = $periodStart->startOfMonth();
+        }
+
+        $featureUsage = UserFeatureUsage::where('user_id', $this->id)
+            ->where('feature_id', $feature->id)
+            ->where('period_start', $periodStart)
+            ->where('is_archived', true)
+            ->first();
+
+        return $featureUsage ? ($featureUsage->usage_count ?? 0) : 0;
+    }
+
+    /**
+     * Get all historical usage records for a feature
+     * 
+     * @param string $featureKey The feature key
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getFeatureUsageHistory($featureKey)
+    {
+        $feature = Feature::where('key', $featureKey)->first();
+        if (!$feature) {
+            return collect();
+        }
+
+        return UserFeatureUsage::where('user_id', $this->id)
+            ->where('feature_id', $feature->id)
+            ->where('is_archived', true)
+            ->orderBy('period_start', 'desc')
+            ->get();
+    }
+
+    /**
+     * Check if a user can use a feature by feature key
+     * 
+     * @param string $featureKey The feature key to check
+     * @return bool True if the user can use the feature, false otherwise
+     */
+    public function canUseFeature($featureKey)
+    {
+        // Check if user has an active package
+        $activePackage = $this->activeUserPackage;
+        if (!$activePackage || !$activePackage->package) {
+            return false;
+        }
+
+        $package = $activePackage->package;
+
+        // Find the feature by key
+        $feature = Feature::where('key', $featureKey)
+            ->where('is_active', true)
+            ->first();
+
+        if (!$feature) {
+            return false;
+        }
+
+        // Check if feature is available in the package and enabled
+        $packageFeature = $package->features()
+            ->where('features.id', $feature->id)
+            ->wherePivot('is_enabled', true)
+            ->first();
+
+        if (!$packageFeature) {
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * Check if user has full access (lifetime package or no expiration)
+     * 
+     * @return bool True if user has full access, false otherwise
+     */
+    public function hasFullAccess()
+    {
+        // Get the active user package
+        $activePackage = $this->activeUserPackage;
+
+        if (!$activePackage || !$activePackage->package) {
+            return false;
+        }
+
+        $package = $activePackage->package;
+
+        // Check if package is lifetime
+        if ($package->is_lifetime) {
+            return true;
+        }
+
+        // Check if package has no expiration date (full access)
+        // If expires_at is null or empty, user has full access
+        if (empty($activePackage->expires_at)) {
+            return true;
+        }
+
+        // If there's an expiration date, it's not full access
+        return false;
     }
 }

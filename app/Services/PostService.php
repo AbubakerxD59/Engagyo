@@ -35,22 +35,24 @@ class PostService
     {
         $post = Post::with("page", "board.pinterest", "tiktok")->where("id", $post_id)->first();
         if ($post) {
-            if ($post->status == 1) {
-                if ($post->social_type == "facebook") {
+            $status = $post->status;
+            $social_type = $post->social_type;
+            $post->delete();
+            if ($status == 1) {
+                if ($social_type == "facebook") {
                     $service = new FacebookService();
                     $service->delete($post);
                 }
-                if ($post->social_type == "pinterest") {
+                if ($social_type == "pinterest") {
                     $service = new PinterestService();
                     $service->delete($post);
                 }
                 // TikTok delete API is disabled for now
-                // if ($post->social_type == "tiktok") {
+                // if ($social_type == "tiktok") {
                 //     $service = new TikTokService();
                 //     $service->delete($post);
                 // }
             }
-            $post->delete();
         }
         return true;
     }

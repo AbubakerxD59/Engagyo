@@ -47,6 +47,74 @@ class FacebookService
         ]);
     }
 
+    /**
+     * Handle post publish result - update post in database and create notification
+     * This centralizes the logic for updating posts and creating notifications after publishing
+     * 
+     * @param Post $post The post model instance
+     * @param array $response The response from Facebook API
+     * @param string $postType The type of post (link, photo, video, content)
+     * @return void
+     */
+    private function handlePostPublishResult(Post $post, array $response, string $postType = 'post')
+    {
+        $postTypeLabels = [
+            'link' => 'link',
+            'photo' => 'photo',
+            'video' => 'video',
+            'content' => 'post',
+            'quote' => 'quote',
+        ];
+
+        $typeLabel = $postTypeLabels[$postType] ?? 'post';
+        $typeLabelCapitalized = ucfirst($typeLabel);
+
+        if ($response["success"]) {
+            // Extract post_id from Facebook response
+            $graphNode = $response["data"]->getGraphNode();
+            $post_id = $graphNode['id'];
+
+            // Update post in database
+            $post->update([
+                "post_id" => $post_id,
+                "status" => 1,
+                "published_at" => date('Y-m-d H:i:s'),
+                "response" => json_encode([
+                    "success" => true,
+                    "post_id" => $post_id,
+                    "message" => "{$typeLabelCapitalized} published successfully to Facebook"
+                ]),
+            ]);
+
+            // Create success notification
+            $this->successNotification(
+                $post->user_id,
+                "Post Published",
+                "Your Facebook {$typeLabel} has been published successfully."
+            );
+        } else {
+            // Handle failure case
+            $errorMessage = $response["message"] ?? "Failed to publish {$typeLabel} to Facebook.";
+
+            // Update post in database with error status
+            $post->update([
+                "status" => -1,
+                "published_at" => date('Y-m-d H:i:s'),
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $errorMessage
+                ])
+            ]);
+
+            // Create error notification
+            $this->errorNotification(
+                $post->user_id,
+                "Post Publishing Failed",
+                "Failed to publish Facebook {$typeLabel}. " . $errorMessage
+            );
+        }
+    }
+
     public function __construct()
     {
         $this->facebook = new Facebook([
@@ -306,35 +374,7 @@ class FacebookService
             ];
         }
         $post = $this->post->find($id);
-        if ($response["success"]) {
-            $createLink = $response["data"];
-            $graphNode = $createLink->getGraphNode();
-            $post_id = $graphNode['id'];
-            $post->update([
-                "post_id" => $post_id,
-                "status" => 1,
-                "published_at" => date('Y-m-d H:i:s'),
-                "response" => json_encode([
-                    "success" => true,
-                    "post_id" => $post_id,
-                    "message" => "Post published successfully to Facebook"
-                ]),
-            ]);
-            // Create success notification (background job)
-            $this->successNotification($post->user_id, "Post Published", "Your Facebook post has been published successfully.");
-        } else {
-            $errorMessage = $response["message"] ?? "Failed to publish post to Facebook.";
-            $post->update([
-                "status" => -1,
-                "published_at" => date('Y-m-d H:i:s'),
-                "response" => json_encode([
-                    "success" => false,
-                    "error" => $errorMessage
-                ])
-            ]);
-            // Create error notification (background job)
-            $this->errorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook post. " . $errorMessage);
-        }
+        $this->handlePostPublishResult($post, $response, 'link');
         return $response;
     }
 
@@ -360,35 +400,7 @@ class FacebookService
             ];
         }
         $post = $this->post->find($id);
-        if ($response["success"]) {
-            $contentOnly = $response["data"];
-            $graphNode = $contentOnly->getGraphNode();
-            $post_id = $graphNode['id'];
-            $post->update([
-                "post_id" => $post_id,
-                "status" => 1,
-                "published_at" => date('Y-m-d H:i:s'),
-                "response" => json_encode([
-                    "success" => true,
-                    "post_id" => $post_id,
-                    "message" => "Post published successfully to Facebook"
-                ]),
-            ]);
-            // Create success notification (background job)
-            $this->successNotification($post->user_id, "Post Published", "Your Facebook post has been published successfully.");
-        } else {
-            $errorMessage = $response["message"] ?? "Failed to publish post to Facebook.";
-            $post->update([
-                "status" => -1,
-                "published_at" => date('Y-m-d H:i:s'),
-                "response" => json_encode([
-                    "success" => false,
-                    "error" => $errorMessage
-                ])
-            ]);
-            // Create error notification (background job)
-            $this->errorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook post. " . $errorMessage);
-        }
+        $this->handlePostPublishResult($post, $response, 'content');
         return $response;
     }
 
@@ -416,35 +428,7 @@ class FacebookService
             ];
         }
         $post = $this->post->find($id);
-        if ($response["success"]) {
-            $contentOnly = $response["data"];
-            $graphNode = $contentOnly->getGraphNode();
-            $post_id = $graphNode['id'];
-            $post->update([
-                "post_id" => $post_id,
-                "status" => 1,
-                "published_at" => date('Y-m-d H:i:s'),
-                "response" => json_encode([
-                    "success" => true,
-                    "post_id" => $post_id,
-                    "message" => "Photo published successfully to Facebook"
-                ]),
-            ]);
-            // Create success notification (background job)
-            $this->successNotification($post->user_id, "Post Published", "Your Facebook photo has been published successfully.");
-        } else {
-            $errorMessage = $response["message"] ?? "Failed to publish photo to Facebook.";
-            $post->update([
-                "status" => -1,
-                "published_at" => date('Y-m-d H:i:s'),
-                "response" => json_encode([
-                    "success" => false,
-                    "error" => $errorMessage
-                ])
-            ]);
-            // Create error notification (background job)
-            $this->errorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Facebook photo. " . $errorMessage);
-        }
+        $this->handlePostPublishResult($post, $response, 'photo');
         return $response;
     }
 
@@ -470,35 +454,7 @@ class FacebookService
                 "message" => $error
             ];
         }
-        if ($response["success"]) {
-            $contentOnly = $response["data"];
-            $graphNode = $contentOnly->getGraphNode();
-            $post_id = $graphNode['id'];
-            $post_row->update([
-                "post_id" => $post_id,
-                "status" => 1,
-                "published_at" => date('Y-m-d H:i:s'),
-                "response" => json_encode([
-                    "success" => true,
-                    "post_id" => $post_id,
-                    "message" => "Video published successfully to Facebook"
-                ]),
-            ]);
-            // Create success notification (background job)
-            $this->successNotification($post_row->user_id, "Post Published", "Your Facebook video has been published successfully.");
-        } else {
-            $errorMessage = $response["message"] ?? "Failed to publish video to Facebook.";
-            $post_row->update([
-                "status" => -1,
-                "published_at" => date('Y-m-d H:i:s'),
-                "response" => json_encode([
-                    "success" => false,
-                    "error" => $errorMessage
-                ])
-            ]);
-            // Create error notification (background job)
-            $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Facebook video. " . $errorMessage);
-        }
+        $this->handlePostPublishResult($post_row, $response, 'video');
         return $response;
     }
 
