@@ -22,12 +22,32 @@ class FacebookService
     /**
      * Create a success notification
      */
-    private function successNotification($userId, $title, $message)
+    private function successNotification($userId, $title, $message, $post = null)
     {
+        $body = ['type' => 'success', 'message' => $message];
+        
+        // Add account information if post is provided
+        if ($post) {
+            $accountImage = null;
+            $socialType = 'facebook';
+            
+            // Get account image from page
+            if ($post->page) {
+                if (!empty($post->page->profile_image)) {
+                    $accountImage = $post->page->profile_image;
+                } elseif ($post->page->facebook && !empty($post->page->facebook->profile_image)) {
+                    $accountImage = $post->page->facebook->profile_image;
+                }
+            }
+            
+            $body['social_type'] = $socialType;
+            $body['account_image'] = $accountImage;
+        }
+        
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'success', 'message' => $message],
+            'body' => $body,
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -36,12 +56,32 @@ class FacebookService
     /**
      * Create an error notification
      */
-    private function errorNotification($userId, $title, $message)
+    private function errorNotification($userId, $title, $message, $post = null)
     {
+        $body = ['type' => 'error', 'message' => $message];
+        
+        // Add account information if post is provided
+        if ($post) {
+            $accountImage = null;
+            $socialType = 'facebook';
+            
+            // Get account image from page
+            if ($post->page) {
+                if (!empty($post->page->profile_image)) {
+                    $accountImage = $post->page->profile_image;
+                } elseif ($post->page->facebook && !empty($post->page->facebook->profile_image)) {
+                    $accountImage = $post->page->facebook->profile_image;
+                }
+            }
+            
+            $body['social_type'] = $socialType;
+            $body['account_image'] = $accountImage;
+        }
+        
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'error', 'message' => $message],
+            'body' => $body,
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -90,7 +130,8 @@ class FacebookService
             $this->successNotification(
                 $post->user_id,
                 "Post Published",
-                "Your Facebook {$typeLabel} has been published successfully."
+                "Your Facebook {$typeLabel} has been published successfully.",
+                $post
             );
         } else {
             // Handle failure case
@@ -110,7 +151,8 @@ class FacebookService
             $this->errorNotification(
                 $post->user_id,
                 "Post Publishing Failed",
-                "Failed to publish Facebook {$typeLabel}. " . $errorMessage
+                "Failed to publish Facebook {$typeLabel}. " . $errorMessage,
+                $post
             );
         }
     }
@@ -373,7 +415,7 @@ class FacebookService
                 "message" => $error
             ];
         }
-        $post = $this->post->find($id);
+        $post = Post::with("page.facebook")->find($id);
         $this->handlePostPublishResult($post, $response, 'link');
         return $response;
     }
@@ -399,7 +441,7 @@ class FacebookService
                 "message" => $error
             ];
         }
-        $post = $this->post->find($id);
+        $post = Post::with("page.facebook")->find($id);
         $this->handlePostPublishResult($post, $response, 'content');
         return $response;
     }
@@ -427,14 +469,14 @@ class FacebookService
                 "message" => $error
             ];
         }
-        $post = $this->post->find($id);
+        $post = Post::with("page.facebook")->find($id);
         $this->handlePostPublishResult($post, $response, 'photo');
         return $response;
     }
 
     public function video($id, $access_token, $post)
     {
-        $post_row = $this->post->find($id);
+        $post_row = Post::with("page.facebook")->find($id);
         try {
             $publish = $this->facebook->post('/' . $post_row->account_id . '/videos', $post, $access_token);
             $response = [

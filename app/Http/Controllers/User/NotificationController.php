@@ -46,6 +46,16 @@ class NotificationController extends Controller
                     $isRead = (bool) $notification->is_read;
                 }
                 
+                $body = $notification->body ?? [];
+                $socialType = $body['social_type'] ?? null;
+                $accountImage = $body['account_image'] ?? null;
+                
+                // Get social media logo if account image is not available
+                $displayImage = $accountImage;
+                if (empty($displayImage) && $socialType) {
+                    $displayImage = social_logo($socialType);
+                }
+                
                 return [
                     'id' => $notification->id,
                     'title' => $notification->title ?? 'Notification',
@@ -55,6 +65,8 @@ class NotificationController extends Controller
                     'is_read' => $isRead,
                     'created_at' => $notification->created_at->diffForHumans(),
                     'created_at_full' => $notification->created_at->format('Y-m-d H:i:s'),
+                    'social_type' => $socialType,
+                    'account_image' => $displayImage,
                 ];
             });
 

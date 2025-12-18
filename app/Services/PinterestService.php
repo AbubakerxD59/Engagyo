@@ -26,12 +26,28 @@ class PinterestService
     /**
      * Create a success notification
      */
-    private function successNotification($userId, $title, $message)
+    private function successNotification($userId, $title, $message, $post = null)
     {
+        $body = ['type' => 'success', 'message' => $message];
+        
+        // Add account information if post is provided
+        if ($post) {
+            $accountImage = null;
+            $socialType = 'pinterest';
+            
+            // Get account image from board's pinterest relationship
+            if ($post->board && $post->board->pinterest) {
+                $accountImage = $post->board->pinterest->profile_image;
+            }
+            
+            $body['social_type'] = $socialType;
+            $body['account_image'] = $accountImage;
+        }
+        
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'success', 'message' => $message],
+            'body' => $body,
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -40,12 +56,28 @@ class PinterestService
     /**
      * Create an error notification
      */
-    private function errorNotification($userId, $title, $message)
+    private function errorNotification($userId, $title, $message, $post = null)
     {
+        $body = ['type' => 'error', 'message' => $message];
+        
+        // Add account information if post is provided
+        if ($post) {
+            $accountImage = null;
+            $socialType = 'pinterest';
+            
+            // Get account image from board's pinterest relationship
+            if ($post->board && $post->board->pinterest) {
+                $accountImage = $post->board->pinterest->profile_image;
+            }
+            
+            $body['social_type'] = $socialType;
+            $body['account_image'] = $accountImage;
+        }
+        
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'error', 'message' => $message],
+            'body' => $body,
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -219,7 +251,7 @@ class PinterestService
         $postData = $this->sanitizePinData($postData);
 
         $publish = $this->client->postJson($this->baseUrl . "pins", $postData, $this->header);
-        $post = $this->post->find($id);
+        $post = Post::with("board.pinterest")->find($id);
         if (isset($publish['id'])) {
             $post->update([
                 "post_id" => $publish["id"],
@@ -232,7 +264,7 @@ class PinterestService
                 ]),
             ]);
             // Create success notification (background job)
-            $this->successNotification($post->user_id, "Post Published", "Your Pinterest post has been published successfully.");
+            $this->successNotification($post->user_id, "Post Published", "Your Pinterest post has been published successfully.", $post);
         } else {
             $errorMessage = $this->extractErrorMessage($publish);
             $post->update([
@@ -244,14 +276,14 @@ class PinterestService
                 ])
             ]);
             // Create error notification (background job)
-            $this->errorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Pinterest post. " . $errorMessage);
+            $this->errorNotification($post->user_id, "Post Publishing Failed", "Failed to publish Pinterest post. " . $errorMessage, $post);
         }
     }
 
     public function video($id, $post, $access_token)
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
-        $post_row = Post::find($id);
+        $post_row = Post::with("board.pinterest")->find($id);
         // step 1
         $response = $this->postIntent();
         if (isset($response["media_id"])) {
@@ -278,7 +310,7 @@ class PinterestService
                             ]),
                         ]);
                         // Create success notification (background job)
-                        $this->successNotification($post_row->user_id, "Post Published", "Your Pinterest video has been published successfully.");
+                        $this->successNotification($post_row->user_id, "Post Published", "Your Pinterest video has been published successfully.", $post_row);
                     } else {
                         $errorMessage = $this->extractErrorMessage($upload_video);
                         $post_row->update([
@@ -290,13 +322,7 @@ class PinterestService
                             ])
                         ]);
                         // Create error notification (background job)
-                        Notification::create([
-                            'user_id' => $post_row->user_id,
-                            'title' => "Post Publishing Failed",
-                            'body' => ['type' => 'error', 'message' => "Failed to publish Pinterest video. " . $errorMessage],
-                            'is_read' => false,
-                            'is_system' => false,
-                        ]);
+                        $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Pinterest video. " . $errorMessage, $post_row);
                     }
                 } else {
                     $errorMessage = $this->extractErrorMessage($media_status);
@@ -309,7 +335,7 @@ class PinterestService
                         ])
                     ]);
                     // Create error notification (background job)
-                    $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Pinterest video. " . $errorMessage);
+                    $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Pinterest video. " . $errorMessage, $post_row);
                 }
             } else {
                 $errorMessage = $this->extractErrorMessage($file);
@@ -322,13 +348,7 @@ class PinterestService
                     ])
                 ]);
                 // Create error notification (background job)
-                Notification::create([
-                    'user_id' => $post_row->user_id,
-                    'title' => "Post Publishing Failed",
-                    'body' => ['type' => 'error', 'message' => "Failed to publish Pinterest video. " . $errorMessage],
-                    'is_read' => false,
-                    'is_system' => false,
-                ]);
+                $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Pinterest video. " . $errorMessage, $post_row);
             }
         } else {
             $errorMessage = $this->extractErrorMessage($response);
@@ -341,13 +361,7 @@ class PinterestService
                 ])
             ]);
             // Create error notification (background job)
-            Notification::create([
-                'user_id' => $post_row->user_id,
-                'title' => "Post Publishing Failed",
-                'body' => ['type' => 'error', 'message' => "Failed to publish Pinterest video. " . $errorMessage],
-                'is_read' => false,
-                'is_system' => false,
-            ]);
+            $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Pinterest video. " . $errorMessage, $post_row);
         }
         removeFromS3($post["video_key"]);
         removeFile($post["video_key"]);

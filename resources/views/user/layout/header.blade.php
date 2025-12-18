@@ -257,11 +257,45 @@
         color: #bbb;
     }
 
+    .notification-title-wrapper {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 4px;
+    }
+
+    .notification-account-image {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        object-fit: cover;
+        flex-shrink: 0;
+        border: 2px solid rgba(0, 0, 0, 0.1);
+    }
+
     .notification-title {
         font-weight: 600;
         font-size: 14px;
         color: #333;
-        margin-bottom: 4px;
+        flex: 1;
+    }
+
+    .notification-status-icon {
+        font-size: 18px;
+        flex-shrink: 0;
+        margin-left: auto;
+    }
+
+    .notification-icon-success {
+        color: #28a745;
+    }
+
+    .notification-icon-error {
+        color: #dc3545;
+    }
+
+    .notification-icon-warning {
+        color: #ffc107;
     }
 
     .notification-body {
@@ -395,9 +429,36 @@
                     } else {
                         itemClass += ' unread';
                     }
+                    // Get account image if available (for Facebook, TikTok, Pinterest notifications)
+                    let accountImageHtml = '';
+                    if (notification.account_image && notification.social_type) {
+                        const imageUrl = escapeHtml(notification.account_image);
+                        accountImageHtml = `<img src="${imageUrl}" alt="${notification.social_type || ''}" class="notification-account-image" onerror="this.style.display='none';">`;
+                    }
+                    
+                    // Get notification type from body to determine icon
+                    let notificationType = null;
+                    let statusIconHtml = '';
+                    if (notification.body && typeof notification.body === 'object') {
+                        notificationType = notification.body.type || null;
+                    }
+                    
+                    // Add status icon based on notification type
+                    if (notificationType === 'success') {
+                        statusIconHtml = '<i class="fas fa-check-circle notification-status-icon notification-icon-success"></i>';
+                    } else if (notificationType === 'error') {
+                        statusIconHtml = '<i class="fas fa-times-circle notification-status-icon notification-icon-error"></i>';
+                    } else if (notificationType === 'warning') {
+                        statusIconHtml = '<i class="fas fa-exclamation-triangle notification-status-icon notification-icon-warning"></i>';
+                    }
+                    
                     html += `
                         <div class="${itemClass}" data-id="${notification.id}">
-                            <div class="notification-title">${escapeHtml(notification.title)}</div>
+                            <div class="notification-title-wrapper">
+                                ${accountImageHtml}
+                                <div class="notification-title">${escapeHtml(notification.title)}</div>
+                                ${statusIconHtml}
+                            </div>
                             <div class="notification-body">${formatNotificationBody(notification.body)}</div>
                             <div class="notification-time">${notification.created_at}</div>
                         </div>
