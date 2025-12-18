@@ -8,11 +8,12 @@ use App\Http\Controllers\User\ApiKeysController;
 use App\Http\Controllers\User\ApiPostsController;
 use App\Http\Controllers\User\SettingsController;
 use App\Http\Controllers\User\NotificationController;
+use App\Models\Feature;
 use App\Models\Post;
 
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_admin"])->group(function () {
     // Schedule Routes
-    Route::controller(ScheduleController::class)->group(function () {
+    Route::controller(ScheduleController::class)->middleware(['feature:' . Feature::$features_list[1]])->group(function () {
         Route::get("schedule", "index")->name("schedule");
         Route::controller(ScheduleController::class)->prefix("schedule/")->name("schedule.")->group(function () {
             Route::get("account/status", "accountStatus")->name("account.status");
@@ -29,7 +30,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
         });
     });
     // Accounts Routes - Protected by feature middleware
-    Route::controller(AccountsController::class)->middleware(['feature:social_accounts'])->group(function () {
+    Route::controller(AccountsController::class)->middleware(['feature:' . Feature::$features_list[0]])->group(function () {
         Route::get("accounts", "index")->name("accounts");
         // Accounts sub Routes
         Route::name("accounts.")->group(function () {
@@ -51,7 +52,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
         });
     });
     // Automation Routes
-    Route::controller(AutomationController::class)->group(function () {
+    Route::controller(AutomationController::class)->middleware(['feature:' . Feature::$features_list[2]])->group(function () {
         Route::get("automation", "index")->name("automation");
         Route::name("automation.")->group(function () {
             Route::post("feed-url", "feedUrl")->name("feedUrl");
@@ -71,7 +72,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
         });
     });
     // API Keys Routes
-    Route::controller(ApiKeysController::class)->group(function () {
+    Route::controller(ApiKeysController::class)->middleware(['feature:' . Feature::$features_list[4]])->group(function () {
         Route::get("api-keys", "index")->name("api-keys");
         Route::name("api-keys.")->prefix("api-keys/")->group(function () {
             Route::post("store", "store")->name("store");

@@ -49,6 +49,9 @@
     <link rel="stylesheet" href="{{ asset('assets/css/custom-styles.css') }}">
     <!-- dropzonejs -->
     <link href="https://unpkg.com/dropzone@6.0.0-beta.1/dist/dropzone.css" rel="stylesheet" type="text/css" />
+    {{-- Notifications CSS --}}
+    <link rel="stylesheet" href="{{ asset('assets/css/notification.css') }}">
+
     @stack('styles')
 </head>
 
@@ -115,6 +118,9 @@
     <script src="https://unpkg.com/dropzone@6.0.0-beta.1/dist/dropzone-min.js"></script>
     <!--app JS-->
     <script src="{{ asset('assets/js/app.js') }}"></script>
+    {{-- Notifications JS Start --}}
+    @include('user.layout.assets.notification')
+    {{-- Notifications JS End --}}
     <script type="text/javascript">
         $.widget.bridge('uibutton', $.ui.button)
     </script>

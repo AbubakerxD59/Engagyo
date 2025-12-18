@@ -2,10 +2,11 @@
 
 namespace App\Http\Controllers\User;
 
-use App\Http\Controllers\BaseController;
+use App\Models\User;
 use App\Models\Timezone;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Http\Controllers\BaseController;
 use Illuminate\Support\Facades\Validator;
 
 class SettingsController extends BaseController
@@ -17,10 +18,58 @@ class SettingsController extends BaseController
      */
     public function index()
     {
-        $user = auth()->user();
+        $user = User::with("userPackages.package", "userPackages.package.features")->findOrFail(auth()->id());
         $timezones = Timezone::orderBy('offset')->orderBy('name')->get();
 
-        return view('user.settings.index', compact('user', 'timezones'));
+        // Get active package
+        $activePackage = $user->activeUserPackage;
+        $package = $activePackage ? $activePackage->package : null;
+
+        // Get package status
+        $packageStatus = 'No Package';
+        $expiryDate = null;
+        if ($activePackage && $package) {
+            if ($package->is_lifetime) {
+                $packageStatus = 'Lifetime';
+            } elseif ($activePackage->expires_at) {
+                $expiryDate = $activePackage->expires_at;
+                if ($expiryDate->isPast()) {
+                    $packageStatus = 'Expired';
+                } elseif ($expiryDate->isToday() || $expiryDate->isFuture()) {
+                    $packageStatus = 'Active';
+                }
+            } else {
+                $packageStatus = 'Active';
+            }
+        }
+
+        // Get features with usage
+        $featuresWithUsage = [];
+        if ($activePackage && $package) {
+            $packageFeatures = $package->features()
+                ->wherePivot('is_enabled', true)
+                ->where('is_active', true)
+                ->get();
+
+            foreach ($packageFeatures as $feature) {
+                $usage = $user->getFeatureUsage($feature->key);
+                $limit = $feature->pivot->limit_value;
+                $isUnlimited = $feature->pivot->is_unlimited ?? false;
+
+                $featuresWithUsage[] = [
+                    'id' => $feature->id,
+                    'key' => $feature->key,
+                    'name' => $feature->name,
+                    'description' => $feature->description ?? '',
+                    'usage' => $usage,
+                    'limit' => $isUnlimited ? null : $limit,
+                    'is_unlimited' => $isUnlimited,
+                    'remaining' => $isUnlimited ? null : ($limit !== null ? max(0, $limit - $usage) : null),
+                ];
+            }
+        }
+
+        return view('user.settings.index', compact('user', 'timezones', 'package', 'packageStatus', 'expiryDate', 'featuresWithUsage'));
     }
 
     /**

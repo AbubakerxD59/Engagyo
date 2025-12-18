@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\Board;
 use App\Models\ApiKey;
 use App\Models\Tiktok;
+use App\Models\Feature;
 use Illuminate\Console\Command;
 use App\Models\UserFeatureUsage;
 use Illuminate\Support\Facades\Log;
@@ -159,29 +160,29 @@ class SyncUserUsage extends Command
     {
         $accounts = $user->getAccounts();
         switch ($featureKey) {
-            case 'social_accounts':
+            case Feature::$features_list[0]:
                 // Count total social accounts: boards (Pinterest) + pages (Facebook) + TikTok accounts
                 $boardsCount = Board::where('user_id', $user->id)->count();
                 $pagesCount = Page::where('user_id', $user->id)->count();
                 $tiktokCount = Tiktok::where('user_id', $user->id)->count();
                 return $boardsCount + $pagesCount + $tiktokCount;
 
-            case 'scheduled_posts_per_account':
+            case Feature::$features_list[1]:
                 return Post::whereIn('account_id', $accounts->pluck('id'))
                     ->where('source', '!=', 'rss')
                     ->count();
 
-            case 'rss_feed_automation':
+            case Feature::$features_list[2]:
                 return Post::whereIn('account_id', $accounts->pluck('id'))
                     ->where('source', 'rss')
                     ->count();
 
-            case 'video_publishing':
+            case Feature::$features_list[3]:
                 return Post::whereIn('account_id', $accounts->pluck('id'))
                     ->where('type', 'video')
                     ->count();
 
-            case 'api_keys':
+            case Feature::$features_list[4]:
                 return ApiKey::where('user_id', $user->id)->count();
 
             default:

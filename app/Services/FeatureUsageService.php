@@ -20,6 +20,31 @@ class FeatureUsageService
      */
     public function checkAndIncrement(User $user, string $featureKey, int $amount = 1): array
     {
+        // If user has full access, always allow and increment usage
+        if ($user->hasFullAccess()) {
+            // Get feature details
+            $feature = Feature::where('key', $featureKey)->first();
+            if (!$feature) {
+                return [
+                    'allowed' => false,
+                    'usage' => 0,
+                    'limit' => null,
+                    'remaining' => null,
+                    'message' => 'Feature not found.',
+                ];
+            }
+
+            // For full access users, increment usage without limit checks
+            $user->incrementFeatureUsage($featureKey, $amount);
+            return [
+                'allowed' => true,
+                'usage' => $user->getFeatureUsage($featureKey),
+                'limit' => null,
+                'remaining' => null,
+                'message' => 'Usage incremented successfully.',
+            ];
+        }
+
         // Check if user can use the feature
         if (!$user->canUseFeature($featureKey)) {
             return [
@@ -111,7 +136,7 @@ class FeatureUsageService
         // Handle numeric features with limits
         if ($featureType === 'numeric') {
             $currentUsage = $user->getFeatureUsage($featureKey);
-            
+
             // If no limit is set, allow usage
             if ($limitValue === null) {
                 $user->incrementFeatureUsage($featureKey, $amount);
@@ -131,14 +156,14 @@ class FeatureUsageService
                     'usage' => $currentUsage,
                     'limit' => $limitValue,
                     'remaining' => max(0, $limitValue - $currentUsage),
-                    'message' => "You have reached your limit of {$limitValue}. You have {$this->getRemaining($currentUsage, $limitValue)} remaining.",
+                    'message' => "You have reached your limit of {$limitValue}. You have {$this->getRemaining($currentUsage,$limitValue)} remaining.",
                 ];
             }
 
             // Increment usage
             $user->incrementFeatureUsage($featureKey, $amount);
             $newUsage = $user->getFeatureUsage($featureKey);
-            
+
             return [
                 'allowed' => true,
                 'usage' => $newUsage,
@@ -201,9 +226,27 @@ class FeatureUsageService
         }
 
         $currentUsage = $user->getFeatureUsage($featureKey);
+        $featureType = $feature->type;
+
+        // If user has full access, treat all features as unlimited
+        if ($user->hasFullAccess()) {
+            return [
+                'feature_key' => $featureKey,
+                'feature_name' => $feature->name,
+                'feature_type' => $featureType,
+                'current_usage' => $currentUsage,
+                'limit' => null,
+                'is_unlimited' => true,
+                'remaining' => null,
+                'usage_percentage' => 0,
+                'is_over_limit' => false,
+                'is_near_limit' => false,
+                'can_use' => true,
+            ];
+        }
+
         $limitValue = $packageFeature->pivot->limit_value ?? null;
         $isUnlimited = $packageFeature->pivot->is_unlimited ?? false;
-        $featureType = $feature->type;
 
         $isUnlimitedFeature = $isUnlimited || $featureType === 'unlimited';
         $remaining = $isUnlimitedFeature ? null : ($limitValue !== null ? max(0, $limitValue - $currentUsage) : null);
@@ -302,6 +345,11 @@ class FeatureUsageService
                 continue;
             }
 
+            // Skip full access users - they don't have limits
+            if ($user->hasFullAccess()) {
+                continue;
+            }
+
             $package = $activePackage->package;
             $packageFeatures = $package->features()
                 ->wherePivot('is_enabled', true)
@@ -389,4 +437,3 @@ class FeatureUsageService
         }
     }
 }
-

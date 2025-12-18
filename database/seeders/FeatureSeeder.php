@@ -14,15 +14,15 @@ class FeatureSeeder extends Seeder
     {
         $features = [
             [
-                'key' => 'social_accounts',
+                'key' => Feature::$features_list[0],
                 'name' => 'Social Accounts',
                 'type' => 'numeric',
                 'default_value' => 1,
-                'description' => 'Number of social media accounts that can be connected (Facebook, Pinterest, TikTok, etc.)',
+                'description' => 'Number of social media accounts that can be connected (Facebook, Pinterest, TikTok, etc.) per account',
                 'is_active' => true,
             ],
             [
-                'key' => 'scheduled_posts_per_account',
+                'key' => Feature::$features_list[1],
                 'name' => 'Scheduled Posts Per Account',
                 'type' => 'numeric',
                 'default_value' => 10,
@@ -30,7 +30,7 @@ class FeatureSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'key' => 'rss_feed_automation',
+                'key' => Feature::$features_list[2],
                 'name' => 'RSS Feed Automation',
                 'type' => 'numeric',
                 'default_value' => 1,
@@ -38,7 +38,7 @@ class FeatureSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'key' => 'video_publishing',
+                'key' => Feature::$features_list[3],
                 'name' => 'Video Publishing or Scheduling',
                 'type' => 'boolean',
                 'default_value' => 0,
@@ -46,7 +46,7 @@ class FeatureSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'key' => 'api_keys',
+                'key' => Feature::$features_list[4],
                 'name' => 'API Keys',
                 'type' => 'numeric',
                 'default_value' => 1,
@@ -54,7 +54,7 @@ class FeatureSeeder extends Seeder
                 'is_active' => true,
             ],
             [
-                'key' => 'api_access',
+                'key' => Feature::$features_list[5],
                 'name' => 'APIs Access',
                 'type' => 'boolean',
                 'default_value' => 0,
@@ -71,4 +71,3 @@ class FeatureSeeder extends Seeder
         }
     }
 }
-

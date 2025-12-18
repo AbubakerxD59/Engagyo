@@ -18,6 +18,15 @@ class Feature extends Model
         'is_active'
     ];
 
+    public static $features_list = [
+        "0" => "social_accounts",
+        "1" => "scheduled_posts_per_account",
+        "2" => "rss_feed_automation",
+        "3" => "video_publishing",
+        "4" => "api_keys",
+        "5" => "api_access",
+    ];
+
     protected $casts = [
         'is_active' => 'boolean',
         'default_value' => 'integer',
@@ -27,8 +36,8 @@ class Feature extends Model
     {
         $query->where(function ($q) use ($search) {
             $q->where('name', 'like', "%{$search}%")
-              ->orWhere('key', 'like', "%{$search}%")
-              ->orWhere('description', 'like', "%{$search}%");
+                ->orWhere('key', 'like', "%{$search}%")
+                ->orWhere('description', 'like', "%{$search}%");
         });
     }
 }

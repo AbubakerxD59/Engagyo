@@ -2,22 +2,23 @@
 
 namespace App\Http\Controllers\User;
 
+use Exception;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\User;
 use App\Models\Board;
 use App\Models\Domain;
+use App\Models\Tiktok;
+use App\Models\Feature;
 use App\Models\Facebook;
 use App\Models\Pinterest;
-use App\Models\Tiktok;
 use Illuminate\Http\Request;
+use App\Services\TikTokService;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
-use App\Services\TikTokService;
-use App\Services\FeatureUsageService;
 use App\Http\Controllers\Controller;
-use Exception;
 use Illuminate\Support\Facades\Auth;
+use App\Services\FeatureUsageService;
 
 class AccountsController extends Controller
 {
@@ -64,7 +65,7 @@ class AccountsController extends Controller
                 $board_ids = $pinterest->boards()->where('user_id', $user->id)->get()->pluck("board_id")->toArray();
                 $totalScheduledPosts = 0;
                 $totalBoards = 0;
-                
+
                 // posts,domains,timeslots,board
                 foreach ($board_ids  as $board_id) {
                     $board = $this->board->find($board_id);
@@ -73,14 +74,14 @@ class AccountsController extends Controller
                         $scheduledPostsCount = $board->posts()->where('source', 'schedule')->count();
                         $totalScheduledPosts += $scheduledPostsCount;
                         $totalBoards++;
-                        
+
                         $board->posts()->delete();
                         $board->domains()->delete();
                         $board->timeslots()->delete();
                         $board->delete();
                     }
                 }
-                
+
                 // Decrement feature usage for scheduled posts
                 if ($totalScheduledPosts > 0) {
                     /** @var User $user */
@@ -89,8 +90,8 @@ class AccountsController extends Controller
                 
                 // Decrement feature usage for social_accounts (Pinterest account + all boards)
                 /** @var User $user */
-                $user->decrementFeatureUsage('social_accounts', 1 + $totalBoards);
-                
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1 + $totalBoards);
+
                 // pinterest account
                 $pinterest->delete();
                 return back()->with("success", "Pinterest Account deleted Successfully!");
@@ -123,7 +124,7 @@ class AccountsController extends Controller
             $user = User::find(Auth::id());
 
             // Check and track feature usage for social_accounts
-            $result = $this->featureUsageService->checkAndIncrement($user, 'social_accounts', 1);
+            $result = $this->featureUsageService->checkAndIncrement($user, Feature::$features_list[0], 1);
 
             if (!$result['allowed']) {
                 return response()->json([
@@ -150,13 +151,13 @@ class AccountsController extends Controller
                 ]);
             } else {
                 // Rollback usage if board creation fails
-                $user->decrementFeatureUsage('social_accounts', 1);
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1);
                 return response()->json(["success" => false, "message" => "Something went Wrong!"]);
             }
         } catch (Exception $e) {
             // Rollback usage on error
             if (isset($user)) {
-                $user->decrementFeatureUsage('social_accounts', 1);
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1);
             }
             return response()->json(["success" => false, "message" => $e->getMessage()]);
         }
@@ -170,7 +171,7 @@ class AccountsController extends Controller
             if ($board && $board->user_id === $user->id) {
                 // Count scheduled posts before deletion
                 $scheduledPostsCount = $board->posts()->where('source', 'schedule')->count();
-                
+
                 // posts
                 $board->posts()->delete();
                 // domains
@@ -179,7 +180,7 @@ class AccountsController extends Controller
                 $board->timeslots()->delete();
                 // board
                 $board->delete();
-                
+
                 // Decrement feature usage for scheduled posts
                 if ($scheduledPostsCount > 0) {
                     /** @var User $user */
@@ -188,8 +189,8 @@ class AccountsController extends Controller
                 
                 // Decrement feature usage for social_accounts
                 /** @var User $user */
-                $user->decrementFeatureUsage('social_accounts', 1);
-                
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1);
+
                 return back()->with("success", "Board deleted Successfully!");
             } else {
                 return back()->with('error', 'Something went Wrong!');
@@ -208,7 +209,7 @@ class AccountsController extends Controller
                 $page_ids = $facebook->pages()->where('user_id', $user->id)->get()->pluck("page_id")->toArray();
                 $totalScheduledPosts = 0;
                 $totalPages = 0;
-                
+
                 // posts,domains,timeslots,page
                 foreach ($page_ids as $page_id) {
                     $page = $this->page->find($page_id);
@@ -217,14 +218,14 @@ class AccountsController extends Controller
                         $scheduledPostsCount = $page->posts()->where('source', 'schedule')->count();
                         $totalScheduledPosts += $scheduledPostsCount;
                         $totalPages++;
-                        
+
                         $page->posts()->delete();
                         $page->domains()->delete();
                         $page->timeslots()->delete();
                         $page->delete();
                     }
                 }
-                
+
                 // Decrement feature usage for scheduled posts
                 if ($totalScheduledPosts > 0) {
                     /** @var User $user */
@@ -233,11 +234,11 @@ class AccountsController extends Controller
                 
                 // Decrement feature usage for social_accounts (Facebook account + all pages)
                 /** @var User $user */
-                $user->decrementFeatureUsage('social_accounts', 1 + $totalPages);
-                
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1 + $totalPages);
+
                 // Delete Facebook account
                 $facebook->delete();
-                
+
                 return back()->with("success", "Facebook Account deleted Successfully!");
             } else {
                 return back()->with("error", "Something went Wrong!");
@@ -270,7 +271,7 @@ class AccountsController extends Controller
                 $user = User::find(Auth::id());
 
                 // Check and track feature usage for social_accounts
-                $result = $this->featureUsageService->checkAndIncrement($user, 'social_accounts', 1);
+                $result = $this->featureUsageService->checkAndIncrement($user, Feature::$features_list[0], 1);
 
                 if (!$result['allowed']) {
                     return response()->json([
@@ -328,7 +329,7 @@ class AccountsController extends Controller
             } catch (Exception $e) {
                 // Rollback usage on error
                 if (isset($user)) {
-                    $user->decrementFeatureUsage('social_accounts', 1);
+                    $user->decrementFeatureUsage(Feature::$features_list[0], 1);
                 }
                 return response()->json(["success" => false, "message" => "Failed to connect page: " . $e->getMessage()]);
             }
@@ -345,7 +346,7 @@ class AccountsController extends Controller
             if ($page && $page->user_id === $user->id) {
                 // Count scheduled posts before deletion
                 $scheduledPostsCount = $page->posts()->where('source', 'schedule')->count();
-                
+
                 // posts
                 $page->posts()->delete();
                 // domains
@@ -354,7 +355,7 @@ class AccountsController extends Controller
                 $page->timeslots()->delete();
                 // page
                 $page->delete();
-                
+
                 // Decrement feature usage for scheduled posts
                 if ($scheduledPostsCount > 0) {
                     /** @var User $user */
@@ -363,8 +364,8 @@ class AccountsController extends Controller
                 
                 // Decrement feature usage for social_accounts
                 /** @var User $user */
-                $user->decrementFeatureUsage('social_accounts', 1);
-                
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1);
+
                 return back()->with("success", "Page deleted Successfully!");
             } else {
                 return back()->with('error', 'Something went Wrong!');
@@ -448,16 +449,16 @@ class AccountsController extends Controller
                     ->where('source', 'schedule')
                     ->where('user_id', $user->id)
                     ->count();
-                
+
                 // Delete all posts for this TikTok account
                 Post::where('account_id', $tiktok->id)
                     ->where('social_type', 'tiktok')
                     ->where('user_id', $user->id)
                     ->delete();
-                
+
                 // TikTok account
                 $tiktok->delete();
-                
+
                 // Decrement feature usage for scheduled posts
                 if ($scheduledPostsCount > 0) {
                     /** @var User $user */
@@ -466,8 +467,8 @@ class AccountsController extends Controller
                 
                 // Decrement feature usage for social_accounts
                 /** @var User $user */
-                $user->decrementFeatureUsage('social_accounts', 1);
-                
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1);
+
                 return back()->with("success", "TikTok Account deleted Successfully!");
             } else {
                 return back()->with("error", "Something went Wrong!");

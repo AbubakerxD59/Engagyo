@@ -417,6 +417,7 @@ class Post extends Model
                         if ($this->social_type == 'pinterest') {
                             if (!empty($response)) {
                                 $message_object = isset($response->message) ? $response->message : $response;
+                                $message_object = isset($message_object->error) ? $message_object->error : $message_object;
                                 $message = getError($message_object);
                             }
                         } else {

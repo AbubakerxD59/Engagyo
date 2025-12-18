@@ -50,11 +50,12 @@
     }
 
     .feature-limit-banner {
-        background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+        background: linear-gradient(135deg, #208637 0%, #f59736 100%);
         color: #333;
         padding: 20px 0;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-        border-bottom: 3px solid #f57c00;
+        border-radius: 30px;
+        /* border-bottom: 3px solid #f57c00; */
     }
 
     .feature-limit-content {
@@ -151,7 +152,7 @@
 
     .btn-upgrade:hover {
         background: #f5f5f5;
-        color: #f57c00;
+        color: #208637;
         transform: translateY(-2px);
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
         text-decoration: none;
@@ -233,7 +234,8 @@
     }
 
     /* Ensure sidebar is above overlay */
-    .main-sidebar {
+    .main-sidebar,
+    .main-header {
         z-index: 1052 !important;
         position: relative;
     }
@@ -257,13 +259,13 @@
         -moz-user-select: auto !important;
         -ms-user-select: auto !important;
     }
-    
+
     /* Ensure header interactions are allowed */
     body:has(.feature-limit-overlay) .main-header,
     body:has(.feature-limit-overlay) .navbar {
         pointer-events: all !important;
     }
-    
+
     /* Ensure alert container interactions are allowed */
     body:has(.feature-limit-overlay) .feature-limit-alert-container {
         pointer-events: all !important;
@@ -272,7 +274,7 @@
         -moz-user-select: auto !important;
         -ms-user-select: auto !important;
     }
-    
+
     /* Fallback for browsers that don't support :has() */
     .content-wrapper.blocked {
         pointer-events: none;
@@ -305,7 +307,7 @@
             if (contentWrapper) {
                 contentWrapper.classList.add('blocked');
             }
-            
+
             // Prevent body scrolling
             document.body.style.overflow = 'hidden';
 

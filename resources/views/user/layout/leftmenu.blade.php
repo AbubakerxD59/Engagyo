@@ -16,7 +16,14 @@
                     <a href="{{ route('panel.schedule') }}"
                         class="nav-link {{ in_array(request()->route()->getName(), $schedule) ? 'active' : '' }}">
                         <i class="nav-icon fas fa-calendar"></i>
+                        @canUseFeature(\App\Models\Feature::$features_list[1])
                         <p>Schedule</p>
+                        @elsecanUseFeature(\App\Models\Feature::$features_list[1])
+                        <p>
+                            Schedule
+                            <i class="fas fa-lock float-right mt-1" style="font-size: 0.8rem;"></i>
+                        </p>
+                        @endcanUseFeature
                     </a>
                 </li>
                 {{-- Automation --}}
@@ -27,7 +34,14 @@
                     <a href="{{ route('panel.automation') }}"
                         class="nav-link {{ in_array(request()->route()->getName(), $automation) ? 'active' : '' }}">
                         <i class="nav-icon fas fa-rss"></i>
+                        @canUseFeature(\App\Models\Feature::$features_list[2])
                         <p>Automation</p>
+                        @elsecanUseFeature(\App\Models\Feature::$features_list[2])
+                        <p>
+                            Automation
+                            <i class="fas fa-lock float-right mt-1" style="font-size: 0.8rem;"></i>
+                        </p>
+                        @endcanUseFeature
                     </a>
                 </li>
                 {{-- API Posts --}}
@@ -38,7 +52,14 @@
                     <a href="{{ route('panel.api-posts') }}"
                         class="nav-link {{ in_array(request()->route()->getName(), $apiPosts) ? 'active' : '' }}">
                         <i class="nav-icon fas fa-code"></i>
+                        @canUseFeature(\App\Models\Feature::$features_list[4])
                         <p>API Posts</p>
+                        @elsecanUseFeature(\App\Models\Feature::$features_list[4])
+                        <p>
+                            API Posts
+                            <i class="fas fa-lock float-right mt-1" style="font-size: 0.8rem;"></i>
+                        </p>
+                        @endcanUseFeature
                     </a>
                 </li>
                 {{-- Accounts --}}
@@ -46,23 +67,18 @@
                 $account = ['panel.accounts', 'panel.accounts.pinterest', 'panel.accounts.facebook'];
                 ?>
                 <li class="nav-item">
-                    @canUseFeature('social_accounts')
                     <a href="{{ route('panel.accounts') }}"
                         class="nav-link {{ in_array(request()->route()->getName(), $account) ? 'active' : '' }}">
                         <i class="nav-icon fas fa-user-circle"></i>
+                        @canUseFeature(\App\Models\Feature::$features_list[0])
                         <p>Accounts</p>
-                    </a>
-                @else
-                    <a href="#" class="nav-link disabled" style="opacity: 0.5; cursor: not-allowed;"
-                        onclick="event.preventDefault(); return false;"
-                        title="This feature is not available in your package">
-                        <i class="nav-icon fas fa-user-circle"></i>
+                        @elsecanUseFeature(\App\Models\Feature::$features_list[0])
                         <p>
                             Accounts
                             <i class="fas fa-lock float-right mt-1" style="font-size: 0.8rem;"></i>
                         </p>
+                        @endcanUseFeature
                     </a>
-                    @endcanUseFeature
                 </li>
             </ul>
         </nav>
