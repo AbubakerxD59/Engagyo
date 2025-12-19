@@ -37,7 +37,8 @@ class UserController extends Controller
      */
     public function create()
     {
-        $roles = Role::get();
+        // Get roles with 'web' guard (matching User model's guard)
+        $roles = Role::where('guard_name', 'web')->get();
         $packages = Package::where('is_active', true)->orderBy('sort_order')->get();
         return view('admin.users.add', compact('roles', 'packages'));
     }
@@ -71,10 +72,11 @@ class UserController extends Controller
         $user = User::create($userData);
 
         if (!empty($user)) {
-            // Assign role
+            // Assign role - use role object directly to preserve guard
             $role = Role::find($request->role);
             if (!empty($role)) {
-                $user->assignRole($role->name);
+                // Use the role object directly instead of name to preserve guard
+                $user->assignRole($role);
             }
 
             // Assign package if selected
@@ -172,7 +174,8 @@ class UserController extends Controller
             'posts',
             'apiKeys',
         ])->find($id);
-        $roles = Role::get();
+        // Get roles with 'web' guard (matching User model's guard)
+        $roles = Role::where('guard_name', 'web')->get();
         $packages = Package::where('is_active', true)->orderBy('sort_order')->get();
         return view('admin.users.edit', compact('roles', 'user', 'packages'));
     }
@@ -218,10 +221,11 @@ class UserController extends Controller
 
             $user->update($data);
 
-            // Assign role
+            // Assign role - use role object directly to preserve guard
             $role = Role::find($request->role);
             if (!empty($role)) {
-                $user->syncRoles($role->name);
+                // Use the role object directly instead of name to preserve guard
+                $user->syncRoles($role);
             }
 
             // Handle package assignment
