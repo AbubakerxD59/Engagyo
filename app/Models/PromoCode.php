@@ -19,6 +19,7 @@ class PromoCode extends Model
         'discount_amount',
         'status',
         'stripe_coupon_id',
+        'stripe_promotion_code_id',
     ];
 
     protected $appends = ['expires_at'];

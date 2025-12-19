@@ -7,6 +7,7 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\PermissionController;
 use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\FeatureController;
+use App\Http\Controllers\Admin\PromoCodeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get("/admin", [AuthController::class, 'redirect']);
@@ -51,6 +52,12 @@ Route::prefix("admin/")->name("admin.")->group(function () {
         Route::resource('features', FeatureController::class)->only(['index']);
         Route::controller(FeatureController::class)->prefix('features/')->name('features.')->group(function () {
             Route::get('dataTable', 'dataTable')->name('dataTable');
+        });
+
+        // Promo Codes
+        Route::resource('promo-codes', PromoCodeController::class)->except('show');
+        Route::controller(PromoCodeController::class)->prefix('promo-codes/')->name('promo-codes.')->group(function () {
+            Route::get('dataTable', 'datatable')->name('dataTable');
         });
     });
 });

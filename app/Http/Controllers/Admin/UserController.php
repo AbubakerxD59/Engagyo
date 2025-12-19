@@ -9,6 +9,8 @@ use App\Models\UserPackage;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 
 class UserController extends Controller
 {
@@ -110,6 +112,20 @@ class UserController extends Controller
                         'assigned_at' => now(),
                         'expires_at' => $expiresAt,
                     ]);
+                    
+                    // Sync user usage with new package limits
+                    try {
+                        Artisan::call('usage:sync', ['--user_id' => $user->id]);
+                        Log::info('User usage synced after package assignment in admin panel', [
+                            'user_id' => $user->id,
+                            'package_id' => $package->id,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('Failed to sync user usage after package assignment in admin panel: ' . $e->getMessage(), [
+                            'user_id' => $user->id,
+                            'package_id' => $package->id,
+                        ]);
+                    }
                 }
             }
 
@@ -175,8 +191,12 @@ class UserController extends Controller
             'package_id' => 'nullable|exists:packages,id',
             'full_access' => 'nullable|boolean',
         ]);
-        $user = User::find($id);
+            $user = User::find($id);
         if (!empty($user)) {
+            // Track if package is being changed
+            $oldPackageId = $user->package_id;
+            $packageChanged = false;
+            
             $data = [
                 'first_name' => $request->first_name,
                 'last_name' => $request->last_name,
@@ -190,8 +210,10 @@ class UserController extends Controller
 
             if ($request->has('package_id') && $request->package_id) {
                 $data['package_id'] = $request->package_id;
+                $packageChanged = ($oldPackageId != $request->package_id);
             } elseif ($request->has('package_id') && empty($request->package_id)) {
                 $data['package_id'] = null;
+                $packageChanged = ($oldPackageId != null);
             }
 
             $user->update($data);
@@ -237,12 +259,40 @@ class UserController extends Controller
                         'assigned_at' => now(),
                         'expires_at' => $expiresAt,
                     ]);
+                    
+                    // Sync user usage with new package limits
+                    try {
+                        Artisan::call('usage:sync', ['--user_id' => $user->id]);
+                        Log::info('User usage synced after package update in admin panel', [
+                            'user_id' => $user->id,
+                            'package_id' => $package->id,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('Failed to sync user usage after package update in admin panel: ' . $e->getMessage(), [
+                            'user_id' => $user->id,
+                            'package_id' => $package->id,
+                        ]);
+                    }
                 }
             } elseif ($request->has('package_id') && empty($request->package_id)) {
                 // If package_id is empty, deactivate all user packages
                 UserPackage::where('user_id', $user->id)
                     ->where('is_active', true)
                     ->update(['is_active' => false]);
+                    
+                // Sync user usage when package is removed
+                if ($packageChanged) {
+                    try {
+                        Artisan::call('usage:sync', ['--user_id' => $user->id]);
+                        Log::info('User usage synced after package removal in admin panel', [
+                            'user_id' => $user->id,
+                        ]);
+                    } catch (\Exception $e) {
+                        Log::error('Failed to sync user usage after package removal in admin panel: ' . $e->getMessage(), [
+                            'user_id' => $user->id,
+                        ]);
+                    }
+                }
             }
             $response = [
                 'success' => true,

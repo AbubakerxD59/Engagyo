@@ -1,15 +1,15 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\User\AccountsController;
-use App\Http\Controllers\User\ScheduleController;
-use App\Http\Controllers\User\AutomationController;
-use App\Http\Controllers\User\ApiKeysController;
-use App\Http\Controllers\User\ApiPostsController;
-use App\Http\Controllers\User\SettingsController;
-use App\Http\Controllers\User\NotificationController;
 use App\Models\Feature;
-use App\Models\Post;
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\User\ApiKeysController;
+use App\Http\Controllers\User\PaymentController;
+use App\Http\Controllers\User\AccountsController;
+use App\Http\Controllers\User\ApiPostsController;
+use App\Http\Controllers\User\ScheduleController;
+use App\Http\Controllers\User\SettingsController;
+use App\Http\Controllers\User\AutomationController;
+use App\Http\Controllers\User\NotificationController;
 
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_admin"])->group(function () {
     // Schedule Routes
@@ -110,4 +110,6 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
         Route::post("mark-read/{id}", "markAsRead")->name("markRead");
         Route::post("mark-all-read", "markAllAsRead")->name("markAllRead");
     });
+    // Upgrade Packages (AJAX endpoint)
+    Route::get("packages/upgrade", [PaymentController::class, "getUpgradePackages"])->name("packages.upgrade");
 });

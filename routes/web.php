@@ -9,6 +9,8 @@ Route::name("general.")->controller(GeneralController::class)->group(function ()
 });
 // Admin Routes
 require __DIR__ . '/admin.php';
+// Payment Gateways routes
+require __DIR__ . '/payment_gateways.php';
 // Frontend routes
 require __DIR__ . '/frontend.php';
 // User Panel routes

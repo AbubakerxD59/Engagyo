@@ -59,6 +59,16 @@
                         </a>
                     </li>
                 @endcan
+                {{-- Promo Codes --}}
+                @can('view_promocode')
+                    <li class="nav-item">
+                        <a href="{{ route('admin.promo-codes.index') }}"
+                            class="nav-link {{ in_array(request()->route()->getName(), ['admin.promo-codes.index', 'admin.promo-codes.create', 'admin.promo-codes.edit']) ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-tag"></i>
+                            <p>Promo Codes</p>
+                        </a>
+                    </li>
+                @endcan
             </ul>
         </nav>
     </div>

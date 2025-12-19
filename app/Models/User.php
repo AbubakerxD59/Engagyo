@@ -34,6 +34,7 @@ class User extends Authenticatable
         'timezone_id',
         'rss_filters',
         'package_id',
+        'stripe_id',
     ];
 
     /**

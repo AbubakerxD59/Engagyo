@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\FrontEnd;
 
 use App\Http\Controllers\Controller;
+use App\Models\Package;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 
 class FrontendController extends Controller
 {
@@ -41,15 +44,26 @@ class FrontendController extends Controller
         return view("frontend.curate-post");
     }
 
-    public function linkShortener(){
+    public function linkShortener()
+    {
         return view("frontend.linkShortener");
     }
 
-    public function pricing(){
-        return view("frontend.pricing");
+    public function pricing()
+    {
+        $packages = Package::where('is_active', true)
+            ->with(['features' => function ($query) {
+                $query->where('is_active', true);
+            }])
+            ->orderBy('sort_order', 'asc')
+            ->orderBy('price', 'asc')
+            ->get();
+
+        return view("frontend.pricing", compact('packages'));
     }
 
-    public function blogs(){
+    public function blogs()
+    {
         return view("frontend.blogs");
     }
 

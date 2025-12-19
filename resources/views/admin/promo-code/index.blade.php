@@ -6,7 +6,7 @@
             <div class="content-header clearfix">
                 <h1 class="float-left">Promo Codes</h1>
                 <div class="float-right">
-                    <a class="btn btn-primary" href="{{ route('promo-code.create') }}">
+                    <a class="btn btn-primary" href="{{ route('admin.promo-codes.create') }}">
                         <i class="fas fa-plus-square"></i> Add new</a>
                 </div>
             </div>
@@ -59,7 +59,7 @@
             "processing": true,
             "serverSide": true,
             ajax: {
-                url: "{{ route('promo-code.dataTable') }}",
+                url: "{{ route('admin.promo-codes.dataTable') }}",
             },
             columns: [{
                     data: 'name'

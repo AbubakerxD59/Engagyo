@@ -44,7 +44,7 @@
                         <div class="signup__text__content">
                             <p>
                                 Already have an account?
-                                <a href="{{ route('frontend.showLogin') }}">Login In</a>
+                                <a href="{{ route('frontend.showLogin') }}">Login</a>
                             </p>
                         </div>
                     </div>

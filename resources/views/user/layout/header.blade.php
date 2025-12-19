@@ -69,3 +69,35 @@
         </li>
     </ul>
 </nav>
+
+<style>
+    /* Ensure navbar appears above feature-limit-alert */
+    nav.main-header.navbar,
+    .main-header.navbar {
+        z-index: 1060 !important;
+        position: relative;
+    }
+    
+    /* Ensure dropdown parent items have proper positioning context */
+    .main-header .nav-item.dropdown {
+        position: relative;
+        z-index: 1061;
+    }
+    
+    /* Ensure notification dropdown appears above feature-limit-alert */
+    .notifications-dropdown .dropdown-menu.notifications-menu,
+    .notifications-dropdown .dropdown-menu {
+        z-index: 1062 !important;
+    }
+    
+    /* Ensure user profile dropdown appears above feature-limit-alert */
+    .user-dropdown-menu,
+    .nav-item.dropdown .user-dropdown-menu {
+        z-index: 1062 !important;
+    }
+    
+    /* Ensure all dropdown menus in navbar appear above feature-limit-alert */
+    .main-header .dropdown-menu {
+        z-index: 1062 !important;
+    }
+</style>

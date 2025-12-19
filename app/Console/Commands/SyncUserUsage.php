@@ -21,7 +21,7 @@ class SyncUserUsage extends Command
      *
      * @var string
      */
-    protected $signature = 'usage:sync';
+    protected $signature = 'usage:sync {--user_id= : Sync usage for a specific user ID only}';
 
     /**
      * The console command description.
@@ -35,17 +35,38 @@ class SyncUserUsage extends Command
      */
     public function handle()
     {
-        $this->info('Starting user usage sync...');
+        $userId = $this->option('user_id');
+        
+        if ($userId) {
+            $this->info("Starting user usage sync for user ID: {$userId}...");
+        } else {
+            $this->info('Starting user usage sync for all users...');
+        }
 
         $currentMonth = now()->startOfMonth();
         $currentMonthEnd = now()->endOfMonth();
 
-        // Get all active users with packages
-        $users = User::whereHas('userPackages', function ($query) {
-            $query->where('is_active', true);
-        })->get();
+        // Get users to process
+        if ($userId) {
+            // Process specific user
+            $users = User::where('id', $userId)
+                ->whereHas('userPackages', function ($query) {
+                    $query->where('is_active', true);
+                })
+                ->get();
+            
+            if ($users->isEmpty()) {
+                $this->warn("User ID {$userId} not found or has no active package.");
+                return Command::FAILURE;
+            }
+        } else {
+            // Get all active users with packages
+            $users = User::whereHas('userPackages', function ($query) {
+                $query->where('is_active', true);
+            })->get();
+        }
 
-        $this->info("Processing {$users->count()} users...");
+        $this->info("Processing {$users->count()} user(s)...");
 
         $syncedCount = 0;
         $createdCount = 0;

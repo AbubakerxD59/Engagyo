@@ -19,7 +19,9 @@ return [
 
     'allowed_methods' => ['*'],
 
-    'allowed_origins' => ['*'],
+    'allowed_origins' => [
+        'https://crisp-adversely-quagga.ngrok-free.app'
+    ],
 
     'allowed_origins_patterns' => [],
 

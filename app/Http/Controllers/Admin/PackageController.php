@@ -5,11 +5,15 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Package;
 use App\Models\Feature;
+use App\Services\StripeService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class PackageController extends Controller
 {
-    public function __construct()
+    protected $stripeService;
+
+    public function __construct(StripeService $stripeService)
     {
         // permissions
         $this->middleware('permission:view_package', ['only' => ['index']]);
@@ -17,6 +21,8 @@ class PackageController extends Controller
         $this->middleware('permission:edit_package', ['only' => ['edit']]);
         $this->middleware('permission:delete_package', ['only' => ['destroy']]);
         // permissions
+
+        $this->stripeService = $stripeService;
     }
 
     /**
@@ -78,7 +84,57 @@ class PackageController extends Controller
             $data['icon'] = $icon;
         }
 
+        // Create Stripe product and price if package has a price
+        if ($data['price'] > 0 && !$request->stripe_product_id) {
+            try {
+                // Create Stripe product
+                $stripeProduct = $this->stripeService->createProduct([
+                    'name' => $data['name'],
+                    'description' => $data['description'] ?? null,
+                    'metadata' => [
+                        'package_id' => null, // Will be updated after package creation
+                    ],
+                    'active' => $data['is_active'] ?? true,
+                ]);
+
+                // Create Stripe price
+                $stripePrice = $this->stripeService->createPrice([
+                    'product_id' => $stripeProduct->id,
+                    'unit_amount' => $data['price'], // Price is already in cents
+                    'currency' => 'gbp',
+                    'metadata' => [
+                        'package_id' => null, // Will be updated after package creation
+                    ],
+                ]);
+
+                $data['stripe_product_id'] = $stripeProduct->id;
+                $data['stripe_price_id'] = $stripePrice->id;
+            } catch (\Exception $e) {
+                Log::error('Failed to create Stripe product/price: ' . $e->getMessage());
+                return back()->with('error', 'Failed to create Stripe product. Please try again.')->withInput();
+            }
+        }
+
         $package = Package::create($data);
+
+        // Update Stripe product metadata with package ID
+        if ($package->stripe_product_id) {
+            try {
+                $this->stripeService->updateProduct($package->stripe_product_id, [
+                    'metadata' => [
+                        'package_id' => $package->id,
+                    ],
+                ]);
+
+                // Update price metadata if exists
+                if ($package->stripe_price_id) {
+                    // Note: Stripe prices are immutable, so we can't update metadata
+                    // But we can update the product which is linked to the price
+                }
+            } catch (\Exception $e) {
+                Log::warning('Failed to update Stripe product metadata: ' . $e->getMessage());
+            }
+        }
 
         // Sync features
         if ($package && $request->has('features')) {
@@ -165,6 +221,68 @@ class PackageController extends Controller
             $data['icon'] = $icon;
         }
 
+        // Track if price changed
+        $priceChanged = $package->price != $data['price'];
+        $oldPriceId = $package->stripe_price_id;
+
+        // Sync with Stripe
+        if ($data['price'] > 0) {
+            try {
+                // Create Stripe product if it doesn't exist
+                if (!$package->stripe_product_id) {
+                    $stripeProduct = $this->stripeService->createProduct([
+                        'name' => $data['name'],
+                        'description' => $data['description'] ?? null,
+                        'metadata' => [
+                            'package_id' => $package->id,
+                        ],
+                        'active' => $data['is_active'] ?? true,
+                    ]);
+                    $data['stripe_product_id'] = $stripeProduct->id;
+                } else {
+                    // Update Stripe product
+                    $this->stripeService->updateProduct($package->stripe_product_id, [
+                        'name' => $data['name'],
+                        'description' => $data['description'] ?? null,
+                        'active' => $data['is_active'] ?? true,
+                        'metadata' => [
+                            'package_id' => $package->id,
+                        ],
+                    ]);
+                }
+
+                // Create new price if price changed (prices are immutable in Stripe)
+                if ($priceChanged && $package->stripe_product_id) {
+                    $stripePrice = $this->stripeService->createPrice([
+                        'product_id' => $package->stripe_product_id,
+                        'unit_amount' => $data['price'], // Price is already in cents
+                        'currency' => 'gbp',
+                        'metadata' => [
+                            'package_id' => $package->id,
+                        ],
+                    ]);
+                    $data['stripe_price_id'] = $stripePrice->id;
+                } elseif (!$package->stripe_price_id && $package->stripe_product_id) {
+                    // Create price if it doesn't exist
+                    $stripePrice = $this->stripeService->createPrice([
+                        'product_id' => $package->stripe_product_id,
+                        'unit_amount' => $data['price'],
+                        'currency' => 'gbp',
+                        'metadata' => [
+                            'package_id' => $package->id,
+                        ],
+                    ]);
+                    $data['stripe_price_id'] = $stripePrice->id;
+                }
+            } catch (\Exception $e) {
+                Log::error('Failed to sync package with Stripe: ' . $e->getMessage(), [
+                    'package_id' => $package->id,
+                    'trace' => $e->getTraceAsString()
+                ]);
+                return back()->with('error', 'Failed to sync with Stripe. Please try again.')->withInput();
+            }
+        }
+
         if ($package->update($data)) {
             // Sync features
             $featuresData = [];
@@ -194,6 +312,23 @@ class PackageController extends Controller
     public function destroy(string $id)
     {
         $package = Package::findOrFail($id);
+
+        // Archive Stripe product if it exists
+        if ($package->stripe_product_id) {
+            try {
+                $this->stripeService->archiveProduct($package->stripe_product_id);
+                Log::info('Stripe product archived', [
+                    'package_id' => $package->id,
+                    'stripe_product_id' => $package->stripe_product_id
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Failed to archive Stripe product: ' . $e->getMessage(), [
+                    'package_id' => $package->id,
+                    'stripe_product_id' => $package->stripe_product_id
+                ]);
+                // Continue with deletion even if Stripe archive fails
+            }
+        }
 
         if ($package->delete()) {
             return back()->with('success', 'Package deleted successfully!');

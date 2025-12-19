@@ -3,13 +3,13 @@
 @section('page_content')
     @can('add_promocode')
         <div class="page-content">
-            <form method="POST" action="{{ route('promo-code.store') }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('admin.promo-codes.store') }}" enctype="multipart/form-data">
                 @csrf
                 <div class="content-header clearfix">
                     <h1 class="float-left"> Add Promo Code
                         <small>
                             <i class="fas fa-arrow-circle-left"></i>
-                            <a href="{{ route('promo-code.index') }}">back to Promo Codes list</a>
+                            <a href="{{ route('admin.promo-codes.index') }}">back to Promo Codes list</a>
                         </small>
                     </h1>
                     <div class="float-right">
@@ -82,12 +82,10 @@
                                                 <label for="discount_type" class="form-label">Discount Type</label>
                                             </div>
                                             <div class="col-md-9">
-                                                <select name="discount_type" id="discount_type" class="form-control">
+                                                <select name="discount_type" id="discount_type" class="form-control" required>
                                                     <option value="">Select Type</option>
-                                                    <option value="%" {{ old('discount_type') == '%' ? 'selected' : '' }}>%
-                                                    </option>
-                                                    <option value="fix"
-                                                        {{ old('discount_type') == 'fix' ? 'selected' : '' }}>Fix</option>
+                                                    <option value="percent" {{ old('discount_type') == 'percent' ? 'selected' : '' }}>Percentage (%)</option>
+                                                    <option value="fix" {{ old('discount_type') == 'fix' ? 'selected' : '' }}>Fixed Amount</option>
                                                 </select>
                                                 @error('discount_type')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
