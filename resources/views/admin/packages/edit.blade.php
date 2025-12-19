@@ -123,20 +123,6 @@
                                             </div>
                                         </div>
 
-                                        <div class="form-group row">
-                                            <div class="col-md-3">
-                                                <label for="monthly_price" class="form-label">Monthly Price</label>
-                                            </div>
-                                            <div class="col-md-9">
-                                                <input type="number" step="0.01" class="form-control"
-                                                    name="monthly_price" id="monthly_price"
-                                                    value="{{ old('monthly_price', $package->monthly_price) }}"
-                                                    placeholder="Enter monthly price (optional)">
-                                                @error('monthly_price')
-                                                    <div class="invalid-feedback d-block">{{ $message }}</div>
-                                                @enderror
-                                            </div>
-                                        </div>
 
                                         <div class="form-group row">
                                             <div class="col-md-3">

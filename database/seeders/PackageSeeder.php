@@ -17,7 +17,6 @@ class PackageSeeder extends Seeder
                 'name' => 'Free',
                 'description' => 'Build a momentum on social media',
                 'price' => 0,
-                'monthly_price' => 0.00,
                 'icon' => '', // You can add icon path later if needed
                 'duration' => 1,
                 'date_type' => 'month',
@@ -31,7 +30,6 @@ class PackageSeeder extends Seeder
                 'name' => 'Professional',
                 'description' => 'Scale your social media efforts',
                 'price' => 12,
-                'monthly_price' => 12.00,
                 'icon' => '', // You can add icon path later if needed
                 'duration' => 1,
                 'date_type' => 'month',
@@ -45,7 +43,6 @@ class PackageSeeder extends Seeder
                 'name' => 'Business',
                 'description' => 'Unleash the power of social media',
                 'price' => 21,
-                'monthly_price' => 21.00,
                 'icon' => '', // You can add icon path later if needed
                 'duration' => 1,
                 'date_type' => 'month',

@@ -51,7 +51,6 @@ class PackageController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-            'monthly_price' => 'nullable|numeric|min:0',
             'duration' => 'required|integer|min:1',
             'date_type' => 'required|in:day,month,year',
             'trial_days' => 'nullable|integer|min:0',
@@ -67,7 +66,6 @@ class PackageController extends Controller
             'name' => $request->name,
             'description' => $request->description,
             'price' => $request->price,
-            'monthly_price' => $request->monthly_price ?? $request->price,
             'duration' => $request->duration,
             'date_type' => $request->date_type,
             'trial_days' => $request->trial_days ?? 0,
@@ -186,7 +184,6 @@ class PackageController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-            'monthly_price' => 'nullable|numeric|min:0',
             'duration' => 'required|integer|min:1',
             'date_type' => 'required|in:day,month,year',
             'trial_days' => 'nullable|integer|min:0',
@@ -204,15 +201,13 @@ class PackageController extends Controller
             'name' => $request->name,
             'description' => $request->description,
             'price' => $request->price,
-            'monthly_price' => $request->monthly_price ?? $request->price,
             'duration' => $request->duration,
             'date_type' => $request->date_type,
             'trial_days' => $request->trial_days ?? 0,
             'sort_order' => $request->sort_order ?? 0,
             'is_active' => $request->has('is_active') ? ($request->is_active ? true : false) : true,
             'is_lifetime' => $request->has('is_lifetime') ? ($request->is_lifetime ? true : false) : false,
-            'stripe_product_id' => $request->stripe_product_id,
-            'stripe_price_id' => $request->stripe_price_id,
+            // Don't set stripe IDs from request - they will be set during Stripe sync below
         ];
 
         // Handle icon upload
@@ -221,15 +216,19 @@ class PackageController extends Controller
             $data['icon'] = $icon;
         }
 
-        // Track if price changed
+        // Track if price, duration, or date_type changed (affects Stripe price)
         $priceChanged = $package->price != $data['price'];
-        $oldPriceId = $package->stripe_price_id;
+        $durationChanged = $package->duration != $data['duration'];
+        $dateTypeChanged = $package->date_type != $data['date_type'];
+        $needsNewPrice = $priceChanged || $durationChanged || $dateTypeChanged;
 
         // Sync with Stripe
         if ($data['price'] > 0) {
             try {
+                $stripeProductId = $package->stripe_product_id;
+
                 // Create Stripe product if it doesn't exist
-                if (!$package->stripe_product_id) {
+                if (!$stripeProductId) {
                     $stripeProduct = $this->stripeService->createProduct([
                         'name' => $data['name'],
                         'description' => $data['description'] ?? null,
@@ -238,10 +237,12 @@ class PackageController extends Controller
                         ],
                         'active' => $data['is_active'] ?? true,
                     ]);
-                    $data['stripe_product_id'] = $stripeProduct->id;
+                    $stripeProductId = $stripeProduct->id;
+                    $data['stripe_product_id'] = $stripeProductId;
                 } else {
-                    // Update Stripe product
-                    $this->stripeService->updateProduct($package->stripe_product_id, [
+                    // Update Stripe product (preserve existing product ID)
+                    $data['stripe_product_id'] = $stripeProductId;
+                    $this->stripeService->updateProduct($stripeProductId, [
                         'name' => $data['name'],
                         'description' => $data['description'] ?? null,
                         'active' => $data['is_active'] ?? true,
@@ -251,28 +252,52 @@ class PackageController extends Controller
                     ]);
                 }
 
-                // Create new price if price changed (prices are immutable in Stripe)
-                if ($priceChanged && $package->stripe_product_id) {
+                // Determine if recurring or one-time payment
+                $recurring = null;
+                if ($data['date_type'] !== 'day' || $data['duration'] > 1) {
+                    // Only day with duration 1 is one-time, others are recurring
+                    $interval = $data['date_type'] === 'day' ? 'day' : ($data['date_type'] === 'month' ? 'month' : 'year');
+                    $intervalCount = $data['duration'];
+                    $recurring = [
+                        'interval' => $interval,
+                        'interval_count' => $intervalCount,
+                    ];
+                }
+
+                // Create new price if price/duration/date_type changed OR if no price exists (prices are immutable in Stripe)
+                if ($needsNewPrice && $stripeProductId) {
+                    // Create a new price (old price remains in Stripe but won't be used)
                     $stripePrice = $this->stripeService->createPrice([
-                        'product_id' => $package->stripe_product_id,
-                        'unit_amount' => $data['price'], // Price is already in cents
+                        'product_id' => $stripeProductId,
+                        'unit_amount' => (int)$data['price'], // Price is already in cents (matching store method)
                         'currency' => 'gbp',
+                        'recurring' => $recurring,
                         'metadata' => [
                             'package_id' => $package->id,
+                            'trial_days' => $data['trial_days'] ?? 0,
                         ],
                     ]);
                     $data['stripe_price_id'] = $stripePrice->id;
-                } elseif (!$package->stripe_price_id && $package->stripe_product_id) {
+                } elseif (!$package->stripe_price_id && $stripeProductId) {
                     // Create price if it doesn't exist
                     $stripePrice = $this->stripeService->createPrice([
-                        'product_id' => $package->stripe_product_id,
-                        'unit_amount' => $data['price'],
+                        'product_id' => $stripeProductId,
+                        'unit_amount' => (int)$data['price'], // Price is already in cents (matching store method)
                         'currency' => 'gbp',
+                        'recurring' => $recurring,
                         'metadata' => [
                             'package_id' => $package->id,
+                            'trial_days' => $data['trial_days'] ?? 0,
                         ],
                     ]);
                     $data['stripe_price_id'] = $stripePrice->id;
+                } else {
+                    // Preserve existing IDs if price/duration/date_type didn't change
+                    // Product ID is already preserved above, just ensure price ID is preserved
+                    if (!$needsNewPrice) {
+                        $data['stripe_product_id'] = $package->stripe_product_id;
+                        $data['stripe_price_id'] = $package->stripe_price_id;
+                    }
                 }
             } catch (\Exception $e) {
                 Log::error('Failed to sync package with Stripe: ' . $e->getMessage(), [
@@ -280,6 +305,17 @@ class PackageController extends Controller
                     'trace' => $e->getTraceAsString()
                 ]);
                 return back()->with('error', 'Failed to sync with Stripe. Please try again.')->withInput();
+            }
+        } else {
+            // If price is 0, archive the Stripe product if it exists
+            if ($package->stripe_product_id) {
+                try {
+                    $this->stripeService->archiveProduct($package->stripe_product_id);
+                    $data['stripe_product_id'] = null;
+                    $data['stripe_price_id'] = null;
+                } catch (\Exception $e) {
+                    Log::warning('Failed to archive Stripe product when price set to 0: ' . $e->getMessage());
+                }
             }
         }
 

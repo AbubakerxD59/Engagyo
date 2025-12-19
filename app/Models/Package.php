@@ -23,7 +23,6 @@ class Package extends Model
         'is_active',
         'is_lifetime',
         'sort_order',
-        'monthly_price',
         'trial_days',
     ];
 
