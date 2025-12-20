@@ -26,7 +26,7 @@ class UserSeeder extends Seeder
             if (! empty($user)) {
                 $role = Role::where("name", "Super Admin")->first();
                 if ($role) {
-                    $user->assignRole($role->name);
+                    $user->assignRole($role);
                 }
             }
         } catch (\Exception $exception) {

@@ -89,26 +89,78 @@ class PermissionSeeder extends Seeder
 
         ];
         try {
+            // Get Super Admin role to determine the guard for permissions
+            $super_admin_role = Role::where('name', 'Super Admin')->first();
+            $permissionGuard = $super_admin_role ? $super_admin_role->guard_name : 'web';
+            
+            // First pass: Create all parent permissions (those without parent_id)
+            $createdPermissions = [];
+            foreach ($permissions as $permission) {
+                if (empty($permission['parent_id'])) {
+                    $data = [
+                        'label' => $permission['label'],
+                        'name' => $permission['name'],
+                        'guard_name' => $permissionGuard,
+                        'parent_id' => '',
+                        'route_name' => $permission['route_name'],
+                        'role_id' => isset($permission['role_id']) ? $permission['role_id'] : '',
+                        'created_by' => '1',
+                    ];
+                    $createdPermission = Permission::updateOrCreate(
+                        [
+                            'name' => $permission['name'],
+                            'guard_name' => $permissionGuard
+                        ],
+                        $data
+                    );
+                    $createdPermissions[$permission['name']] = $createdPermission->id;
+                }
+            }
+            
+            // Second pass: Create child permissions (those with parent_id)
             foreach ($permissions as $permission) {
                 if (!empty($permission['parent_id'])) {
-                    $parent_id = Permission::where('name', $permission['parent_id'])->first();
-                    $permission['parent_id'] = $parent_id->id;
+                    // Find parent permission ID from created permissions or database
+                    $parentId = null;
+                    if (isset($createdPermissions[$permission['parent_id']])) {
+                        $parentId = $createdPermissions[$permission['parent_id']];
+                    } else {
+                        $parent = Permission::where('name', $permission['parent_id'])
+                            ->where('guard_name', $permissionGuard)
+                            ->first();
+                        if ($parent) {
+                            $parentId = $parent->id;
+                        }
+                    }
+                    
+                    $data = [
+                        'label' => $permission['label'],
+                        'name' => $permission['name'],
+                        'guard_name' => $permissionGuard, // Use the same guard as Super Admin role
+                        'parent_id' => $parentId,
+                        'route_name' => $permission['route_name'],
+                        'role_id' => isset($permission['role_id']) ? $permission['role_id'] : '',
+                        'created_by' => '1',
+                    ];
+                    // Update or create with both name and guard_name to ensure uniqueness
+                    $createdPermission = Permission::updateOrCreate(
+                        [
+                            'name' => $permission['name'],
+                            'guard_name' => $permissionGuard
+                        ],
+                        $data
+                    );
+                    $createdPermissions[$permission['name']] = $createdPermission->id;
                 }
-                $data = [
-                    'label' => $permission['label'],
-                    'name' => $permission['name'],
-                    'guard_name' => 'web',
-                    'parent_id' => $permission['parent_id'],
-                    'route_name' => $permission['route_name'],
-                    'role_id' => isset($permission['role_id']) ? $permission['role_id'] : '',
-                    'created_by' => '1',
-                ];
-                Permission::updateOrCreate(['name' => $permission['name']], $data);
             }
             // set permissions to Super admin
-            $super_admin_role = Role::where('name', 'Super Admin')->first();
-            $get_all_permissions = Permission::get()->pluck('id')->toArray();
-            $super_admin_role->syncPermissions($get_all_permissions);
+            if ($super_admin_role) {
+                // Get permissions with the same guard as the role
+                $get_all_permissions = Permission::where('guard_name', $super_admin_role->guard_name)
+                    ->pluck('id')
+                    ->toArray();
+                $super_admin_role->syncPermissions($get_all_permissions);
+            }
             // set permissions to Super admin
         } catch (\Exception $exception) {
             echo $exception->getMessage();
