@@ -71,7 +71,7 @@ class PaymentController extends Controller
             // Determine payment mode based on package
             // For now, we'll use 'payment' for one-time payments
             // If you want subscriptions, you can check package properties or add a field
-            $mode = 'payment'; // Default to one-time payment
+            $mode = 'subscription'; // Default to one-time payment
             // You can add logic here to determine if it should be a subscription
             // For example: $mode = $package->is_recurring ? 'subscription' : 'payment';
 
