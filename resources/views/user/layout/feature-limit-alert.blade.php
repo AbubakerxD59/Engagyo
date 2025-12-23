@@ -266,7 +266,7 @@
         z-index: 1060 !important;
     }
 
-    .modal-backdrop {
+    #upgradePackagesModal {
         z-index: 1055 !important;
     }
 
