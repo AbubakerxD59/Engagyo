@@ -1009,11 +1009,13 @@
     <script>
         $(document).ready(function() {
             // Function to remove modal backdrop
-            function removeModalBackdrop() {
-                $('.modal-backdrop').remove();
-                $('body').removeClass('modal-open');
-                $('body').css('padding-right', '');
-            }
+            setTimeout(() => {
+                function removeModalBackdrop() {
+                    $('.modal-backdrop').remove();
+                    $('body').removeClass('modal-open');
+                    $('body').css('padding-right', '');
+                }
+            }, 250);
             
             // Cleanup any orphaned backdrops on page load
             removeModalBackdrop();
