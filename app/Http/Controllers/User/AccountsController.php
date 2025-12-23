@@ -60,6 +60,7 @@ class AccountsController extends Controller
     public function pinterestDelete($id = null)
     {
         if (!empty($id)) {
+            $user = User::find(Auth::guard('user')->id());
             $pinterest = $this->pinterest->search($id)->first();
             if ($pinterest) {
                 $boards = Board::where("pin_id", $pinterest->id)->get();
@@ -85,12 +86,10 @@ class AccountsController extends Controller
 
                 // Decrement feature usage for scheduled posts
                 if ($totalScheduledPosts > 0) {
-                    /** @var User $user */
                     $user->decrementFeatureUsage(Feature::$features_list[1], $totalScheduledPosts);
                 }
-                
+
                 // Decrement feature usage for social_accounts (Pinterest account + all boards)
-                /** @var User $user */
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1 + $totalBoards);
 
                 // pinterest account
@@ -167,7 +166,7 @@ class AccountsController extends Controller
     public function boardDelete($id = null)
     {
         if (!empty($id)) {
-            $user = Auth::guard('user')->user();
+            $user = User::find(Auth::guard('user')->id());
             $board = $this->board->search($id)->first();
             if ($board) {
                 // Count scheduled posts before deletion
@@ -184,12 +183,10 @@ class AccountsController extends Controller
 
                 // Decrement feature usage for scheduled posts
                 if ($scheduledPostsCount > 0) {
-                    /** @var User $user */
                     $user->decrementFeatureUsage(Feature::$features_list[1], $scheduledPostsCount);
                 }
-                
+
                 // Decrement feature usage for social_accounts
-                /** @var User $user */
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1);
 
                 return back()->with("success", "Board deleted Successfully!");
@@ -204,7 +201,7 @@ class AccountsController extends Controller
     public function facebookDelete($id = null)
     {
         if (!empty($id)) {
-            $user = Auth::guard('user')->user();
+            $user = User::find(Auth::guard('user')->id());
             $facebook = $this->facebook->search($id)->first();
             if ($facebook) {
                 $pages = Page::with("posts", "domains", "timeslots")->where('fb_id', $facebook->id)->get();
@@ -230,12 +227,10 @@ class AccountsController extends Controller
 
                 // Decrement feature usage for scheduled posts
                 if ($totalScheduledPosts > 0) {
-                    /** @var User $user */
                     $user->decrementFeatureUsage(Feature::$features_list[1], $totalScheduledPosts);
                 }
-                
+
                 // Decrement feature usage for social_accounts (Facebook account + all pages)
-                /** @var User $user */
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1 + $totalPages);
 
                 // Delete Facebook account
@@ -343,7 +338,7 @@ class AccountsController extends Controller
     public function pageDelete($id = null)
     {
         if (!empty($id)) {
-            $user = Auth::guard('user')->user();
+            $user = User::find(Auth::guard('user')->id());
             $page = $this->page->search($id)->first();
             if ($page) {
                 // Count scheduled posts before deletion
@@ -360,12 +355,10 @@ class AccountsController extends Controller
 
                 // Decrement feature usage for scheduled posts
                 if ($scheduledPostsCount > 0) {
-                    /** @var User $user */
                     $user->decrementFeatureUsage(Feature::$features_list[1], $scheduledPostsCount);
                 }
-                
+
                 // Decrement feature usage for social_accounts
-                /** @var User $user */
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1);
 
                 return back()->with("success", "Page deleted Successfully!");
@@ -442,7 +435,7 @@ class AccountsController extends Controller
     public function tiktokDelete($id = null)
     {
         if (!empty($id)) {
-            $user = Auth::guard('user')->user();
+            $user = User::find(Auth::guard('user')->id());
             $tiktok = $this->tiktok->search($id)->first();
             if ($tiktok) {
                 // Count scheduled posts before deletion
@@ -458,12 +451,10 @@ class AccountsController extends Controller
 
                 // Decrement feature usage for scheduled posts
                 if ($scheduledPostsCount > 0) {
-                    /** @var User $user */
                     $user->decrementFeatureUsage(Feature::$features_list[1], $scheduledPostsCount);
                 }
-                
+
                 // Decrement feature usage for social_accounts
-                /** @var User $user */
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1);
 
                 return back()->with("success", "TikTok Account deleted Successfully!");
