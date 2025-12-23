@@ -11,7 +11,7 @@ Route::name("pinterest.")->controller(PinterestController::class)->group(functio
 });
 
 // Facebook
-Route::middleware("web")->name("facebook.")->controller(FacebookController::class)->group(function () {
+Route::name("facebook.")->controller(FacebookController::class)->group(function () {
     Route::get("facebook-callback", "facebookCallback")->name("callback");
     Route::get("facebook-delete-callback", "deleteCallback")->name("deleteCallback");
     Route::post("deauthorize-callback", "deauthorizeCallback")->name("deauthorize");
