@@ -1008,6 +1008,24 @@
 @push('scripts')
     <script>
         $(document).ready(function() {
+            // Function to remove modal backdrop
+            function removeModalBackdrop() {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+            }
+            
+            // Cleanup any orphaned backdrops on page load
+            removeModalBackdrop();
+            
+            // Also cleanup on window focus (in case user navigated away and came back)
+            $(window).on('focus', function() {
+                // Only remove if no modal is actually showing
+                if (!$('.modal.show').length) {
+                    removeModalBackdrop();
+                }
+            });
+            
             // Initialize tooltips for account cards
             function initAccountTooltips() {
                 $('.has-tooltip').each(function() {
@@ -1039,6 +1057,8 @@
             // Pinterest Modal
             var pinAcc = $('#pinterestAcc').val();
             if (pinAcc == 1) {
+                // Ensure no leftover backdrops before showing
+                removeModalBackdrop();
                 $('#connectPinterestModal').modal('show');
                 {{ session_delete('pinterest_auth') }}
             }
@@ -1090,14 +1110,21 @@
                 });
             });
             
+            // Pinterest Modal handlers
             $("#connectPinterestModal").on("hide.bs.modal", function() {
                 {{ session_delete('account') }}
                 {{ session_delete('items') }}
             });
             
+            $("#connectPinterestModal").on("hidden.bs.modal", function() {
+                removeModalBackdrop();
+            });
+            
             // Facebook Modal
             var facAcc = $('#facebookAcc').val();
             if (facAcc == 1) {
+                // Ensure no leftover backdrops before showing
+                removeModalBackdrop();
                 $('#connectFacebookModal').modal('show');
                 {{ session_delete('facebook_auth') }}
             }
@@ -1152,6 +1179,10 @@
             $("#connectFacebookModal").on("hide.bs.modal", function() {
                 {{ session_delete('account') }}
                 {{ session_delete('items') }}
+            });
+            
+            $("#connectFacebookModal").on("hidden.bs.modal", function() {
+                removeModalBackdrop();
             });
 
             // Accounts Toggle Functionality
