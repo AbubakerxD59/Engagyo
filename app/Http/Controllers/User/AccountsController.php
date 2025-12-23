@@ -11,6 +11,7 @@ use App\Models\Domain;
 use App\Models\Tiktok;
 use App\Models\Feature;
 use App\Models\Facebook;
+use App\Models\Timeslot;
 use App\Models\Pinterest;
 use Illuminate\Http\Request;
 use App\Services\TikTokService;
@@ -59,33 +60,33 @@ class AccountsController extends Controller
     public function pinterestDelete($id = null)
     {
         if (!empty($id)) {
-            $user = Auth::guard('user')->user();
             $pinterest = $this->pinterest->search($id)->first();
-            if ($pinterest && $pinterest->user_id === $user->id) {
-                $board_ids = $pinterest->boards()->where('user_id', $user->id)->get()->pluck("board_id")->toArray();
+            if ($pinterest) {
+                $boards = Board::where("pin_id", $pinterest->id)->get();
                 $totalScheduledPosts = 0;
                 $totalBoards = 0;
 
                 // posts,domains,timeslots,board
-                foreach ($board_ids  as $board_id) {
-                    $board = $this->board->find($board_id);
-                    if ($board && $board->user_id === $user->id) {
-                        // Count scheduled posts before deletion
-                        $scheduledPostsCount = $board->posts()->where('source', 'schedule')->count();
-                        $totalScheduledPosts += $scheduledPostsCount;
-                        $totalBoards++;
+                foreach ($boards as $board) {
+                    // Count scheduled posts before deletion
+                    $scheduledPostsCount = Post::where("account_id", $board->id)->count();
+                    $totalScheduledPosts += $scheduledPostsCount;
+                    $totalBoards++;
 
-                        $board->posts()->delete();
-                        $board->domains()->delete();
-                        $board->timeslots()->delete();
-                        $board->delete();
-                    }
+                    // Delete Posts
+                    Post::where("account_id", $board->id)->delete();
+                    // Delete Domains
+                    Domain::where("account_id", $board->id)->delete();
+                    // Delete Timeslots
+                    Timeslot::where("account_id", $board->id)->delete();
+                    // Delete Board
+                    Board::where("id", $board->id)->delete();
                 }
 
                 // Decrement feature usage for scheduled posts
                 if ($totalScheduledPosts > 0) {
                     /** @var User $user */
-                    $user->decrementFeatureUsage('scheduled_posts_per_account', $totalScheduledPosts);
+                    $user->decrementFeatureUsage(Feature::$features_list[1], $totalScheduledPosts);
                 }
                 
                 // Decrement feature usage for social_accounts (Pinterest account + all boards)
@@ -168,7 +169,7 @@ class AccountsController extends Controller
         if (!empty($id)) {
             $user = Auth::guard('user')->user();
             $board = $this->board->search($id)->first();
-            if ($board && $board->user_id === $user->id) {
+            if ($board) {
                 // Count scheduled posts before deletion
                 $scheduledPostsCount = $board->posts()->where('source', 'schedule')->count();
 
@@ -184,7 +185,7 @@ class AccountsController extends Controller
                 // Decrement feature usage for scheduled posts
                 if ($scheduledPostsCount > 0) {
                     /** @var User $user */
-                    $user->decrementFeatureUsage('scheduled_posts_per_account', $scheduledPostsCount);
+                    $user->decrementFeatureUsage(Feature::$features_list[1], $scheduledPostsCount);
                 }
                 
                 // Decrement feature usage for social_accounts
@@ -205,31 +206,32 @@ class AccountsController extends Controller
         if (!empty($id)) {
             $user = Auth::guard('user')->user();
             $facebook = $this->facebook->search($id)->first();
-            if ($facebook && $facebook->user_id === $user->id) {
-                $page_ids = Page::where('fb_id', $facebook->id)->pluck('id')->toArray();
+            if ($facebook) {
+                $pages = Page::with("posts", "domains", "timeslots")->where('fb_id', $facebook->id)->get();
                 $totalScheduledPosts = 0;
                 $totalPages = 0;
 
                 // posts,domains,timeslots,page
-                foreach ($page_ids as $page_id) {
-                    $page = Page::find($page_id);
-                    if ($page && $page->user_id === $user->id) {
-                        // Count scheduled posts before deletion
-                        $scheduledPostsCount = $page->posts()->where('source', 'schedule')->count();
-                        $totalScheduledPosts += $scheduledPostsCount;
-                        $totalPages++;
+                foreach ($pages as $page) {
+                    // Count scheduled posts before deletion
+                    $scheduledPostsCount = Post::where("account_id", $page->id)->count();
+                    $totalScheduledPosts += $scheduledPostsCount;
+                    $totalPages++;
 
-                        $page->posts()->delete();
-                        $page->domains()->delete();
-                        $page->timeslots()->delete();
-                        $page->delete();
-                    }
+                    // Delete Posts
+                    Post::where("account_id", $page->id)->delete();
+                    // Delete Domains
+                    Domain::where("account_id", $page->id)->delete();
+                    // Delete Timeslots
+                    Timeslot::where("account_id", $page->id)->delete();
+                    // Delete Page
+                    Page::where("id", $page->id)->delete();
                 }
 
                 // Decrement feature usage for scheduled posts
                 if ($totalScheduledPosts > 0) {
                     /** @var User $user */
-                    $user->decrementFeatureUsage('scheduled_posts_per_account', $totalScheduledPosts);
+                    $user->decrementFeatureUsage(Feature::$features_list[1], $totalScheduledPosts);
                 }
                 
                 // Decrement feature usage for social_accounts (Facebook account + all pages)
@@ -343,7 +345,7 @@ class AccountsController extends Controller
         if (!empty($id)) {
             $user = Auth::guard('user')->user();
             $page = $this->page->search($id)->first();
-            if ($page && $page->user_id === $user->id) {
+            if ($page) {
                 // Count scheduled posts before deletion
                 $scheduledPostsCount = $page->posts()->where('source', 'schedule')->count();
 
@@ -359,7 +361,7 @@ class AccountsController extends Controller
                 // Decrement feature usage for scheduled posts
                 if ($scheduledPostsCount > 0) {
                     /** @var User $user */
-                    $user->decrementFeatureUsage('scheduled_posts_per_account', $scheduledPostsCount);
+                    $user->decrementFeatureUsage(Feature::$features_list[1], $scheduledPostsCount);
                 }
                 
                 // Decrement feature usage for social_accounts
@@ -442,18 +444,13 @@ class AccountsController extends Controller
         if (!empty($id)) {
             $user = Auth::guard('user')->user();
             $tiktok = $this->tiktok->search($id)->first();
-            if ($tiktok && $tiktok->user_id === $user->id) {
+            if ($tiktok) {
                 // Count scheduled posts before deletion
-                $scheduledPostsCount = Post::where('account_id', $tiktok->id)
-                    ->where('social_type', 'tiktok')
-                    ->where('source', 'schedule')
-                    ->where('user_id', $user->id)
-                    ->count();
+                $scheduledPostsCount = Post::where('account_id', $tiktok->id)->count();
 
                 // Delete all posts for this TikTok account
                 Post::where('account_id', $tiktok->id)
                     ->where('social_type', 'tiktok')
-                    ->where('user_id', $user->id)
                     ->delete();
 
                 // TikTok account
@@ -462,7 +459,7 @@ class AccountsController extends Controller
                 // Decrement feature usage for scheduled posts
                 if ($scheduledPostsCount > 0) {
                     /** @var User $user */
-                    $user->decrementFeatureUsage('scheduled_posts_per_account', $scheduledPostsCount);
+                    $user->decrementFeatureUsage(Feature::$features_list[1], $scheduledPostsCount);
                 }
                 
                 // Decrement feature usage for social_accounts
