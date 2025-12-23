@@ -968,7 +968,9 @@
         }
 
         @keyframes spin {
-            to { transform: rotate(360deg); }
+            to {
+                transform: rotate(360deg);
+            }
         }
 
         /* Success animation */
@@ -1009,17 +1011,15 @@
     <script>
         $(document).ready(function() {
             // Function to remove modal backdrop
-            setTimeout(() => {
-                function removeModalBackdrop() {
-                    $('.modal-backdrop').remove();
-                    $('body').removeClass('modal-open');
-                    $('body').css('padding-right', '');
-                }
-            }, 250);
-            
+            function removeModalBackdrop() {
+                $('.modal-backdrop').remove();
+                $('body').removeClass('modal-open');
+                $('body').css('padding-right', '');
+            }
+
             // Cleanup any orphaned backdrops on page load
             removeModalBackdrop();
-            
+
             // Also cleanup on window focus (in case user navigated away and came back)
             $(window).on('focus', function() {
                 // Only remove if no modal is actually showing
@@ -1027,7 +1027,7 @@
                     removeModalBackdrop();
                 }
             });
-            
+
             // Initialize tooltips for account cards
             function initAccountTooltips() {
                 $('.has-tooltip').each(function() {
@@ -1064,7 +1064,7 @@
                 $('#connectPinterestModal').modal('show');
                 {{ session_delete('pinterest_auth') }}
             }
-            
+
             // Pinterest Connect Handler
             $(document).on('click', '.pinterest_connect', function() {
                 var button = $(this);
@@ -1073,11 +1073,11 @@
                 var pin_id = button.data('pin-id');
                 var board_data = button.data('board-data');
                 var token = $('meta[name="csrf-token"]').attr('content');
-                
+
                 // Disable button and show loading state
                 button.addClass('loading').prop('disabled', true);
                 $accountItem.addClass('connecting');
-                
+
                 $.ajax({
                     url: "{{ route('panel.accounts.addBoard') }}",
                     type: 'POST',
@@ -1092,9 +1092,10 @@
                             // Update button to connected state
                             button.removeClass('pinterest_connect loading')
                                 .addClass('btn-connected')
-                                .html('<i class="fas fa-check-circle"></i><span>Connected</span>')
+                                .html(
+                                    '<i class="fas fa-check-circle"></i><span>Connected</span>')
                                 .prop('disabled', true);
-                            
+
                             $accountItem.removeClass('connecting');
                             toastr.success("Board Connected Successfully!");
                         } else {
@@ -1106,22 +1107,23 @@
                     error: function(xhr) {
                         button.removeClass('loading').prop('disabled', false);
                         $accountItem.removeClass('connecting');
-                        var errorMsg = xhr.responseJSON?.message || "Something went wrong. Please try again.";
+                        var errorMsg = xhr.responseJSON?.message ||
+                            "Something went wrong. Please try again.";
                         toastr.error(errorMsg);
                     }
                 });
             });
-            
+
             // Pinterest Modal handlers
             $("#connectPinterestModal").on("hide.bs.modal", function() {
                 {{ session_delete('account') }}
                 {{ session_delete('items') }}
             });
-            
+
             $("#connectPinterestModal").on("hidden.bs.modal", function() {
                 removeModalBackdrop();
             });
-            
+
             // Facebook Modal
             var facAcc = $('#facebookAcc').val();
             if (facAcc == 1) {
@@ -1130,7 +1132,7 @@
                 $('#connectFacebookModal').modal('show');
                 {{ session_delete('facebook_auth') }}
             }
-            
+
             // Facebook Connect Handler
             $(document).on('click', '.facebook_connect', function() {
                 var button = $(this);
@@ -1139,11 +1141,11 @@
                 var fb_id = button.data('fb-id');
                 var page_data = button.data('page-data');
                 var token = $('meta[name="csrf-token"]').attr('content');
-                
+
                 // Disable button and show loading state
                 button.addClass('loading').prop('disabled', true);
                 $accountItem.addClass('connecting');
-                
+
                 $.ajax({
                     url: "{{ route('panel.accounts.addPage') }}",
                     type: 'POST',
@@ -1158,9 +1160,10 @@
                             // Update button to connected state
                             button.removeClass('facebook_connect loading')
                                 .addClass('btn-connected')
-                                .html('<i class="fas fa-check-circle"></i><span>Connected</span>')
+                                .html(
+                                    '<i class="fas fa-check-circle"></i><span>Connected</span>')
                                 .prop('disabled', true);
-                            
+
                             $accountItem.removeClass('connecting');
                             toastr.success("Page Connected Successfully!");
                         } else {
@@ -1172,17 +1175,18 @@
                     error: function(xhr) {
                         button.removeClass('loading').prop('disabled', false);
                         $accountItem.removeClass('connecting');
-                        var errorMsg = xhr.responseJSON?.message || "Something went wrong. Please try again.";
+                        var errorMsg = xhr.responseJSON?.message ||
+                            "Something went wrong. Please try again.";
                         toastr.error(errorMsg);
                     }
                 });
             });
-            
+
             $("#connectFacebookModal").on("hide.bs.modal", function() {
                 {{ session_delete('account') }}
                 {{ session_delete('items') }}
             });
-            
+
             $("#connectFacebookModal").on("hidden.bs.modal", function() {
                 removeModalBackdrop();
             });
