@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Models\User;
 use App\Models\Timezone;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use App\Http\Controllers\BaseController;
 use Illuminate\Support\Facades\Validator;
@@ -18,7 +19,7 @@ class SettingsController extends BaseController
      */
     public function index()
     {
-        $user = User::with("userPackages.package", "userPackages.package.features")->findOrFail(auth()->id());
+        $user = User::with("userPackages.package", "userPackages.package.features")->findOrFail(Auth::guard('user')->id());
         $timezones = Timezone::orderBy('offset')->orderBy('name')->get();
 
         // Get active package
@@ -80,7 +81,7 @@ class SettingsController extends BaseController
      */
     public function update(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::guard('user')->user();
 
         $validator = Validator::make($request->all(), [
             'first_name' => 'required|string|max:150',
@@ -134,7 +135,7 @@ class SettingsController extends BaseController
             return $this->errorResponse($validator->errors()->first(), 422);
         }
 
-        $user = auth()->user();
+        $user = Auth::guard('user')->user();
 
         // Delete old profile pic if exists
         if ($user->profile_pic && file_exists(public_path($user->profile_pic))) {
@@ -169,7 +170,7 @@ class SettingsController extends BaseController
      */
     public function removeProfilePic()
     {
-        $user = auth()->user();
+        $user = Auth::guard('user')->user();
 
         // Delete profile pic if exists
         if ($user->profile_pic && file_exists(public_path($user->profile_pic))) {
@@ -201,7 +202,7 @@ class SettingsController extends BaseController
             return $this->errorResponse($validator->errors()->first(), 422);
         }
 
-        $user = auth()->user();
+        $user = Auth::guard('user')->user();
 
         // Check current password
         if (!password_verify($request->current_password, $user->getAttributes()['password'])) {

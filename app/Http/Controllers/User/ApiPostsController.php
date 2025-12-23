@@ -19,7 +19,7 @@ class ApiPostsController extends Controller
      */
     public function index()
     {
-        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
+        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         return view("user.api-posts.index", compact("accounts"));
     }

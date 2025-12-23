@@ -17,7 +17,7 @@ class NotificationController extends Controller
     public function fetch()
     {
         try {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             
             // Get all notifications for this user (both read and unread)
             // Includes: user-specific notifications + system notifications (is_system = true, user_id = null)
@@ -93,7 +93,7 @@ class NotificationController extends Controller
     public function markAsRead($id)
     {
         try {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             
             $notification = Notification::where(function($query) use ($user, $id) {
                 $query->where('id', $id)
@@ -153,7 +153,7 @@ class NotificationController extends Controller
     public function markAllAsRead()
     {
         try {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             
             // Mark user-specific notifications as read
             Notification::where('user_id', $user->id)

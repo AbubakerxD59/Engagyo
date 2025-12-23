@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\BaseController;
 use App\Models\ApiKey;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Validator;
 
 class ApiKeysController extends BaseController
@@ -16,7 +17,7 @@ class ApiKeysController extends BaseController
      */
     public function index()
     {
-        $user = auth()->user();
+        $user = Auth::guard('user')->user();
         $apiKeys = $user->apiKeys()->orderBy('created_at', 'desc')->get();
         
         return view('user.api-keys.index', compact('apiKeys'));
@@ -38,7 +39,7 @@ class ApiKeysController extends BaseController
             return $this->errorResponse($validator->errors()->first(), 422);
         }
 
-        $user = auth()->user();
+        $user = Auth::guard('user')->user();
 
         // Check if user already has too many API keys (limit to 10)
         if ($user->apiKeys()->count() >= 10) {
@@ -74,7 +75,7 @@ class ApiKeysController extends BaseController
      */
     public function refresh(Request $request, $id)
     {
-        $user = auth()->user();
+        $user = Auth::guard('user')->user();
         $apiKey = $user->apiKeys()->find($id);
 
         if (!$apiKey) {
@@ -98,7 +99,7 @@ class ApiKeysController extends BaseController
      */
     public function toggle(Request $request, $id)
     {
-        $user = auth()->user();
+        $user = Auth::guard('user')->user();
         $apiKey = $user->apiKeys()->find($id);
 
         if (!$apiKey) {
@@ -122,7 +123,7 @@ class ApiKeysController extends BaseController
      */
     public function destroy(Request $request, $id)
     {
-        $user = auth()->user();
+        $user = Auth::guard('user')->user();
         $apiKey = $user->apiKeys()->find($id);
 
         if (!$apiKey) {
@@ -142,7 +143,7 @@ class ApiKeysController extends BaseController
      */
     public function dataTable(Request $request)
     {
-        $user = auth()->user();
+        $user = Auth::guard('user')->user();
         $apiKeys = $user->apiKeys()->orderBy('created_at', 'desc')->get();
 
         return $this->successResponse([

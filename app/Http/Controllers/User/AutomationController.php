@@ -46,7 +46,7 @@ class AutomationController extends Controller
     }
     public function index()
     {
-        $user = User::with("boards.pinterest", "pages.facebook")->findOrFail(Auth::id());
+        $user = User::with("boards.pinterest", "pages.facebook")->findOrFail(Auth::guard('user')->id());
         $timeslots = timeslots();
         $accounts = $user->getAccounts();
         return view("user.automation.index", compact("user", "timeslots", "accounts"));
@@ -54,7 +54,7 @@ class AutomationController extends Controller
 
     public function posts(Request $request)
     {
-        $user = Auth::user();
+        $user = Auth::guard('user')->user();
         $data = $request->all();
         $iTotalRecords = $this->post;
         $order = isset($data["order"][0]["dir"]) ? $data["order"][0]["dir"] : 'ASC';
@@ -118,7 +118,7 @@ class AutomationController extends Controller
     {
         $id = $request->id;
         if ($id) {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             $post = $this->post->with("photo")->find($id);
             if ($post) {
                 $postData = $post->toArray();
@@ -154,7 +154,7 @@ class AutomationController extends Controller
             'post_time' => 'required',
         ]);
         if (!empty($id)) {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             $post = $this->post->notPublished()->where("id", $id)->first();
             if ($post) {
                 $data = [
@@ -188,7 +188,7 @@ class AutomationController extends Controller
     public function feedUrl(Request $request)
     {
         try {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             $type = $request->type;
             $domains = $request->url;
             $times = $request->time;
@@ -302,7 +302,7 @@ class AutomationController extends Controller
     {
         $id = $request->account_id;
         if (!empty($id)) {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
             $type = $request->type;
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($id);
@@ -327,7 +327,7 @@ class AutomationController extends Controller
     public function postPublish(Request $request, $id = null)
     {
         try {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             if (!empty($id)) {
                 $type = $request->type;
                 if ($type == "pinterest") {
@@ -414,7 +414,7 @@ class AutomationController extends Controller
         $type = $request->type;
         $shuffle = $request->shuffle;
         if (!empty($id)) {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             if ($type == 'pinterest') {
                 $account = $this->board->where("id", $id)->first();
             }
@@ -450,7 +450,7 @@ class AutomationController extends Controller
         $type = $request->type;
         $domain = $request->has("domain") ? $request->domain : [];
         if (!empty($id)) {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             if ($type == 'pinterest') {
                 $account = $this->board->with("posts.photo")->where("id", $id)->first();
             }
@@ -522,7 +522,7 @@ class AutomationController extends Controller
 
     public function saveFilters(Request $request)
     {
-        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
+        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
         $selected_account = $request->selected_account;
         $selected_type = $request->selected_type;
         $domain = $request->has("domain") ? $request->domain : [];
@@ -554,7 +554,7 @@ class AutomationController extends Controller
         }
 
         try {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             $deletedCount = 0;
 
             foreach ($domainIds as $domainId) {

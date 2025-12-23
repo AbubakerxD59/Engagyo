@@ -150,7 +150,7 @@ class  ScheduleController extends Controller
     }
     public function index()
     {
-        $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->find(Auth::id());
+        $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         return view("user.schedule.index", compact("accounts"));
     }
@@ -252,7 +252,7 @@ class  ScheduleController extends Controller
     private function publishPost($request): array
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->findOrFail(Auth::id());
+            $user = User::with("boards.pinterest", "pages.facebook")->findOrFail(Auth::guard('user')->id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -416,7 +416,7 @@ class  ScheduleController extends Controller
     private function queuePost($request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -564,7 +564,7 @@ class  ScheduleController extends Controller
     private function schedulePost($request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -706,7 +706,7 @@ class  ScheduleController extends Controller
     private function publishLink($request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -857,7 +857,7 @@ class  ScheduleController extends Controller
     private function queueLink($request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -1022,7 +1022,7 @@ class  ScheduleController extends Controller
     private function scheduleLink($request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
             // get scheduled active
             $accounts = $user->getScheduledActiveAccounts();
             $content = $request->get("content") ?? null;
@@ -1178,7 +1178,7 @@ class  ScheduleController extends Controller
     }
     public function getSetting(Request $request)
     {
-        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::id());
+        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $view = view("user.schedule.ajax.settings", compact("accounts"));
         $response = [
@@ -1189,7 +1189,7 @@ class  ScheduleController extends Controller
     }
     public function timeslotSetting(Request $request)
     {
-        $user = Auth::user();
+        $user = Auth::guard('user')->user();
         try {
             $type = $request->type;
             $id = $request->id;

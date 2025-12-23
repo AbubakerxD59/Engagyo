@@ -49,7 +49,7 @@ class AccountsController extends Controller
     }
     public function index()
     {
-        $user = User::with("facebook", "pinterest", "tiktok")->findOrFail(Auth::id());
+        $user = User::with("facebook", "pinterest", "tiktok")->findOrFail(Auth::guard('user')->id());
         $facebookUrl = $this->facebookService->getLoginUrl();
         $pinterestUrl = $this->pinterestService->getLoginUrl();
         $tiktokUrl = $this->tiktokService->getLoginUrl();
@@ -59,7 +59,7 @@ class AccountsController extends Controller
     public function pinterestDelete($id = null)
     {
         if (!empty($id)) {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             $pinterest = $this->pinterest->search($id)->first();
             if ($pinterest && $pinterest->user_id === $user->id) {
                 $board_ids = $pinterest->boards()->where('user_id', $user->id)->get()->pluck("board_id")->toArray();
@@ -121,7 +121,7 @@ class AccountsController extends Controller
     public function addBoard(Request $request)
     {
         try {
-            $user = User::find(Auth::id());
+            $user = User::find(Auth::guard('user')->id());
 
             // Check and track feature usage for social_accounts
             $result = $this->featureUsageService->checkAndIncrement($user, Feature::$features_list[0], 1);
@@ -166,7 +166,7 @@ class AccountsController extends Controller
     public function boardDelete($id = null)
     {
         if (!empty($id)) {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             $board = $this->board->search($id)->first();
             if ($board && $board->user_id === $user->id) {
                 // Count scheduled posts before deletion
@@ -203,16 +203,16 @@ class AccountsController extends Controller
     public function facebookDelete($id = null)
     {
         if (!empty($id)) {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             $facebook = $this->facebook->search($id)->first();
             if ($facebook && $facebook->user_id === $user->id) {
-                $page_ids = $facebook->pages()->where('user_id', $user->id)->get()->pluck("page_id")->toArray();
+                $page_ids = Page::where('fb_id', $facebook->id)->pluck('id')->toArray();
                 $totalScheduledPosts = 0;
                 $totalPages = 0;
 
                 // posts,domains,timeslots,page
                 foreach ($page_ids as $page_id) {
-                    $page = $this->page->find($page_id);
+                    $page = Page::find($page_id);
                     if ($page && $page->user_id === $user->id) {
                         // Count scheduled posts before deletion
                         $scheduledPostsCount = $page->posts()->where('source', 'schedule')->count();
@@ -268,7 +268,7 @@ class AccountsController extends Controller
         $page = $request->page_data;
         if ($page) {
             try {
-                $user = User::find(Auth::id());
+                $user = User::find(Auth::guard('user')->id());
 
                 // Check and track feature usage for social_accounts
                 $result = $this->featureUsageService->checkAndIncrement($user, Feature::$features_list[0], 1);
@@ -341,7 +341,7 @@ class AccountsController extends Controller
     public function pageDelete($id = null)
     {
         if (!empty($id)) {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             $page = $this->page->search($id)->first();
             if ($page && $page->user_id === $user->id) {
                 // Count scheduled posts before deletion
@@ -440,7 +440,7 @@ class AccountsController extends Controller
     public function tiktokDelete($id = null)
     {
         if (!empty($id)) {
-            $user = Auth::user();
+            $user = Auth::guard('user')->user();
             $tiktok = $this->tiktok->search($id)->first();
             if ($tiktok && $tiktok->user_id === $user->id) {
                 // Count scheduled posts before deletion
