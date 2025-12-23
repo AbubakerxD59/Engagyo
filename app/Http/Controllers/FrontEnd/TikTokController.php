@@ -22,7 +22,7 @@ class TikTokController extends Controller
 
     public function tiktokCallback(Request $request)
     {
-        $user = User::with("tiktok")->find(Auth::id());
+        $user = User::with("tiktok")->find(Auth::guard('user')->id());
 
         if ($request->has('code')) {
             $tokenResponse = $this->tiktokService->getUserAccessToken($request->code);

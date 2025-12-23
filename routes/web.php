@@ -13,6 +13,8 @@ require __DIR__ . '/admin.php';
 require __DIR__ . '/payment_gateways.php';
 // Frontend routes
 require __DIR__ . '/frontend.php';
+// Redirects
+require __DIR__ . '/redirect.php';
 // User Panel routes
 require __DIR__ . '/user.php';
 // API Docs

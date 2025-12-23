@@ -25,7 +25,7 @@ class PinterestController extends Controller
     }
     public function pinterestCallback(Request $request)
     {
-        $user = User::with("pinterest")->find(Auth::id());
+        $user = User::with("pinterest")->find(Auth::guard('user')->id());
         if ($request->has('code') && $request->has('state')) {
             $token = $this->pinterestService->getOauthToken($request->code);
             if (isset($token["access_token"])) {

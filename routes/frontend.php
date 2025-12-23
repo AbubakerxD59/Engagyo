@@ -40,6 +40,3 @@ Route::name("frontend.")->controller(FrontendController::class)->group(function 
     // Privacy Policy
     Route::get("privacy", "privacy")->name("privacy");
 });
-
-// Redirects
-require __DIR__ . '/redirect.php';

@@ -31,7 +31,7 @@ class FacebookController extends Controller
     {
         $code = $request->code;
         if (!empty($code)) {
-            $user = User::with("facebook")->findOrFail(Auth::id());
+            $user = User::with("facebook")->findOrFail(Auth::guard('user')->id());
             $getAccessToken = $this->facebookService->getAccessToken();
             if ($getAccessToken["success"]) {
                 $data = $getAccessToken["data"];
