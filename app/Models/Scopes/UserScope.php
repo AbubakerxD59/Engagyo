@@ -19,7 +19,7 @@ class UserScope implements Scope
         $tableName = $model->getTable();
         if (Schema::hasColumn($tableName, 'user_id')) {
             if (Auth::check()) {
-                $user = Auth::user();
+                $user = Auth::guard("user")->user();
                 // Only apply scope if user is a User instance and has "User" role (not admin/super admin)
                 if ($user instanceof User) {
                     $role = $user->roles()->first();
