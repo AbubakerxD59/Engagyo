@@ -11,10 +11,11 @@ class GeneralController extends Controller
 {
     public function previewLink(Request $request)
     {
-        $user = User::with("pages.facebook", "boards.pinterest")->findOrFail(Auth::id());
+        $user = User::with("pages.facebook", "boards.pinterest")->findOrFail(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $check = $accounts->where("schedule_status", "active")->where("type", "!=", "pinterest")->first();
         $pinterest_active = $check ? false : true;
+        $link = $request->link;
         $link = $request->link;
         if (!empty($link)) {
             $max_tries = 3;
