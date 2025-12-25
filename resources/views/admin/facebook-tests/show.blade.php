@@ -32,7 +32,8 @@
                                             </tr>
                                             <tr>
                                                 <th>Ran At</th>
-                                                <td>{{ $testCase->ran_at ? $testCase->ran_at->format('Y-m-d H:i:s') : 'N/A' }}</td>
+                                                <td>{{ $testCase->ran_at ? $testCase->ran_at->format('Y-m-d H:i:s') : 'N/A' }}
+                                                </td>
                                             </tr>
                                             <tr>
                                                 <th>Created At</th>
@@ -49,7 +50,7 @@
                                             <tr>
                                                 <th width="40%">Facebook Page</th>
                                                 <td>
-                                                    @if($testCase->facebookPage)
+                                                    @if ($testCase->facebookPage)
                                                         {{ $testCase->facebookPage->name }}
                                                     @else
                                                         N/A
@@ -59,10 +60,10 @@
                                             <tr>
                                                 <th>Test Post</th>
                                                 <td>
-                                                    @if($testCase->testPost)
+                                                    @if ($testCase->testPost)
                                                         <a href="#" target="_blank">
                                                             Post #{{ $testCase->testPost->id }}
-                                                            @if($testCase->testPost->post_id)
+                                                            @if ($testCase->testPost->post_id)
                                                                 (Facebook ID: {{ $testCase->testPost->post_id }})
                                                             @endif
                                                         </a>
@@ -71,83 +72,84 @@
                                                     @endif
                                                 </td>
                                             </tr>
-                                            @if($testCase->failure_reason)
-                                            <tr>
-                                                <th>Failure Reason</th>
-                                                <td>
-                                                    <div class="alert alert-danger mb-0">
-                                                        {{ $testCase->failure_reason }}
-                                                    </div>
-                                                </td>
-                                            </tr>
+                                            @if ($testCase->failure_reason)
+                                                <tr>
+                                                    <th>Failure Reason</th>
+                                                    <td>
+                                                        <div class="alert alert-danger mb-0">
+                                                            {{ $testCase->failure_reason }}
+                                                        </div>
+                                                    </td>
+                                                </tr>
                                             @endif
                                         </table>
                                     </div>
                                 </div>
 
-                                @if($testCase->test_data)
-                                <div class="row mt-3">
-                                    <div class="col-12">
-                                        <h5>Test Data</h5>
-                                        <div class="card">
-                                            <div class="card-body">
-                                                <pre class="mb-0" style="max-height: 400px; overflow-y: auto;">{{ json_encode($testCase->test_data, JSON_PRETTY_PRINT) }}</pre>
+                                @if ($testCase->test_data)
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <h5>Test Data</h5>
+                                            <div class="card">
+                                                <div class="card-body">
+                                                    <pre class="mb-0" style="max-height: 400px; overflow-y: auto;">{{ json_encode($testCase->test_data, JSON_PRETTY_PRINT) }}</pre>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
                                 @endif
 
-                                @if($testCase->testPost)
-                                <div class="row mt-3">
-                                    <div class="col-12">
-                                        <h5>Test Post Details</h5>
-                                        <table class="table table-bordered">
-                                            <tr>
-                                                <th width="20%">Post ID</th>
-                                                <td>{{ $testCase->testPost->id }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>Facebook Post ID</th>
-                                                <td>{{ $testCase->testPost->post_id ?? 'N/A' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>Type</th>
-                                                <td>{{ ucfirst($testCase->testPost->type) }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>Title</th>
-                                                <td>{{ $testCase->testPost->title ?? 'N/A' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <th>Status</th>
-                                                <td>
-                                                    @if($testCase->testPost->status == 1)
-                                                        <span class="badge badge-success">Published</span>
-                                                    @elseif($testCase->testPost->status == -1)
-                                                        <span class="badge badge-danger">Failed</span>
-                                                    @else
-                                                        <span class="badge badge-warning">Pending</span>
-                                                    @endif
-                                                </td>
-                                            </tr>
-                                            @if($testCase->testPost->response)
-                                            <tr>
-                                                <th>Response</th>
-                                                <td>
-                                                    <pre style="max-height: 200px; overflow-y: auto;">{{ is_string($testCase->testPost->response) ? $testCase->testPost->response : json_encode($testCase->testPost->response, JSON_PRETTY_PRINT) }}</pre>
-                                                </td>
-                                            </tr>
-                                            @endif
-                                            @if($testCase->testPost->published_at)
-                                            <tr>
-                                                <th>Published At</th>
-                                                <td>{{ \Carbon\Carbon::parse($testCase->testPost->published_at)->format('Y-m-d H:i:s') }}</td>
-                                            </tr>
-                                            @endif
-                                        </table>
+                                @if ($testCase->testPost)
+                                    <div class="row mt-3">
+                                        <div class="col-12">
+                                            <h5>Test Post Details</h5>
+                                            <table class="table table-bordered">
+                                                <tr>
+                                                    <th width="20%">Post ID</th>
+                                                    <td>{{ $testCase->testPost->id }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Facebook Post ID</th>
+                                                    <td>{{ $testCase->testPost->post_id ?? 'N/A' }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Type</th>
+                                                    <td>{{ ucfirst($testCase->testPost->type) }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Title</th>
+                                                    <td>{{ $testCase->testPost->title ?? 'N/A' }}</td>
+                                                </tr>
+                                                <tr>
+                                                    <th>Status</th>
+                                                    <td>
+                                                        @if ($testCase->testPost->status == 1)
+                                                            <span class="badge badge-success">Published</span>
+                                                        @elseif($testCase->testPost->status == -1)
+                                                            <span class="badge badge-danger">Failed</span>
+                                                        @else
+                                                            <span class="badge badge-warning">Pending</span>
+                                                        @endif
+                                                    </td>
+                                                </tr>
+                                                @if ($testCase->testPost->response)
+                                                    <tr>
+                                                        <th>Response</th>
+                                                        <td>
+                                                            <pre style="text-wrap: auto;max-height: 200px;overflow-y: auto;">{{ is_string($testCase->testPost->response) ? $testCase->testPost->response : json_encode($testCase->testPost->response, JSON_PRETTY_PRINT) }}</pre>
+                                                        </td>
+                                                    </tr>
+                                                @endif
+                                                @if ($testCase->testPost->published_at)
+                                                    <tr>
+                                                        <th>Published At</th>
+                                                        <td>{{ \Carbon\Carbon::parse($testCase->testPost->published_at)->format('Y-m-d H:i:s') }}
+                                                        </td>
+                                                    </tr>
+                                                @endif
+                                            </table>
+                                        </div>
                                     </div>
-                                </div>
                                 @endif
                             </div>
                         </div>
@@ -157,4 +159,3 @@
         </section>
     </div>
 @endsection
-
