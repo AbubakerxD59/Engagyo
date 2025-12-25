@@ -64,7 +64,7 @@ Route::prefix("admin/")->name("admin.")->group(function () {
         // Facebook Test Cases
         Route::resource('facebook-tests', FacebookTestController::class)->except(['show']);
         Route::controller(FacebookTestController::class)->prefix('facebook-tests/')->name('facebook-tests.')->group(function () {
-            Route::get('show', 'show')->name('show');
+            Route::get('show/{id}', 'show')->name('show');
             Route::get('dataTable', 'dataTable')->name('dataTable');
             Route::post('run', 'runTests')->name('run');
         });
