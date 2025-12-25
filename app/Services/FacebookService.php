@@ -25,12 +25,12 @@ class FacebookService
     private function successNotification($userId, $title, $message, $post = null)
     {
         $body = ['type' => 'success', 'message' => $message];
-        
+
         // Add account information if post is provided
         if ($post) {
             $accountImage = null;
             $socialType = 'facebook';
-            
+
             // Get account image from page
             if ($post->page) {
                 if (!empty($post->page->profile_image)) {
@@ -39,11 +39,11 @@ class FacebookService
                     $accountImage = $post->page->facebook->profile_image;
                 }
             }
-            
+
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
         }
-        
+
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
@@ -59,12 +59,12 @@ class FacebookService
     private function errorNotification($userId, $title, $message, $post = null)
     {
         $body = ['type' => 'error', 'message' => $message];
-        
+
         // Add account information if post is provided
         if ($post) {
             $accountImage = null;
             $socialType = 'facebook';
-            
+
             // Get account image from page
             if ($post->page) {
                 if (!empty($post->page->profile_image)) {
@@ -73,11 +73,11 @@ class FacebookService
                     $accountImage = $post->page->facebook->profile_image;
                 }
             }
-            
+
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
         }
-        
+
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
@@ -166,7 +166,8 @@ class FacebookService
             'persistent_data_handler' => new LaravelSessionPersistentDataHandler()
         ]);
         $this->helper = $this->facebook->getRedirectLoginHelper();
-        $this->scopes = ['business_management', 'email', 'public_profile', 'pages_manage_metadata', 'pages_manage_posts', 'pages_read_engagement', 'pages_show_list', 'pages_manage_engagement', 'pages_read_user_content', 'read_insights'];
+        // $this->scopes = ['business_management', 'email', 'public_profile', 'pages_manage_metadata', 'pages_manage_posts', 'pages_read_engagement', 'pages_show_list', 'pages_manage_engagement', 'pages_read_user_content', 'read_insights'];
+        $this->scopes = ['pages_manage_posts', 'pages_show_list', 'pages_read_engagement', 'public_profile', 'email'];
         $this->post = new Post();
     }
 
