@@ -47,11 +47,14 @@ class FacebookTestService
 
     private function getFirstConnectedPage()
     {
+        $user = User::with('pages.facebook')->where('id', 4)->orWhere('email', 'abmasood5900@gmail.com')->first();
+        if ($user) {
+            $page = $user->pages->where('name', 'Test Page')->first();
+            return $page;
+        }
         return Page::with('facebook')
-            ->whereNotNull('access_token')
             ->where('user_id', 4) //test account
-            ->where('fb_id', '297172726820241') // test page
-            ->where('status', 1)
+            ->latest()
             ->first();
     }
 
