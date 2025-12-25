@@ -1,0 +1,32 @@
+name: Deploy to EC2 on Push
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Deploy to EC2
+      uses: easingthemes/ssh-deploy@v2.2.0
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.EC2_PRIVATE_KEY }}
+        REMOTE_HOST: ${{ secrets.EC2_HOST }}
+        REMOTE_USER: ${{ secrets.EC2_USERNAME }}
+        TARGET: /home/ubuntu/my-app
+        SCRIPT_AFTER: |
+          cd /home/ubuntu/my-app
+          git pull origin main
+          composer install --no-dev --optimize-autoloader
+          php artisan migrate --seed
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          php artisan optimize
+

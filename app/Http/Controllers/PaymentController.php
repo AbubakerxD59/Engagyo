@@ -44,11 +44,9 @@ class PaymentController extends Controller
         $user = Auth::guard('user')->user();
 
         try {
-            // Create or retrieve Stripe customer
             $customerId = $user->stripe_id;
 
             if (!$customerId) {
-                // Create new Stripe customer
                 $customer = $this->stripeService->createCustomer([
                     'email' => $user->email,
                     'name' => $user->first_name . ' ' . $user->last_name,
@@ -57,30 +55,20 @@ class PaymentController extends Controller
                     ],
                 ]);
                 $customerId = $customer->id;
-
-                // Save customer ID to user
                 $user->update(['stripe_id' => $customerId]);
             }
 
-            // Prepare line items for Stripe
             $lineItems = [[
                 'price' => $package->stripe_price_id,
                 'quantity' => 1,
             ]];
 
-            // Determine payment mode based on package
-            // For now, we'll use 'payment' for one-time payments
-            // If you want subscriptions, you can check package properties or add a field
-            $mode = 'subscription'; // Default to one-time payment
-            // You can add logic here to determine if it should be a subscription
-            // For example: $mode = $package->is_recurring ? 'subscription' : 'payment';
+            $mode = 'subscription';
 
-            // Get trial days from package
             $trialDays = $package->trial_days ?? 0;
 
-            // Create checkout session
             $sessionData = [
-                'customer' => $customerId, // Use customer ID instead of email
+                'customer' => $customerId,
                 'line_items' => $lineItems,
                 'mode' => $mode,
                 'success_url' => route('payment.success') . '?session_id={CHECKOUT_SESSION_ID}',
@@ -89,12 +77,11 @@ class PaymentController extends Controller
                     'user_id' => $user->id,
                     'package_id' => $package->id,
                     'package_name' => $package->name,
-                    'trial_days' => $trialDays, // Store trial days in metadata
+                    'trial_days' => $trialDays,
                 ],
                 'allow_promotion_codes' => true,
             ];
 
-            // Add trial days if package has them
             if ($trialDays > 0) {
                 $sessionData['trial_period_days'] = $trialDays;
             }
@@ -127,7 +114,6 @@ class PaymentController extends Controller
             $session = $this->stripeService->retrieveCheckoutSession($sessionId);
 
             if ($session->payment_status === 'paid') {
-                // Check if package is already activated by webhook
                 $userId = $session->metadata->user_id ?? null;
                 $packageId = $session->metadata->package_id ?? null;
 
@@ -136,17 +122,14 @@ class PaymentController extends Controller
                     $package = Package::find($packageId);
 
                     if ($user && $package) {
-                        // Check if subscription already exists (webhook may have processed it)
                         $subscription = UserSubscription::where('user_id', $user->id)
                             ->where('package_id', $package->id)
                             ->where('status', 'active')
                             ->first();
 
                         if (!$subscription) {
-                            // Webhook hasn't processed yet, activate package as fallback
                             $this->activatePackageFromSession($session, $user, $package);
                         } else {
-                            // Update user's package_id if not already set
                             if ($user->package_id != $package->id) {
                                 $user->update(['package_id' => $package->id]);
                             }
@@ -154,7 +137,6 @@ class PaymentController extends Controller
                     }
                 }
 
-                // Redirect to user dashboard
                 return redirect()->route('panel.schedule')->with('success', 'Payment successful! Your package has been activated.');
             }
 
@@ -173,7 +155,6 @@ class PaymentController extends Controller
      */
     public function cancel()
     {
-        // Redirect to user panel if authenticated, otherwise to pricing
         if (Auth::check()) {
             return redirect()->route('panel.schedule')->with('info', 'Payment was cancelled. You can try again anytime.');
         }
@@ -191,16 +172,13 @@ class PaymentController extends Controller
         try {
             $event = $this->stripeService->constructWebhookEvent($payload, $signature);
 
-            // Check if event has already been processed (idempotency)
             if (StripeWebhookEvent::isProcessed($event->id)) {
                 Log::info('Webhook event already processed', ['event_id' => $event->id, 'type' => $event->type]);
                 return response()->json(['status' => 'already_processed'], 200);
             }
 
-            // Handle different event types
             try {
                 switch ($event->type) {
-                    // Checkout & Payment Events
                     case 'checkout.session.completed':
                         $this->handleCheckoutSessionCompleted($event->data->object);
                         break;
@@ -213,7 +191,6 @@ class PaymentController extends Controller
                         $this->handlePaymentFailed($event->data->object);
                         break;
 
-                    // Subscription Events
                     case 'customer.subscription.created':
                         $this->handleSubscriptionCreated($event->data->object);
                         break;
@@ -230,7 +207,6 @@ class PaymentController extends Controller
                         $this->handleTrialWillEnd($event->data->object);
                         break;
 
-                    // Invoice Events
                     case 'invoice.payment_succeeded':
                         $this->handleInvoicePaymentSucceeded($event->data->object);
                         break;
@@ -243,7 +219,6 @@ class PaymentController extends Controller
                         $this->handleInvoiceUpcoming($event->data->object);
                         break;
 
-                    // Customer Events
                     case 'customer.created':
                         $this->handleCustomerCreated($event->data->object);
                         break;
@@ -256,7 +231,6 @@ class PaymentController extends Controller
                         Log::info('Unhandled Stripe event: ' . $event->type);
                 }
 
-                // Mark event as processed
                 StripeWebhookEvent::markAsProcessed(
                     $event->id,
                     $event->type,
@@ -265,7 +239,6 @@ class PaymentController extends Controller
 
                 return response()->json(['status' => 'success'], 200);
             } catch (\Exception $e) {
-                // Mark event as failed
                 StripeWebhookEvent::markAsFailed(
                     $event->id,
                     $event->type,
@@ -309,87 +282,50 @@ class PaymentController extends Controller
                 return;
             }
 
-            // Determine if this is a subscription or one-time payment
             $isSubscription = $session->mode === 'subscription';
             $subscriptionId = $session->subscription ?? null;
             $customerId = $session->customer ?? null;
             $paymentIntentId = $session->payment_intent ?? null;
 
-            // Update user's Stripe customer ID if available
             if ($customerId && !$user->stripe_id) {
                 $user->update(['stripe_id' => $customerId]);
             }
 
-            // Get trial days from metadata or package
             $trialDays = (int)($session->metadata->trial_days ?? $package->trial_days ?? 0);
-
-            // Calculate subscription dates
             $startsAt = Carbon::now();
             $endsAt = null;
 
             if ($isSubscription && $subscriptionId) {
-                // For subscriptions, get the subscription details
                 $subscription = $this->stripeService->retrieveSubscription($subscriptionId);
 
-                // Check if subscription is in trial period
                 if ($subscription->status === 'trialing' && $subscription->trial_end) {
                     $startsAt = Carbon::createFromTimestamp($subscription->trial_start ?? $subscription->created);
-                    // Trial end becomes the actual start of billing
-                    $trialEnd = Carbon::createFromTimestamp($subscription->trial_end);
-                    // After trial, subscription period starts
-                    $endsAt = Carbon::createFromTimestamp($subscription->current_period_end);
+                    $endsAt = $this->calculateExpiryDate($package, $startsAt, $trialDays);
                 } else {
                     $startsAt = Carbon::createFromTimestamp($subscription->current_period_start);
-                    $endsAt = Carbon::createFromTimestamp($subscription->current_period_end);
+                    $endsAt = $this->calculateExpiryDate($package, $startsAt, 0);
                 }
             } else {
-                // For one-time payments, calculate based on package duration
-                // If trial days exist, add them to the duration
-                if ($trialDays > 0) {
-                    $startsAt = Carbon::now();
-                    // Trial period doesn't count towards package duration
-                    // Package starts after trial ends
-                    $packageStartDate = $startsAt->copy()->addDays($trialDays);
-
-                    if ($package->date_type === 'day') {
-                        $endsAt = $packageStartDate->copy()->addDays($package->duration);
-                    } elseif ($package->date_type === 'month') {
-                        $endsAt = $packageStartDate->copy()->addMonths($package->duration);
-                    } elseif ($package->date_type === 'year') {
-                        $endsAt = $packageStartDate->copy()->addYears($package->duration);
-                    } elseif ($package->is_lifetime) {
-                        $endsAt = null; // Lifetime package
-                    }
-                } else {
-                    // No trial, normal calculation
-                    if ($package->date_type === 'day') {
-                        $endsAt = $startsAt->copy()->addDays($package->duration);
-                    } elseif ($package->date_type === 'month') {
-                        $endsAt = $startsAt->copy()->addMonths($package->duration);
-                    } elseif ($package->date_type === 'year') {
-                        $endsAt = $startsAt->copy()->addYears($package->duration);
-                    } elseif ($package->is_lifetime) {
-                        $endsAt = null; // Lifetime package
-                    }
-                }
+                $endsAt = $this->calculateExpiryDate($package, $startsAt, $trialDays);
             }
 
-            // Deactivate previous active packages
             UserPackage::where('user_id', $user->id)
                 ->where('is_active', true)
                 ->update(['is_active' => false]);
 
-            // Create or update user package record
-            $userPackage = UserPackage::create([
-                'user_id' => $user->id,
-                'package_id' => $package->id,
-                'is_active' => true,
-                'assigned_at' => $startsAt,
-                'expires_at' => $endsAt,
-                'assigned_by' => null, // System assigned via payment
-            ]);
+            $userPackage = UserPackage::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'package_id' => $package->id,
+                ],
+                [
+                    'is_active' => true,
+                    'assigned_at' => $startsAt,
+                    'expires_at' => $endsAt,
+                    'assigned_by' => null,
+                ]
+            );
 
-            // Create or update subscription record
             $subscription = UserSubscription::updateOrCreate(
                 [
                     'user_id' => $user->id,
@@ -447,9 +383,6 @@ class PaymentController extends Controller
         }
     }
 
-    /**
-     * Activate package from checkout session (fallback method)
-     */
     protected function activatePackageFromSession($session, $user, $package)
     {
         try {
@@ -458,15 +391,11 @@ class PaymentController extends Controller
             $customerId = $session->customer ?? null;
             $paymentIntentId = $session->payment_intent ?? null;
 
-            // Update user's Stripe customer ID if available
             if ($customerId && !$user->stripe_id) {
                 $user->update(['stripe_id' => $customerId]);
             }
 
-            // Get trial days from metadata or package
             $trialDays = (int)($session->metadata->trial_days ?? $package->trial_days ?? 0);
-
-            // Calculate subscription dates
             $startsAt = Carbon::now();
             $endsAt = null;
 
@@ -474,64 +403,38 @@ class PaymentController extends Controller
                 try {
                     $subscription = $this->stripeService->retrieveSubscription($subscriptionId);
 
-                    // Check if subscription is in trial period
                     if ($subscription->status === 'trialing' && $subscription->trial_end) {
                         $startsAt = Carbon::createFromTimestamp($subscription->trial_start ?? $subscription->created);
-                        $trialEnd = Carbon::createFromTimestamp($subscription->trial_end);
-                        $endsAt = Carbon::createFromTimestamp($subscription->current_period_end);
+                        $endsAt = $this->calculateExpiryDate($package, $startsAt, $trialDays);
                     } else {
                         $startsAt = Carbon::createFromTimestamp($subscription->current_period_start);
-                        $endsAt = Carbon::createFromTimestamp($subscription->current_period_end);
+                        $endsAt = $this->calculateExpiryDate($package, $startsAt, 0);
                     }
                 } catch (\Exception $e) {
                     Log::warning('Failed to retrieve subscription details: ' . $e->getMessage());
+                    $endsAt = $this->calculateExpiryDate($package, $startsAt, $trialDays);
                 }
             } else {
-                // For one-time payments, calculate based on package duration
-                // If trial days exist, add them to the duration
-                if ($trialDays > 0) {
-                    $startsAt = Carbon::now();
-                    $packageStartDate = $startsAt->copy()->addDays($trialDays);
-
-                    if ($package->date_type === 'day') {
-                        $endsAt = $packageStartDate->copy()->addDays($package->duration);
-                    } elseif ($package->date_type === 'month') {
-                        $endsAt = $packageStartDate->copy()->addMonths($package->duration);
-                    } elseif ($package->date_type === 'year') {
-                        $endsAt = $packageStartDate->copy()->addYears($package->duration);
-                    } elseif ($package->is_lifetime) {
-                        $endsAt = null; // Lifetime package
-                    }
-                } else {
-                    // No trial, normal calculation
-                    if ($package->date_type === 'day') {
-                        $endsAt = $startsAt->copy()->addDays($package->duration);
-                    } elseif ($package->date_type === 'month') {
-                        $endsAt = $startsAt->copy()->addMonths($package->duration);
-                    } elseif ($package->date_type === 'year') {
-                        $endsAt = $startsAt->copy()->addYears($package->duration);
-                    } elseif ($package->is_lifetime) {
-                        $endsAt = null; // Lifetime package
-                    }
-                }
+                $endsAt = $this->calculateExpiryDate($package, $startsAt, $trialDays);
             }
 
-            // Deactivate previous active packages
             UserPackage::where('user_id', $user->id)
                 ->where('is_active', true)
                 ->update(['is_active' => false]);
 
-            // Create or update user package record
-            $userPackage = UserPackage::create([
-                'user_id' => $user->id,
-                'package_id' => $package->id,
-                'is_active' => true,
-                'assigned_at' => $startsAt,
-                'expires_at' => $endsAt,
-                'assigned_by' => null, // System assigned via payment
-            ]);
+            $userPackage = UserPackage::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'package_id' => $package->id,
+                ],
+                [
+                    'is_active' => true,
+                    'assigned_at' => $startsAt,
+                    'expires_at' => $endsAt,
+                    'assigned_by' => null,
+                ]
+            );
 
-            // Create or update subscription record
             UserSubscription::updateOrCreate(
                 [
                     'user_id' => $user->id,
@@ -554,13 +457,9 @@ class PaymentController extends Controller
                 ]
             );
 
-            // Update user's package_id
             $user->update(['package_id' => $package->id]);
-
-            // Update feature limits based on package features
             $this->updateUserFeatureLimits($user, $package);
 
-            // Sync user usage with new package limits
             try {
                 Artisan::call('usage:sync', ['--user_id' => $user->id]);
                 Log::info('User usage synced after package activation (fallback)', [
@@ -590,17 +489,11 @@ class PaymentController extends Controller
         }
     }
 
-    /**
-     * Handle successful payment intent
-     */
     protected function handlePaymentIntentSucceeded($paymentIntent)
     {
         Log::info('Payment intent succeeded', ['payment_intent_id' => $paymentIntent->id]);
 
-        // Payment intent success is usually handled by checkout.session.completed
-        // This is a fallback for direct payment intents
         if (isset($paymentIntent->metadata->user_id) && isset($paymentIntent->metadata->package_id)) {
-            // Handle direct payment intent if needed
         }
     }
 
@@ -615,7 +508,6 @@ class PaymentController extends Controller
             'failure_message' => $paymentIntent->last_payment_error->message ?? null,
         ]);
 
-        // Update subscription status if it exists
         if (isset($paymentIntent->metadata->subscription_id)) {
             $subscription = UserSubscription::where('stripe_subscription_id', $paymentIntent->metadata->subscription_id)
                 ->first();
@@ -642,7 +534,6 @@ class PaymentController extends Controller
                 return;
             }
 
-            // Get package from subscription metadata or price
             $packageId = $subscription->metadata->package_id ?? null;
 
             if (!$packageId && isset($subscription->items->data[0]->price->metadata->package_id)) {
@@ -660,36 +551,35 @@ class PaymentController extends Controller
                 return;
             }
 
-            // Handle trial period
-            if ($subscription->status === 'trialing' && $subscription->trial_end) {
-                $startsAt = Carbon::createFromTimestamp($subscription->trial_start ?? $subscription->created);
-                $trialEnd = Carbon::createFromTimestamp($subscription->trial_end);
-                $endsAt = Carbon::createFromTimestamp($subscription->current_period_end);
-            } else {
-                $startsAt = Carbon::createFromTimestamp($subscription->current_period_start);
-                $endsAt = Carbon::createFromTimestamp($subscription->current_period_end);
-            }
-
-            // Get trial days from package or calculate from subscription
             $trialDays = $package->trial_days ?? 0;
             if ($subscription->trial_end && $subscription->trial_start) {
                 $trialDays = (int)(($subscription->trial_end - $subscription->trial_start) / 86400);
             }
 
-            // Deactivate previous active packages
+            if ($subscription->status === 'trialing' && $subscription->trial_end) {
+                $startsAt = Carbon::createFromTimestamp($subscription->trial_start ?? $subscription->created);
+                $endsAt = $this->calculateExpiryDate($package, $startsAt, $trialDays);
+            } else {
+                $startsAt = Carbon::createFromTimestamp($subscription->current_period_start);
+                $endsAt = $this->calculateExpiryDate($package, $startsAt, 0);
+            }
+
             UserPackage::where('user_id', $user->id)
                 ->where('is_active', true)
                 ->update(['is_active' => false]);
 
-            // Create or update user package record
-            $userPackage = UserPackage::create([
-                'user_id' => $user->id,
-                'package_id' => $package->id,
-                'is_active' => true,
-                'assigned_at' => $startsAt,
-                'expires_at' => $endsAt,
-                'assigned_by' => null, // System assigned via payment
-            ]);
+            $userPackage = UserPackage::updateOrCreate(
+                [
+                    'user_id' => $user->id,
+                    'package_id' => $package->id,
+                ],
+                [
+                    'is_active' => true,
+                    'assigned_at' => $startsAt,
+                    'expires_at' => $endsAt,
+                    'assigned_by' => null,
+                ]
+            );
 
             UserSubscription::updateOrCreate(
                 [
@@ -711,13 +601,9 @@ class PaymentController extends Controller
                 ]
             );
 
-            // Update user's package_id
             $user->update(['package_id' => $package->id]);
-
-            // Update feature limits based on package features
             $this->updateUserFeatureLimits($user, $package);
 
-            // Sync user usage with new package limits
             try {
                 Artisan::call('usage:sync', ['--user_id' => $user->id]);
                 Log::info('User usage synced after subscription created', [
@@ -758,13 +644,36 @@ class PaymentController extends Controller
                 return;
             }
 
+            $package = Package::find($userSubscription->package_id);
+            $startsAt = Carbon::createFromTimestamp($subscription->current_period_start);
+
+            if ($package) {
+                $endsAt = $this->calculateExpiryDate($package, $startsAt, 0);
+            } else {
+                Log::warning('Package not found for subscription update', [
+                    'subscription_id' => $subscription->id,
+                    'package_id' => $userSubscription->package_id
+                ]);
+                $endsAt = Carbon::createFromTimestamp($subscription->current_period_end);
+            }
+
             $updateData = [
                 'status' => $this->mapSubscriptionStatus($subscription->status),
-                'starts_at' => Carbon::createFromTimestamp($subscription->current_period_start),
-                'ends_at' => Carbon::createFromTimestamp($subscription->current_period_end),
+                'starts_at' => $startsAt,
+                'ends_at' => $endsAt,
             ];
 
-            // Handle cancellation
+            $userPackage = UserPackage::where('user_id', $userSubscription->user_id)
+                ->where('package_id', $userSubscription->package_id)
+                ->where('is_active', true)
+                ->first();
+
+            if ($userPackage && $package) {
+                $userPackage->update([
+                    'expires_at' => $endsAt
+                ]);
+            }
+
             if ($subscription->cancel_at_period_end) {
                 $updateData['cancelled_at'] = Carbon::createFromTimestamp($subscription->current_period_end);
             } elseif ($subscription->status === 'canceled') {
@@ -774,7 +683,6 @@ class PaymentController extends Controller
 
             $userSubscription->update($updateData);
 
-            // Update user's package if subscription is no longer active
             if (in_array($subscription->status, ['canceled', 'unpaid', 'past_due'])) {
                 $userSubscription->user->update(['package_id' => null]);
             }
@@ -805,7 +713,6 @@ class PaymentController extends Controller
                     'cancelled_at' => Carbon::now(),
                 ]);
 
-                // Remove package from user
                 $userSubscription->user->update(['package_id' => null]);
 
                 Log::info('Subscription cancelled', [
@@ -826,13 +733,10 @@ class PaymentController extends Controller
     {
         Log::info('Trial will end', ['subscription_id' => $subscription->id]);
 
-        // Send notification to user about trial ending
-        // You can implement email notification here
         try {
             $userSubscription = UserSubscription::where('stripe_subscription_id', $subscription->id)->first();
 
             if ($userSubscription && $userSubscription->user) {
-                // TODO: Send email notification
                 Log::info('Trial ending notification should be sent', [
                     'user_id' => $userSubscription->user_id,
                     'trial_end' => $subscription->trial_end
@@ -854,23 +758,44 @@ class PaymentController extends Controller
             $subscriptionId = $invoice->subscription;
 
             if (!$subscriptionId) {
-                // One-time payment invoice
                 return;
             }
 
             $userSubscription = UserSubscription::where('stripe_subscription_id', $subscriptionId)->first();
 
             if ($userSubscription) {
-                // Update subscription period
                 $subscription = $this->stripeService->retrieveSubscription($subscriptionId);
+
+                $package = Package::find($userSubscription->package_id);
+                if (!$package) {
+                    Log::error('Package not found for subscription renewal', [
+                        'subscription_id' => $subscriptionId,
+                        'package_id' => $userSubscription->package_id
+                    ]);
+                    $endsAt = Carbon::createFromTimestamp($subscription->current_period_end);
+                } else {
+                    $startsAt = Carbon::createFromTimestamp($subscription->current_period_start);
+                    $endsAt = $this->calculateExpiryDate($package, $startsAt, 0);
+                }
 
                 $userSubscription->update([
                     'status' => 'active',
                     'starts_at' => Carbon::createFromTimestamp($subscription->current_period_start),
-                    'ends_at' => Carbon::createFromTimestamp($subscription->current_period_end),
+                    'ends_at' => $endsAt,
                     'amount_paid' => ($invoice->amount_paid ?? 0) / 100,
                     'currency' => $invoice->currency ?? 'gbp',
                 ]);
+
+                $userPackage = UserPackage::where('user_id', $userSubscription->user_id)
+                    ->where('package_id', $userSubscription->package_id)
+                    ->where('is_active', true)
+                    ->first();
+
+                if ($userPackage && $package) {
+                    $userPackage->update([
+                        'expires_at' => $endsAt
+                    ]);
+                }
 
                 Log::info('Subscription renewed', [
                     'subscription_id' => $subscriptionId,
@@ -902,7 +827,6 @@ class PaymentController extends Controller
                 if ($userSubscription) {
                     $userSubscription->update(['status' => 'past_due']);
 
-                    // TODO: Send notification to user about failed payment
                     Log::info('Subscription marked as past due', [
                         'subscription_id' => $subscriptionId,
                         'user_id' => $userSubscription->user_id
@@ -921,7 +845,6 @@ class PaymentController extends Controller
     {
         Log::info('Invoice upcoming', ['invoice_id' => $invoice->id]);
 
-        // Send notification to user about upcoming invoice
         try {
             $subscriptionId = $invoice->subscription;
 
@@ -929,7 +852,6 @@ class PaymentController extends Controller
                 $userSubscription = UserSubscription::where('stripe_subscription_id', $subscriptionId)->first();
 
                 if ($userSubscription && $userSubscription->user) {
-                    // TODO: Send email notification about upcoming invoice
                     Log::info('Upcoming invoice notification should be sent', [
                         'user_id' => $userSubscription->user_id,
                         'amount_due' => ($invoice->amount_due ?? 0) / 100
@@ -949,7 +871,6 @@ class PaymentController extends Controller
         Log::info('Customer created', ['customer_id' => $customer->id]);
 
         try {
-            // Find user by email and update stripe_id
             if (isset($customer->email)) {
                 $user = User::where('email', $customer->email)->first();
 
@@ -972,9 +893,6 @@ class PaymentController extends Controller
     protected function handleCustomerUpdated($customer)
     {
         Log::info('Customer updated', ['customer_id' => $customer->id]);
-
-        // Sync customer data if needed
-        // This is optional - you can update user data based on Stripe customer data
     }
 
     /**
@@ -983,19 +901,16 @@ class PaymentController extends Controller
     protected function updateUserFeatureLimits(User $user, Package $package)
     {
         try {
-            // Get all enabled features from the package
             $packageFeatures = $package->features()
                 ->wherePivot('is_enabled', true)
                 ->get();
 
-            // Get current month start for period tracking
             $currentPeriodStart = Carbon::now()->startOfMonth()->format('Y-m-d');
 
             foreach ($packageFeatures as $feature) {
                 $limitValue = $feature->pivot->limit_value;
                 $isUnlimited = $feature->pivot->is_unlimited ?? false;
 
-                // Create or update user feature usage record
                 UserFeatureUsage::updateOrCreate(
                     [
                         'user_id' => $user->id,
@@ -1004,7 +919,7 @@ class PaymentController extends Controller
                         'is_archived' => false,
                     ],
                     [
-                        'usage_count' => 0, // Reset usage count for new package
+                        'usage_count' => 0,
                         'is_unlimited' => $isUnlimited,
                         'period_end' => Carbon::now()->endOfMonth()->format('Y-m-d'),
                     ]
@@ -1019,7 +934,6 @@ class PaymentController extends Controller
                 ]);
             }
 
-            // Archive old feature usage records for features not in new package
             $packageFeatureIds = $packageFeatures->pluck('id')->toArray();
 
             UserFeatureUsage::where('user_id', $user->id)
@@ -1036,8 +950,54 @@ class PaymentController extends Controller
                 'package_id' => $package->id,
                 'trace' => $e->getTraceAsString()
             ]);
-            // Don't throw - allow package activation to continue even if feature limits fail
         }
+    }
+
+    protected function calculateExpiryDate(Package $package, Carbon $startDate, int $trialDays = 0): ?Carbon
+    {
+        if ($package->is_lifetime) {
+            return null;
+        }
+
+        $packageStartDate = $trialDays > 0
+            ? $startDate->copy()->addDays($trialDays)
+            : $startDate->copy();
+
+        if (empty($package->duration) || empty($package->date_type)) {
+            Log::warning('Package missing duration or date_type', [
+                'package_id' => $package->id,
+                'duration' => $package->duration,
+                'date_type' => $package->date_type
+            ]);
+            return $packageStartDate->copy()->addDays(30);
+        }
+
+        switch (strtolower($package->date_type)) {
+            case 'day':
+            case 'days':
+                $endsAt = $packageStartDate->copy()->addDays($package->duration);
+                break;
+
+            case 'month':
+            case 'months':
+                $endsAt = $packageStartDate->copy()->addMonths($package->duration);
+                break;
+
+            case 'year':
+            case 'years':
+                $endsAt = $packageStartDate->copy()->addYears($package->duration);
+                break;
+
+            default:
+                Log::warning('Unknown package date_type', [
+                    'package_id' => $package->id,
+                    'date_type' => $package->date_type
+                ]);
+                $endsAt = $packageStartDate->copy()->addDays($package->duration);
+                break;
+        }
+
+        return $endsAt;
     }
 
     /**
