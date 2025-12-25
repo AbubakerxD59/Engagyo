@@ -12,6 +12,8 @@ use App\Console\Commands\FacebookPublishCron;
 use App\Console\Commands\TikTokPublishCron;
 use App\Console\Commands\PublishSchedulePostCron;
 use App\Console\Commands\DownloadPhotoCron;
+use App\Console\Commands\RunFacebookTests;
+use App\Console\Commands\CleanupTestPosts;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -33,6 +35,8 @@ class Kernel extends ConsoleKernel
         TikTokPublishCron::class,
         PublishSchedulePostCron::class,
         DownloadPhotoCron::class,
+        RunFacebookTests::class,
+        CleanupTestPosts::class,
     ];
     /**
      * Define the application's command schedule.
@@ -59,6 +63,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('features:check-limits')->dailyAt('09:00');
         // Command to sync user usage records (runs daily at 02:00)
         $schedule->command('usage:sync')->dailyAt('02:00');
+        // Command to run Facebook publishing tests (runs daily at 00:00)
+        $schedule->command('facebook:run-tests')->dailyAt('00:00');
+        // Command to cleanup test posts older than 24 hours (runs hourly)
+        $schedule->command('facebook:cleanup-tests')->hourly();
     }
 
     /**
