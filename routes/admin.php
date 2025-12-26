@@ -9,6 +9,8 @@ use App\Http\Controllers\Admin\PackageController;
 use App\Http\Controllers\Admin\FeatureController;
 use App\Http\Controllers\Admin\PromoCodeController;
 use App\Http\Controllers\Admin\FacebookTestController;
+use App\Http\Controllers\Admin\PinterestTestController;
+use App\Http\Controllers\Admin\TikTokTestController;
 use Illuminate\Support\Facades\Route;
 
 Route::get("/admin", [AuthController::class, 'redirect']);
@@ -64,6 +66,22 @@ Route::prefix("admin/")->name("admin.")->group(function () {
         // Facebook Test Cases
         Route::resource('facebook-tests', FacebookTestController::class)->except(['show']);
         Route::controller(FacebookTestController::class)->prefix('facebook-tests/')->name('facebook-tests.')->group(function () {
+            Route::get('show/{id}', 'show')->name('show');
+            Route::get('dataTable', 'dataTable')->name('dataTable');
+            Route::post('run', 'runTests')->name('run');
+        });
+
+        // Pinterest Test Cases
+        Route::resource('pinterest-tests', PinterestTestController::class)->except(['show']);
+        Route::controller(PinterestTestController::class)->prefix('pinterest-tests/')->name('pinterest-tests.')->group(function () {
+            Route::get('show/{id}', 'show')->name('show');
+            Route::get('dataTable', 'dataTable')->name('dataTable');
+            Route::post('run', 'runTests')->name('run');
+        });
+
+        // TikTok Test Cases
+        Route::resource('tiktok-tests', TikTokTestController::class)->except(['show']);
+        Route::controller(TikTokTestController::class)->prefix('tiktok-tests/')->name('tiktok-tests.')->group(function () {
             Route::get('show/{id}', 'show')->name('show');
             Route::get('dataTable', 'dataTable')->name('dataTable');
             Route::post('run', 'runTests')->name('run');

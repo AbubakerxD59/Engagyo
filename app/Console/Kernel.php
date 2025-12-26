@@ -14,6 +14,10 @@ use App\Console\Commands\PublishSchedulePostCron;
 use App\Console\Commands\DownloadPhotoCron;
 use App\Console\Commands\RunFacebookTests;
 use App\Console\Commands\CleanupTestPosts;
+use App\Console\Commands\RunPinterestTests;
+use App\Console\Commands\CleanupPinterestTestPosts;
+use App\Console\Commands\RunTikTokTests;
+use App\Console\Commands\CleanupTikTokTestPosts;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -37,6 +41,10 @@ class Kernel extends ConsoleKernel
         DownloadPhotoCron::class,
         RunFacebookTests::class,
         CleanupTestPosts::class,
+        RunPinterestTests::class,
+        CleanupPinterestTestPosts::class,
+        RunTikTokTests::class,
+        CleanupTikTokTestPosts::class,
     ];
     /**
      * Define the application's command schedule.
@@ -67,6 +75,14 @@ class Kernel extends ConsoleKernel
         $schedule->command('facebook:run-tests')->dailyAt('00:00');
         // Command to cleanup test posts older than 24 hours (runs hourly)
         $schedule->command('facebook:cleanup-tests')->hourly();
+        // Command to run Pinterest publishing tests (runs daily at 00:30)
+        $schedule->command('pinterest:run-tests')->dailyAt('00:30');
+        // Command to cleanup Pinterest test posts older than 24 hours (runs hourly)
+        $schedule->command('pinterest:cleanup-tests')->hourly();
+        // Command to run TikTok publishing tests (runs daily at 01:00)
+        $schedule->command('tiktok:run-tests')->dailyAt('01:00');
+        // Command to cleanup TikTok test posts older than 24 hours (runs hourly)
+        $schedule->command('tiktok:cleanup-tests')->hourly();
     }
 
     /**

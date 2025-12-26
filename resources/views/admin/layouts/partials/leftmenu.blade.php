@@ -69,6 +69,39 @@
                         </a>
                     </li>
                 @endcan
+                {{-- Test Cases --}}
+                <li class="nav-item has-treeview {{ in_array(request()->route()->getName(), ['admin.facebook-tests.index', 'admin.facebook-tests.show', 'admin.pinterest-tests.index', 'admin.pinterest-tests.show', 'admin.tiktok-tests.index', 'admin.tiktok-tests.show']) ? 'menu-open' : '' }}">
+                    <a href="#" class="nav-link {{ in_array(request()->route()->getName(), ['admin.facebook-tests.index', 'admin.facebook-tests.show', 'admin.pinterest-tests.index', 'admin.pinterest-tests.show', 'admin.tiktok-tests.index', 'admin.tiktok-tests.show']) ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-vial"></i>
+                        <p>
+                            Test Cases
+                            <i class="fas fa-angle-left right"></i>
+                        </p>
+                    </a>
+                    <ul class="nav nav-treeview">
+                        <li class="nav-item">
+                            <a href="{{ route('admin.facebook-tests.index') }}"
+                                class="nav-link {{ in_array(request()->route()->getName(), ['admin.facebook-tests.index', 'admin.facebook-tests.show']) ? 'active' : '' }}">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>Facebook</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.pinterest-tests.index') }}"
+                                class="nav-link {{ in_array(request()->route()->getName(), ['admin.pinterest-tests.index', 'admin.pinterest-tests.show']) ? 'active' : '' }}">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>Pinterest</p>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{{ route('admin.tiktok-tests.index') }}"
+                                class="nav-link {{ in_array(request()->route()->getName(), ['admin.tiktok-tests.index', 'admin.tiktok-tests.show']) ? 'active' : '' }}">
+                                <i class="far fa-circle nav-icon"></i>
+                                <p>TikTok</p>
+                            </a>
+                        </li>
+                    </ul>
+                </li>
             </ul>
         </nav>
     </div>
