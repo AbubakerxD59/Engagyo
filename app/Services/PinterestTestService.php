@@ -50,7 +50,7 @@ class PinterestTestService
     {
         $user = User::with('boards.pinterest')->where('id', 4)->orWhere('email', 'abmasood5900@gmail.com')->first();
         if ($user) {
-            $board = $user->boards->where('name', 'Test Board')->first();
+            $board = $user->boards->where('name', 'New Board')->first();
             if ($board) {
                 return $board;
             }
@@ -123,7 +123,7 @@ class PinterestTestService
             } else {
                 $responseData = json_decode($testPost->response ?? '{}', true);
                 $errorMessage = $responseData['error'] ?? $responseData['message'] ?? 'Unknown error during image post publishing';
-                
+
                 $testCase->update([
                     'status' => 'failed',
                     'test_post_id' => $testPost->id,
@@ -202,7 +202,7 @@ class PinterestTestService
             } else {
                 $responseData = json_decode($testPost->response ?? '{}', true);
                 $errorMessage = $responseData['error'] ?? $responseData['message'] ?? 'Unknown error during link post publishing';
-                
+
                 $testCase->update([
                     'status' => 'failed',
                     'test_post_id' => $testPost->id,
@@ -282,7 +282,7 @@ class PinterestTestService
             } else {
                 $responseData = json_decode($testPost->response ?? '{}', true);
                 $errorMessage = $responseData['error'] ?? $responseData['message'] ?? 'Unknown error during video post publishing';
-                
+
                 $testCase->update([
                     'status' => 'failed',
                     'test_post_id' => $testPost->id,
@@ -311,4 +311,3 @@ class PinterestTestService
         }
     }
 }
-

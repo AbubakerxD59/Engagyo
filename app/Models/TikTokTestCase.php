@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 class TikTokTestCase extends Model
 {
     use HasFactory;
+    protected $table = 'tiktok_test_cases';
 
     protected $fillable = [
         'test_type',

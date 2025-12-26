@@ -70,8 +70,10 @@
                     </li>
                 @endcan
                 {{-- Test Cases --}}
-                <li class="nav-item has-treeview {{ in_array(request()->route()->getName(), ['admin.facebook-tests.index', 'admin.facebook-tests.show', 'admin.pinterest-tests.index', 'admin.pinterest-tests.show', 'admin.tiktok-tests.index', 'admin.tiktok-tests.show']) ? 'menu-open' : '' }}">
-                    <a href="#" class="nav-link {{ in_array(request()->route()->getName(), ['admin.facebook-tests.index', 'admin.facebook-tests.show', 'admin.pinterest-tests.index', 'admin.pinterest-tests.show', 'admin.tiktok-tests.index', 'admin.tiktok-tests.show']) ? 'active' : '' }}">
+                <li
+                    class="nav-item has-treeview {{ in_array(request()->route()->getName(), ['admin.facebook-tests.index', 'admin.facebook-tests.show', 'admin.pinterest-tests.index', 'admin.pinterest-tests.show', 'admin.tiktok-tests.index', 'admin.tiktok-tests.show']) ? 'menu-open' : '' }}">
+                    <a href="#"
+                        class="nav-link {{ in_array(request()->route()->getName(), ['admin.facebook-tests.index', 'admin.facebook-tests.show', 'admin.pinterest-tests.index', 'admin.pinterest-tests.show', 'admin.tiktok-tests.index', 'admin.tiktok-tests.show']) ? 'active' : '' }}">
                         <i class="nav-icon fas fa-vial"></i>
                         <p>
                             Test Cases
