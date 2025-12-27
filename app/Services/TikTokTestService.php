@@ -48,9 +48,9 @@ class TikTokTestService
 
     private function getFirstConnectedTikTok()
     {
-        $user = User::with('tiktoks')->where('id', 4)->orWhere('email', 'abmasood5900@gmail.com')->first();
-        if ($user && $user->tiktoks->count() > 0) {
-            return $user->tiktoks->first();
+        $user = User::with('tiktok')->where('id', 4)->orWhere('email', 'abmasood5900@gmail.com')->first();
+        if ($user && $user->tiktok->count() > 0) {
+            return $user->tiktok->first();
         }
         return Tiktok::where('user_id', 4) //test account
             ->whereNotNull('access_token')
