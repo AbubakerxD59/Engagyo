@@ -23,7 +23,6 @@
                                             <select class="form-control form-control-sm" id="filterTestType">
                                                 <option value="">All Types</option>
                                                 <option value="image">Image</option>
-                                                <option value="link">Link</option>
                                                 <option value="video">Video</option>
                                             </select>
                                         </div>

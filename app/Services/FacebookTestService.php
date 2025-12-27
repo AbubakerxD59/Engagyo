@@ -7,6 +7,7 @@ use App\Models\Page;
 use App\Models\User;
 use App\Models\FacebookTestCase;
 use App\Services\FacebookService;
+use App\Services\PostService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -14,10 +15,12 @@ use Carbon\Carbon;
 class FacebookTestService
 {
     private $facebookService;
+    private $postService;
 
     public function __construct()
     {
         $this->facebookService = new FacebookService();
+        $this->postService = new PostService();
     }
 
     public function runAllTests()
@@ -92,16 +95,13 @@ class FacebookTestService
                 'social_type' => 'facebook',
                 'type' => 'photo',
                 'source' => 'test',
-                'title' => 'Test Image Post - ' . now()->format('Y-m-d H:i:s'),
+                'title' => 'Test Image Post - Automated Test',
                 'image' => $testImageUrl,
                 'status' => 0,
                 'scheduled' => 0
             ]);
 
-            $postData = [
-                'url' => $testImageUrl,
-                'message' => 'Test Image Post - Automated Test'
-            ];
+            $postData = $this->postService->postTypeBody($testPost);
 
             $response = $this->facebookService->photo($testPost->id, $accessToken, $postData);
 
@@ -175,9 +175,7 @@ class FacebookTestService
                 'scheduled' => 0
             ]);
 
-            $postData = [
-                'message' => $quoteText
-            ];
+            $postData = $this->postService->postTypeBody($testPost);
 
             $response = $this->facebookService->contentOnly($testPost->id, $accessToken, $postData);
 
@@ -246,17 +244,14 @@ class FacebookTestService
                 'social_type' => 'facebook',
                 'type' => 'link',
                 'source' => 'test',
-                'title' => 'Test Link Post',
+                'title' => 'Test Link Post - Automated Test',
                 'url' => $testUrl,
                 'description' => 'This is a test link post for automated testing',
                 'status' => 0,
                 'scheduled' => 0
             ]);
 
-            $postData = [
-                'link' => $testUrl,
-                'message' => 'Test Link Post - Automated Test'
-            ];
+            $postData = $this->postService->postTypeBody($testPost);
 
             $response = $this->facebookService->createLink($testPost->id, $accessToken, $postData);
 
@@ -332,10 +327,7 @@ class FacebookTestService
                 'scheduled' => 0
             ]);
 
-            $postData = [
-                'file_url' => $testVideoUrl,
-                'description' => 'Test Video Post - Automated Test'
-            ];
+            $postData = $this->postService->postTypeBody($testPost);
 
             $response = $this->facebookService->video($testPost->id, $accessToken, $postData);
 

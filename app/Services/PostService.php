@@ -169,7 +169,7 @@ class PostService
             if ($post->type == "video") { // Video
                 $postData = [
                     "title" => $post->title,
-                    "file_url" => $post->video_key
+                    "file_url" => $post->video_key ?: $post->video
                 ];
             }
             if ($post->type == "link") { // Link
