@@ -1277,15 +1277,26 @@
                     success: function(response) {
                         if (response.success) {
                             options = response.data;
+                            var allDomainIds = []; // Track all domain IDs for pre-selection
                             $.each(options, function(index, value) {
                                 var option = $("<option></option>");
                                 mode == "id" ? option.val(value.id).text(value.name) :
                                     option.val(value.name).text(value.name);
-                                if (saved_domains.includes(value.id)) {
+                                // If mode is 'id' (for domains filter), pre-select all domains
+                                if (mode == "id") {
+                                    option.attr('selected', 'selected');
+                                    allDomainIds.push(value.id);
+                                } else if (saved_domains.includes(value.id)) {
+                                    // For feed_url select, only select saved domains
                                     option.attr('selected', 'selected');
                                 }
                                 select.append(option);
                             });
+                            // Trigger Select2 update if it's the domains select
+                            if (mode == "id" && select.hasClass('select2')) {
+                                // Update Select2 to reflect the selected options
+                                select.trigger('change');
+                            }
                         }
                     }
                 });
