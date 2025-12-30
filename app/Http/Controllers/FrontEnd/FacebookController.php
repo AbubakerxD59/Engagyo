@@ -79,7 +79,7 @@ class FacebookController extends Controller
                     }
                     session_set('facebook_auth', '1');
                     session_set('account', 'Facebook');
-                    session_set('items', $pages["items"]);
+                    session_set('items', $pages["items"] ?? []);
                     $response = [
                         "success" => "success",
                         "message" => "Facebook Authorization completed!"
