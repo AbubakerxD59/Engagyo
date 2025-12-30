@@ -70,18 +70,19 @@ class FeedCron extends Command
                     echo "Pinterest\n";
                     $sub_account = $value->board;
                     $account = $sub_account ? $sub_account->pinterest : null;
-                    $account_id = $sub_account->id;
+                    $account_id = $sub_account ? $sub_account->id : null;
                 } elseif ($type == 'facebook') {
                     echo "Facebook\n";
                     $sub_account = $value->page;
                     $account = $sub_account ? $sub_account->facebook : null;
-                    $account_id = $sub_account->id;
+                    $account_id = $sub_account ? $sub_account->id : null;
                 }
 
                 if ($sub_account && $account) {
                     echo "Sub account: " . $sub_account->id . "\n";
                     // Check if RSS automation is paused for this page or board
                     if ($sub_account->rss_paused) {
+                        echo "RSS paused\n";
                         $accountName = $type == 'pinterest' ? $sub_account->name : $sub_account->name;
                         Log::info("RSS Feed: Skipping domain {$value->id} - RSS automation is paused for {$type} account '{$accountName}'.");
                         continue;
