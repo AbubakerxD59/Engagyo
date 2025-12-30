@@ -58,23 +58,28 @@ class FeedCron extends Command
     public function handle(Domain $domain)
     {
         $domains = $domain->with("user", "board.pinterest", "page.facebook")->get();
+        echo "Total domains: " . $domains->count() . "\n";
         foreach ($domains as $key => $value) {
             $type = $value->type;
             $times = $value->time;
             $user = $value->user;
 
             if ($user) {
+                echo "User: " . $user->id . "\n";
                 if ($type == 'pinterest') {
+                    echo "Pinterest\n";
                     $sub_account = $value->board;
                     $account = $sub_account ? $sub_account->pinterest : null;
                     $account_id = $sub_account->id;
                 } elseif ($type == 'facebook') {
+                    echo "Facebook\n";
                     $sub_account = $value->page;
                     $account = $sub_account ? $sub_account->facebook : null;
                     $account_id = $sub_account->id;
                 }
 
                 if ($sub_account && $account) {
+                    echo "Sub account: " . $sub_account->id . "\n";
                     // Check if RSS automation is paused for this page or board
                     if ($sub_account->rss_paused) {
                         $accountName = $type == 'pinterest' ? $sub_account->name : $sub_account->name;
@@ -82,6 +87,10 @@ class FeedCron extends Command
                         continue;
                     }
 
+                    $sub_account->update([
+                        "last_fetch" => date("Y-m-d H:i A")
+                    ]);
+                    echo "Last fetch updated: " . date("Y-m-d H:i A") . "\n";
                     // Parse domain name to extract protocol, host, and category
                     $domainName = $value->name;
                     $parsedUrl = parse_url($domainName);
@@ -108,11 +117,6 @@ class FeedCron extends Command
 
                     // Determine the link URL (always use domain + category if available)
                     $link = !empty($category) ? $urlDomain . $category : $urlDomain;
-
-                    // Update last_fetch on the account (board/page)
-                    $sub_account->update([
-                        "last_fetch" => date("Y-m-d H:i A")
-                    ]);
 
                     foreach ($times as $time) {
                         $data = [
