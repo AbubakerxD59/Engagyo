@@ -104,7 +104,7 @@ class PinterestTestService
 
             $postData = $this->postService->postTypeBody($testPost);
 
-            $response = $this->pinterestService->create($testPost->id, $postData, $accessToken);
+            $this->pinterestService->create($testPost->id, $postData, $accessToken);
 
             // Check if post was updated successfully (status = 1 means success)
             $testPost->refresh();
@@ -183,7 +183,7 @@ class PinterestTestService
 
             $postData = $this->postService->postTypeBody($testPost);
 
-            $response = $this->pinterestService->create($testPost->id, $postData, $accessToken);
+            $this->pinterestService->create($testPost->id, $postData, $accessToken);
 
             // Check if post was updated successfully (status = 1 means success)
             $testPost->refresh();
@@ -263,7 +263,7 @@ class PinterestTestService
 
             $postData = $this->postService->postTypeBody($testPost);
 
-            $response = $this->pinterestService->video($testPost->id, $postData, $accessToken);
+            $this->pinterestService->video($testPost->id, $postData, $accessToken);
 
             // Check if post was updated successfully (status = 1 means success)
             $testPost->refresh();

@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use CURLFile;
 use Exception;
 use App\Models\Post;
 use App\Models\Notification;
@@ -22,7 +21,6 @@ class PinterestService
     private $header;
     private $scopes;
     private $baseUrl = "https://api.pinterest.com/v5/";
-    private $response = "Post Published Successfully!";
     private $logService;
 
     /**
@@ -36,16 +34,16 @@ class PinterestService
         if ($post) {
             $accountImage = null;
             $socialType = 'pinterest';
-            
+
             // Get account image from board's pinterest relationship
             if ($post->board && $post->board->pinterest) {
                 $accountImage = $post->board->pinterest->profile_image;
             }
-            
+
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
         }
-        
+
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
@@ -61,21 +59,21 @@ class PinterestService
     private function errorNotification($userId, $title, $message, $post = null)
     {
         $body = ['type' => 'error', 'message' => $message];
-        
+
         // Add account information if post is provided
         if ($post) {
             $accountImage = null;
             $socialType = 'pinterest';
-            
+
             // Get account image from board's pinterest relationship
             if ($post->board && $post->board->pinterest) {
                 $accountImage = $post->board->pinterest->profile_image;
             }
-            
+
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
         }
-        
+
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
@@ -480,9 +478,10 @@ class PinterestService
 
         // Sanitize the payload
         $payload = $this->sanitizePinData($payload);
-        info(json_encode($payload));
+        $this->logService->log('pinterest', 'uploadVideo', 'payload', ['payload' => $payload]);
 
         $response = $this->client->postJson($this->baseUrl . "pins", $payload, $this->header);
+        $this->logService->log('pinterest', 'uploadVideo', 'response', ['response' => $response]);
         return $response;
     }
 
