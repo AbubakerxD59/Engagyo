@@ -56,10 +56,15 @@ class TikTokController extends Controller
 
                         if ($tiktok_id) {
                             $avatar_url = isset($userInfo["meta"]["avatar_url"]) ? $userInfo["meta"]["avatar_url"] : null;
+                            $this->logService->log('tiktok', 'me_api', 'User info retrieved successfully', [
+                                "avatar_url" => $avatar_url,
+                            ]);
                             $profile_pic = !empty($avatar_url)
                                 ? saveImageFromUrl($avatar_url)
                                 : '';
-
+                            $this->logService->log('tiktok', 'me_api', 'User info retrieved successfully', [
+                                "profile_pic" => $profile_pic,
+                            ]);
                             $data = [
                                 "user_id" => $user->id,
                                 "tiktok_id" => $tiktok_id,
