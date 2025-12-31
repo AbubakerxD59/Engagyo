@@ -55,8 +55,9 @@ class TikTokController extends Controller
                         $tiktok_id = $userInfo["open_id"] ?? $userInfo["union_id"] ?? null;
 
                         if ($tiktok_id) {
-                            $profile_pic = isset($userInfo["avatar_url"]) && !empty($userInfo["avatar_url"])
-                                ? saveImageFromUrl($userInfo["avatar_url"])
+                            $avatar_url = isset($userInfo["meta"]["avatar_url"]) ? $userInfo["meta"]["avatar_url"] : null;
+                            $profile_pic = !empty($avatar_url)
+                                ? saveImageFromUrl($avatar_url)
                                 : '';
 
                             $data = [
