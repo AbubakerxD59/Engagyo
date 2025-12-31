@@ -52,8 +52,8 @@ class TikTokController extends Controller
                     }
 
                     if (!empty($userInfo)) {
-                        $tiktok_id = $userInfo["open_id"] ?? $userInfo["union_id"] ?? null;
-
+                        $tiktok_id = $userInfo["open_id"] ?? ($userInfo["union_id"] ?? null);
+                        dd($userInfo);
                         if ($tiktok_id) {
                             $avatar_url = isset($userInfo["meta"]["avatar_url"]) ? $userInfo["meta"]["avatar_url"] : null;
                             $this->logService->log('tiktok', 'me_api', 'User info retrieved successfully', [
