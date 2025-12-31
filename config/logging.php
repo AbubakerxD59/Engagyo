@@ -118,6 +118,63 @@ return [
         'emergency' => [
             'path' => storage_path('logs/laravel.log'),
         ],
+
+        // Social Media Platform Logs - Daily rotation
+        'social_facebook' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/social-media/facebook.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 30,
+            'permission' => 0664,
+        ],
+
+        'social_pinterest' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/social-media/pinterest.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 30,
+            'permission' => 0664,
+        ],
+
+        'social_tiktok' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/social-media/tiktok.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 30,
+            'permission' => 0664,
+        ],
+
+        'social_instagram' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/social-media/instagram.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 30,
+            'permission' => 0664,
+        ],
+
+        'social_twitter' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/social-media/twitter.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 30,
+            'permission' => 0664,
+        ],
+
+        'social_linkedin' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/social-media/linkedin.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 30,
+            'permission' => 0664,
+        ],
+
+        'social_youtube' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/social-media/youtube.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 30,
+            'permission' => 0664,
+        ],
     ],
 
 ];

@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\PinterestService;
+use App\Services\SocialMediaLogService;
 use App\Http\Controllers\Controller;
 use App\Models\Board;
 use App\Models\Pinterest;
@@ -17,11 +18,13 @@ class PinterestController extends Controller
     private $pinterest;
     private $account;
     private $board;
+    private $logService;
     public function __construct(Pinterest $pinterest, Board $board)
     {
         $this->pinterestService = new PinterestService();
         $this->pinterest = $pinterest;
         $this->board = $board;
+        $this->logService = new SocialMediaLogService();
     }
     public function pinterestCallback(Request $request)
     {
@@ -30,6 +33,20 @@ class PinterestController extends Controller
             $token = $this->pinterestService->getOauthToken($request->code);
             if (isset($token["access_token"])) {
                 $me = $this->pinterestService->me($token["access_token"]);
+                
+                // Log "me" API call
+                if (isset($me['id'])) {
+                    $this->logService->log('pinterest', 'me_api', 'User info retrieved successfully', [
+                        'user_id' => $user->id,
+                        'pin_id' => $me['id'] ?? null,
+                        'username' => $me['username'] ?? null,
+                        'board_count' => $me['board_count'] ?? null,
+                        'pin_count' => $me['pin_count'] ?? null
+                    ], 'info');
+                } else {
+                    $this->logService->logApiError('pinterest', '/user_account', 'Failed to get user info', ['user_id' => $user->id]);
+                }
+                
                 if (isset($me['id'])) {
                     $profile_pic = saveImageFromUrl($me["profile_image"]) ? saveImageFromUrl($me["profile_image"]) : '';
                     $data = [
@@ -49,6 +66,9 @@ class PinterestController extends Controller
                         "refresh_token_expires_in" => $token["refresh_token_expires_in"],
                     ];
                     $pinterestAccount = $user->pinterest()->updateOrCreate(["pin_id" => $me["id"]], $data);
+
+                    // Log account connection
+                    $this->logService->logAccountConnection('pinterest', $pinterestAccount->id, $me["username"], 'connected');
 
                     $boards = $this->pinterestService->getBoards($token["access_token"]);
                     if (isset($boards['items'])) {
@@ -72,18 +92,21 @@ class PinterestController extends Controller
                         "message" => "Pinterest Authorization completed!"
                     ];
                 } else {
+                    $this->logService->logApiError('pinterest', '/user_account', 'Failed to get user information', ['user_id' => $user->id]);
                     $response = [
                         "success" => "error",
                         "message" => "Something went Wrong!"
                     ];
                 }
             } else {
+                $this->logService->logApiError('pinterest', '/oauth/token', 'Failed to get access token', ['user_id' => $user->id]);
                 $response = [
                     "success" => "error",
                     "message" => "Invalid Code!"
                 ];
             }
         } else {
+            $this->logService->log('pinterest', 'callback_error', 'Missing code or state parameter', ['user_id' => Auth::guard('user')->id()], 'error');
             $response = [
                 "success" => "error",
                 "message" => "Something went Wrong!"

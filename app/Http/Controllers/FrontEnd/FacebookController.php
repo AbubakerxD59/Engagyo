@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\Facebook;
 use Illuminate\Http\Request;
 use App\Services\FacebookService;
+use App\Services\SocialMediaLogService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 
@@ -15,14 +16,17 @@ class FacebookController extends Controller
     private $facebookService;
     private $facebook;
     private $page;
+    private $logService;
     public function __construct(Facebook $facebook, Page $page)
     {
         $this->facebookService = new FacebookService();
         $this->facebook = $facebook;
         $this->page = $page;
+        $this->logService = new SocialMediaLogService();
     }
     public function deleteCallback(Request $request)
     {
+        $this->logService->log('facebook', 'delete_callback', 'Facebook delete callback received', $request->all(), 'info');
         info(json_encode($request->all()));
         return true;
     }
@@ -38,6 +42,20 @@ class FacebookController extends Controller
                 $meta_data = $data["metadata"];
                 $access_token = $data["access_token"];
                 $me = $this->facebookService->me($access_token);
+                
+                // Log "me" API call
+                if ($me["success"] && isset($me["data"])) {
+                    $meData = $me["data"];
+                    $this->logService->log('facebook', 'me_api', 'User info retrieved successfully', [
+                        'user_id' => $user->id,
+                        'fb_id' => $meData["id"] ?? null,
+                        'username' => $meData["name"] ?? null,
+                        'email' => $meData["email"] ?? null
+                    ], 'info');
+                } else {
+                    $this->logService->logApiError('facebook', '/me', $me["message"] ?? 'Failed to get user info', ['user_id' => $user->id]);
+                }
+                
                 $me = $me["data"];
                 $image = $me->getPicture();
                 $data = [
@@ -48,6 +66,9 @@ class FacebookController extends Controller
                     "expires_in" => $meta_data->getField("data_access_expires_at")
                 ];
                 $facebookAccount = $user->facebook()->updateOrCreate(["fb_id" => $me["id"]], $data);
+
+                // Log account connection
+                $this->logService->logAccountConnection('facebook', $facebookAccount->id, $me["name"], 'connected');
 
                 $pages = $this->facebookService->pages($access_token);
                 if ($pages["success"]) {
@@ -85,18 +106,23 @@ class FacebookController extends Controller
                         "message" => "Facebook Authorization completed!"
                     ];
                 } else {
+                    $errorMessage = $pages["message"] ?? "Failed to fetch Facebook pages.";
+                    $this->logService->logApiError('facebook', '/pages', $errorMessage, ['user_id' => $user->id]);
                     $response = [
                         "success" => "error",
-                        "message" => $pages["message"] ?? "Failed to fetch Facebook pages."
+                        "message" => $errorMessage
                     ];
                 }
             } else {
+                $errorMessage = $getAccessToken["message"] ?? "Failed to get access token from Facebook.";
+                $this->logService->logApiError('facebook', '/oauth/access_token', $errorMessage, ['user_id' => $user->id]);
                 $response = [
                     "success" => "error",
-                    "message" => $getAccessToken["message"] ?? "Failed to get access token from Facebook."
+                    "message" => $errorMessage
                 ];
             }
         } else {
+            $this->logService->log('facebook', 'callback_error', 'Invalid authorization code', ['user_id' => Auth::guard('user')->id()], 'error');
             $response = [
                 "success" => "error",
                 "message" => "Invalid Code!"
@@ -107,6 +133,7 @@ class FacebookController extends Controller
 
     public function deauthorizeCallback(Request $request)
     {
+        $this->logService->log('facebook', 'deauthorize_callback', 'Facebook deauthorize callback received', $request->all(), 'warning');
         info(json_encode($request->all()));
         return true;
     }

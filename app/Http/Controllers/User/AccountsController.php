@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use App\Services\TikTokService;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
+use App\Services\SocialMediaLogService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Services\FeatureUsageService;
@@ -34,6 +35,7 @@ class AccountsController extends Controller
     private $page;
     private $post;
     private $domain;
+    private $logService;
     public function __construct(Pinterest $pinterest, Facebook $facebook, Tiktok $tiktok, Board $board, Page $page, Post $post, Domain $domain, FeatureUsageService $featureUsageService)
     {
         $this->pinterestService = new PinterestService();
@@ -47,6 +49,7 @@ class AccountsController extends Controller
         $this->page = $page;
         $this->post = $post;
         $this->domain = $domain;
+        $this->logService = new SocialMediaLogService();
     }
     public function index()
     {
@@ -93,7 +96,13 @@ class AccountsController extends Controller
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1 + $totalBoards);
 
                 // pinterest account
+                $pinterestId = $pinterest->id;
+                $pinterestUsername = $pinterest->username;
                 $pinterest->delete();
+                
+                // Log account deletion
+                $this->logService->logAccountConnection('pinterest', $pinterestId, $pinterestUsername, 'disconnected');
+                
                 return back()->with("success", "Pinterest Account deleted Successfully!");
             } else {
                 return back()->with("error", "Something went Wrong!");
@@ -139,10 +148,18 @@ class AccountsController extends Controller
             $board = $request->board_data;
             if ($board) {
                 $pinterest = $this->pinterest->search($request->pin_id)->firstOrfail();
-                $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "board_id" => $board["id"]], [
+                $boardModel = $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "board_id" => $board["id"]], [
                     "name" => $board["name"],
                     "status" => 1
                 ]);
+                
+                // Log board connection
+                $this->logService->log('pinterest', 'board_connected', "Board '{$board["name"]}' connected", [
+                    'board_id' => $boardModel->id,
+                    'pinterest_id' => $pinterest->id,
+                    'user_id' => $user->id
+                ], 'info');
+                
                 return response()->json([
                     "success" => true,
                     "message" => "Board connected Successfully!",
@@ -179,6 +196,8 @@ class AccountsController extends Controller
                 // timeslots
                 $board->timeslots()->delete();
                 // board
+                $boardId = $board->id;
+                $boardName = $board->name;
                 $board->delete();
 
                 // Decrement feature usage for scheduled posts
@@ -188,6 +207,12 @@ class AccountsController extends Controller
 
                 // Decrement feature usage for social_accounts
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1);
+
+                // Log board deletion
+                $this->logService->log('pinterest', 'board_deleted', "Board '{$boardName}' deleted", [
+                    'board_id' => $boardId,
+                    'user_id' => $user->id
+                ], 'info');
 
                 return back()->with("success", "Board deleted Successfully!");
             } else {
@@ -234,7 +259,12 @@ class AccountsController extends Controller
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1 + $totalPages);
 
                 // Delete Facebook account
+                $facebookId = $facebook->id;
+                $facebookUsername = $facebook->username;
                 $facebook->delete();
+
+                // Log account deletion
+                $this->logService->logAccountConnection('facebook', $facebookId, $facebookUsername, 'disconnected');
 
                 return back()->with("success", "Facebook Account deleted Successfully!");
             } else {
@@ -315,7 +345,14 @@ class AccountsController extends Controller
                     $pageData["profile_image"] = $profileImage;
                 }
 
-                $facebook->pages()->updateOrCreate(["user_id" => $user->id, "page_id" => $page["id"]], $pageData);
+                $pageModel = $facebook->pages()->updateOrCreate(["user_id" => $user->id, "page_id" => $page["id"]], $pageData);
+
+                // Log page connection
+                $this->logService->log('facebook', 'page_connected', "Page '{$page["name"]}' connected", [
+                    'page_id' => $pageModel->id,
+                    'facebook_id' => $facebook->id,
+                    'user_id' => $user->id
+                ], 'info');
 
                 return response()->json([
                     "success" => true,
@@ -351,6 +388,8 @@ class AccountsController extends Controller
                 // timeslots
                 $page->timeslots()->delete();
                 // page
+                $pageId = $page->id;
+                $pageName = $page->name;
                 $page->delete();
 
                 // Decrement feature usage for scheduled posts
@@ -360,6 +399,12 @@ class AccountsController extends Controller
 
                 // Decrement feature usage for social_accounts
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1);
+
+                // Log page deletion
+                $this->logService->log('facebook', 'page_deleted', "Page '{$pageName}' deleted", [
+                    'page_id' => $pageId,
+                    'user_id' => $user->id
+                ], 'info');
 
                 return back()->with("success", "Page deleted Successfully!");
             } else {

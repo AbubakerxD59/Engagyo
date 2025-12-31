@@ -10,6 +10,7 @@ use TikTok\Authentication\Authentication;
 use GuzzleHttp\Exception\RequestException;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use App\Services\SocialMediaLogService;
 
 class TikTokService
 {
@@ -18,6 +19,7 @@ class TikTokService
     private $redirectUrl;
     private $scopes;
     private $baseUrl = "https://open.tiktokapis.com/v2/";
+    private $logService;
 
     /**
      * Create a success notification
@@ -95,6 +97,7 @@ class TikTokService
             "video.list"
         );
         $this->client = new HttpService();
+        $this->logService = new SocialMediaLogService();
     }
 
     public function getLoginUrl()
@@ -191,6 +194,7 @@ class TikTokService
             $tiktok->update($updateData);
 
             info("TikTok token refreshed successfully for ID: {$tiktok_id}");
+            $this->logService->logTokenRefresh('tiktok', $tiktok_id, 'success', 'Token refreshed successfully');
 
             // Return success response with token data
             return [
@@ -213,6 +217,7 @@ class TikTokService
                 }
             }
             info("TikTok refresh token HTTP error for ID {$tiktok_id}: {$errorMessage}");
+            $this->logService->logTokenRefresh('tiktok', $tiktok_id, 'failed', $errorMessage);
             return [
                 "success" => false,
                 "message" => "TikTok API error: " . $errorMessage
@@ -221,6 +226,7 @@ class TikTokService
             // Handle any other exceptions
             $errorMessage = $e->getMessage();
             info("TikTok refresh token exception for ID {$tiktok_id}: {$errorMessage}");
+            $this->logService->logTokenRefresh('tiktok', $tiktok_id, 'failed', $errorMessage);
             return [
                 "success" => false,
                 "message" => "Error refreshing TikTok token: " . $errorMessage
@@ -495,6 +501,7 @@ class TikTokService
                     ]);
                     // Create success notification (background job)
                     $this->successNotification($post_row->user_id, "Post Published", "Your TikTok video has been published successfully.", $post_row);
+                    $this->logService->logPost('tiktok', 'video', $id, ['publish_id' => $publishId], 'success');
                 } else {
                     // Error occurred - check error details
                     $errorMessage = $response['error']['message'] ?? "Unknown error occurred";
@@ -539,6 +546,8 @@ class TikTokService
             ]);
             // Create error notification (background job)
             $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok video. " . $errorMessage, $post_row);
+            $this->logService->logPost('tiktok', 'video', $id, [], 'failed');
+            $this->logService->logApiError('tiktok', '/post/publish/video/init/', $errorMessage, ['post_id' => $id]);
         } catch (Exception $e) {
             $errorMessage = $e->getMessage();
             $post_row->update([
@@ -551,6 +560,8 @@ class TikTokService
             ]);
             // Create error notification (background job)
             $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok video. " . $errorMessage, $post_row);
+            $this->logService->logPost('tiktok', 'video', $id, [], 'failed');
+            $this->logService->logApiError('tiktok', '/post/publish/video/init/', $errorMessage, ['post_id' => $id]);
         }
     }
 
@@ -624,6 +635,7 @@ class TikTokService
                     ]);
                     // Create success notification (background job)
                     $this->successNotification($post_row->user_id, "Post Published", "Your TikTok photo has been published successfully.", $post_row);
+                    $this->logService->logPost('tiktok', 'photo', $id, ['publish_id' => $publishId], 'success');
                 } else {
                     // Check if there's an error in the response
                     $errorMessage = $response['error']['message'] ?? $response['error']['log_id'] ?? "Unknown error occurred";
@@ -662,6 +674,8 @@ class TikTokService
             ]);
             // Create error notification (background job)
             $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok photo. " . $errorMessage, $post_row);
+            $this->logService->logPost('tiktok', 'photo', $id, [], 'failed');
+            $this->logService->logApiError('tiktok', '/post/publish/content/init/', $errorMessage, ['post_id' => $id]);
         } catch (Exception $e) {
             $errorMessage = $e->getMessage();
             $post_row->update([
@@ -674,6 +688,8 @@ class TikTokService
             ]);
             // Create error notification (background job)
             $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok photo. " . $errorMessage, $post_row);
+            $this->logService->logPost('tiktok', 'photo', $id, [], 'failed');
+            $this->logService->logApiError('tiktok', '/post/publish/content/init/', $errorMessage, ['post_id' => $id]);
         } finally {
             // Always delete local file after processing
             $this->deleteLocalFile($localFilePath);
@@ -764,6 +780,7 @@ class TikTokService
                     ]);
                     // Create success notification (background job)
                     $this->successNotification($post_row->user_id, "Post Published", "Your TikTok link post has been published successfully.", $post_row);
+                    $this->logService->logPost('tiktok', 'link', $id, ['publish_id' => $publishId], 'success');
                 } else {
                     // Check if there's an error in the response
                     $errorMessage = $response['error']['message'] ?? $response['error']['log_id'] ?? "Unknown error occurred";
@@ -802,6 +819,8 @@ class TikTokService
             ]);
             // Create error notification (background job)
             $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok link post. " . $errorMessage, $post_row);
+            $this->logService->logPost('tiktok', 'link', $id, [], 'failed');
+            $this->logService->logApiError('tiktok', '/post/publish/content/init/', $errorMessage, ['post_id' => $id]);
         } catch (Exception $e) {
             $errorMessage = $e->getMessage();
             $post_row->update([
@@ -814,6 +833,8 @@ class TikTokService
             ]);
             // Create error notification (background job)
             $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok link post. " . $errorMessage, $post_row);
+            $this->logService->logPost('tiktok', 'link', $id, [], 'failed');
+            $this->logService->logApiError('tiktok', '/post/publish/content/init/', $errorMessage, ['post_id' => $id]);
         } finally {
             // Always delete local file after processing
             $this->deleteLocalFile($localFilePath);
@@ -884,19 +905,24 @@ class TikTokService
                 // If error code is "ok", deletion was successful
                 if ($errorCode === "ok") {
                     info("TikTok post deleted successfully. Post ID: {$post->id}, Publish ID: {$post->post_id}");
+                    $this->logService->logPostDeletion('tiktok', $post->id, 'success');
                     return true;
                 } else {
                     // Log the error but don't fail completely
                     info("TikTok delete API error for post ID {$post->id}: {$errorMessage}");
+                    $this->logService->logPostDeletion('tiktok', $post->id, 'failed');
+                    $this->logService->logApiError('tiktok', $endpoint, $errorMessage, ['post_id' => $post->id]);
                     // Return false but don't throw - allow local deletion to proceed
                     return false;
                 }
             } elseif ($response && !isset($response['error'])) {
                 // Success response without error object
                 info("TikTok post deleted successfully. Post ID: {$post->id}, Publish ID: {$post->post_id}");
+                $this->logService->logPostDeletion('tiktok', $post->id, 'success');
                 return true;
             } else {
                 info("TikTok delete: Unexpected response format for post ID: {$post->id}");
+                $this->logService->logPostDeletion('tiktok', $post->id, 'failed');
                 return false;
             }
         } catch (RequestException $e) {
@@ -910,10 +936,14 @@ class TikTokService
                 }
             }
             info("TikTok delete HTTP error for post ID {$post->id}: {$errorMessage}");
+            $this->logService->logPostDeletion('tiktok', $post->id, 'failed');
+            $this->logService->logApiError('tiktok', $endpoint ?? '/delete', $errorMessage, ['post_id' => $post->id]);
             // Note: TikTok API may not support deletion, so we log but don't fail
             return false;
         } catch (Exception $e) {
             info("TikTok delete exception for post ID {$post->id}: " . $e->getMessage());
+            $this->logService->logPostDeletion('tiktok', $post->id, 'failed');
+            $this->logService->logApiError('tiktok', $endpoint ?? '/delete', $e->getMessage(), ['post_id' => $post->id]);
             // Note: TikTok API may not support deletion, so we log but don't fail
             return false;
         }
@@ -1043,6 +1073,7 @@ class TikTokService
                         "Your TikTok video has been uploaded to your inbox as a draft. Please check your TikTok notifications to review and post it.",
                         $post_row
                     );
+                    $this->logService->logDraft('tiktok', 'video', $id, ['publish_id' => $publishId], 'success');
                 } else {
                     $errorMessage = $response['error']['message'] ?? "Unknown error occurred";
                     $logId = $response['error']['log_id'] ?? null;
@@ -1078,6 +1109,8 @@ class TikTokService
                 ])
             ]);
             $this->errorNotification($post_row->user_id, "Draft Upload Failed", "Failed to upload TikTok video draft. " . $errorMessage, $post_row);
+            $this->logService->logDraft('tiktok', 'video', $id, [], 'failed');
+            $this->logService->logApiError('tiktok', '/post/publish/inbox/video/init/', $errorMessage, ['post_id' => $id]);
         } catch (Exception $e) {
             $errorMessage = $e->getMessage();
             $post_row->update([
@@ -1088,6 +1121,8 @@ class TikTokService
                 ])
             ]);
             $this->errorNotification($post_row->user_id, "Draft Upload Failed", "Failed to upload TikTok video draft. " . $errorMessage, $post_row);
+            $this->logService->logDraft('tiktok', 'video', $id, [], 'failed');
+            $this->logService->logApiError('tiktok', '/post/publish/inbox/video/init/', $errorMessage, ['post_id' => $id]);
         } finally {
             // Always delete local file after processing
             $this->deleteLocalFile($localFilePath);
@@ -1177,6 +1212,7 @@ class TikTokService
                         "Your TikTok photo has been uploaded to your inbox as a draft. Please check your TikTok notifications to review and post it.",
                         $post_row
                     );
+                    $this->logService->logDraft('tiktok', 'photo', $id, ['publish_id' => $publishId], 'success');
                 } else {
                     $errorMessage = $response['error']['message'] ?? "Unknown error occurred";
                     $logId = $response['error']['log_id'] ?? null;
@@ -1212,6 +1248,8 @@ class TikTokService
                 ])
             ]);
             $this->errorNotification($post_row->user_id, "Draft Upload Failed", "Failed to upload TikTok photo draft. " . $errorMessage, $post_row);
+            $this->logService->logDraft('tiktok', 'photo', $id, [], 'failed');
+            $this->logService->logApiError('tiktok', '/post/publish/inbox/content/init/', $errorMessage, ['post_id' => $id]);
         } catch (Exception $e) {
             $errorMessage = $e->getMessage();
             $post_row->update([
@@ -1222,6 +1260,8 @@ class TikTokService
                 ])
             ]);
             $this->errorNotification($post_row->user_id, "Draft Upload Failed", "Failed to upload TikTok photo draft. " . $errorMessage, $post_row);
+            $this->logService->logDraft('tiktok', 'photo', $id, [], 'failed');
+            $this->logService->logApiError('tiktok', '/post/publish/inbox/content/init/', $errorMessage, ['post_id' => $id]);
         }
     }
 

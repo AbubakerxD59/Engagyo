@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Storage;
 use Facebook\Exceptions\FacebookSDKException;
 use Facebook\Exceptions\FacebookResponseException;
 use App\Classes\FacebookSDK\LaravelSessionPersistentDataHandler;
+use App\Services\SocialMediaLogService;
 
 class FacebookService
 {
@@ -18,6 +19,7 @@ class FacebookService
     private $helper;
     private $scopes;
     private $response = "Post Published Successfully!";
+    private $logService;
 
     /**
      * Create a success notification
@@ -169,6 +171,7 @@ class FacebookService
         // $this->scopes = ['business_management', 'email', 'public_profile', 'pages_manage_metadata', 'pages_manage_posts', 'pages_read_engagement', 'pages_show_list', 'pages_manage_engagement', 'pages_read_user_content', 'read_insights'];
         $this->scopes = ['pages_manage_posts', 'pages_show_list', 'pages_read_engagement', 'public_profile', 'email'];
         $this->post = new Post();
+        $this->logService = new SocialMediaLogService();
     }
 
     public function getLoginUrl()
@@ -292,13 +295,15 @@ class FacebookService
                     "access_token" => $newAccessToken
                 ],
             ];
+            $this->logService->logTokenRefresh('facebook', $page_id, 'success', 'Token refreshed successfully');
         } catch (FacebookResponseException $e) {
-            // When Graph returns an error
+// When Graph returns an error
             $error = $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => "Facebook API error: " . $error,
             ];
+            $this->logService->logTokenRefresh('facebook', $page_id, 'failed', $error);
         } catch (FacebookSDKException $e) {
             // When validation fails or other local issues
             $error = $e->getMessage();
@@ -306,6 +311,7 @@ class FacebookService
                 "success" => false,
                 "message" => "Facebook SDK error: " . $error,
             ];
+            $this->logService->logTokenRefresh('facebook', $page_id, 'failed', $error);
         } catch (\Exception $e) {
             // Catch any other unexpected errors
             $error = $e->getMessage();
@@ -313,6 +319,7 @@ class FacebookService
                 "success" => false,
                 "message" => "Unexpected error while refreshing token: " . $error,
             ];
+            $this->logService->logTokenRefresh('facebook', $page_id, 'failed', $error);
         }
         return $response;
     }
@@ -457,18 +464,21 @@ class FacebookService
                 "success" => true,
                 "data" => $publish
             ];
+            $this->logService->logPost('facebook', 'photo', $id, ['page_id' => $page_id], 'success');
         } catch (FacebookResponseException $e) {
             $error =  $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => $error
             ];
+            $this->logService->logApiError('facebook', '/photos', $error, ['post_id' => $id, 'page_id' => $page_id ?? null]);
         } catch (FacebookSDKException $e) {
             $error =  $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => $error
             ];
+            $this->logService->logApiError('facebook', '/photos', $error, ['post_id' => $id, 'page_id' => $page_id ?? null]);
         }
         $post = Post::with("page.facebook")->find($id);
         $this->handlePostPublishResult($post, $response, 'photo');
@@ -484,18 +494,21 @@ class FacebookService
                 "success" => true,
                 "data" => $publish
             ];
+            $this->logService->logPost('facebook', 'video', $id, ['account_id' => $post_row->account_id], 'success');
         } catch (FacebookResponseException $e) {
             $error =  $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => $error
             ];
+            $this->logService->logApiError('facebook', '/videos', $error, ['post_id' => $id, 'account_id' => $post_row->account_id ?? null]);
         } catch (FacebookSDKException $e) {
             $error =  $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => $error
             ];
+            $this->logService->logApiError('facebook', '/videos', $error, ['post_id' => $id, 'account_id' => $post_row->account_id ?? null]);
         }
         $this->handlePostPublishResult($post_row, $response, 'video');
         return $response;
@@ -534,18 +547,23 @@ class FacebookService
                 "success" => true,
                 "data" => $publish
             ];
+            $this->logService->logPostDeletion('facebook', $post->id, 'success');
         } catch (FacebookResponseException $e) {
             $error =  $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => $error
             ];
+            $this->logService->logPostDeletion('facebook', $post->id, 'failed');
+            $this->logService->logApiError('facebook', '/delete', $error, ['post_id' => $post->id]);
         } catch (FacebookSDKException $e) {
             $error =  $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => $error
             ];
+            $this->logService->logPostDeletion('facebook', $post->id, 'failed');
+            $this->logService->logApiError('facebook', '/delete', $error, ['post_id' => $post->id]);
         }
         return $response;
     }

@@ -11,6 +11,7 @@ use DirkGroenen\Pinterest\Pinterest;
 use Illuminate\Support\Facades\Storage;
 use GuzzleHttp\Exception\RequestException;
 use App\Models\Pinterest as PinterestModel;
+use App\Services\SocialMediaLogService;
 
 class PinterestService
 {
@@ -22,6 +23,7 @@ class PinterestService
     private $scopes;
     private $baseUrl = "https://api.pinterest.com/v5/";
     private $response = "Post Published Successfully!";
+    private $logService;
 
     /**
      * Create a success notification
@@ -29,7 +31,7 @@ class PinterestService
     private function successNotification($userId, $title, $message, $post = null)
     {
         $body = ['type' => 'success', 'message' => $message];
-        
+
         // Add account information if post is provided
         if ($post) {
             $accountImage = null;
@@ -93,6 +95,7 @@ class PinterestService
         $this->post = new Post();
         $this->auth = base64_encode("{$pinterest_id}:{$pinterest_secret}");
         $this->header = array("Content-Type" => "application/x-www-form-urlencoded", "Authorization" => "Basic " . $this->auth);
+        $this->logService = new SocialMediaLogService();
     }
 
     public function getLoginUrl()
@@ -192,6 +195,7 @@ class PinterestService
             $pinterest->update($updateData);
 
             info("Pinterest token refreshed successfully for ID: {$pinterest_id}");
+            $this->logService->logTokenRefresh('pinterest', $pinterest_id, 'success', 'Token refreshed successfully');
 
             // Return success response with token data
             return [
@@ -204,6 +208,7 @@ class PinterestService
         } catch (RequestException $e) {
             // Handle Guzzle HTTP exceptions
             $errorMessage = $e->getMessage();
+            $this->logService->logTokenRefresh('pinterest', $pinterest_id, 'failed', $errorMessage);
             if ($e->hasResponse()) {
                 $responseBody = $e->getResponse()->getBody()->getContents();
                 $decoded = json_decode($responseBody, true);
@@ -222,6 +227,7 @@ class PinterestService
             // Handle any other exceptions
             $errorMessage = $e->getMessage();
             info("Pinterest refresh token exception for ID {$pinterest_id}: {$errorMessage}");
+            $this->logService->logTokenRefresh('pinterest', $pinterest_id, 'failed', $errorMessage);
             return [
                 "success" => false,
                 "message" => "Error refreshing Pinterest token: " . $errorMessage
@@ -311,6 +317,7 @@ class PinterestService
                         ]);
                         // Create success notification (background job)
                         $this->successNotification($post_row->user_id, "Post Published", "Your Pinterest video has been published successfully.", $post_row);
+                        $this->logService->logPost('pinterest', 'video', $id, ['post_id' => $upload_video["id"]], 'success');
                     } else {
                         $errorMessage = $this->extractErrorMessage($upload_video);
                         $post_row->update([
@@ -323,6 +330,8 @@ class PinterestService
                         ]);
                         // Create error notification (background job)
                         $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Pinterest video. " . $errorMessage, $post_row);
+                        $this->logService->logPost('pinterest', 'video', $id, [], 'failed');
+                        $this->logService->logApiError('pinterest', '/pins', $errorMessage, ['post_id' => $id]);
                     }
                 } else {
                     $errorMessage = $this->extractErrorMessage($media_status);
@@ -336,6 +345,8 @@ class PinterestService
                     ]);
                     // Create error notification (background job)
                     $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Pinterest video. " . $errorMessage, $post_row);
+                    $this->logService->logPost('pinterest', 'video', $id, [], 'failed');
+                    $this->logService->logApiError('pinterest', '/media/status', $errorMessage, ['post_id' => $id, 'media_id' => $media_id]);
                 }
             } else {
                 $errorMessage = $this->extractErrorMessage($file);
@@ -349,6 +360,8 @@ class PinterestService
                 ]);
                 // Create error notification (background job)
                 $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Pinterest video. " . $errorMessage, $post_row);
+                $this->logService->logPost('pinterest', 'video', $id, [], 'failed');
+                $this->logService->logApiError('pinterest', '/file_download', $errorMessage, ['post_id' => $id]);
             }
         } else {
             $errorMessage = $this->extractErrorMessage($response);
@@ -362,6 +375,8 @@ class PinterestService
             ]);
             // Create error notification (background job)
             $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish Pinterest video. " . $errorMessage, $post_row);
+            $this->logService->logPost('pinterest', 'video', $id, [], 'failed');
+            $this->logService->logApiError('pinterest', '/media', $errorMessage, ['post_id' => $id]);
         }
         removeFromS3($post["video_key"]);
         removeFile($post["video_key"]);
@@ -501,9 +516,12 @@ class PinterestService
 
         try {
             $response = $this->client->delete($this->baseUrl . "pins/" . $post->post_id, [], $this->header);
+            $this->logService->logPostDeletion('pinterest', $post->id, 'success');
             return true;
         } catch (Exception $e) {
             info("Pinterest delete error for post ID {$post->id}: " . $e->getMessage());
+            $this->logService->logPostDeletion('pinterest', $post->id, 'failed');
+            $this->logService->logApiError('pinterest', '/pins/delete', $e->getMessage(), ['post_id' => $post->id]);
             return false;
         }
     }

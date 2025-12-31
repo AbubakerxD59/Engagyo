@@ -22,6 +22,7 @@ use App\Models\Tiktok;
 use App\Services\PostService;
 use App\Services\FeatureUsageService;
 use App\Enums\DraftEnum;
+use App\Services\SocialMediaLogService;
 use Illuminate\Support\Facades\Auth;
 
 class  ScheduleController extends Controller
@@ -31,6 +32,7 @@ class  ScheduleController extends Controller
     protected $tiktokService;
     protected $featureUsageService;
     protected $source;
+    protected $logService;
     public function __construct(FeatureUsageService $featureUsageService)
     {
         $this->facebookService = new FacebookService();
@@ -38,6 +40,7 @@ class  ScheduleController extends Controller
         $this->tiktokService = new TikTokService();
         $this->featureUsageService = $featureUsageService;
         $this->source = "schedule";
+        $this->logService = new SocialMediaLogService();
     }
 
     /**
@@ -317,9 +320,13 @@ class  ScheduleController extends Controller
                         $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                     }
 
+                    // Log post creation
+                    $this->logService->logPost('facebook', $type, $post->id, ['action' => 'publish'], 'pending');
+
                     // Use validateToken for proper error handling
                     $tokenResponse = FacebookService::validateToken($account);
                     if (!$tokenResponse['success']) {
+                        $this->logService->logPost('facebook', $type, $post->id, ['action' => 'publish'], 'failed');
                         return array(
                             "success" => false,
                             "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
@@ -502,9 +509,13 @@ class  ScheduleController extends Controller
                             $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                         }
 
+                        // Log draft post creation
+                        $this->logService->logDraft('tiktok', $type, $post->id, ['action' => 'draft'], 'pending');
+
                         // Use validateToken for proper error handling
                         $tokenResponse = TikTokService::validateToken($account);
                         if (!$tokenResponse['success']) {
+                            $this->logService->logDraft('tiktok', $type, $post->id, ['action' => 'draft'], 'failed');
                             return array(
                                 "success" => false,
                                 "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
@@ -731,6 +742,8 @@ class  ScheduleController extends Controller
                         if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                             $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                         }
+                        // Log queued post
+                        $this->logService->logQueuedPost('facebook', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                     }
                     if ($account->type == "pinterest") {
                         Pinterest::where("id", $account->pin_id)->firstOrFail();
@@ -756,6 +769,8 @@ class  ScheduleController extends Controller
                             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                             }
+                            // Log queued post
+                            $this->logService->logQueuedPost('pinterest', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                         }
                     }
                     if ($account->type == "tiktok") {
@@ -782,6 +797,8 @@ class  ScheduleController extends Controller
                             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                             }
+                            // Log queued post
+                            $this->logService->logQueuedPost('tiktok', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                         }
                     }
                     $response = array(
@@ -879,6 +896,8 @@ class  ScheduleController extends Controller
                     if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                         $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                     }
+                    // Log scheduled post
+                    $this->logService->logScheduledPost('facebook', $post->id, $scheduleDateTime, ['type' => $type]);
                 }
                 if ($account->type == "pinterest") {
                     Pinterest::where("id", $account->pin_id)->firstOrFail();
@@ -904,6 +923,8 @@ class  ScheduleController extends Controller
                         if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                             $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                         }
+                        // Log scheduled post
+                        $this->logService->logScheduledPost('pinterest', $post->id, $scheduleDateTime, ['type' => $type]);
                     }
                 }
                 if ($account->type == "tiktok") {
@@ -930,6 +951,8 @@ class  ScheduleController extends Controller
                         if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                             $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                         }
+                        // Log scheduled post
+                        $this->logService->logScheduledPost('tiktok', $post->id, $scheduleDateTime, ['type' => $type]);
                     }
                 }
                 $response = array(
