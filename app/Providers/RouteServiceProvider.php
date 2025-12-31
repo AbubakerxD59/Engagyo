@@ -21,7 +21,8 @@ class RouteServiceProvider extends ServiceProvider
     public const ADMIN_HOME = '/admin/dashboard';
     public const INV_CRED = '/admin/login';
     public const FRONTEND_INV_CRED = 'users/sign_in';
-    public const FRONTEND_AUTH_HOME = '/';
+    public const FRONTEND_AUTH_HOME = '/panel/schedule';
+    // public const FRONTEND_AUTH_HOME = '/';
 
     /**
      * Define your route model bindings, pattern filters, and other route configuration.

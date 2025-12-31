@@ -551,9 +551,6 @@ class TikTokService
             ]);
             // Create error notification (background job)
             $this->errorNotification($post_row->user_id, "Post Publishing Failed", "Failed to publish TikTok video. " . $errorMessage, $post_row);
-        } finally {
-            // Always delete local file after processing
-            $this->deleteLocalFile($localFilePath);
         }
     }
 
@@ -572,7 +569,6 @@ class TikTokService
             "Authorization" => "Bearer " . $access_token
         );
         $post_row = \App\Models\Post::with("tiktok")->find($id);
-        $localFilePath = null;
 
         try {
             // Get image URL or S3 key
@@ -920,6 +916,416 @@ class TikTokService
             info("TikTok delete exception for post ID {$post->id}: " . $e->getMessage());
             // Note: TikTok API may not support deletion, so we log but don't fail
             return false;
+        }
+    }
+
+    /**
+     * Upload a video to TikTok as a draft (inbox)
+     * Uses the Upload API to send video to TikTok's inbox for user review
+     * Reference: https://developers.tiktok.com/doc/content-posting-api-get-started-upload-content
+     *
+     * @param int $id Post ID
+     * @param array $post Post data
+     * @param string $access_token TikTok access token
+     * @param string $source Source type: 'FILE_UPLOAD' or 'PULL_FROM_URL' (default: 'PULL_FROM_URL')
+     * @return void
+     */
+    public function uploadVideoDraft($id, $post, $access_token, $source = 'PULL_FROM_URL')
+    {
+        $header = array(
+            "Content-Type" => "application/json",
+            "Authorization" => "Bearer " . $access_token
+        );
+        $post_row = \App\Models\Post::with("tiktok")->find($id);
+        $localFilePath = null;
+
+        try {
+            // Get video URL or S3 key
+            $videoSource = $post['file_url'] ?? $post['video'] ?? null;
+
+            if (empty($videoSource)) {
+                throw new Exception("Video URL or file is required for TikTok video draft upload");
+            }
+
+            $requestBody = [];
+            $uploadUrl = null;
+            $publishId = null;
+
+            if ($source === 'FILE_UPLOAD') {
+                // For FILE_UPLOAD, we need to get file size first
+                $downloadResult = $this->downloadFromS3ToLocal($videoSource, 'video');
+                
+                if (!$downloadResult['success']) {
+                    throw new Exception("Failed to download video: " . ($downloadResult['message'] ?? "Unknown error"));
+                }
+
+                $localFilePath = $downloadResult['local_path'];
+                
+                if (!file_exists($localFilePath)) {
+                    throw new Exception("Video file not found at local path");
+                }
+
+                $videoSize = filesize($localFilePath);
+                $chunkSize = $videoSize; // For simplicity, we'll upload in one chunk
+                $totalChunkCount = 1;
+
+                // Prepare request body for FILE_UPLOAD
+                $requestBody = [
+                    "source_info" => [
+                        "source" => "FILE_UPLOAD",
+                        "video_size" => $videoSize,
+                        "chunk_size" => $chunkSize,
+                        "total_chunk_count" => $totalChunkCount
+                    ]
+                ];
+            } else {
+                // For PULL_FROM_URL, we can use the URL directly or download to local first
+                // If it's already a public URL, use it directly
+                $isUrl = filter_var($videoSource, FILTER_VALIDATE_URL);
+                
+                if ($isUrl && (strpos($videoSource, 'amazonaws.com') === false && strpos($videoSource, 's3.') === false)) {
+                    // It's already a public URL, use it directly
+                    $videoUrl = $videoSource;
+                } else {
+                    // Download from S3 to local storage and get public URL
+                    $downloadResult = $this->downloadFromS3ToLocal($videoSource, 'video');
+                    
+                    if (!$downloadResult['success']) {
+                        throw new Exception("Failed to download video: " . ($downloadResult['message'] ?? "Unknown error"));
+                    }
+
+                    $videoUrl = $downloadResult['local_url'];
+                    $localFilePath = $downloadResult['local_path'];
+                }
+
+                // Prepare request body for PULL_FROM_URL
+                $requestBody = [
+                    "source_info" => [
+                        "source" => "PULL_FROM_URL",
+                        "video_url" => $videoUrl
+                    ]
+                ];
+            }
+
+            // Make API call to TikTok Video Upload endpoint (inbox)
+            // Endpoint: /v2/post/publish/inbox/video/init/
+            $endpoint = $this->baseUrl . "post/publish/inbox/video/init/";
+            $response = $this->client->postJson($endpoint, $requestBody, $header);
+
+            // Check response
+            if ($response && isset($response['data'])) {
+                $publishId = $response['data']['publish_id'] ?? null;
+                $uploadUrl = $response['data']['upload_url'] ?? null;
+                $errorCode = $response['error']['code'] ?? null;
+
+                if ($errorCode === "ok" && $publishId) {
+                    // If using FILE_UPLOAD, we need to upload the file to the upload_url
+                    if ($source === 'FILE_UPLOAD' && $uploadUrl && $localFilePath) {
+                        $this->uploadFileToTikTok($uploadUrl, $localFilePath);
+                    }
+
+                    // Update post with publish_id and status
+                    $post_row->update([
+                        "post_id" => $publishId,
+                        "status" => 0, // Status 0 = draft/pending (user needs to review in TikTok)
+                        "response" => json_encode([
+                            "success" => true,
+                            "publish_id" => $publishId,
+                            "message" => "Video uploaded to TikTok inbox as draft. User must review and post in TikTok app.",
+                            "upload_type" => "draft"
+                        ])
+                    ]);
+
+                    // Create success notification
+                    $this->successNotification(
+                        $post_row->user_id,
+                        "Video Uploaded to Draft",
+                        "Your TikTok video has been uploaded to your inbox as a draft. Please check your TikTok notifications to review and post it.",
+                        $post_row
+                    );
+                } else {
+                    $errorMessage = $response['error']['message'] ?? "Unknown error occurred";
+                    $logId = $response['error']['log_id'] ?? null;
+                    throw new Exception("TikTok API error: {$errorMessage}" . ($logId ? " [Log ID: {$logId}]" : ""));
+                }
+            } else {
+                $errorMessage = "Failed to upload video draft to TikTok";
+                if (isset($response['error'])) {
+                    $errorCode = $response['error']['code'] ?? "unknown_error";
+                    $errorMessage = $response['error']['message'] ?? $errorMessage;
+                    $logId = $response['error']['log_id'] ?? null;
+                    $errorMessage = "TikTok API error ({$errorCode}): {$errorMessage}" . ($logId ? " [Log ID: {$logId}]" : "");
+                }
+                throw new Exception($errorMessage);
+            }
+        } catch (RequestException $e) {
+            $errorMessage = $e->getMessage();
+            if ($e->hasResponse()) {
+                $responseBody = $e->getResponse()->getBody()->getContents();
+                $decoded = json_decode($responseBody, true);
+                if (isset($decoded['error']['message'])) {
+                    $errorMessage = $decoded['error']['message'];
+                } elseif (isset($decoded['error']['log_id'])) {
+                    $errorMessage = "TikTok API error (Log ID: " . $decoded['error']['log_id'] . ")";
+                }
+            }
+
+            $post_row->update([
+                "status" => -1,
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $errorMessage
+                ])
+            ]);
+            $this->errorNotification($post_row->user_id, "Draft Upload Failed", "Failed to upload TikTok video draft. " . $errorMessage, $post_row);
+        } catch (Exception $e) {
+            $errorMessage = $e->getMessage();
+            $post_row->update([
+                "status" => -1,
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $errorMessage
+                ])
+            ]);
+            $this->errorNotification($post_row->user_id, "Draft Upload Failed", "Failed to upload TikTok video draft. " . $errorMessage, $post_row);
+        } finally {
+            // Always delete local file after processing
+            $this->deleteLocalFile($localFilePath);
+        }
+    }
+
+    /**
+     * Upload a photo to TikTok as a draft (inbox)
+     * Uses the Upload API to send photo to TikTok's inbox for user review
+     * Reference: https://developers.tiktok.com/doc/content-posting-api-get-started-upload-content
+     *
+     * @param int $id Post ID
+     * @param array $post Post data
+     * @param string $access_token TikTok access token
+     * @return void
+     */
+    public function uploadPhotoDraft($id, $post, $access_token)
+    {
+        $header = array(
+            "Content-Type" => "application/json",
+            "Authorization" => "Bearer " . $access_token
+        );
+        $post_row = \App\Models\Post::with("tiktok")->find($id);
+        $localFilePath = null;
+
+        try {
+            // Get image URL or S3 key
+            $imageSource = $post['url'] ?? $post['image'] ?? null;
+
+            if (empty($imageSource)) {
+                throw new Exception("Image URL is required for TikTok photo draft upload");
+            }
+
+            // For photos, we must use PULL_FROM_URL from a verified domain
+            // Download from S3 to local storage if needed
+            $downloadResult = $this->downloadFromS3ToLocal($imageSource, 'image');
+
+            if (!$downloadResult['success']) {
+                throw new Exception("Failed to download image: " . ($downloadResult['message'] ?? "Unknown error"));
+            }
+
+            $imageUrl = $downloadResult['local_url'];
+            $localFilePath = $downloadResult['local_path'];
+
+            // Prepare the request body for TikTok Content Posting API (Upload mode)
+            // Note: For photos, post_mode must be MEDIA_UPLOAD and media_type must be PHOTO
+            $requestBody = [
+                "post_info" => [
+                    "title" => $post['title'] ?? "",
+                    "description" => $post['description'] ?? ""
+                ],
+                "source_info" => [
+                    "source" => "PULL_FROM_URL",
+                    "photo_cover_index" => 0,
+                    "photo_images" => [$imageUrl] // Can be array of multiple images
+                ],
+                "post_mode" => "MEDIA_UPLOAD", // Required for draft upload
+                "media_type" => "PHOTO" // Required for photo posts
+            ];
+
+            // Make API call to TikTok Content Posting API
+            // Endpoint: /v2/post/publish/content/init/
+            $endpoint = $this->baseUrl . "post/publish/content/init/";
+            $response = $this->client->postJson($endpoint, $requestBody, $header);
+
+            if ($response && isset($response['data'])) {
+                $publishId = $response['data']['publish_id'] ?? null;
+                $errorCode = $response['error']['code'] ?? null;
+
+                if ($errorCode === "ok" && $publishId) {
+                    // Update post with publish_id and status
+                    $post_row->update([
+                        "post_id" => $publishId,
+                        "status" => 0, // Status 0 = draft/pending (user needs to review in TikTok)
+                        "response" => json_encode([
+                            "success" => true,
+                            "publish_id" => $publishId,
+                            "message" => "Photo uploaded to TikTok inbox as draft. User must review and post in TikTok app.",
+                            "upload_type" => "draft"
+                        ])
+                    ]);
+
+                    // Create success notification
+                    $this->successNotification(
+                        $post_row->user_id,
+                        "Photo Uploaded to Draft",
+                        "Your TikTok photo has been uploaded to your inbox as a draft. Please check your TikTok notifications to review and post it.",
+                        $post_row
+                    );
+                } else {
+                    $errorMessage = $response['error']['message'] ?? "Unknown error occurred";
+                    $logId = $response['error']['log_id'] ?? null;
+                    throw new Exception("TikTok API error: {$errorMessage}" . ($logId ? " [Log ID: {$logId}]" : ""));
+                }
+            } else {
+                $errorMessage = "Failed to upload photo draft to TikTok";
+                if (isset($response['error'])) {
+                    $errorCode = $response['error']['code'] ?? "unknown_error";
+                    $errorMessage = $response['error']['message'] ?? $errorMessage;
+                    $logId = $response['error']['log_id'] ?? null;
+                    $errorMessage = "TikTok API error ({$errorCode}): {$errorMessage}" . ($logId ? " [Log ID: {$logId}]" : "");
+                }
+                throw new Exception($errorMessage);
+            }
+        } catch (RequestException $e) {
+            $errorMessage = $e->getMessage();
+            if ($e->hasResponse()) {
+                $responseBody = $e->getResponse()->getBody()->getContents();
+                $decoded = json_decode($responseBody, true);
+                if (isset($decoded['error']['message'])) {
+                    $errorMessage = $decoded['error']['message'];
+                } elseif (isset($decoded['error']['log_id'])) {
+                    $errorMessage = "TikTok API error (Log ID: " . $decoded['error']['log_id'] . ")";
+                }
+            }
+
+            $post_row->update([
+                "status" => -1,
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $errorMessage
+                ])
+            ]);
+            $this->errorNotification($post_row->user_id, "Draft Upload Failed", "Failed to upload TikTok photo draft. " . $errorMessage, $post_row);
+        } catch (Exception $e) {
+            $errorMessage = $e->getMessage();
+            $post_row->update([
+                "status" => -1,
+                "response" => json_encode([
+                    "success" => false,
+                    "error" => $errorMessage
+                ])
+            ]);
+            $this->errorNotification($post_row->user_id, "Draft Upload Failed", "Failed to upload TikTok photo draft. " . $errorMessage, $post_row);
+        }
+    }
+
+    /**
+     * Upload file to TikTok using PUT request
+     * Used when source is FILE_UPLOAD
+     *
+     * @param string $uploadUrl The upload URL from TikTok API response
+     * @param string $filePath Local file path to upload
+     * @return void
+     * @throws Exception
+     */
+    private function uploadFileToTikTok($uploadUrl, $filePath)
+    {
+        try {
+            if (!file_exists($filePath)) {
+                throw new Exception("File not found: {$filePath}");
+            }
+
+            $fileSize = filesize($filePath);
+            $fileHandle = fopen($filePath, 'rb');
+
+            if (!$fileHandle) {
+                throw new Exception("Failed to open file: {$filePath}");
+            }
+
+            // Read file content
+            $fileContent = file_get_contents($filePath);
+            fclose($fileHandle);
+
+            // Determine content type
+            $extension = strtolower(pathinfo($filePath, PATHINFO_EXTENSION));
+            $contentType = 'video/mp4'; // Default
+            if ($extension === 'mov') {
+                $contentType = 'video/quicktime';
+            } elseif ($extension === 'avi') {
+                $contentType = 'video/x-msvideo';
+            }
+
+            // Make PUT request to upload URL
+            $response = $this->client->getClient()->put($uploadUrl, [
+                'headers' => [
+                    'Content-Range' => "bytes 0-{$fileSize}/{$fileSize}",
+                    'Content-Type' => $contentType
+                ],
+                'body' => $fileContent
+            ]);
+
+            $statusCode = $response->getStatusCode();
+            if ($statusCode < 200 || $statusCode >= 300) {
+                throw new Exception("File upload failed with status code: {$statusCode}");
+            }
+
+            Log::info("File uploaded successfully to TikTok: {$uploadUrl}");
+        } catch (Exception $e) {
+            Log::error("Failed to upload file to TikTok: " . $e->getMessage());
+            throw $e;
+        }
+    }
+
+    /**
+     * Get post status from TikTok API
+     * Checks the status of an uploaded draft
+     * Reference: https://developers.tiktok.com/doc/content-posting-api-get-post-status
+     *
+     * @param string $publishId The publish_id from upload response
+     * @param string $access_token TikTok access token
+     * @return array|null
+     */
+    public function getPostStatus($publishId, $access_token)
+    {
+        $header = array(
+            "Content-Type" => "application/json; charset=UTF-8",
+            "Authorization" => "Bearer " . $access_token
+        );
+
+        try {
+            $requestBody = [
+                "publish_id" => $publishId
+            ];
+
+            // Make API call to TikTok Get Post Status endpoint
+            // Endpoint: /v2/post/publish/status/fetch/
+            $endpoint = $this->baseUrl . "post/publish/status/fetch/";
+            $response = $this->client->postJson($endpoint, $requestBody, $header);
+
+            if ($response && isset($response['data'])) {
+                return [
+                    'success' => true,
+                    'data' => $response['data'],
+                    'error' => $response['error'] ?? null
+                ];
+            }
+
+            return [
+                'success' => false,
+                'error' => $response['error'] ?? ['message' => 'Unknown error']
+            ];
+        } catch (Exception $e) {
+            Log::error("Failed to get TikTok post status: " . $e->getMessage());
+            return [
+                'success' => false,
+                'error' => ['message' => $e->getMessage()]
+            ];
         }
     }
 }

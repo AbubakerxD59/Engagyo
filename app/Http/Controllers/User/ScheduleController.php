@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Models\Tiktok;
 use App\Services\PostService;
 use App\Services\FeatureUsageService;
+use App\Enums\DraftEnum;
 use Illuminate\Support\Facades\Auth;
 
 class  ScheduleController extends Controller
@@ -231,6 +232,9 @@ class  ScheduleController extends Controller
             if ($action == "schedule") {
                 $response = $this->scheduleLink($request);
             }
+            if ($action == "draft") {
+                $response = $this->draftLink($request);
+            }
         } else { //no link
             if ($action == "publish") {
                 $response = $this->publishPost($request);
@@ -240,6 +244,9 @@ class  ScheduleController extends Controller
             }
             if ($action == "schedule") {
                 $response = $this->schedulePost($request);
+            }
+            if ($action == "draft") {
+                $response = $this->draftPost($request);
             }
         }
         return response()->json($response);
@@ -412,6 +419,242 @@ class  ScheduleController extends Controller
         sleep(1);
         return $response;
     }
+
+    /**
+     * Draft Post - Upload posts as drafts to draft-active platforms
+     * @param Request $request
+     * @return array
+     */
+    private function draftPost($request): array
+    {
+        try {
+            $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->findOrFail(Auth::guard('user')->id());
+            // Get scheduled active accounts
+            $accounts = $user->getScheduledActiveAccounts();
+
+            // Filter accounts for draft-active platforms only
+            $draftActivePlatforms = DraftEnum::getDraftActivePlatformValues();
+            $draftAccounts = $accounts->filter(function ($account) use ($draftActivePlatforms) {
+                return in_array($account->type, $draftActivePlatforms);
+            });
+
+            if ($draftAccounts->isEmpty()) {
+                return [
+                    "success" => false,
+                    "message" => "No draft-active accounts found. Please connect a TikTok account to use draft functionality."
+                ];
+            }
+
+            $content = $request->get("content") ?? null;
+            $comment = $request->get("comment") ?? null;
+            $file = $request->file("files") ? true : false;
+            $image = $video = null;
+
+            if ($file) {
+                $is_video = $request->video;
+                if ($is_video) {
+                    $video = saveToS3($request->file("files"));
+                } else {
+                    $image = saveImage($request->file("files"));
+                }
+            }
+
+            // Count total posts to be created
+            $totalPostsToCreate = count($draftAccounts);
+            
+            // Check scheduled posts limit before creating any posts
+            /** @var User $user */
+            $limitCheck = $this->checkScheduledPostsLimit($user, $totalPostsToCreate);
+            if (!$limitCheck['allowed']) {
+                return [
+                    "success" => false,
+                    "message" => $limitCheck['message']
+                ];
+            }
+
+            foreach ($draftAccounts as $account) {
+                // Handle TikTok draft posts
+                if ($account->type == "tiktok" && DraftEnum::isDraftActiveFor("tiktok")) {
+                    if ($file) {
+                        // Determine post type
+                        $type = !empty($image) ? "photo" : "video";
+
+                        // Store in db
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "tiktok",
+                            "type" => $type,
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "video" => $video,
+                            "url" => $image, // For photo posts
+                            "file_url" => $video, // For video posts
+                            "status" => 0, // Draft status
+                            "publish_date" => date("Y-m-d H:i"),
+                        ];
+                        $post = PostService::create($data);
+
+                        // Verify account belongs to user before incrementing
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        }
+
+                        // Use validateToken for proper error handling
+                        $tokenResponse = TikTokService::validateToken($account);
+                        if (!$tokenResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
+                            );
+                        }
+                        $access_token = $tokenResponse['access_token'];
+                        $postData = PostService::postTypeBody($post);
+
+                        // Dispatch draft upload
+                        if ($type == "video") {
+                            $this->tiktokService->uploadVideoDraft($post->id, $postData, $access_token, 'PULL_FROM_URL');
+                        } elseif ($type == "photo") {
+                            $this->tiktokService->uploadPhotoDraft($post->id, $postData, $access_token);
+                        }
+                    } else {
+                        // No file provided for draft post
+                        return [
+                            "success" => false,
+                            "message" => "Draft posts require a file (image or video)."
+                        ];
+                    }
+                }
+                // Add other draft-active platforms here in the future
+                // Example: if ($account->type == "facebook" && DraftEnum::isDraftActiveFor("facebook")) { ... }
+            }
+
+            $response = array(
+                "success" => true,
+                "message" => "Your posts are being uploaded as drafts!"
+            );
+        } catch (Exception $e) {
+            $response = array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
+        }
+        sleep(1);
+        return $response;
+    }
+
+    /**
+     * Draft Link - Upload link posts as drafts to draft-active platforms
+     * @param Request $request
+     * @return array
+     */
+    private function draftLink($request): array
+    {
+        try {
+            $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->findOrFail(Auth::guard('user')->id());
+            // Get scheduled active accounts
+            $accounts = $user->getScheduledActiveAccounts();
+
+            // Filter accounts for draft-active platforms only
+            $draftActivePlatforms = DraftEnum::getDraftActivePlatformValues();
+            $draftAccounts = $accounts->filter(function ($account) use ($draftActivePlatforms) {
+                return in_array($account->type, $draftActivePlatforms);
+            });
+
+            if ($draftAccounts->isEmpty()) {
+                return [
+                    "success" => false,
+                    "message" => "No draft-active accounts found. Please connect a TikTok account to use draft functionality."
+                ];
+            }
+
+            $content = $request->get("content") ?? null;
+            $link = $request->get("link") ?? null;
+            $comment = $request->get("comment") ?? null;
+            $file = $request->file("files") ? true : false;
+            $image = null;
+
+            if ($file) {
+                $image = saveImage($request->file("files"));
+            }
+
+            // Count total posts to be created
+            $totalPostsToCreate = count($draftAccounts);
+            
+            // Check scheduled posts limit before creating any posts
+            /** @var User $user */
+            $limitCheck = $this->checkScheduledPostsLimit($user, $totalPostsToCreate);
+            if (!$limitCheck['allowed']) {
+                return [
+                    "success" => false,
+                    "message" => $limitCheck['message']
+                ];
+            }
+
+            foreach ($draftAccounts as $account) {
+                // Handle TikTok draft link posts
+                if ($account->type == "tiktok" && DraftEnum::isDraftActiveFor("tiktok")) {
+                    if ($file && $image) {
+                        // Store in db
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "tiktok",
+                            "type" => "link",
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "url" => $image,
+                            "link" => $link,
+                            "status" => 0, // Draft status
+                            "publish_date" => date("Y-m-d H:i"),
+                        ];
+                        $post = PostService::create($data);
+
+                        // Verify account belongs to user before incrementing
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        }
+
+                        // Use validateToken for proper error handling
+                        $tokenResponse = TikTokService::validateToken($account);
+                        if (!$tokenResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
+                            );
+                        }
+                        $access_token = $tokenResponse['access_token'];
+                        $postData = PostService::postTypeBody($post);
+
+                        // For link posts, TikTok treats them as photo posts with link in caption
+                        $this->tiktokService->uploadPhotoDraft($post->id, $postData, $access_token);
+                    } else {
+                        return [
+                            "success" => false,
+                            "message" => "Draft link posts require an image file."
+                        ];
+                    }
+                }
+                // Add other draft-active platforms here in the future
+            }
+
+            $response = array(
+                "success" => true,
+                "message" => "Your link posts are being uploaded as drafts!"
+            );
+        } catch (Exception $e) {
+            $response = array(
+                "success" => false,
+                "message" => $e->getMessage()
+            );
+        }
+        sleep(1);
+        return $response;
+    }
+
     // queue post
     private function queuePost($request)
     {
