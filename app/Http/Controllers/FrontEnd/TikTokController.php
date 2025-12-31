@@ -45,7 +45,7 @@ class TikTokController extends Controller
                             'union_id' => $userInfo["union_id"] ?? null,
                             'username' => $userInfo["username"] ?? $userInfo["display_name"] ?? null,
                             'display_name' => $userInfo["display_name"] ?? null,
-                            'meta' => json_decode($userInfo),
+                            'meta' => json_encode($userInfo),
                         ], 'info');
                     } else {
                         $this->logService->logApiError('tiktok', '/user/info/', 'Failed to get user info', ['user_id' => $user->id]);
