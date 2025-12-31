@@ -334,6 +334,9 @@ class  ScheduleController extends Controller
                     }
                     $access_token = $tokenResponse['access_token'];
                     $postData = PostService::postTypeBody($post);
+                    $this->logService->log('facebook', 'publish_post', 'Post published successfully', [
+                        'data' => $postData
+                    ]);
                     PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
                 }
                 if ($account->type == "pinterest") {

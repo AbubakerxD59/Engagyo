@@ -297,7 +297,7 @@ class FacebookService
             ];
             $this->logService->logTokenRefresh('facebook', $page_id, 'success', 'Token refreshed successfully');
         } catch (FacebookResponseException $e) {
-// When Graph returns an error
+            // When Graph returns an error
             $error = $e->getMessage();
             $response = [
                 "success" => false,
@@ -488,8 +488,9 @@ class FacebookService
     public function video($id, $access_token, $post)
     {
         $post_row = Post::with("page.facebook")->find($id);
+        $page_id = $post_row->page ? $post_row->page->page_id : null;
         try {
-            $publish = $this->facebook->post('/' . $post_row->account_id . '/videos', $post, $access_token);
+            $publish = $this->facebook->post('/' . $page_id . '/videos', $post, $access_token);
             $response = [
                 "success" => true,
                 "data" => $publish
