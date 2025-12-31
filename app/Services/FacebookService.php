@@ -489,6 +489,7 @@ class FacebookService
     {
         $post_row = Post::with("page.facebook")->find($id);
         $page_id = $post_row->page ? $post_row->page->page_id : null;
+        $this->logService->log('facebook', 'publish_video', 'page_id', ['page_id' => $page_id]);
         try {
             $publish = $this->facebook->post('/' . $page_id . '/videos', $post, $access_token);
             $response = [
