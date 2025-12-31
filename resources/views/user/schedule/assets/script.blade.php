@@ -185,14 +185,14 @@
                     if (isValid) {
                         processContentOnly();
                     } else {
-                        toastr.error("Please provide Post title!");
+                        toastr.error("Please enter post content or upload a file!");
                     }
                 } else {
                     if (isValid) {
                         var filesCopy = [...dropZone.files];
                         processQueueWithDelay(filesCopy);
                     } else {
-                        toastr.error("Please provide Post title!");
+                        toastr.error("Please enter post content or upload a file!");
                     }
                 }
             } else {

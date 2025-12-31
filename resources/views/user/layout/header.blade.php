@@ -72,11 +72,11 @@
 
 <style>
     /* Ensure navbar appears above feature-limit-alert */
-    nav.main-header.navbar,
+    /* nav.main-header.navbar,
     .main-header.navbar {
         z-index: 1060 !important;
         position: relative;
-    }
+    } */
     
     /* Ensure dropdown parent items have proper positioning context */
     .main-header .nav-item.dropdown {

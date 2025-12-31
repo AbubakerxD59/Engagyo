@@ -103,17 +103,48 @@
                                         SETTINGS
                                     </button>
                                 </div>
-                                <div class="d-flex">
-                                    <button type="button" class="btn btn-outline-danger btn-sm action_btn" href="schedule">
-                                        SCHEDULE
-                                    </button>
-                                    <button type="button" class="btn btn-outline-success btn-sm action_btn mx-1"
-                                        href="queue">
-                                        QUEUE
-                                    </button>
-                                    <button type="button" class="btn btn-outline-primary btn-sm action_btn" href="publish">
-                                        PUBLISH
-                                    </button>
+                                <div class="d-flex action-buttons-container" style="gap: 0.75rem;">
+                                    <!-- Schedule Dropdown Group -->
+                                    <div class="btn-group action-dropdown-group">
+                                        <button type="button" class="btn btn-action-dropdown btn-schedule dropdown-toggle"
+                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-calendar-alt mr-2"></i>
+                                            <span>Schedule</span>
+                                            <i class="fas fa-chevron-down ml-2 dropdown-arrow"></i>
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-action shadow-sm">
+                                            <button type="button" class="dropdown-item action_btn" href="schedule">
+                                                <i class="fas fa-clock text-danger mr-2"></i>
+                                                <span>Schedule</span>
+                                            </button>
+                                            <div class="dropdown-divider"></div>
+                                            <button type="button" class="dropdown-item action_btn" href="queue">
+                                                <i class="fas fa-list-ul text-success mr-2"></i>
+                                                <span>Queue</span>
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <!-- Publish/Draft Dropdown Group -->
+                                    <div class="btn-group action-dropdown-group">
+                                        <button type="button" class="btn btn-action-dropdown btn-publish dropdown-toggle"
+                                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                                            <i class="fas fa-paper-plane mr-2"></i>
+                                            <span>Publish/Draft</span>
+                                            <i class="fas fa-chevron-down ml-2 dropdown-arrow"></i>
+                                        </button>
+                                        <div class="dropdown-menu dropdown-menu-action shadow-sm">
+                                            <button type="button" class="dropdown-item action_btn" href="publish">
+                                                <i class="fas fa-check-circle text-primary mr-2"></i>
+                                                <span>Publish</span>
+                                            </button>
+                                            <div class="dropdown-divider"></div>
+                                            <button type="button" class="dropdown-item action_btn" href="draft">
+                                                <i class="fas fa-file-alt text-info mr-2"></i>
+                                                <span>Draft</span>
+                                            </button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>

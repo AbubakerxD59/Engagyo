@@ -25,21 +25,21 @@ class TikTokService
     private function successNotification($userId, $title, $message, $post = null)
     {
         $body = ['type' => 'success', 'message' => $message];
-        
+
         // Add account information if post is provided
         if ($post) {
             $accountImage = null;
             $socialType = 'tiktok';
-            
+
             // Get account image from tiktok relationship
             if ($post->tiktok && !empty($post->tiktok->profile_image)) {
                 $accountImage = $post->tiktok->profile_image;
             }
-            
+
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
         }
-        
+
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
@@ -55,21 +55,21 @@ class TikTokService
     private function errorNotification($userId, $title, $message, $post = null)
     {
         $body = ['type' => 'error', 'message' => $message];
-        
+
         // Add account information if post is provided
         if ($post) {
             $accountImage = null;
             $socialType = 'tiktok';
-            
+
             // Get account image from tiktok relationship
             if ($post->tiktok && !empty($post->tiktok->profile_image)) {
                 $accountImage = $post->tiktok->profile_image;
             }
-            
+
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
         }
-        
+
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
@@ -880,7 +880,7 @@ class TikTokService
             if ($response && isset($response['error'])) {
                 $errorCode = $response['error']['code'] ?? null;
                 $errorMessage = $response['error']['message'] ?? "Unknown error";
-                
+
                 // If error code is "ok", deletion was successful
                 if ($errorCode === "ok") {
                     info("TikTok post deleted successfully. Post ID: {$post->id}, Publish ID: {$post->post_id}");
@@ -954,13 +954,13 @@ class TikTokService
             if ($source === 'FILE_UPLOAD') {
                 // For FILE_UPLOAD, we need to get file size first
                 $downloadResult = $this->downloadFromS3ToLocal($videoSource, 'video');
-                
+
                 if (!$downloadResult['success']) {
                     throw new Exception("Failed to download video: " . ($downloadResult['message'] ?? "Unknown error"));
                 }
 
                 $localFilePath = $downloadResult['local_path'];
-                
+
                 if (!file_exists($localFilePath)) {
                     throw new Exception("Video file not found at local path");
                 }
@@ -982,14 +982,14 @@ class TikTokService
                 // For PULL_FROM_URL, we can use the URL directly or download to local first
                 // If it's already a public URL, use it directly
                 $isUrl = filter_var($videoSource, FILTER_VALIDATE_URL);
-                
+
                 if ($isUrl && (strpos($videoSource, 'amazonaws.com') === false && strpos($videoSource, 's3.') === false)) {
                     // It's already a public URL, use it directly
                     $videoUrl = $videoSource;
                 } else {
                     // Download from S3 to local storage and get public URL
                     $downloadResult = $this->downloadFromS3ToLocal($videoSource, 'video');
-                    
+
                     if (!$downloadResult['success']) {
                         throw new Exception("Failed to download video: " . ($downloadResult['message'] ?? "Unknown error"));
                     }

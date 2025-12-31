@@ -262,9 +262,9 @@
 <!-- Modal Styles -->
 <style>
     /* Ensure modal appears above feature-limit-alert (z-index: 1051) */
-    #upgradePackagesModal {
+    /* #upgradePackagesModal {
         z-index: 1060 !important;
-    }
+    } */
 
     #upgradePackagesModal {
         z-index: 1055 !important;
