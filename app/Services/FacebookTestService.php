@@ -55,7 +55,7 @@ class FacebookTestService
     {
         $user = User::with('pages.facebook')->where('id', 4)->orWhere('email', 'abmasood5900@gmail.com')->first();
         if ($user) {
-            $page = $user->pages->where('name', 'Test Page')->first();
+            $page = $user->pages->latest()->first();
             return $page;
         }
         return Page::with('facebook')
