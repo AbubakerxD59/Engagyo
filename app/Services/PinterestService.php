@@ -250,10 +250,12 @@ class PinterestService
     public function create($id, $postData, $access_token)
     {
         $this->header = array("Content-Type" => "application/json", "Authorization" => "Bearer  " . $access_token);
-
         // Sanitize Pinterest API fields
         $postData = $this->sanitizePinData($postData);
-
+        $this->logService->log('pinterest', 'create', 'postData', [
+            'postData' => $postData,
+            'headers' => $this->header
+        ]);
         $publish = $this->client->postJson($this->baseUrl . "pins", $postData, $this->header);
         $post = Post::with("board.pinterest")->find($id);
         if (isset($publish['id'])) {
