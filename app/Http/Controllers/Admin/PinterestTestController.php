@@ -37,8 +37,6 @@ class PinterestTestController extends Controller
     {
         $data = $request->all();
         $search = @$data['search']['value'];
-        $order = end($data['order']);
-        $orderby = $data['columns'][$order['column']]['data'] ?? 'id';
 
         $columnMapping = [
             'id' => 'id',
@@ -47,8 +45,6 @@ class PinterestTestController extends Controller
             'failure_reason' => 'failure_reason',
             'ran_at' => 'ran_at',
         ];
-
-        $orderColumn = $columnMapping[$orderby] ?? 'id';
 
         $iTotalRecords = PinterestTestCase::query();
         $testCases = PinterestTestCase::with(['testPost', 'pinterestBoard.pinterest']);
@@ -134,4 +130,3 @@ class PinterestTestController extends Controller
         }
     }
 }
-

@@ -37,8 +37,6 @@ class TikTokTestController extends Controller
     {
         $data = $request->all();
         $search = @$data['search']['value'];
-        $order = end($data['order']);
-        $orderby = $data['columns'][$order['column']]['data'] ?? 'id';
 
         $columnMapping = [
             'id' => 'id',
@@ -47,8 +45,6 @@ class TikTokTestController extends Controller
             'failure_reason' => 'failure_reason',
             'ran_at' => 'ran_at',
         ];
-
-        $orderColumn = $columnMapping[$orderby] ?? 'id';
 
         $iTotalRecords = TikTokTestCase::query();
         $testCases = TikTokTestCase::with(['testPost', 'tiktokAccount']);
