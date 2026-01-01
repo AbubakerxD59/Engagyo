@@ -310,6 +310,11 @@ class PinterestTestService
 
             // Check if post was updated successfully (status = 1 means success)
             $testPost->refresh();
+            $this->logService->log('pinterest', 'test', 'Pinterest Video Test Post Status: ' . $testPost->status, [
+                'test_post_id' => $testPost->id,
+                'post_status' => $testPost->status,
+                'post_response' => $testPost->response
+            ]);
             if ($testPost->status == 1) {
                 $testCase->update([
                     'status' => 'passed',
