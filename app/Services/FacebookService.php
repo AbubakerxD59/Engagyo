@@ -513,6 +513,11 @@ class FacebookService
             $this->logService->logApiError('facebook', '/videos', $error, ['post_id' => $id, 'account_id' => $post_row->account_id ?? null]);
         }
         $this->handlePostPublishResult($post_row, $response, 'video');
+        // Remove video from S3 if API failed and post source is not "test"
+        if ($post_row->source !== 'test' && !empty($post_row->video)) {
+            removeFromS3($post_row->video);
+            removeFile($post_row->video);
+        }
         return $response;
     }
 

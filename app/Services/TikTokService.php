@@ -563,6 +563,15 @@ class TikTokService
             $this->logService->logPost('tiktok', 'video', $id, [], 'failed');
             $this->logService->logApiError('tiktok', '/post/publish/video/init/', $errorMessage, ['post_id' => $id]);
         }
+        // Remove video from S3 if API failed and post source is not "test"
+        if ($post_row->source !== 'test' && !empty($post_row->video)) {
+            // Check if video is an S3 key (not a URL)
+            $isUrl = filter_var($post_row->video, FILTER_VALIDATE_URL);
+            if (!$isUrl) {
+                removeFromS3($post_row->video);
+                removeFile($post_row->video);
+            }
+        }
     }
 
     /**

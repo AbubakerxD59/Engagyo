@@ -378,8 +378,13 @@ class PinterestService
             $this->logService->logPost('pinterest', 'video', $id, [], 'failed');
             $this->logService->logApiError('pinterest', '/media', $errorMessage, ['post_id' => $id]);
         }
-        removeFromS3($post["video_key"]);
-        removeFile($post["video_key"]);
+        
+        // Don't remove video from S3 if post source is "test"
+        if ($post_row->source !== 'test') {
+            removeFromS3($post["video_key"]);
+            removeFile($post["video_key"]);
+        }
+        return $response;
     }
     private function postIntent()
     {
