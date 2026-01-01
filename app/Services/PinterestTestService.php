@@ -206,6 +206,9 @@ class PinterestTestService
             ]);
 
             $postData = $this->postService->postTypeBody($testPost);
+            $this->logService->log('pinterest', 'test', 'Pinterest Link Test Post Data: ' . json_encode($postData), [
+                'postData' => $postData,
+            ]);
 
             $this->pinterestService->create($testPost->id, $postData, $accessToken);
 
