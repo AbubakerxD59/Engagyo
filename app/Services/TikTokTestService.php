@@ -116,7 +116,7 @@ class TikTokTestService
                 'test_post_id' => $testPost->id
             ]);
 
-            $postData = $this->postService->postTypeBody($testPost);
+            $postData = PostService::postTypeBody($testPost);
 
             $this->tiktokService->photo($testPost->id, $postData, $accessToken);
 
@@ -212,7 +212,7 @@ class TikTokTestService
                 'test_post_id' => $testPost->id
             ]);
 
-            $postData = $this->postService->postTypeBody($testPost);
+            $postData = PostService::postTypeBody($testPost);
 
             $this->tiktokService->video($testPost->id, $postData, $accessToken);
 

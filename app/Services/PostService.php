@@ -89,96 +89,117 @@ class PostService
     }
     public static function postTypeBody($post)
     {
+        // Keep for backward compatibility - delegates to platform-specific methods
+        switch ($post->social_type) {
+            case 'facebook':
+                return self::facebookPostTypeBody($post);
+            case 'pinterest':
+                return self::pinterestPostTypeBody($post);
+            case 'tiktok':
+                return self::tiktokPostTypeBody($post);
+            default:
+                return [];
+        }
+    }
+
+    public static function facebookPostTypeBody($post)
+    {
         $postData = [];
-        if ($post->social_type == "facebook") { //Facebook
-            if ($post->type == "content_only") { // Content Only
-                $postData = array(
-                    'message' => $post->title ?: ' ' // Facebook requires a message for content_only posts, use space if empty
-                );
-            }
-            if ($post->type == "photo") { // Photo
-                $postData = array(
-                    "url" => $post->image
-                );
-                // Only include message if title is not empty (Facebook prefers 'message' over 'caption')
-                if (!empty($post->title)) {
-                    $postData["message"] = $post->title;
-                }
-            }
-            if ($post->type == "video") { // Video
-                $postData = array(
-                    "file_url" => $post->video_key
-                );
-                // Only include description if title is not empty
-                if (!empty($post->title)) {
-                    $postData["description"] = $post->title;
-                }
-            }
-            if ($post->type == "link") { // Link
-                $postData = array(
-                    'link' => $post->url
-                );
-                // Only include message if title is not empty (Facebook rejects empty messages)
-                if (!empty($post->title)) {
-                    $postData['message'] = $post->title;
-                }
+        if ($post->type == "content_only") { // Content Only
+            $postData = array(
+                'message' => $post->title ?: ' ' // Facebook requires a message for content_only posts, use space if empty
+            );
+        }
+        if ($post->type == "photo") { // Photo
+            $postData = array(
+                "url" => $post->image
+            );
+            // Only include message if title is not empty (Facebook prefers 'message' over 'caption')
+            if (!empty($post->title)) {
+                $postData["message"] = $post->title;
             }
         }
-        if ($post->social_type == "pinterest") { //Pinterest
-            $board = $post->board;
-            $board_id = $board ? $board->board_id : null;
-            if ($post->type == "photo") { // Photo
-                $encoded_image = file_get_contents($post->image);
-                $encoded_image = base64_encode($encoded_image);
-                $postData = array(
-                    "title" => $post->title,
-                    "board_id" => (string) $board_id,
-                    "media_source" => array(
-                        "source_type" => "image_base64",
-                        "content_type" => "image/jpeg",
-                        "data" => $encoded_image
-                    )
-                );
-            }
-            if ($post->type == "video") { // Video
-                $postData = array(
-                    "title" => $post->title,
-                    "board_id" => (string) $board_id,
-                    'video_key' => $post->video
-                );
-            }
-            if ($post->type == "link") { // Link
-                $postData = [
-                    "title" => $post->title,
-                    "link" => $post->url,
-                    "board_id" => (string) $board_id,
-                    "media_source" => [
-                        "source_type" => str_contains($post->image, "http") ? "image_url" : "image_base64",
-                        "url" => $post->image
-                    ]
-                ];
+        if ($post->type == "video") { // Video
+            $postData = array(
+                "file_url" => $post->video_key
+            );
+            // Only include description if title is not empty
+            if (!empty($post->title)) {
+                $postData["description"] = $post->title;
             }
         }
-        if ($post->social_type == "tiktok") { //TikTok
-            if ($post->type == "photo") { // Photo
-                $postData = [
-                    "title" => $post->title,
+        if ($post->type == "link") { // Link
+            $postData = array(
+                'link' => $post->url
+            );
+            // Only include message if title is not empty (Facebook rejects empty messages)
+            if (!empty($post->title)) {
+                $postData['message'] = $post->title;
+            }
+        }
+        return $postData;
+    }
+
+    public static function pinterestPostTypeBody($post)
+    {
+        $postData = [];
+        $board = $post->board;
+        $board_id = $board ? $board->board_id : null;
+        if ($post->type == "photo") { // Photo
+            $encoded_image = file_get_contents($post->image);
+            $encoded_image = base64_encode($encoded_image);
+            $postData = array(
+                "title" => $post->title,
+                "board_id" => (string) $board_id,
+                "media_source" => array(
+                    "source_type" => "image_base64",
+                    "content_type" => "image/jpeg",
+                    "data" => $encoded_image
+                )
+            );
+        }
+        if ($post->type == "video") { // Video
+            $postData = array(
+                "title" => $post->title,
+                "board_id" => (string) $board_id,
+                'video_key' => $post->video
+            );
+        }
+        if ($post->type == "link") { // Link
+            $postData = [
+                "title" => $post->title,
+                "link" => $post->url,
+                "board_id" => (string) $board_id,
+                "media_source" => [
+                    "source_type" => str_contains($post->image, "http") ? "image_url" : "image_base64",
                     "url" => $post->image
-                ];
-            }
-            if ($post->type == "video") { // Video
-                $postData = [
-                    "title" => $post->title,
-                    "file_url" => $post->video_key ?: $post->video
-                ];
-            }
-            if ($post->type == "link") { // Link
-                $postData = [
-                    "title" => $post->title,
-                    "link" => $post->url,
-                    "url" => $post->image
-                ];
-            }
+                ]
+            ];
+        }
+        return $postData;
+    }
+
+    public static function tiktokPostTypeBody($post)
+    {
+        $postData = [];
+        if ($post->type == "photo") { // Photo
+            $postData = [
+                "title" => $post->title,
+                "url" => $post->image
+            ];
+        }
+        if ($post->type == "video") { // Video
+            $postData = [
+                "title" => $post->title,
+                "file_url" => $post->video_key ?: $post->video
+            ];
+        }
+        if ($post->type == "link") { // Link
+            $postData = [
+                "title" => $post->title,
+                "link" => $post->url,
+                "url" => $post->image
+            ];
         }
         return $postData;
     }

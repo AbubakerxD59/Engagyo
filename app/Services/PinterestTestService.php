@@ -110,7 +110,7 @@ class PinterestTestService
                 'test_post_id' => $testPost->id
             ]);
 
-            $postData = $this->postService->postTypeBody($testPost);
+            $postData = PostService::postTypeBody($testPost);
 
             $this->pinterestService->create($testPost->id, $postData, $accessToken);
 
@@ -186,7 +186,7 @@ class PinterestTestService
             }
 
             $accessToken = $tokenResponse['access_token'];
-            $testUrl = 'https://www.example.com/test-link';
+            $testUrl = 'https://www.bbc.com/news/articles/cddg7100ym2o';
 
             $testPost = Post::create([
                 'user_id' => $user->id,
@@ -196,6 +196,7 @@ class PinterestTestService
                 'source' => 'test',
                 'title' => 'Test Link Post - ' . now()->format('Y-m-d H:i:s'),
                 'url' => $testUrl,
+                'image' => 'https://ichef.bbci.co.uk/news/1536/cpsprodpb/3415/live/21f57130-e6c3-11f0-a8dc-93c15fe68710.jpg.webp',
                 'status' => 0,
                 'scheduled' => 0
             ]);
@@ -205,7 +206,7 @@ class PinterestTestService
                 'test_post_id' => $testPost->id
             ]);
 
-            $postData = $this->postService->postTypeBody($testPost);
+            $postData = PostService::postTypeBody($testPost);
             $this->logService->log('pinterest', 'test', 'Pinterest Link Test Post Data: ' . json_encode($postData), [
                 'postData' => $postData,
             ]);
@@ -304,7 +305,7 @@ class PinterestTestService
                 'test_post_id' => $testPost->id
             ]);
 
-            $postData = $this->postService->postTypeBody($testPost);
+            $postData = PostService::postTypeBody($testPost);
 
             $this->pinterestService->video($testPost->id, $postData, $accessToken);
 

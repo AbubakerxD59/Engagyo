@@ -109,7 +109,7 @@ class FacebookTestService
                 'test_post_id' => $testPost->id
             ]);
 
-            $postData = $this->postService->postTypeBody($testPost);
+            $postData = PostService::postTypeBody($testPost);
 
             $response = $this->facebookService->photo($testPost->id, $accessToken, $postData);
 
@@ -199,7 +199,7 @@ class FacebookTestService
                 'test_post_id' => $testPost->id
             ]);
 
-            $postData = $this->postService->postTypeBody($testPost);
+            $postData = PostService::postTypeBody($testPost);
 
             $response = $this->facebookService->contentOnly($testPost->id, $accessToken, $postData);
 
@@ -291,7 +291,7 @@ class FacebookTestService
                 'test_post_id' => $testPost->id
             ]);
 
-            $postData = $this->postService->postTypeBody($testPost);
+            $postData = PostService::postTypeBody($testPost);
 
             $response = $this->facebookService->createLink($testPost->id, $accessToken, $postData);
 
@@ -383,7 +383,7 @@ class FacebookTestService
                 'test_post_id' => $testPost->id
             ]);
 
-            $postData = $this->postService->postTypeBody($testPost);
+            $postData = PostService::postTypeBody($testPost);
 
             $response = $this->facebookService->video($testPost->id, $accessToken, $postData);
 
