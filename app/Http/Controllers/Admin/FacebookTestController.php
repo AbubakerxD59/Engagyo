@@ -74,7 +74,6 @@ class FacebookTestController extends Controller
         }
 
         $totalRecordswithFilter = clone $testCases;
-        $testCases->orderBy($orderColumn, $order['dir']);
 
         $testCases = $testCases->offset(intval($data['start']));
         $testCases = $testCases->limit(intval($data['length']));
