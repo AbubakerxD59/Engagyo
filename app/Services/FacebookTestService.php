@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\FacebookTestCase;
 use App\Services\FacebookService;
 use App\Services\PostService;
+use App\Services\SocialMediaLogService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -16,11 +17,13 @@ class FacebookTestService
 {
     private $facebookService;
     private $postService;
+    private $logService;
 
     public function __construct()
     {
         $this->facebookService = new FacebookService();
         $this->postService = new PostService();
+        $this->logService = new SocialMediaLogService();
     }
 
     public function runAllTests()
@@ -28,7 +31,7 @@ class FacebookTestService
         $page = $this->getFirstConnectedPage();
 
         if (!$page) {
-            Log::error('Facebook Test: No connected Facebook page found');
+            $this->logService->log('facebook', 'test', 'No connected Facebook page found for testing', [], 'error');
             return [
                 'success' => false,
                 'message' => 'No connected Facebook page found for testing'
@@ -131,7 +134,11 @@ class FacebookTestService
                 'status' => 'failed',
                 'failure_reason' => 'Exception: ' . $e->getMessage()
             ]);
-            Log::error('Facebook Image Test Error: ' . $e->getMessage());
+            $this->logService->log('facebook', 'test', 'Facebook Image Test Error: ' . $e->getMessage(), [
+                'test_case_id' => $testCase->id,
+                'test_type' => 'image',
+                'exception' => $e->getMessage()
+            ], 'error');
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -205,7 +212,11 @@ class FacebookTestService
                 'status' => 'failed',
                 'failure_reason' => 'Exception: ' . $e->getMessage()
             ]);
-            Log::error('Facebook Quote Test Error: ' . $e->getMessage());
+            $this->logService->log('facebook', 'test', 'Facebook Quote Test Error: ' . $e->getMessage(), [
+                'test_case_id' => $testCase->id,
+                'test_type' => 'quote',
+                'exception' => $e->getMessage()
+            ], 'error');
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -281,7 +292,11 @@ class FacebookTestService
                 'status' => 'failed',
                 'failure_reason' => 'Exception: ' . $e->getMessage()
             ]);
-            Log::error('Facebook Link Test Error: ' . $e->getMessage());
+            $this->logService->log('facebook', 'test', 'Facebook Link Test Error: ' . $e->getMessage(), [
+                'test_case_id' => $testCase->id,
+                'test_type' => 'link',
+                'exception' => $e->getMessage()
+            ], 'error');
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -357,7 +372,11 @@ class FacebookTestService
                 'status' => 'failed',
                 'failure_reason' => 'Exception: ' . $e->getMessage()
             ]);
-            Log::error('Facebook Video Test Error: ' . $e->getMessage());
+            $this->logService->log('facebook', 'test', 'Facebook Video Test Error: ' . $e->getMessage(), [
+                'test_case_id' => $testCase->id,
+                'test_type' => 'video',
+                'exception' => $e->getMessage()
+            ], 'error');
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }

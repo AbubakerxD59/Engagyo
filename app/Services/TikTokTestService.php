@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\TikTokTestCase;
 use App\Services\TikTokService;
 use App\Services\PostService;
+use App\Services\SocialMediaLogService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Carbon\Carbon;
@@ -16,11 +17,13 @@ class TikTokTestService
 {
     private $tiktokService;
     private $postService;
+    private $logService;
 
     public function __construct()
     {
         $this->tiktokService = new TikTokService();
         $this->postService = new PostService();
+        $this->logService = new SocialMediaLogService();
     }
 
     public function runAllTests()
@@ -28,7 +31,7 @@ class TikTokTestService
         $tiktok = $this->getFirstConnectedTikTok();
 
         if (!$tiktok) {
-            Log::error('TikTok Test: No connected TikTok account found');
+            $this->logService->log('tiktok', 'test', 'No connected TikTok account found for testing', [], 'error');
             return [
                 'success' => false,
                 'message' => 'No connected TikTok account found for testing'
@@ -142,7 +145,11 @@ class TikTokTestService
                 'status' => 'failed',
                 'failure_reason' => 'Exception: ' . $e->getMessage()
             ]);
-            Log::error('TikTok Image Test Error: ' . $e->getMessage());
+            $this->logService->log('tiktok', 'test', 'TikTok Image Test Error: ' . $e->getMessage(), [
+                'test_case_id' => $testCase->id,
+                'test_type' => 'image',
+                'exception' => $e->getMessage()
+            ], 'error');
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -232,7 +239,11 @@ class TikTokTestService
                 'status' => 'failed',
                 'failure_reason' => 'Exception: ' . $e->getMessage()
             ]);
-            Log::error('TikTok Video Test Error: ' . $e->getMessage());
+            $this->logService->log('tiktok', 'test', 'TikTok Video Test Error: ' . $e->getMessage(), [
+                'test_case_id' => $testCase->id,
+                'test_type' => 'video',
+                'exception' => $e->getMessage()
+            ], 'error');
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -242,7 +253,10 @@ class TikTokTestService
         try {
             $fileContents = @file_get_contents($url);
             if ($fileContents === false) {
-                Log::error("TikTok Test: Failed to download file from URL: {$url}");
+                $this->logService->log('tiktok', 'test', "Failed to download file from URL: {$url}", [
+                    'url' => $url,
+                    'type' => $type
+                ], 'error');
                 return false;
             }
 
@@ -266,14 +280,21 @@ class TikTokTestService
             // Save file locally
             $bytesWritten = file_put_contents($fullPath, $fileContents);
             if ($bytesWritten === false) {
-                Log::error("TikTok Test: Failed to save file to local storage: {$fullPath}");
+                $this->logService->log('tiktok', 'test', "Failed to save file to local storage: {$fullPath}", [
+                    'path' => $fullPath,
+                    'type' => $type
+                ], 'error');
                 return false;
             }
 
             // Return the full public URL (TikTok needs a publicly accessible URL)
             return url($localPublicPath);
         } catch (\Exception $e) {
-            Log::error("TikTok Test: Exception downloading file: " . $e->getMessage());
+            $this->logService->log('tiktok', 'test', "Exception downloading file: " . $e->getMessage(), [
+                'url' => $url,
+                'type' => $type,
+                'exception' => $e->getMessage()
+            ], 'error');
             return false;
         }
     }

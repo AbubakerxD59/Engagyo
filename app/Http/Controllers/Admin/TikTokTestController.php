@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\TikTokTestCase;
 use App\Services\TikTokTestService;
+use App\Services\SocialMediaLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
@@ -12,10 +13,12 @@ use Illuminate\Support\Facades\Log;
 class TikTokTestController extends Controller
 {
     protected $testService;
+    protected $logService;
 
     public function __construct(TikTokTestService $testService)
     {
         $this->testService = $testService;
+        $this->logService = new SocialMediaLogService();
     }
 
     public function index()
@@ -108,8 +111,9 @@ class TikTokTestController extends Controller
             Artisan::call('tiktok:run-tests');
             $output = Artisan::output();
 
-            Log::info('TikTok tests manually triggered from admin panel', [
-                'admin_id' => auth('admin')->id()
+            $this->logService->log('tiktok', 'runTests', 'TikTok tests manually triggered from admin panel', [
+                'admin_id' => auth('admin')->id(),
+                'output' => $output
             ]);
 
             return response()->json([
@@ -118,10 +122,10 @@ class TikTokTestController extends Controller
                 'output' => $output
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to run TikTok tests from admin panel: ' . $e->getMessage(), [
+            $this->logService->log('tiktok', 'runTests', 'Failed to run TikTok tests from admin panel: ' . $e->getMessage(), [
                 'admin_id' => auth('admin')->id(),
                 'trace' => $e->getTraceAsString()
-            ]);
+            ], 'error');
 
             return response()->json([
                 'success' => false,

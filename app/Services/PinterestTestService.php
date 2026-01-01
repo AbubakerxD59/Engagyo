@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\PinterestTestCase;
 use App\Services\PinterestService;
 use App\Services\PostService;
+use App\Services\SocialMediaLogService;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
@@ -15,11 +16,13 @@ class PinterestTestService
 {
     private $pinterestService;
     private $postService;
+    private $logService;
 
     public function __construct()
     {
         $this->pinterestService = new PinterestService();
         $this->postService = new PostService();
+        $this->logService = new SocialMediaLogService();
     }
 
     public function runAllTests()
@@ -27,7 +30,7 @@ class PinterestTestService
         $board = $this->getFirstConnectedBoard();
 
         if (!$board) {
-            Log::error('Pinterest Test: No connected Pinterest board found');
+            $this->logService->log('pinterest', 'test', 'No connected Pinterest board found for testing', [], 'error');
             return [
                 'success' => false,
                 'message' => 'No connected Pinterest board found for testing'
@@ -136,7 +139,11 @@ class PinterestTestService
                 'status' => 'failed',
                 'failure_reason' => 'Exception: ' . $e->getMessage()
             ]);
-            Log::error('Pinterest Image Test Error: ' . $e->getMessage());
+            $this->logService->log('pinterest', 'test', 'Pinterest Image Test Error: ' . $e->getMessage(), [
+                'test_case_id' => $testCase->id,
+                'test_type' => 'image',
+                'exception' => $e->getMessage()
+            ], 'error');
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -215,7 +222,11 @@ class PinterestTestService
                 'status' => 'failed',
                 'failure_reason' => 'Exception: ' . $e->getMessage()
             ]);
-            Log::error('Pinterest Link Test Error: ' . $e->getMessage());
+            $this->logService->log('pinterest', 'test', 'Pinterest Link Test Error: ' . $e->getMessage(), [
+                'test_case_id' => $testCase->id,
+                'test_type' => 'link',
+                'exception' => $e->getMessage()
+            ], 'error');
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }
@@ -295,7 +306,11 @@ class PinterestTestService
                 'status' => 'failed',
                 'failure_reason' => 'Exception: ' . $e->getMessage()
             ]);
-            Log::error('Pinterest Video Test Error: ' . $e->getMessage());
+            $this->logService->log('pinterest', 'test', 'Pinterest Video Test Error: ' . $e->getMessage(), [
+                'test_case_id' => $testCase->id,
+                'test_type' => 'video',
+                'exception' => $e->getMessage()
+            ], 'error');
             return ['success' => false, 'message' => $e->getMessage()];
         }
     }

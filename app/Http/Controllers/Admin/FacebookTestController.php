@@ -2,20 +2,23 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
-use App\Models\FacebookTestCase;
-use App\Services\FacebookTestService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Artisan;
+use App\Models\FacebookTestCase;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use App\Services\FacebookTestService;
+use App\Services\SocialMediaLogService;
+use Illuminate\Support\Facades\Artisan;
 
 class FacebookTestController extends Controller
 {
     protected $testService;
+    protected $logService;
 
     public function __construct(FacebookTestService $testService)
     {
         $this->testService = $testService;
+        $this->logService = new SocialMediaLogService();
     }
 
     public function index()
@@ -108,8 +111,10 @@ class FacebookTestController extends Controller
             Artisan::call('facebook:run-tests');
             $output = Artisan::output();
 
-            Log::info('Facebook tests manually triggered from admin panel', [
-                'admin_id' => auth('admin')->id()
+
+            $this->logService->log('facebook', 'runTests', 'Facebook tests manually triggered from admin panel', [
+                'admin_id' => auth('admin')->id(),
+                'output' => $output
             ]);
 
             return response()->json([
@@ -118,10 +123,10 @@ class FacebookTestController extends Controller
                 'output' => $output
             ]);
         } catch (\Exception $e) {
-            Log::error('Failed to run Facebook tests from admin panel: ' . $e->getMessage(), [
+            $this->logService->log('facebook', 'runTests', 'Failed to run Facebook tests from admin panel: ' . $e->getMessage(), [
                 'admin_id' => auth('admin')->id(),
                 'trace' => $e->getTraceAsString()
-            ]);
+            ], 'error');
 
             return response()->json([
                 'success' => false,
