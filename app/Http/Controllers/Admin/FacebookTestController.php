@@ -91,7 +91,7 @@ class FacebookTestController extends Controller
                 'test_type' => ucfirst($testCase->test_type),
                 'status_badge' => $testCase->status_badge,
                 'failure_reason' => $testCase->failure_reason ? substr($testCase->failure_reason, 0, 100) . '...' : '-',
-                'ran_at' => $testCase->ran_at ? $testCase->ran_at->format('Y-m-d H:i:s') : '-',
+                'ran_at' => $testCase->ran_at ? $testCase->ran_at->format('jS M, Y h:i A') : '-',
                 'page_name' => $testCase->facebookPage ? $testCase->facebookPage->name : '-',
                 'action' => '<a href="' . route('admin.facebook-tests.show', $testCase->id) . '" class="btn btn-sm btn-info">View Details</a>',
             ];
