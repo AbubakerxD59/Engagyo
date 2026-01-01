@@ -37,10 +37,12 @@
                                             </select>
                                         </div>
                                         <div class="col-md-3">
-                                            <input type="date" class="form-control form-control-sm" id="filterDateFrom" placeholder="From Date">
+                                            <input type="date" class="form-control form-control-sm" id="filterDateFrom"
+                                                placeholder="From Date">
                                         </div>
                                         <div class="col-md-3">
-                                            <input type="date" class="form-control form-control-sm" id="filterDateTo" placeholder="To Date">
+                                            <input type="date" class="form-control form-control-sm" id="filterDateTo"
+                                                placeholder="To Date">
                                         </div>
                                     </div>
                                 </div>
@@ -53,7 +55,7 @@
                                                 <table class="table table-striped table-bordered" id="dataTable">
                                                     <thead>
                                                         <tr>
-                                                            <th data-data="id">ID</th>
+                                                            {{-- <th data-data="id">ID</th> --}}
                                                             <th data-data="test_type">Test Type</th>
                                                             <th data-data="status_badge">Status</th>
                                                             <th data-data="failure_reason">Failure Reason</th>
@@ -102,11 +104,10 @@
                     d.date_to = $('#filterDateTo').val();
                 }
             },
-            order: [[0, 'desc']],
+            order: [
+                [0, 'desc']
+            ],
             columns: [{
-                    data: 'id'
-                },
-                {
                     data: 'test_type'
                 },
                 {
@@ -165,4 +166,3 @@
         });
     </script>
 @endpush
-
