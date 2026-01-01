@@ -83,7 +83,7 @@ class TikTokTestController extends Controller
         $testCases = $testCases->offset(intval($data['start']));
         $testCases = $testCases->limit(intval($data['length']));
 
-        $testCases = $testCases->get();
+        $testCases = $testCases->latest()->get();
 
         $formattedData = $testCases->map(function ($testCase) {
             return [
@@ -134,4 +134,3 @@ class TikTokTestController extends Controller
         }
     }
 }
-
