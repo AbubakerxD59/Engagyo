@@ -111,6 +111,11 @@ class TikTokTestService
                 'scheduled' => 0
             ]);
 
+            // Save test_post_id before API call
+            $testCase->update([
+                'test_post_id' => $testPost->id
+            ]);
+
             $postData = $this->postService->postTypeBody($testPost);
 
             $this->tiktokService->photo($testPost->id, $postData, $accessToken);
@@ -120,7 +125,6 @@ class TikTokTestService
             if ($testPost->status == 1) {
                 $testCase->update([
                     'status' => 'passed',
-                    'test_post_id' => $testPost->id,
                     'test_data' => array_merge($testCase->test_data ?? [], [
                         'post_id' => $testPost->post_id ?? null,
                         'response' => json_decode($testPost->response ?? '{}', true)
@@ -132,19 +136,27 @@ class TikTokTestService
             } else {
                 $responseData = json_decode($testPost->response ?? '{}', true);
                 $errorMessage = $responseData['error'] ?? $responseData['message'] ?? 'Unknown error during image post publishing';
-                
+
                 $testCase->update([
                     'status' => 'failed',
-                    'test_post_id' => $testPost->id,
                     'failure_reason' => $errorMessage
                 ]);
                 return ['success' => false, 'message' => $errorMessage];
             }
         } catch (\Exception $e) {
-            $testCase->update([
-                'status' => 'failed',
-                'failure_reason' => 'Exception: ' . $e->getMessage()
-            ]);
+            // Update test_post_id if post was created but not yet saved
+            if (isset($testPost) && $testPost->id) {
+                $testCase->update([
+                    'test_post_id' => $testPost->id,
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            } else {
+                $testCase->update([
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            }
             $this->logService->log('tiktok', 'test', 'TikTok Image Test Error: ' . $e->getMessage(), [
                 'test_case_id' => $testCase->id,
                 'test_type' => 'image',
@@ -183,16 +195,6 @@ class TikTokTestService
 
             $testVideoUrl = 'videos/test_sample_video.mp4';
 
-            // Download video to local storage
-            $localVideoUrl = $this->downloadFileToLocal($testVideoUrl, 'video');
-            if (!$localVideoUrl) {
-                $testCase->update([
-                    'status' => 'failed',
-                    'failure_reason' => 'Failed to download video to local storage'
-                ]);
-                return ['success' => false, 'message' => 'Failed to download video to local storage'];
-            }
-
             $testPost = Post::create([
                 'user_id' => $user->id,
                 'account_id' => $tiktok->id,
@@ -200,9 +202,14 @@ class TikTokTestService
                 'type' => 'video',
                 'source' => 'test',
                 'title' => 'Test Video Post - ' . now()->format('Y-m-d H:i:s'),
-                'video' => $localVideoUrl,
+                'video' => $testVideoUrl,
                 'status' => 0,
                 'scheduled' => 0
+            ]);
+
+            // Save test_post_id before API call
+            $testCase->update([
+                'test_post_id' => $testPost->id
             ]);
 
             $postData = $this->postService->postTypeBody($testPost);
@@ -214,7 +221,6 @@ class TikTokTestService
             if ($testPost->status == 1) {
                 $testCase->update([
                     'status' => 'passed',
-                    'test_post_id' => $testPost->id,
                     'test_data' => array_merge($testCase->test_data ?? [], [
                         'post_id' => $testPost->post_id ?? null,
                         'response' => json_decode($testPost->response ?? '{}', true)
@@ -226,19 +232,27 @@ class TikTokTestService
             } else {
                 $responseData = json_decode($testPost->response ?? '{}', true);
                 $errorMessage = $responseData['error'] ?? $responseData['message'] ?? 'Unknown error during video post publishing';
-                
+
                 $testCase->update([
                     'status' => 'failed',
-                    'test_post_id' => $testPost->id,
                     'failure_reason' => $errorMessage
                 ]);
                 return ['success' => false, 'message' => $errorMessage];
             }
         } catch (\Exception $e) {
-            $testCase->update([
-                'status' => 'failed',
-                'failure_reason' => 'Exception: ' . $e->getMessage()
-            ]);
+            // Update test_post_id if post was created but not yet saved
+            if (isset($testPost) && $testPost->id) {
+                $testCase->update([
+                    'test_post_id' => $testPost->id,
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            } else {
+                $testCase->update([
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            }
             $this->logService->log('tiktok', 'test', 'TikTok Video Test Error: ' . $e->getMessage(), [
                 'test_case_id' => $testCase->id,
                 'test_type' => 'video',
@@ -310,4 +324,3 @@ class TikTokTestService
         }
     }
 }
-

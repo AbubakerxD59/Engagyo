@@ -105,6 +105,11 @@ class PinterestTestService
                 'scheduled' => 0
             ]);
 
+            // Save test_post_id before API call
+            $testCase->update([
+                'test_post_id' => $testPost->id
+            ]);
+
             $postData = $this->postService->postTypeBody($testPost);
 
             $this->pinterestService->create($testPost->id, $postData, $accessToken);
@@ -114,7 +119,6 @@ class PinterestTestService
             if ($testPost->status == 1) {
                 $testCase->update([
                     'status' => 'passed',
-                    'test_post_id' => $testPost->id,
                     'test_data' => array_merge($testCase->test_data ?? [], [
                         'post_id' => $testPost->post_id ?? null,
                         'response' => json_decode($testPost->response ?? '{}', true)
@@ -129,16 +133,24 @@ class PinterestTestService
 
                 $testCase->update([
                     'status' => 'failed',
-                    'test_post_id' => $testPost->id,
                     'failure_reason' => $errorMessage
                 ]);
                 return ['success' => false, 'message' => $errorMessage];
             }
         } catch (\Exception $e) {
-            $testCase->update([
-                'status' => 'failed',
-                'failure_reason' => 'Exception: ' . $e->getMessage()
-            ]);
+            // Update test_post_id if post was created but not yet saved
+            if (isset($testPost) && $testPost->id) {
+                $testCase->update([
+                    'test_post_id' => $testPost->id,
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            } else {
+                $testCase->update([
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            }
             $this->logService->log('pinterest', 'test', 'Pinterest Image Test Error: ' . $e->getMessage(), [
                 'test_case_id' => $testCase->id,
                 'test_type' => 'image',
@@ -188,6 +200,11 @@ class PinterestTestService
                 'scheduled' => 0
             ]);
 
+            // Save test_post_id before API call
+            $testCase->update([
+                'test_post_id' => $testPost->id
+            ]);
+
             $postData = $this->postService->postTypeBody($testPost);
 
             $this->pinterestService->create($testPost->id, $postData, $accessToken);
@@ -197,7 +214,6 @@ class PinterestTestService
             if ($testPost->status == 1) {
                 $testCase->update([
                     'status' => 'passed',
-                    'test_post_id' => $testPost->id,
                     'test_data' => array_merge($testCase->test_data ?? [], [
                         'post_id' => $testPost->post_id ?? null,
                         'response' => json_decode($testPost->response ?? '{}', true)
@@ -212,16 +228,24 @@ class PinterestTestService
 
                 $testCase->update([
                     'status' => 'failed',
-                    'test_post_id' => $testPost->id,
                     'failure_reason' => $errorMessage
                 ]);
                 return ['success' => false, 'message' => $errorMessage];
             }
         } catch (\Exception $e) {
-            $testCase->update([
-                'status' => 'failed',
-                'failure_reason' => 'Exception: ' . $e->getMessage()
-            ]);
+            // Update test_post_id if post was created but not yet saved
+            if (isset($testPost) && $testPost->id) {
+                $testCase->update([
+                    'test_post_id' => $testPost->id,
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            } else {
+                $testCase->update([
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            }
             $this->logService->log('pinterest', 'test', 'Pinterest Link Test Error: ' . $e->getMessage(), [
                 'test_case_id' => $testCase->id,
                 'test_type' => 'link',
@@ -272,6 +296,11 @@ class PinterestTestService
                 'scheduled' => 0
             ]);
 
+            // Save test_post_id before API call
+            $testCase->update([
+                'test_post_id' => $testPost->id
+            ]);
+
             $postData = $this->postService->postTypeBody($testPost);
 
             $this->pinterestService->video($testPost->id, $postData, $accessToken);
@@ -281,7 +310,6 @@ class PinterestTestService
             if ($testPost->status == 1) {
                 $testCase->update([
                     'status' => 'passed',
-                    'test_post_id' => $testPost->id,
                     'test_data' => array_merge($testCase->test_data ?? [], [
                         'post_id' => $testPost->post_id ?? null,
                         'response' => json_decode($testPost->response ?? '{}', true)
@@ -296,16 +324,24 @@ class PinterestTestService
 
                 $testCase->update([
                     'status' => 'failed',
-                    'test_post_id' => $testPost->id,
                     'failure_reason' => $errorMessage
                 ]);
                 return ['success' => false, 'message' => $errorMessage];
             }
         } catch (\Exception $e) {
-            $testCase->update([
-                'status' => 'failed',
-                'failure_reason' => 'Exception: ' . $e->getMessage()
-            ]);
+            // Update test_post_id if post was created but not yet saved
+            if (isset($testPost) && $testPost->id) {
+                $testCase->update([
+                    'test_post_id' => $testPost->id,
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            } else {
+                $testCase->update([
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            }
             $this->logService->log('pinterest', 'test', 'Pinterest Video Test Error: ' . $e->getMessage(), [
                 'test_case_id' => $testCase->id,
                 'test_type' => 'video',

@@ -4,7 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use App\Services\TikTokTestService;
-use Illuminate\Support\Facades\Log;
+use App\Services\SocialMediaLogService;
 
 class RunTikTokTests extends Command
 {
@@ -12,48 +12,32 @@ class RunTikTokTests extends Command
 
     protected $description = 'Run daily TikTok publishing tests for all post types';
 
+    protected $logService;
+
+    public function __construct()
+    {
+        parent::__construct();
+        $this->logService = new SocialMediaLogService();
+    }
+
     public function handle(TikTokTestService $testService)
     {
-        $this->info('Starting TikTok publishing tests...');
-
         try {
             $results = $testService->runAllTests();
 
             if (!$results['success']) {
-                $this->error('Test execution failed: ' . ($results['message'] ?? 'Unknown error'));
-                Log::error('TikTok Tests Failed: ' . ($results['message'] ?? 'Unknown error'));
+                $this->logService->log('tiktok', 'runTests', 'TikTok Tests Failed: ' . ($results['message'] ?? 'Unknown error'), [
+                    'results' => $results['results']
+                ], 'error');
                 return 1;
             }
 
-            $passed = 0;
-            $failed = 0;
-
-            foreach ($results['results'] as $type => $result) {
-                if ($result['success']) {
-                    $this->info("✓ {$type} test: PASSED");
-                    $passed++;
-                } else {
-                    $this->error("✗ {$type} test: FAILED - " . ($result['message'] ?? 'Unknown error'));
-                    $failed++;
-                }
-            }
-
-            $this->info("\nTest Summary: {$passed} passed, {$failed} failed");
-
-            Log::info('TikTok Tests Completed', [
-                'passed' => $passed,
-                'failed' => $failed,
-                'results' => $results['results']
-            ]);
-
             return 0;
         } catch (\Exception $e) {
-            $this->error('Exception during test execution: ' . $e->getMessage());
-            Log::error('TikTok Tests Exception: ' . $e->getMessage(), [
+            $this->logService->log('tiktok', 'runTests', 'TikTok Tests Exception: ' . $e->getMessage(), [
                 'trace' => $e->getTraceAsString()
-            ]);
+            ], 'error');
             return 1;
         }
     }
 }
-

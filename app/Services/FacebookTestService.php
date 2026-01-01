@@ -104,6 +104,11 @@ class FacebookTestService
                 'scheduled' => 0
             ]);
 
+            // Save test_post_id before API call
+            $testCase->update([
+                'test_post_id' => $testPost->id
+            ]);
+
             $postData = $this->postService->postTypeBody($testPost);
 
             $response = $this->facebookService->photo($testPost->id, $accessToken, $postData);
@@ -112,7 +117,6 @@ class FacebookTestService
                 $testPost->refresh();
                 $testCase->update([
                     'status' => 'passed',
-                    'test_post_id' => $testPost->id,
                     'test_data' => array_merge($testCase->test_data ?? [], [
                         'post_id' => $testPost->post_id,
                         'response' => $response
@@ -124,16 +128,24 @@ class FacebookTestService
             } else {
                 $testCase->update([
                     'status' => 'failed',
-                    'test_post_id' => $testPost->id,
                     'failure_reason' => $response['message'] ?? 'Unknown error during image post publishing'
                 ]);
                 return ['success' => false, 'message' => $response['message'] ?? 'Image post test failed'];
             }
         } catch (\Exception $e) {
-            $testCase->update([
-                'status' => 'failed',
-                'failure_reason' => 'Exception: ' . $e->getMessage()
-            ]);
+            // Update test_post_id if post was created but not yet saved
+            if (isset($testPost) && $testPost->id) {
+                $testCase->update([
+                    'test_post_id' => $testPost->id,
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            } else {
+                $testCase->update([
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            }
             $this->logService->log('facebook', 'test', 'Facebook Image Test Error: ' . $e->getMessage(), [
                 'test_case_id' => $testCase->id,
                 'test_type' => 'image',
@@ -182,6 +194,11 @@ class FacebookTestService
                 'scheduled' => 0
             ]);
 
+            // Save test_post_id before API call
+            $testCase->update([
+                'test_post_id' => $testPost->id
+            ]);
+
             $postData = $this->postService->postTypeBody($testPost);
 
             $response = $this->facebookService->contentOnly($testPost->id, $accessToken, $postData);
@@ -190,7 +207,6 @@ class FacebookTestService
                 $testPost->refresh();
                 $testCase->update([
                     'status' => 'passed',
-                    'test_post_id' => $testPost->id,
                     'test_data' => array_merge($testCase->test_data ?? [], [
                         'post_id' => $testPost->post_id,
                         'response' => $response
@@ -202,16 +218,24 @@ class FacebookTestService
             } else {
                 $testCase->update([
                     'status' => 'failed',
-                    'test_post_id' => $testPost->id,
                     'failure_reason' => $response['message'] ?? 'Unknown error during quote post publishing'
                 ]);
                 return ['success' => false, 'message' => $response['message'] ?? 'Quote post test failed'];
             }
         } catch (\Exception $e) {
-            $testCase->update([
-                'status' => 'failed',
-                'failure_reason' => 'Exception: ' . $e->getMessage()
-            ]);
+            // Update test_post_id if post was created but not yet saved
+            if (isset($testPost) && $testPost->id) {
+                $testCase->update([
+                    'test_post_id' => $testPost->id,
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            } else {
+                $testCase->update([
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            }
             $this->logService->log('facebook', 'test', 'Facebook Quote Test Error: ' . $e->getMessage(), [
                 'test_case_id' => $testCase->id,
                 'test_type' => 'quote',
@@ -262,6 +286,11 @@ class FacebookTestService
                 'scheduled' => 0
             ]);
 
+            // Save test_post_id before API call
+            $testCase->update([
+                'test_post_id' => $testPost->id
+            ]);
+
             $postData = $this->postService->postTypeBody($testPost);
 
             $response = $this->facebookService->createLink($testPost->id, $accessToken, $postData);
@@ -270,7 +299,6 @@ class FacebookTestService
                 $testPost->refresh();
                 $testCase->update([
                     'status' => 'passed',
-                    'test_post_id' => $testPost->id,
                     'test_data' => array_merge($testCase->test_data ?? [], [
                         'post_id' => $testPost->post_id,
                         'response' => $response
@@ -282,16 +310,24 @@ class FacebookTestService
             } else {
                 $testCase->update([
                     'status' => 'failed',
-                    'test_post_id' => $testPost->id,
                     'failure_reason' => $response['message'] ?? 'Unknown error during link post publishing'
                 ]);
                 return ['success' => false, 'message' => $response['message'] ?? 'Link post test failed'];
             }
         } catch (\Exception $e) {
-            $testCase->update([
-                'status' => 'failed',
-                'failure_reason' => 'Exception: ' . $e->getMessage()
-            ]);
+            // Update test_post_id if post was created but not yet saved
+            if (isset($testPost) && $testPost->id) {
+                $testCase->update([
+                    'test_post_id' => $testPost->id,
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            } else {
+                $testCase->update([
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            }
             $this->logService->log('facebook', 'test', 'Facebook Link Test Error: ' . $e->getMessage(), [
                 'test_case_id' => $testCase->id,
                 'test_type' => 'link',
@@ -342,6 +378,11 @@ class FacebookTestService
                 'scheduled' => 0
             ]);
 
+            // Save test_post_id before API call
+            $testCase->update([
+                'test_post_id' => $testPost->id
+            ]);
+
             $postData = $this->postService->postTypeBody($testPost);
 
             $response = $this->facebookService->video($testPost->id, $accessToken, $postData);
@@ -350,7 +391,6 @@ class FacebookTestService
                 $testPost->refresh();
                 $testCase->update([
                     'status' => 'passed',
-                    'test_post_id' => $testPost->id,
                     'test_data' => array_merge($testCase->test_data ?? [], [
                         'post_id' => $testPost->post_id,
                         'response' => $response
@@ -368,10 +408,19 @@ class FacebookTestService
                 return ['success' => false, 'message' => $response['message'] ?? 'Video post test failed'];
             }
         } catch (\Exception $e) {
-            $testCase->update([
-                'status' => 'failed',
-                'failure_reason' => 'Exception: ' . $e->getMessage()
-            ]);
+            // Update test_post_id if post was created but not yet saved
+            if (isset($testPost) && $testPost->id) {
+                $testCase->update([
+                    'test_post_id' => $testPost->id,
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            } else {
+                $testCase->update([
+                    'status' => 'failed',
+                    'failure_reason' => 'Exception: ' . $e->getMessage()
+                ]);
+            }
             $this->logService->log('facebook', 'test', 'Facebook Video Test Error: ' . $e->getMessage(), [
                 'test_case_id' => $testCase->id,
                 'test_type' => 'video',
