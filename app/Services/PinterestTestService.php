@@ -258,7 +258,7 @@ class PinterestTestService
 
             $accessToken = $tokenResponse['access_token'];
 
-            $testVideoUrl = 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4';
+            $testVideoUrl = 'videos/test_sample_video.mp4';
 
             $testPost = Post::create([
                 'user_id' => $user->id,
