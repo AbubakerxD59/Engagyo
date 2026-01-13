@@ -28,6 +28,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
                 Route::post("update/{id?}", "postUpdate")->name("update");
                 Route::post("publish/now/{id?}", "postPublishNow")->name("publish.now");
             });
+            Route::get("tiktok/creator-info/{accountId}", "getTikTokCreatorInfo")->name("tiktok.creator-info");
         });
     });
     // Accounts Routes - Protected by feature middleware

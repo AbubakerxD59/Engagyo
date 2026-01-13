@@ -379,8 +379,59 @@ class  ScheduleController extends Controller
                 }
                 if ($account->type == "tiktok") {
                     $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
-                    if ($file) {
-                        // store in db
+                    
+                    // Check if this is a TikTok-specific post (from modal)
+                    $tiktokAccountId = $request->get("tiktok_account_id");
+                    if ($tiktokAccountId && $tiktokAccountId == $account->id && $file) {
+                        // This is a TikTok post from the modal - use TikTok-specific fields
+                        $type = !empty($image) ? "photo" : "video";
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "tiktok",
+                            "type" => $type,
+                            "source" => $this->source,
+                            "title" => $request->get("content") ?: $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "video" => $video,
+                            "status" => 0,
+                            "publish_date" => date("Y-m-d H:i"),
+                        ];
+                        $post = PostService::create($data);
+
+                        // Store TikTok-specific metadata in response field
+                        $tiktokMetadata = [
+                            "privacy_level" => $request->get("tiktok_privacy_level"),
+                            "disable_comment" => !$request->get("tiktok_allow_comment", 0),
+                            "disable_duet" => !$request->get("tiktok_allow_duet", 0),
+                            "disable_stitch" => !$request->get("tiktok_allow_stitch", 0),
+                            "commercial_content_toggle" => $request->get("tiktok_commercial_toggle", 0),
+                            "your_brand" => $request->get("tiktok_your_brand", 0),
+                            "branded_content" => $request->get("tiktok_branded_content", 0),
+                        ];
+                        $post->update(["response" => json_encode($tiktokMetadata)]);
+
+                        // Verify account belongs to user before incrementing
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        }
+
+                        // Use validateToken for proper error handling
+                        $tokenResponse = TikTokService::validateToken($account);
+                        if (!$tokenResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
+                            );
+                        }
+                        $access_token = $tokenResponse['access_token'];
+                        $postData = PostService::postTypeBody($post);
+                        // Merge TikTok metadata into postData
+                        $postData = array_merge($postData, $tiktokMetadata);
+                        PublishTikTokPost::dispatch($post->id, $postData, $access_token, $type);
+                    } elseif ($file) {
+                        // Legacy TikTok post (non-modal) - keep existing behavior
                         $type = !empty($image) ? "photo" : "video";
                         $data = [
                             "user_id" => $user->id,
@@ -1613,5 +1664,63 @@ class  ScheduleController extends Controller
     {
         $response = PostService::publishNow($request->id);
         return response()->json($response);
+    }
+
+    /**
+     * Get TikTok creator info for a specific account
+     * Required for TikTok Direct Post API compliance
+     *
+     * @param int $accountId
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function getTikTokCreatorInfo($accountId)
+    {
+        try {
+            $user = Auth::guard('user')->user();
+            $tiktok = Tiktok::where('id', $accountId)
+                ->where('user_id', $user->id)
+                ->first();
+
+            if (!$tiktok) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'TikTok account not found or access denied.'
+                ], 404);
+            }
+
+            // Validate and refresh token if needed
+            $tokenResponse = TikTokService::validateToken($tiktok);
+            if (!$tokenResponse['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $tokenResponse['message'] ?? 'Failed to validate TikTok access token.'
+                ], 400);
+            }
+
+            // Query creator info from TikTok API
+            $creatorInfo = $this->tiktokService->queryCreatorInfo($tokenResponse['access_token']);
+
+            if (!$creatorInfo['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $creatorInfo['message'] ?? 'Failed to fetch creator info from TikTok.'
+                ], 400);
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $creatorInfo['data'],
+                'account' => [
+                    'id' => $tiktok->id,
+                    'username' => $tiktok->username,
+                    'display_name' => $tiktok->display_name ?? $tiktok->username
+                ]
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 500);
+        }
     }
 }

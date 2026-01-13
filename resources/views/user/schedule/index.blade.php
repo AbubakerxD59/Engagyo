@@ -224,6 +224,7 @@
     @include('user.schedule.modals.settings-modal')
     @include('user.schedule.modals.schedule-modal')
     @include('user.schedule.modals.edit-post-modal')
+    @include('user.schedule.modals.tiktok-post-modal')
 
     {{-- Image Lightbox Modal --}}
     <div class="image-lightbox" id="imageLightbox">

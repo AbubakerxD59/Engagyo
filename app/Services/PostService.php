@@ -201,6 +201,15 @@ class PostService
                 "url" => $post->image
             ];
         }
+        
+        // Merge TikTok-specific metadata from response field if available
+        if (!empty($post->response)) {
+            $metadata = json_decode($post->response, true);
+            if (is_array($metadata)) {
+                $postData = array_merge($postData, $metadata);
+            }
+        }
+        
         return $postData;
     }
 }

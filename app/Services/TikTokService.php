@@ -264,6 +264,47 @@ class TikTokService
     }
 
     /**
+     * Query creator information from TikTok API
+     * Required for Direct Post API compliance
+     * Reference: https://developers.tiktok.com/doc/content-posting-api-reference-query-creator-info
+     *
+     * @param string $access_token TikTok access token
+     * @return array
+     */
+    public function queryCreatorInfo($access_token)
+    {
+        $header = array(
+            "Content-Type" => "application/json",
+            "Authorization" => "Bearer " . $access_token
+        );
+
+        try {
+            $endpoint = $this->baseUrl . "post/publish/creator_info/query/";
+            $response = $this->client->get($endpoint, [], $header);
+
+            if (isset($response['data'])) {
+                return [
+                    'success' => true,
+                    'data' => $response['data']
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => $response['error']['message'] ?? 'Failed to fetch creator info',
+                'data' => null
+            ];
+        } catch (Exception $e) {
+            info("TikTok query creator info error: " . $e->getMessage());
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'data' => null
+            ];
+        }
+    }
+
+    /**
      * Validate and refresh TikTok token if needed.
      *
      * @param object $tiktok The TikTok account
@@ -464,11 +505,40 @@ class TikTokService
 
             // Prepare the request body according to TikTok API documentation
             // Reference: https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
+            $postInfo = [
+                "privacy_level" => $post['privacy_level'] ?? "SELF_ONLY", // Required: PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY
+                "title" => $post['title'] ?? "", // Optional: Video caption (max 2200 UTF-16 runes)
+            ];
+
+            // Add interaction settings if provided
+            if (isset($post['disable_comment'])) {
+                $postInfo["disable_comment"] = !$post['disable_comment']; // Invert because API uses "disable"
+            }
+            if (isset($post['disable_duet'])) {
+                $postInfo["disable_duet"] = !$post['disable_duet'];
+            }
+            if (isset($post['disable_stitch'])) {
+                $postInfo["disable_stitch"] = !$post['disable_stitch'];
+            }
+
+            // Add commercial content settings if provided
+            if (isset($post['commercial_content_toggle']) && $post['commercial_content_toggle']) {
+                $postInfo["commercial_content_toggle"] = true;
+                if (isset($post['your_brand']) && $post['your_brand']) {
+                    $postInfo["commercial_content_type"] = "BRAND_ORGANIC";
+                }
+                if (isset($post['branded_content']) && $post['branded_content']) {
+                    $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
+                }
+                // If both are selected, use BRANDED_CONTENT
+                if (isset($post['your_brand']) && $post['your_brand'] && 
+                    isset($post['branded_content']) && $post['branded_content']) {
+                    $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
+                }
+            }
+
             $requestBody = [
-                "post_info" => [
-                    "privacy_level" => "SELF_ONLY", // Required: PUBLIC_TO_EVERYONE, MUTUAL_FOLLOW_FRIENDS, FOLLOWER_OF_CREATOR, SELF_ONLY
-                    "title" => $post['title'] ?? "", // Optional: Video caption (max 2200 UTF-16 runes)
-                ],
+                "post_info" => $postInfo,
                 "source_info" => [
                     "source" => "PULL_FROM_URL", // Required: PULL_FROM_URL or FILE_UPLOAD
                     "video_url" => $videoUrl // Required for PULL_FROM_URL: Public-accessible URL
@@ -609,13 +679,36 @@ class TikTokService
             $localFilePath = $downloadResult['local_path'];
 
             // Prepare the request body for TikTok Content Posting API
+            $postInfo = [
+                "title" => $post['title'] ?? "",
+                "privacy_level" => $post['privacy_level'] ?? "SELF_ONLY",
+            ];
+
+            // Add interaction settings if provided (only comment for photos)
+            if (isset($post['disable_comment'])) {
+                $postInfo["disable_comment"] = !$post['disable_comment'];
+            }
+
+            // Add commercial content settings if provided
+            if (isset($post['commercial_content_toggle']) && $post['commercial_content_toggle']) {
+                $postInfo["commercial_content_toggle"] = true;
+                if (isset($post['your_brand']) && $post['your_brand']) {
+                    $postInfo["commercial_content_type"] = "BRAND_ORGANIC";
+                }
+                if (isset($post['branded_content']) && $post['branded_content']) {
+                    $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
+                }
+                // If both are selected, use BRANDED_CONTENT
+                if (isset($post['your_brand']) && $post['your_brand'] && 
+                    isset($post['branded_content']) && $post['branded_content']) {
+                    $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
+                }
+            }
+
             $requestBody = [
                 "media_type" => "PHOTO",
                 "post_mode" => "DIRECT_POST",
-                "post_info" => [
-                    "title" => $post['title'] ?? "",
-                    "privacy_level" => "SELF_ONLY",
-                ],
+                "post_info" => $postInfo,
                 "source_info" => [
                     "source" => "PULL_FROM_URL",
                     "photo_cover_index" => 0,

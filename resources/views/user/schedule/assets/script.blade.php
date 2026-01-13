@@ -175,6 +175,28 @@
                 isValid = true;
             }
             if (isValid) {
+                // Check if TikTok accounts are selected
+                var hasTikTokAccounts = false;
+                var tiktokAccounts = [];
+                $('.account-card.active').each(function() {
+                    if ($(this).data('type') === 'tiktok') {
+                        hasTikTokAccounts = true;
+                        tiktokAccounts.push({
+                            id: $(this).data('id'),
+                            name: $(this).find('.account-name').text().trim()
+                        });
+                    }
+                });
+
+                // If TikTok accounts are selected and there are files, show TikTok modal
+                if (hasTikTokAccounts && dropZone.getAcceptedFiles().length > 0) {
+                    var filesCopy = [...dropZone.files];
+                    if (filesCopy.length > 0) {
+                        showTikTokModal(filesCopy[0], tiktokAccounts[0]);
+                        return;
+                    }
+                }
+
                 // check content
                 var drop_files = dropZone.getAcceptedFiles().length;
                 if (drop_files == 0) {
@@ -861,5 +883,389 @@
             $('#imageLightbox').removeClass('active');
             $('body').css('overflow', '');
         }
+
+        // TikTok Modal Functions
+        var currentTikTokFile = null;
+        var currentTikTokAccount = null;
+        var creatorInfoData = null;
+
+        function showTikTokModal(file, account) {
+            currentTikTokFile = file;
+            currentTikTokAccount = account;
+            
+            // Reset modal
+            resetTikTokModal();
+            
+            // Set account ID
+            $('#tiktok-account-id').val(account.id);
+            
+            // Determine post type
+            var isVideo = file.type.startsWith('video/');
+            $('#tiktok-post-type').val(isVideo ? 'video' : 'photo');
+            
+            // Show preview
+            showTikTokPreview(file);
+            
+            // Fetch creator info
+            fetchTikTokCreatorInfo(account.id);
+            
+            // Show modal
+            $('.tiktok-post-modal').modal('show');
+        }
+
+        function resetTikTokModal() {
+            $('#tiktok-title').val('');
+            $('#tiktok-privacy-level').val('').html('<option value="">-- Select Privacy Level --</option>');
+            $('#tiktok-allow-comment').prop('checked', false);
+            $('#tiktok-allow-duet').prop('checked', false);
+            $('#tiktok-allow-stitch').prop('checked', false);
+            $('#tiktok-commercial-toggle').prop('checked', false);
+            $('#tiktok-your-brand').prop('checked', false);
+            $('#tiktok-branded-content').prop('checked', false);
+            $('#commercial-options').hide();
+            $('#commercial-prompts').html('');
+            $('#commercial-error').hide();
+            $('#branded-content-privacy-warning').hide();
+            $('#tiktok-publish-btn').prop('disabled', true);
+            creatorInfoData = null;
+        }
+
+        function showTikTokPreview(file) {
+            var previewDiv = $('#content-preview');
+            var previewImage = $('#preview-image');
+            var previewVideo = $('#preview-video');
+            var previewTitle = $('#preview-title');
+            
+            previewImage.hide();
+            previewVideo.hide();
+            
+            if (file.type.startsWith('image/')) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    previewImage.find('img').attr('src', e.target.result);
+                    previewImage.show();
+                };
+                reader.readAsDataURL(file);
+            } else if (file.type.startsWith('video/')) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    previewVideo.find('video').attr('src', e.target.result);
+                    previewVideo.show();
+                };
+                reader.readAsDataURL(file);
+            }
+            
+            previewTitle.text(file.name);
+            previewDiv.show();
+        }
+
+        function fetchTikTokCreatorInfo(accountId) {
+            $('#creator-nickname').text('Loading...');
+            $('#creator-error').hide();
+            
+            $.ajax({
+                url: "{{ route('panel.schedule.tiktok.creator-info', ['accountId' => ':id']) }}".replace(':id', accountId),
+                type: "GET",
+                success: function(response) {
+                    if (response.success && response.data) {
+                        creatorInfoData = response.data;
+                        displayCreatorInfo(response);
+                        populatePrivacyOptions(response.data);
+                        populateInteractionSettings(response.data);
+                        checkVideoDuration(response.data);
+                        validateTikTokForm();
+                    } else {
+                        showCreatorError(response.message || 'Failed to fetch creator information');
+                    }
+                },
+                error: function(xhr) {
+                    var errorMsg = 'Failed to fetch creator information';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    showCreatorError(errorMsg);
+                }
+            });
+        }
+
+        function displayCreatorInfo(response) {
+            $('#creator-nickname').text(response.account.display_name || response.account.username);
+            if (response.data.avatar_url) {
+                $('#creator-avatar').attr('src', response.data.avatar_url).show();
+            }
+        }
+
+        function showCreatorError(message) {
+            $('#creator-error').text(message).show();
+            $('#tiktok-publish-btn').prop('disabled', true);
+        }
+
+        function populatePrivacyOptions(data) {
+            var select = $('#tiktok-privacy-level');
+            select.html('<option value="">-- Select Privacy Level --</option>');
+            
+            if (data.privacy_level_options && Array.isArray(data.privacy_level_options)) {
+                data.privacy_level_options.forEach(function(option) {
+                    var label = option.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    select.append($('<option></option>').attr('value', option).text(label));
+                });
+            } else {
+                // Default options if API doesn't return them
+                var defaultOptions = ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY'];
+                defaultOptions.forEach(function(option) {
+                    var label = option.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                    select.append($('<option></option>').attr('value', option).text(label));
+                });
+            }
+        }
+
+        function populateInteractionSettings(data) {
+            // Disable interactions if they're disabled in app settings
+            if (data.disable_comment === true) {
+                $('#tiktok-allow-comment').prop('disabled', true).parent().addClass('text-muted');
+            }
+            if (data.disable_duet === true) {
+                $('#tiktok-allow-duet').prop('disabled', true).parent().addClass('text-muted');
+            }
+            if (data.disable_stitch === true) {
+                $('#tiktok-allow-stitch').prop('disabled', true).parent().addClass('text-muted');
+            }
+            
+            // Hide Duet and Stitch for photo posts
+            var isPhoto = $('#tiktok-post-type').val() === 'photo';
+            if (isPhoto) {
+                $('#duet-container').hide();
+                $('#stitch-container').hide();
+            } else {
+                $('#duet-container').show();
+                $('#stitch-container').show();
+            }
+        }
+
+        function checkVideoDuration(data) {
+            if ($('#tiktok-post-type').val() === 'video' && currentTikTokFile) {
+                var video = document.createElement('video');
+                video.preload = 'metadata';
+                video.onloadedmetadata = function() {
+                    window.URL.revokeObjectURL(video.src);
+                    var duration = video.duration;
+                    $('#tiktok-video-duration').val(duration);
+                    
+                    if (data.max_video_post_duration_sec && duration > data.max_video_post_duration_sec) {
+                        toastr.error('Video duration (' + Math.round(duration) + 's) exceeds maximum allowed duration (' + data.max_video_post_duration_sec + 's)');
+                        $('#tiktok-publish-btn').prop('disabled', true);
+                    }
+                };
+                video.src = URL.createObjectURL(currentTikTokFile);
+            }
+        }
+
+        // Commercial content toggle handler
+        $('#tiktok-commercial-toggle').on('change', function() {
+            if ($(this).is(':checked')) {
+                $('#commercial-options').show();
+                updateCommercialPrompts();
+                validateTikTokForm();
+            } else {
+                $('#commercial-options').hide();
+                $('#tiktok-your-brand').prop('checked', false);
+                $('#tiktok-branded-content').prop('checked', false);
+                updateCommercialPrompts();
+                updateDeclaration();
+                validateTikTokForm();
+            }
+        });
+
+        $('#tiktok-your-brand, #tiktok-branded-content').on('change', function() {
+            updateCommercialPrompts();
+            updateDeclaration();
+            validateTikTokForm();
+        });
+
+        function updateCommercialPrompts() {
+            var yourBrand = $('#tiktok-your-brand').is(':checked');
+            var brandedContent = $('#tiktok-branded-content').is(':checked');
+            var prompts = $('#commercial-prompts');
+            prompts.html('');
+            
+            if (yourBrand && !brandedContent) {
+                prompts.html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Promotional content\'</div>');
+            } else if (!yourBrand && brandedContent) {
+                prompts.html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Paid partnership\'</div>');
+            } else if (yourBrand && brandedContent) {
+                prompts.html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Paid partnership\'</div>');
+            }
+        }
+
+        function updateDeclaration() {
+            var commercialToggle = $('#tiktok-commercial-toggle').is(':checked');
+            var yourBrand = $('#tiktok-your-brand').is(':checked');
+            var brandedContent = $('#tiktok-branded-content').is(':checked');
+            var declaration = $('#tiktok-declaration');
+            
+            if (commercialToggle && (yourBrand || brandedContent)) {
+                if (brandedContent) {
+                    declaration.html('<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Branded Content Policy and Music Usage Confirmation</strong>');
+                } else {
+                    declaration.html('<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Music Usage Confirmation</strong>');
+                }
+            } else {
+                declaration.html('<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Music Usage Confirmation</strong>');
+            }
+        }
+
+        // Privacy level change handler
+        $('#tiktok-privacy-level').on('change', function() {
+            validateTikTokForm();
+            checkBrandedContentPrivacy();
+        });
+
+        function checkBrandedContentPrivacy() {
+            var brandedContent = $('#tiktok-branded-content').is(':checked');
+            var privacyLevel = $('#tiktok-privacy-level').val();
+            var warning = $('#branded-content-privacy-warning');
+            
+            if (brandedContent && privacyLevel === 'SELF_ONLY') {
+                warning.show();
+                // Auto-switch to public
+                $('#tiktok-privacy-level').val('PUBLIC_TO_EVERYONE');
+            } else {
+                warning.hide();
+            }
+        }
+
+        // Title character count
+        $('#tiktok-title').on('input', function() {
+            var count = $(this).val().length;
+            $('#title-char-count').text(count);
+            validateTikTokForm();
+        });
+
+        function validateTikTokForm() {
+            var isValid = true;
+            var errors = [];
+            
+            // Check creator info
+            if (!creatorInfoData) {
+                isValid = false;
+                errors.push('Creator information not loaded');
+            }
+            
+            // Check if creator can post
+            if (creatorInfoData && creatorInfoData.can_create_post === false) {
+                isValid = false;
+                errors.push('You cannot make more posts at this moment. Please try again later.');
+            }
+            
+            // Check title
+            var title = $('#tiktok-title').val().trim();
+            if (!title) {
+                isValid = false;
+            }
+            
+            // Check privacy level
+            var privacyLevel = $('#tiktok-privacy-level').val();
+            if (!privacyLevel) {
+                isValid = false;
+            }
+            
+            // Check commercial content
+            var commercialToggle = $('#tiktok-commercial-toggle').is(':checked');
+            if (commercialToggle) {
+                var yourBrand = $('#tiktok-your-brand').is(':checked');
+                var brandedContent = $('#tiktok-branded-content').is(':checked');
+                if (!yourBrand && !brandedContent) {
+                    isValid = false;
+                    $('#commercial-error').show();
+                } else {
+                    $('#commercial-error').hide();
+                }
+            }
+            
+            // Check branded content privacy
+            if ($('#tiktok-branded-content').is(':checked') && $('#tiktok-privacy-level').val() === 'SELF_ONLY') {
+                isValid = false;
+            }
+            
+            $('#tiktok-publish-btn').prop('disabled', !isValid);
+            
+            return isValid;
+        }
+
+        // Publish button handler
+        $('#tiktok-publish-btn').on('click', function() {
+            if (!validateTikTokForm()) {
+                toastr.error('Please fill in all required fields correctly');
+                return;
+            }
+            
+            if (!currentTikTokFile) {
+                toastr.error('No file selected');
+                return;
+            }
+            
+            // Prepare form data
+            var formData = new FormData();
+            formData.append('files', currentTikTokFile);
+            formData.append('content', $('#tiktok-title').val());
+            formData.append('action', action_name);
+            formData.append('tiktok_account_id', $('#tiktok-account-id').val());
+            formData.append('tiktok_privacy_level', $('#tiktok-privacy-level').val());
+            formData.append('tiktok_allow_comment', $('#tiktok-allow-comment').is(':checked') ? 1 : 0);
+            formData.append('tiktok_allow_duet', $('#tiktok-allow-duet').is(':checked') ? 1 : 0);
+            formData.append('tiktok_allow_stitch', $('#tiktok-allow-stitch').is(':checked') ? 1 : 0);
+            formData.append('tiktok_commercial_toggle', $('#tiktok-commercial-toggle').is(':checked') ? 1 : 0);
+            formData.append('tiktok_your_brand', $('#tiktok-your-brand').is(':checked') ? 1 : 0);
+            formData.append('tiktok_branded_content', $('#tiktok-branded-content').is(':checked') ? 1 : 0);
+            formData.append('video', $('#tiktok-post-type').val() === 'video' ? 1 : 0);
+            
+            // Add CSRF token
+            formData.append('_token', '{{ csrf_token() }}');
+            
+            // Disable button
+            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Publishing...');
+            
+            // Submit via AJAX
+            $.ajax({
+                url: '{{ route("panel.schedule.process.post") }}',
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        $('.tiktok-post-modal').modal('hide');
+                        // Remove the file from dropzone
+                        if (currentTikTokFile) {
+                            dropZone.removeFile(currentTikTokFile);
+                        }
+                        // Process remaining files
+                        var remainingFiles = dropZone.getAcceptedFiles();
+                        if (remainingFiles.length > 0) {
+                            processQueueWithDelay(remainingFiles);
+                        } else {
+                            resetPostArea();
+                        }
+                    } else {
+                        toastr.error(response.message);
+                        $('#tiktok-publish-btn').prop('disabled', false).html('<i class="fas fa-paper-plane mr-2"></i>Publish');
+                    }
+                },
+                error: function(xhr) {
+                    var errorMsg = 'Failed to publish post';
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMsg = xhr.responseJSON.message;
+                    }
+                    toastr.error(errorMsg);
+                    $('#tiktok-publish-btn').prop('disabled', false).html('<i class="fas fa-paper-plane mr-2"></i>Publish');
+                }
+            });
+        });
+
+        // Initialize form validation on modal show
+        $('.tiktok-post-modal').on('shown.bs.modal', function() {
+            validateTikTokForm();
+        });
     });
 </script>
