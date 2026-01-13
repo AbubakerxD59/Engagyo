@@ -9,16 +9,14 @@
                 </button>
             </div>
             <div class="modal-body">
-                <!-- Creator Info Display -->
-                <div class="creator-info-section mb-3 p-3 bg-light rounded">
-                    <div class="d-flex align-items-center">
-                        <img id="creator-avatar" src="" alt="Creator Avatar" class="rounded-circle mr-2" style="width: 40px; height: 40px; display: none;">
-                        <div>
-                            <small class="text-muted d-block">Posting to:</small>
-                            <strong id="creator-nickname">Loading...</strong>
+                <!-- Account Info Display -->
+                <div class="account-info-section mb-3 p-3 bg-light rounded">
+                    <div>
+                        <small class="text-muted d-block">Posting to:</small>
+                        <div id="tiktok-account-names" class="mt-2">
+                            <!-- Account names will be populated here -->
                         </div>
                     </div>
-                    <div id="creator-error" class="alert alert-danger mt-2" style="display: none;"></div>
                 </div>
 
                 <!-- Content Preview -->

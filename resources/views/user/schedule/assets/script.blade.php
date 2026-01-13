@@ -192,7 +192,7 @@
                 if (hasTikTokAccounts && dropZone.getAcceptedFiles().length > 0) {
                     var filesCopy = [...dropZone.files];
                     if (filesCopy.length > 0) {
-                        showTikTokModal(filesCopy[0], tiktokAccounts[0]);
+                        showTikTokModal(filesCopy[0], tiktokAccounts);
                         return;
                     }
                 }
@@ -886,18 +886,19 @@
 
         // TikTok Modal Functions
         var currentTikTokFile = null;
-        var currentTikTokAccount = null;
-        var creatorInfoData = null;
+        var currentTikTokAccounts = [];
 
-        function showTikTokModal(file, account) {
+        function showTikTokModal(file, accounts) {
             currentTikTokFile = file;
-            currentTikTokAccount = account;
+            currentTikTokAccounts = Array.isArray(accounts) ? accounts : [accounts];
             
             // Reset modal
             resetTikTokModal();
             
-            // Set account ID
-            $('#tiktok-account-id').val(account.id);
+            // Set account ID (use first account)
+            if (currentTikTokAccounts.length > 0) {
+                $('#tiktok-account-id').val(currentTikTokAccounts[0].id);
+            }
             
             // Determine post type
             var isVideo = file.type.startsWith('video/');
@@ -906,8 +907,11 @@
             // Show preview
             showTikTokPreview(file);
             
-            // Fetch creator info
-            fetchTikTokCreatorInfo(account.id);
+            // Display account names
+            displayTikTokAccountNames(currentTikTokAccounts);
+            
+            // Populate form options
+            populateTikTokFormOptions();
             
             // Show modal
             $('.tiktok-post-modal').modal('show');
@@ -927,7 +931,63 @@
             $('#commercial-error').hide();
             $('#branded-content-privacy-warning').hide();
             $('#tiktok-publish-btn').prop('disabled', true);
-            creatorInfoData = null;
+            $('#tiktok-account-names').html('');
+        }
+
+        function displayTikTokAccountNames(accounts) {
+            var namesHtml = '';
+            accounts.forEach(function(account) {
+                var accountCard = $('.account-card[data-type="tiktok"][data-id="' + account.id + '"]');
+                var accountName = accountCard.find('.account-name').text().trim() || account.name || 'TikTok Account';
+                var accountUsername = accountCard.find('.account-username').text().trim() || account.username || '';
+                
+                namesHtml += '<div class="mb-1">';
+                namesHtml += '<strong>' + accountName + '</strong>';
+                if (accountUsername) {
+                    namesHtml += ' <small class="text-muted">(@' + accountUsername + ')</small>';
+                }
+                namesHtml += '</div>';
+            });
+            $('#tiktok-account-names').html(namesHtml);
+        }
+
+        function populateTikTokFormOptions() {
+            // Populate privacy options with defaults
+            var select = $('#tiktok-privacy-level');
+            select.html('<option value="">-- Select Privacy Level --</option>');
+            var defaultOptions = ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY'];
+            defaultOptions.forEach(function(option) {
+                var label = option.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                select.append($('<option></option>').attr('value', option).text(label));
+            });
+            
+            // Hide Duet and Stitch for photo posts
+            var isPhoto = $('#tiktok-post-type').val() === 'photo';
+            if (isPhoto) {
+                $('#duet-container').hide();
+                $('#stitch-container').hide();
+            } else {
+                $('#duet-container').show();
+                $('#stitch-container').show();
+            }
+            
+            // Check video duration if video
+            if (!isPhoto && currentTikTokFile) {
+                checkVideoDuration();
+            }
+        }
+
+        function checkVideoDuration() {
+            if ($('#tiktok-post-type').val() === 'video' && currentTikTokFile) {
+                var video = document.createElement('video');
+                video.preload = 'metadata';
+                video.onloadedmetadata = function() {
+                    window.URL.revokeObjectURL(video.src);
+                    var duration = video.duration;
+                    $('#tiktok-video-duration').val(duration);
+                };
+                video.src = URL.createObjectURL(currentTikTokFile);
+            }
         }
 
         function showTikTokPreview(file) {
@@ -959,106 +1019,6 @@
             previewDiv.show();
         }
 
-        function fetchTikTokCreatorInfo(accountId) {
-            $('#creator-nickname').text('Loading...');
-            $('#creator-error').hide();
-            
-            $.ajax({
-                url: "{{ route('panel.schedule.tiktok.creator-info', ['accountId' => ':id']) }}".replace(':id', accountId),
-                type: "GET",
-                success: function(response) {
-                    if (response.success && response.data) {
-                        creatorInfoData = response.data;
-                        displayCreatorInfo(response);
-                        populatePrivacyOptions(response.data);
-                        populateInteractionSettings(response.data);
-                        checkVideoDuration(response.data);
-                        validateTikTokForm();
-                    } else {
-                        showCreatorError(response.message || 'Failed to fetch creator information');
-                    }
-                },
-                error: function(xhr) {
-                    var errorMsg = 'Failed to fetch creator information';
-                    if (xhr.responseJSON && xhr.responseJSON.message) {
-                        errorMsg = xhr.responseJSON.message;
-                    }
-                    showCreatorError(errorMsg);
-                }
-            });
-        }
-
-        function displayCreatorInfo(response) {
-            $('#creator-nickname').text(response.account.display_name || response.account.username);
-            if (response.data.avatar_url) {
-                $('#creator-avatar').attr('src', response.data.avatar_url).show();
-            }
-        }
-
-        function showCreatorError(message) {
-            $('#creator-error').text(message).show();
-            $('#tiktok-publish-btn').prop('disabled', true);
-        }
-
-        function populatePrivacyOptions(data) {
-            var select = $('#tiktok-privacy-level');
-            select.html('<option value="">-- Select Privacy Level --</option>');
-            
-            if (data.privacy_level_options && Array.isArray(data.privacy_level_options)) {
-                data.privacy_level_options.forEach(function(option) {
-                    var label = option.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    select.append($('<option></option>').attr('value', option).text(label));
-                });
-            } else {
-                // Default options if API doesn't return them
-                var defaultOptions = ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY'];
-                defaultOptions.forEach(function(option) {
-                    var label = option.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                    select.append($('<option></option>').attr('value', option).text(label));
-                });
-            }
-        }
-
-        function populateInteractionSettings(data) {
-            // Disable interactions if they're disabled in app settings
-            if (data.disable_comment === true) {
-                $('#tiktok-allow-comment').prop('disabled', true).parent().addClass('text-muted');
-            }
-            if (data.disable_duet === true) {
-                $('#tiktok-allow-duet').prop('disabled', true).parent().addClass('text-muted');
-            }
-            if (data.disable_stitch === true) {
-                $('#tiktok-allow-stitch').prop('disabled', true).parent().addClass('text-muted');
-            }
-            
-            // Hide Duet and Stitch for photo posts
-            var isPhoto = $('#tiktok-post-type').val() === 'photo';
-            if (isPhoto) {
-                $('#duet-container').hide();
-                $('#stitch-container').hide();
-            } else {
-                $('#duet-container').show();
-                $('#stitch-container').show();
-            }
-        }
-
-        function checkVideoDuration(data) {
-            if ($('#tiktok-post-type').val() === 'video' && currentTikTokFile) {
-                var video = document.createElement('video');
-                video.preload = 'metadata';
-                video.onloadedmetadata = function() {
-                    window.URL.revokeObjectURL(video.src);
-                    var duration = video.duration;
-                    $('#tiktok-video-duration').val(duration);
-                    
-                    if (data.max_video_post_duration_sec && duration > data.max_video_post_duration_sec) {
-                        toastr.error('Video duration (' + Math.round(duration) + 's) exceeds maximum allowed duration (' + data.max_video_post_duration_sec + 's)');
-                        $('#tiktok-publish-btn').prop('disabled', true);
-                    }
-                };
-                video.src = URL.createObjectURL(currentTikTokFile);
-            }
-        }
 
         // Commercial content toggle handler
         $('#tiktok-commercial-toggle').on('change', function() {
@@ -1143,19 +1103,6 @@
 
         function validateTikTokForm() {
             var isValid = true;
-            var errors = [];
-            
-            // Check creator info
-            if (!creatorInfoData) {
-                isValid = false;
-                errors.push('Creator information not loaded');
-            }
-            
-            // Check if creator can post
-            if (creatorInfoData && creatorInfoData.can_create_post === false) {
-                isValid = false;
-                errors.push('You cannot make more posts at this moment. Please try again later.');
-            }
             
             // Check title
             var title = $('#tiktok-title').val().trim();
