@@ -6,12 +6,17 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <nav class="mt-3">
+            @php
+                $user = auth()->guard('user')->user();
+            @endphp
             <ul class="nav nav-pills nav-sidebar flex-column py-2" data-widget="treeview" role="menu"
                 data-accordion="false">
                 {{-- Schedule --}}
-                <?php
-                $schedule = ['panel.schedule'];
-                ?>
+                @php
+                    $schedule = ['panel.schedule'];
+                    $hasScheduleAccess = !$user->isTeamMember() || $user->hasMenuAccess('schedule');
+                @endphp
+                @if($hasScheduleAccess)
                 <li class="nav-item">
                     <a href="{{ route('panel.schedule') }}"
                         class="nav-link {{ in_array(request()->route()->getName(), $schedule) ? 'active' : '' }}">
@@ -26,10 +31,13 @@
                         @endcanUseFeature
                     </a>
                 </li>
+                @endif
                 {{-- Automation --}}
-                <?php
-                $automation = ['panel.automation'];
-                ?>
+                @php
+                    $automation = ['panel.automation'];
+                    $hasAutomationAccess = !$user->isTeamMember() || $user->hasMenuAccess('automation');
+                @endphp
+                @if($hasAutomationAccess)
                 <li class="nav-item">
                     <a href="{{ route('panel.automation') }}"
                         class="nav-link {{ in_array(request()->route()->getName(), $automation) ? 'active' : '' }}">
@@ -44,10 +52,13 @@
                         @endcanUseFeature
                     </a>
                 </li>
+                @endif
                 {{-- API Posts --}}
-                <?php
-                $apiPosts = ['panel.api-posts'];
-                ?>
+                @php
+                    $apiPosts = ['panel.api-posts'];
+                    $hasApiPostsAccess = !$user->isTeamMember() || $user->hasMenuAccess('api-posts');
+                @endphp
+                @if($hasApiPostsAccess)
                 <li class="nav-item">
                     <a href="{{ route('panel.api-posts') }}"
                         class="nav-link {{ in_array(request()->route()->getName(), $apiPosts) ? 'active' : '' }}">
@@ -62,10 +73,13 @@
                         @endcanUseFeature
                     </a>
                 </li>
+                @endif
                 {{-- Accounts --}}
-                <?php
-                $account = ['panel.accounts', 'panel.accounts.pinterest', 'panel.accounts.facebook'];
-                ?>
+                @php
+                    $account = ['panel.accounts', 'panel.accounts.pinterest', 'panel.accounts.facebook'];
+                    $hasAccountsAccess = !$user->isTeamMember() || $user->hasMenuAccess('accounts');
+                @endphp
+                @if($hasAccountsAccess)
                 <li class="nav-item">
                     <a href="{{ route('panel.accounts') }}"
                         class="nav-link {{ in_array(request()->route()->getName(), $account) ? 'active' : '' }}">
@@ -80,6 +94,21 @@
                         @endcanUseFeature
                     </a>
                 </li>
+                @endif
+                {{-- Team --}}
+                @php
+                    $teamMembers = ['panel.team-members.index', 'panel.team-members.create', 'panel.team-members.edit'];
+                    $hasTeamAccess = !$user->isTeamMember() || $user->hasMenuAccess('team');
+                @endphp
+                @if($hasTeamAccess)
+                <li class="nav-item">
+                    <a href="{{ route('panel.team-members.index') }}"
+                        class="nav-link {{ in_array(request()->route()->getName(), $teamMembers) ? 'active' : '' }}">
+                        <i class="nav-icon fas fa-users"></i>
+                        <p>Team</p>
+                    </a>
+                </li>
+                @endif
             </ul>
         </nav>
     </div>

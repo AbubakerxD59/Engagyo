@@ -68,24 +68,9 @@ class FeatureUsageService
             ];
         }
 
-        // Get user's package feature details
-        $activePackage = $user->activeUserPackage;
-        if (!$activePackage || !$activePackage->package) {
-            return [
-                'allowed' => false,
-                'usage' => 0,
-                'limit' => null,
-                'remaining' => null,
-                'message' => 'No active package found.',
-            ];
-        }
-
-        $packageFeature = $activePackage->package->features()
-            ->where('features.id', $feature->id)
-            ->wherePivot('is_enabled', true)
-            ->first();
-
-        if (!$packageFeature) {
+        // Check if user is a team member and get appropriate limits
+        $limitData = $this->getUserFeatureLimit($user, $feature);
+        if ($limitData === null) {
             return [
                 'allowed' => false,
                 'usage' => 0,
@@ -95,8 +80,8 @@ class FeatureUsageService
             ];
         }
 
-        $isUnlimited = $packageFeature->pivot->is_unlimited ?? false;
-        $limitValue = $packageFeature->pivot->limit_value ?? null;
+        $isUnlimited = $limitData['is_unlimited'] ?? false;
+        $limitValue = $limitData['limit'] ?? null;
         $featureType = $feature->type;
 
         // Handle boolean features
@@ -183,6 +168,42 @@ class FeatureUsageService
     }
 
     /**
+     * Get feature limit for user (considering team member limits)
+     */
+    private function getUserFeatureLimit(User $user, Feature $feature): ?array
+    {
+        // Check if user is a team member and has custom limits
+        if ($user->isTeamMember()) {
+            $teamLimit = $user->getTeamMemberFeatureLimit($feature->key);
+            if ($teamLimit !== null) {
+                return $teamLimit;
+            }
+            // If null, use team lead's limit (handled below)
+            $user = $user->getTeamLead() ?? $user;
+        }
+
+        // Get from package
+        $activePackage = $user->activeUserPackage;
+        if (!$activePackage || !$activePackage->package) {
+            return null;
+        }
+
+        $packageFeature = $activePackage->package->features()
+            ->where('features.id', $feature->id)
+            ->wherePivot('is_enabled', true)
+            ->first();
+
+        if (!$packageFeature) {
+            return null;
+        }
+
+        return [
+            'limit' => $packageFeature->pivot->limit_value ?? null,
+            'is_unlimited' => $packageFeature->pivot->is_unlimited ?? false,
+        ];
+    }
+
+    /**
      * Get remaining usage for a feature
      * 
      * @param int $currentUsage
@@ -211,25 +232,23 @@ class FeatureUsageService
             return [];
         }
 
-        $activePackage = $user->activeUserPackage;
-        if (!$activePackage || !$activePackage->package) {
+        // Check if user is a team member and get appropriate limits
+        $limitData = $this->getUserFeatureLimit($user, $feature);
+        if ($limitData === null) {
             return [];
         }
 
-        $packageFeature = $activePackage->package->features()
-            ->where('features.id', $feature->id)
-            ->wherePivot('is_enabled', true)
-            ->first();
-
-        if (!$packageFeature) {
-            return [];
-        }
-
+        $limitValue = $limitData['limit'] ?? null;
+        $isUnlimited = $limitData['is_unlimited'] ?? false;
+        // Get usage for the actual user (team member tracks their own usage)
         $currentUsage = $user->getFeatureUsage($featureKey);
         $featureType = $feature->type;
 
-        // If user has full access, treat all features as unlimited
-        if ($user->hasFullAccess()) {
+        // Check full access on the effective user (team lead if team member)
+        $effectiveUser = $user->isTeamMember() ? ($user->getTeamLead() ?? $user) : $user;
+        
+        // If effective user has full access, treat all features as unlimited
+        if ($effectiveUser && $effectiveUser->hasFullAccess()) {
             return [
                 'feature_key' => $featureKey,
                 'feature_name' => $feature->name,
@@ -244,9 +263,6 @@ class FeatureUsageService
                 'can_use' => true,
             ];
         }
-
-        $limitValue = $packageFeature->pivot->limit_value ?? null;
-        $isUnlimited = $packageFeature->pivot->is_unlimited ?? false;
 
         $isUnlimitedFeature = $isUnlimited || $featureType === 'unlimited';
         $remaining = $isUnlimitedFeature ? null : ($limitValue !== null ? max(0, $limitValue - $currentUsage) : null);

@@ -12,15 +12,30 @@
                     </div>
                     <div class="text-wrapper">
                         <h1>
-                            Get Started
+                            @if($teamMember ?? false)
+                                Accept Team Invitation
+                            @else
+                                Get Started
+                            @endif
                         </h1>
+                        @if($teamMember ?? false)
+                            <div style="background-color: #e7f3ff; border-left: 4px solid #007bff; padding: 15px; margin-bottom: 20px; border-radius: 4px;">
+                                <p style="margin: 0; color: #004085; font-size: 14px;">
+                                    <strong>You've been invited to join a team!</strong><br>
+                                    Complete your registration to accept the invitation.
+                                </p>
+                            </div>
+                        @endif
                         <form action="{{ route('frontend.register') }}" method="POST" class="signup__input__form">
                             @csrf
+                            @if($invitationToken ?? false)
+                                <input type="hidden" name="invitation_token" value="{{ $invitationToken }}">
+                            @endif
                             <div class="field">
                                 <label for="email">Email</label>
                                 <input type="email" class="signup__input" id="email" name="email"
-                                    value="{{ old('email') }}" placeholder="Enter your email address" autocomplete="off"
-                                    required>
+                                    value="{{ old('email', $invitationEmail ?? '') }}" placeholder="Enter your email address" autocomplete="off"
+                                    {{ ($invitationEmail ?? false) ? 'readonly' : '' }} required>
                             </div>
                             <div class="field">
                                 <label for="password">Password</label>

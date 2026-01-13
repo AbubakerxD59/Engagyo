@@ -4,6 +4,9 @@ namespace App\Http\Controllers\FrontEnd;
 
 use Exception;
 use App\Models\User;
+use App\Models\Role;
+use App\Models\TeamMember;
+use App\Services\TeamMemberService;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -15,18 +18,32 @@ use App\Http\Requests\FrontEnd\RegisterRequest;
 class AuthController extends Controller
 {
     private $user;
-    public function __construct(User $user)
+    private $teamMemberService;
+    
+    public function __construct(User $user, TeamMemberService $teamMemberService)
     {
         $this->user = $user;
+        $this->teamMemberService = $teamMemberService;
     }
     public function showLogin()
     {
         return view("frontend.auth.login");
     }
 
-    public function showRegister()
+    public function showRegister(Request $request)
     {
-        return view("frontend.auth.register");
+        $invitationToken = $request->get('token');
+        $invitationEmail = $request->get('email');
+        $teamMember = null;
+        
+        if ($invitationToken && $invitationEmail) {
+            $teamMember = TeamMember::where('invitation_token', $invitationToken)
+                ->where('email', $invitationEmail)
+                ->where('status', 'pending')
+                ->first();
+        }
+        
+        return view("frontend.auth.register", compact('invitationToken', 'invitationEmail', 'teamMember'));
     }
 
     public function login(LoginRequest $request)
@@ -81,11 +98,59 @@ class AuthController extends Controller
             ]);
 
             if ($user) {
-                $user->assignRole("User");
-                $response = [
-                    "success" => true,
-                    "message" => "Welcome to " . env("APP_NAME", "Engagyo") . " ! Get started and explore"
-                ];
+                // Find and assign the User role
+                // Try to find User role with 'web' guard first (matching User model's default guard)
+                $userRole = Role::where('name', 'User')
+                    ->where('guard_name', 'web')
+                    ->first();
+                
+                // If not found, try 'user' guard
+                if (!$userRole) {
+                    $userRole = Role::where('name', 'User')
+                        ->where('guard_name', 'user')
+                        ->first();
+                }
+                
+                // If still not found, try any User role
+                if (!$userRole) {
+                    $userRole = Role::where('name', 'User')->first();
+                }
+                
+                // If role doesn't exist, create it with 'web' guard
+                if (!$userRole) {
+                    $userRole = Role::create([
+                        'name' => 'User',
+                        'guard_name' => 'web',
+                    ]);
+                }
+                
+                // Assign the role using the role object to ensure proper guard matching
+                $user->assignRole($userRole);
+                
+                // Handle team invitation if token is provided
+                if ($request->has('invitation_token') && $request->invitation_token) {
+                    $invitationResult = $this->teamMemberService->acceptInvitation(
+                        $request->invitation_token,
+                        $user
+                    );
+                    
+                    if ($invitationResult['success']) {
+                        $response = [
+                            "success" => true,
+                            "message" => "Welcome to " . env("APP_NAME", "Engagyo") . "! Your team invitation has been accepted."
+                        ];
+                    } else {
+                        $response = [
+                            "success" => true,
+                            "message" => "Welcome to " . env("APP_NAME", "Engagyo") . "! " . $invitationResult['message']
+                        ];
+                    }
+                } else {
+                    $response = [
+                        "success" => true,
+                        "message" => "Welcome to " . env("APP_NAME", "Engagyo") . " ! Get started and explore"
+                    ];
+                }
             } else {
                 $response = [
                     "success" => false,

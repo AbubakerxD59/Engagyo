@@ -74,5 +74,7 @@ class Kernel extends HttpKernel
         'auth.admin' => \App\Http\Middleware\AuthenticateAdmin::class,
         'auth.user' => \App\Http\Middleware\AuthenticateUser::class,
         'feature' => \App\Http\Middleware\CheckFeatureLimit::class,
+        'team.account' => \App\Http\Middleware\CheckTeamMemberAccountAccess::class,
+        'team.menu' => \App\Http\Middleware\CheckTeamMemberMenuAccess::class,
     ];
 }

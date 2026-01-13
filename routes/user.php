@@ -10,8 +10,9 @@ use App\Http\Controllers\User\ScheduleController;
 use App\Http\Controllers\User\SettingsController;
 use App\Http\Controllers\User\AutomationController;
 use App\Http\Controllers\User\NotificationController;
+use App\Http\Controllers\User\TeamMemberController;
 
-Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_admin"])->group(function () {
+Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_admin", "team.menu"])->group(function () {
     // Schedule Routes
     Route::controller(ScheduleController::class)->middleware(['feature:' . Feature::$features_list[1]])->group(function () {
         Route::get("schedule", "index")->name("schedule");
@@ -112,4 +113,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
     });
     // Upgrade Packages (AJAX endpoint)
     Route::get("packages/upgrade", [PaymentController::class, "getUpgradePackages"])->name("packages.upgrade");
+
+    // Team Members Routes
+    Route::resource('team-members', TeamMemberController::class)->except(['show']);
 });

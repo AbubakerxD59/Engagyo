@@ -233,11 +233,11 @@ class User extends Authenticatable
     public function getAccounts()
     {
         // Pinterest Boards
-        $boards = $this->boards()->with("pinterest", "timeslots")->get();
+        $boards = Board::with("pinterest", "timeslots")->get();
         // Facebook Pages
-        $pages = $this->pages()->with("facebook", "timeslots")->get();
+        $pages = Page::with("facebook", "timeslots")->get();
         // TikTok Accounts
-        $tiktoks = $this->tiktok()->with("timeslots")->get();
+        $tiktoks = Tiktok::with("timeslots")->get();
         $accounts = collect();
         $accounts = $boards->concat($pages)->concat($tiktoks);
         return $accounts;
@@ -297,11 +297,11 @@ class User extends Authenticatable
     public function getScheduledActiveAccounts()
     {
         // Pinterest Boards
-        $boards = $this->boards()->with("pinterest")->whereScheduledActive()->get();
+        $boards = Board::with("pinterest")->whereScheduledActive()->get();
         // Facebook Pages
-        $pages = $this->pages()->with("facebook")->whereScheduledActive()->get();
+        $pages = Page::with("facebook")->whereScheduledActive()->get();
         // TikTok Accounts
-        $tiktoks = $this->tiktok()->whereScheduledActive()->get();
+        $tiktoks = Tiktok::whereScheduledActive()->get();
         $accounts = collect();
         $accounts = $boards->concat($pages)->concat($tiktoks);
         return $accounts;
@@ -512,8 +512,11 @@ class User extends Authenticatable
      */
     public function canUseFeature($featureKey)
     {
+        // If user is a team member, check team lead's package
+        $effectiveUser = $this->isTeamMember() ? ($this->getTeamLead() ?? $this) : $this;
+
         // Check if user has an active package
-        $activePackage = $this->activeUserPackage;
+        $activePackage = $effectiveUser->activeUserPackage;
         if (!$activePackage || !$activePackage->package) {
             return false;
         }
@@ -570,5 +573,133 @@ class User extends Authenticatable
 
         // If there's an expiration date, it's not full access
         return false;
+    }
+
+    /**
+     * Team member relationships
+     */
+    public function teamMemberships()
+    {
+        return $this->hasMany(TeamMember::class, 'member_id');
+    }
+
+    public function teamMemberAsLead()
+    {
+        return $this->hasMany(TeamMember::class, 'team_lead_id');
+    }
+
+    public function activeTeamMembership()
+    {
+        return $this->teamMemberships()->active()->first();
+    }
+
+    public function isTeamMember()
+    {
+        return $this->teamMemberships()->active()->first();
+    }
+
+    public function getTeamLead()
+    {
+        $membership = $this->activeTeamMembership();
+        return $membership ? $membership->teamLead : null;
+    }
+
+    public function isTeamLead()
+    {
+        return $this->teamMemberAsLead()->exists();
+    }
+
+    /**
+     * Get the effective user for feature limits (team member uses team lead's limits)
+     */
+    public function getEffectiveUser()
+    {
+        if ($this->isTeamMember()) {
+            return $this->getTeamLead();
+        }
+        return $this;
+    }
+
+    /**
+     * Get feature limit for team member (considers team member overrides)
+     */
+    public function getTeamMemberFeatureLimit($featureKey)
+    {
+        if (!$this->isTeamMember()) {
+            return null;
+        }
+
+        $membership = $this->activeTeamMembership();
+        if (!$membership) {
+            return null;
+        }
+
+        $feature = Feature::where('key', $featureKey)->first();
+        if (!$feature) {
+            return null;
+        }
+
+        $limit = TeamMemberFeatureLimit::where('team_member_id', $membership->id)
+            ->where('feature_id', $feature->id)
+            ->first();
+
+        // If limit is set, return it (null means use team lead's limit)
+        if ($limit) {
+            if ($limit->is_unlimited) {
+                return ['limit' => null, 'is_unlimited' => true];
+            }
+            return ['limit' => $limit->limit_value, 'is_unlimited' => false];
+        }
+
+        // Return null to indicate use team lead's limit
+        return null;
+    }
+
+    /**
+     * Check if team member has access to a menu item
+     */
+    public function hasMenuAccess(string $menuId): bool
+    {
+        // If user is not a team member, they have full access
+        if (!$this->isTeamMember()) {
+            return true;
+        }
+
+        $teamMember = $this->activeTeamMembership();
+        if (!$teamMember) {
+            return false;
+        }
+
+        // Load team member menus
+        $teamMember->load('menus');
+
+        // Check if team member has access to this menu item
+        $hasMenuAccess = $teamMember->menus()
+            ->where('menu_id', $menuId)
+            ->exists();
+
+        return $hasMenuAccess;
+    }
+
+    /**
+     * Get board IDs from team_member_accounts for the current user
+     * 
+     * @return array Array of board IDs that the user has access to through team membership
+     */
+    public function getTeamMemberBoardIds(): array
+    {
+        if (!$this->isTeamMember()) {
+            return [];
+        }
+
+        $teamMember = $this->activeTeamMembership();
+        if (!$teamMember) {
+            return [];
+        }
+
+        return TeamMemberAccount::where('team_member_id', $teamMember->id)
+            ->where('account_type', 'board')
+            ->pluck('account_id')
+            ->toArray();
     }
 }
