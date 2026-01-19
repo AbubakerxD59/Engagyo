@@ -144,7 +144,7 @@ function saveImageFromUrl($url)
 function automation_placeholder_image($title = null)
 {
     // Create images directory if it doesn't exist
-    $imagesDir = public_path() . "/images" . '/';
+    $imagesDir = public_path() . "/assets/img" . '/';
     if (!is_dir($imagesDir)) {
         if (!mkdir($imagesDir, 0755, true)) {
             return no_image();
@@ -207,7 +207,7 @@ function automation_placeholder_image($title = null)
     }
 
     // Return the existing placeholder
-    return asset("images/{$placeholderFileName}");
+    return asset("assets/img/{$placeholderFileName}");
 }
 
 function saveVideo($folderName, $file)
