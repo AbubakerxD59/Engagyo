@@ -16,7 +16,7 @@
         @else
             <!-- Regular Image -->
             <img src="{{ $post->image }}" alt="Product post image" class="post-image"
-                onerror="this.onerror=null; this.src='{{ no_image() }}';">
+                onerror="this.onerror=null; this.src='{{ asset('images/downloading_sample.png') }}';">
         @endif
     </div>
     <!-- CONTENT SECTION -->
