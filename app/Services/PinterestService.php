@@ -381,7 +381,7 @@ class PinterestService
         
         // Don't remove video from S3 if post source is "test"
         if ($post_row->source !== 'test') {
-            removeFromS3($post["video_key"]);
+            // removeFromS3($post["video_key"]);
             removeFile($post["video_key"]);
         }
         return $response;

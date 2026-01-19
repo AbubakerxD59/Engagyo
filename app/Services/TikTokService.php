@@ -638,7 +638,7 @@ class TikTokService
             // Check if video is an S3 key (not a URL)
             $isUrl = filter_var($post_row->video, FILTER_VALIDATE_URL);
             if (!$isUrl) {
-                removeFromS3($post_row->video);
+                // removeFromS3($post_row->video);
                 removeFile($post_row->video);
             }
         }
