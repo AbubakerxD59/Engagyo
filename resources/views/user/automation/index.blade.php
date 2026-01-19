@@ -230,7 +230,7 @@
             justify-content: space-between;
             align-items: center;
             padding: 5px 20px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            /* background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); */
             border-radius: 12px;
             margin-bottom: 25px;
             box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
