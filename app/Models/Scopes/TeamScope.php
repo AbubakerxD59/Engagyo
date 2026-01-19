@@ -19,6 +19,10 @@ class TeamScope implements Scope
         $tableName = $model->getTable();
         if (Schema::hasColumn($tableName, 'user_id')) {
             if (Auth::check()) {
+                $admin = Auth::guard("admin")->user();
+                if($admin){
+                    return;
+                }
                 $user = Auth::guard("user")->user();
                 
                 // If the user is an admin, return without applying scope
