@@ -21,6 +21,7 @@ use App\Jobs\PublishPinterestPost;
 use App\Services\HtmlParseService;
 use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
+use App\Models\Tiktok;
 use Illuminate\Support\Facades\Auth;
 
 class AutomationController extends Controller
@@ -76,6 +77,11 @@ class AutomationController extends Controller
                 $lastFetch = $account->last_fetched;
                 $account_id = $account->id;
             }
+            if ($type == 'tiktok') {
+                $account = Tiktok::findOrFail($account);
+                $lastFetch = $account->last_fetched;
+                $account_id = $account->id;
+            }
             $posts = $posts->where("account_id", $account_id);
         }
         if (count($domain) > 0) {
@@ -91,7 +97,7 @@ class AutomationController extends Controller
         $posts = $posts->offset(intval($data['start'] ?? 0))->limit(intval($data['length'] ?? 9));
         $posts = $posts->get();
         $posts->append(["post_details", "account_detail", "publish_datetime", "domain_name", "status_view", "action", "published_at_formatted"]);
-        
+
         // Add account_name to each post for the card view
         $posts->transform(function ($post) {
             if ($post->social_type == 'facebook' && $post->page) {
@@ -189,18 +195,19 @@ class AutomationController extends Controller
     {
         try {
             $user = Auth::guard('user')->user();
-            $type = $request->type;
-            $domains = $request->url;
-            $times = $request->time;
+            $feedBody = $request->feedBody;
+            $type = $feedBody['type'];
+            $account = $feedBody['account'];
+            $body = $feedBody['body'];
             if ($type == 'pinterest') {
-                $account = $this->board->findOrFail($request->account);
+                $account = $this->board->findOrFail($account);
                 $account_id = $account->id;
             }
             if ($type == 'facebook') {
-                $account = $this->page->findOrFail($request->account);
+                $account = $this->page->findOrFail($account);
                 $account_id = $account->id;
             }
-            
+
             // Check if RSS automation is paused for this page or board
             if ($account->rss_paused) {
                 return response()->json([
@@ -208,9 +215,10 @@ class AutomationController extends Controller
                     "message" => "RSS automation is paused for this account. Please enable RSS automation to fetch posts."
                 ]);
             }
-            
-            foreach ($times as $time) {
-                foreach ($domains as $domain) {
+            foreach ($body as $item) {
+                $times = $item['time'];
+                $domain = $item['feed_url'];
+                foreach ($times as $time) {
                     $parsedUrl = parse_url($domain);
                     if (isset($parsedUrl['host'])) {
                         $urlDomain = $parsedUrl["host"];
@@ -310,7 +318,10 @@ class AutomationController extends Controller
             if ($type == 'facebook') {
                 $account = $this->page->find($id);
             }
-            $domains = $user->getDomains($account->id);
+            if ($type == 'tiktok') {
+                $account = Tiktok::find($id);
+            }
+            $domains = $user->getDomains($account->id, $type);
             $response = [
                 "success" => true,
                 "data" => $domains
@@ -343,7 +354,7 @@ class AutomationController extends Controller
 
                     // Use validateToken for proper error handling
                     $tokenResponse = PinterestService::validateToken($board);
-                    
+
                     if (!$tokenResponse['success']) {
                         return response()->json([
                             "success" => false,
@@ -372,7 +383,7 @@ class AutomationController extends Controller
 
                     // Use validateToken for proper error handling
                     $tokenResponse = FacebookService::validateToken($page);
-                    
+
                     if (!$tokenResponse['success']) {
                         return response()->json([
                             "success" => false,
@@ -525,12 +536,10 @@ class AutomationController extends Controller
         $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
         $selected_account = $request->selected_account;
         $selected_type = $request->selected_type;
-        $domain = $request->has("domain") ? $request->domain : [];
         if ($selected_account && $selected_type) {
             $data = array(
                 "selected_account" => $selected_account,
                 "selected_type" => $selected_type,
-                "domain" => $domain,
             );
             $user->update([
                 "rss_filters" => $data
@@ -544,34 +553,28 @@ class AutomationController extends Controller
 
     public function deleteDomain(Request $request)
     {
-        $domainIds = $request->domain_ids;
+        $domainId = $request->domain_id;
 
-        if (empty($domainIds) || !is_array($domainIds)) {
+        if (empty($domainId)) {
             return response()->json([
                 "success" => false,
-                "message" => "No domains selected!"
+                "message" => "No domain selected!"
             ]);
         }
 
         try {
-            $user = Auth::guard('user')->user();
             $deletedCount = 0;
-
-            foreach ($domainIds as $domainId) {
-                $domain = $this->domain->where('id', $domainId)->first();
-
-                if ($domain) {
-                    // Delete all posts associated with this domain
-                    $posts = $domain->posts()->get();
-                    foreach ($posts as $post) {
-                        $post->photo()->delete();
-                        $post->delete();
-                    }
-
-                    // Delete the domain
-                    $domain->delete();
-                    $deletedCount++;
+            $domain = $this->domain->where('id', $domainId)->first();
+            if ($domain) {
+                // Delete all posts associated with this domain
+                $posts = Post::where('domain_id', $domain->id)->get();
+                foreach ($posts as $post) {
+                    $post->photo()->delete();
+                    $post->delete();
                 }
+                // Delete the domain
+                $domain->delete();
+                $deletedCount++;
             }
 
             if ($deletedCount > 0) {

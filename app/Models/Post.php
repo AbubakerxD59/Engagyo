@@ -342,7 +342,7 @@ class Post extends Model
             $post = $post->where("status", $status);
         }
         $post = $post->first();
-        return $post ? date("jS M, Y h:i A", strtotime($post->publish_date)) : 'NA';
+        return $post ? date("jS M, Y", strtotime($post->publish_date)) : 'NA';
     }
 
     protected function title(): Attribute

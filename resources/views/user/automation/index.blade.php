@@ -19,44 +19,104 @@
                     </div>
                     <div class="card-body">
                         <form id="fetchPostForm">
-                            <div>
-                                <div class="row">
-                                    <div class="col-md-4 form-group">
-                                        <label for="fetch_account">Accounts</label>
-                                        <select name="account" id="fetch_account" class="form-control" required>
-                                            <option value="">All Accounts</option>
-                                            @foreach ($accounts as $key => $account)
-                                                <option value="{{ $account->id }}" data-type="{{ $account->type }}">
-                                                    {{ strtoupper($account->name . ' - ' . $account->type) }}
-                                                </option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-3 form-group">
-                                        <label for="time">Time</label>
-                                        <select name="time[]" id="time"class="form-control select2" multiple>
-                                            @foreach ($timeslots as $timeslot)
-                                                <option value="{{ $timeslot }}">{{ $timeslot }}</option>
-                                            @endforeach
-                                        </select>
-                                    </div>
-                                    <div class="col-md-4 form-group">
-                                        <label for="feed_url">Feed Url</label>
-                                        <select name="feed_url[]" id="feed_url" class="form-control select2"
-                                            multiple></select>
-                                        <div class="d-flex">
+                            <div class="row justify-content-end">
+                                @php
+                                    $selectedType = $selectedAccount = '';
+                                    $selectedAccountDomains = [];
+                                @endphp
+                                <div class="col-md-4 form-group mb-0">
+                                    <label for="fetch_account">Accounts</label>
+                                    <select name="account" id="account" class="form-control adv_filter">
+                                        <option value="">All Accounts</option>
+                                        @foreach ($accounts as $key => $account)
+                                            <option value="{{ $account->id }}" data-type="{{ $account->type }}"
+                                                data-shuffle="{{ $account->shuffle }}"
+                                                data-rss-paused="{{ $account->rss_paused ? 1 : 0 }}"
+                                                @php $selected = false;
+                                                    if(@$user->rss_filters['selected_account'] == $account->id && @$user->rss_filters['selected_type'] == $account->type){
+                                                        $selected = true;
+                                                        $selectedType = $account->type;
+                                                        $selectedAccount = $account->id;
+                                                        $selectedAccountDomains = $user->getDomains($selectedAccount, $selectedType);
+                                                    } @endphp
+                                                @selected($selected)>
+                                                {{ strtoupper($account->name . ' - ' . $account->type) }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                @forelse ($selectedAccountDomains as $index => $domain)
+                                    <div class="col-md-8 row url_body">
+                                        <div class="col-md-6 form-group mb-0">
+                                            <label for="time">Time <span class="text-danger">*</span></label>
+                                            <select name="time[]" class="form-control select2 time_dropdown" multiple
+                                                required>
+                                                @foreach ($timeslots as $timeslot)
+                                                    <option value="{{ $timeslot }}" @selected(in_array($timeslot, $domain->time))>
+                                                        {{ $timeslot }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 form-group mb-0">
+                                            <label for="feed_url">Feed Url <span class="text-danger">*</span></label>
+                                            @if ($selectedAccount && $selectedType)
+                                                <div class="row col-md-12 d-flex justify-content-between form-group">
+                                                    <input type="text" value="{{ $domain->name }}" name="feed_url[]"
+                                                        class="col-md-10 form-control mb-2" required>
+                                                    <div class="row">
+                                                        <button type="button"
+                                                            class="btn btn-outline-success btn-sm ml-2 fetch_url_btn">
+                                                            <i class="fas fa-download"></i>
+                                                        </button>
+                                                        <button type="button"
+                                                            class="btn btn-outline-danger btn-sm ml-2 delete_domain_btn"
+                                                            data-url-id="{{ $domain->id }}"
+                                                            title="Delete Selected Domains">
+                                                            <i class="fas fa-trash"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            @endif
                                         </div>
                                     </div>
-                                    <div class="align-content-end col-md-1 form-group text-right">
-                                        <a class="btn btn-info" id="addNewUrl">+</a>
+                                @empty
+                                    <div class="col-md-8 row url_body">
+                                        <div class="col-md-6 form-group mb-0">
+                                            <label for="time">Time <span class="text-danger">*</span></label>
+                                            <select name="time[]" class="form-control select2 time_dropdown" multiple
+                                                required>
+                                                @foreach ($timeslots as $timeslot)
+                                                    <option value="{{ $timeslot }}">
+                                                        {{ $timeslot }}
+                                                    </option>
+                                                @endforeach
+                                            </select>
+                                        </div>
+                                        <div class="col-md-6 form-group mb-0">
+                                            <label for="feed_url">Feed Url <span class="text-danger">*</span></label>
+                                            <div class="row col-md-12 d-flex justify-content-between form-group">
+                                                <input type="text" name="feed_url[]" class="col-md-10 form-control mb-2"
+                                                    required>
+                                                <div class="row">
+                                                    <button type="button"
+                                                        class="btn btn-outline-success btn-sm ml-2 fetch_url_btn">
+                                                        <i class="fas fa-download"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                                <div class="row d-flex justify-content-end">
-                                    <div class="new_url col-md-5 p-0" style="display: none;">
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-outline-primary float-right"
-                                    id="fetchPostsBtn">Fetch</button>
+                                @endforelse
+                            </div>
+                            <div class="row justify-content-end new_url_section" style="display: none;"></div>
+                            <div class="row justify-content-end">
+                                <button type="button" class="btn btn-info mx-2 add_new_url" id="addNewUrl">
+                                    + Add New
+                                </button>
+                                <button type="submit" class="btn btn-outline-primary" id="fetchPostsBtn">
+                                    Fetch All
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -71,66 +131,21 @@
                     <div class="card-body">
                         {{-- Filters Section --}}
                         <form id="adv_filter_form" class="automation-filters">
-                            <div class="row">
-                                <div class="col-md-4 form-group">
-                                    <label for="account" class="filter-label">
-                                        <i class="fas fa-user-circle mr-1"></i>Account
-                                    </label>
-                                    <select name="account" id="account" class="form-control adv_filter">
-                                        <option value="">All Accounts</option>
-                                        @foreach ($accounts as $key => $account)
-                                            <option value="{{ $account->id }}" data-type="{{ $account->type }}"
-                                                data-shuffle="{{ $account->shuffle }}"
-                                                data-rss-paused="{{ $account->rss_paused ? 1 : 0 }}"
-                                                {{ @$user->rss_filters['selected_account'] == $account->id && @$user->rss_filters['selected_type'] == $account->type ? 'selected' : '' }}>
-                                                {{ strtoupper($account->name . ' - ' . $account->type) }}
-                                            </option>
-                                        @endforeach
-                                    </select>
-                                </div>
-                                <div class="col-md-4 form-group">
-                                    <label for="domains" class="filter-label">
-                                        <i class="fas fa-globe mr-1"></i>Domains
-                                    </label>
-                                    <input type="hidden" id="saved_domains"
-                                        value="{{ isset($user->rss_filters['domain']) ? implode(',', $user->rss_filters['domain']) : '' }}">
-                                    <div class="d-flex align-items-center">
-                                        <select name="domains[]" id="domains" class="form-control adv_filter select2"
-                                            multiple style="flex: 1;">
-                                        </select>
-                                        <button type="button" id="deleteDomains" class="btn btn-outline-danger btn-sm ml-2"
-                                            style="display: none;" title="Delete Selected Domains">
-                                            <i class="fas fa-trash"></i>
-                                        </button>
-                                    </div>
-                                </div>
-                                <div class="col-md-4 form-group">
+                            <div class="row justify-content-between align-items-end">
+                                <div class="col-md-4 form-group mb-0">
                                     <label for="status" class="filter-label">
                                         <i class="fas fa-info-circle mr-1"></i>Status
                                     </label>
-                                    <select name="status" id="status" class="form-control adv_filter">
+                                    <select name="status" id="status" class="form-control">
                                         <option value="">All Status</option>
                                         <option value="1">Published</option>
                                         <option value="0" selected>Pending</option>
                                         <option value="-1">Failed</option>
                                     </select>
                                 </div>
-                            </div>
-                        </form>
-
-                        {{-- Control Panel Section --}}
-                        <div class="automation-control-panel">
-                            <div class="control-panel-left">
-                                <div class="action-buttons-group">
-                                    <button id="clearFilters" class="btn btn-secondary">
-                                        <i class="fas fa-eraser mr-1"></i>Clear Filters
-                                    </button>
-                                    <button id="deleteAll" class="btn btn-danger" style="display: none;">
-                                        <i class="fas fa-trash-alt mr-1"></i>Delete All
-                                    </button>
-                                </div>
-                                <div class="toggle-controls-group">
-                                    <div class="toggle-control-item shuffle_toggle" style="display: none;">
+                                <div class="d-flex justify-content-center col-md-4 form-group mb-0">
+                                    <div class="toggle-control-item shuffle_toggle col-md-6 d-flex justify-content-between"
+                                        style="display: none;">
                                         <label for="toggle" class="toggle-label-text">
                                             <i class="fas fa-random mr-1"></i>Shuffle
                                         </label>
@@ -139,7 +154,8 @@
                                             <label class="toggle-label" for="toggle"></label>
                                         </div>
                                     </div>
-                                    <div class="toggle-control-item rss_toggle" style="display: none;">
+                                    <div class="toggle-control-item rss_toggle col-md-6 d-flex justify-content-between"
+                                        style="display: none;">
                                         <label for="rss_toggle" class="toggle-label-text">
                                             <i class="fas fa-rss mr-1"></i>RSS Automation
                                         </label>
@@ -150,18 +166,30 @@
                                     </div>
                                 </div>
                             </div>
-                            <div class="control-panel-right">
-                                <div class="info-badges">
-                                    <div class="info-badge">
-                                        <i class="fas fa-clock mr-1"></i>
-                                        <span class="info-label">Last Fetch:</span>
-                                        <span class="info-value last_fetch">NA</span>
-                                    </div>
-                                    <div class="info-badge">
-                                        <i class="fas fa-calendar-alt mr-1"></i>
-                                        <span class="info-label">Scheduled Till:</span>
-                                        <span class="info-value scheduled_till">NA</span>
-                                    </div>
+                        </form>
+
+                        {{-- Control Panel Section --}}
+                        <div class="automation-control-panel">
+                            <div class="col-md-4 row">
+                                <button id="clearFilters" class="btn btn-secondary col-md-6">
+                                    <i class="fas fa-eraser mr-1"></i>
+                                    Clear Filters
+                                </button>
+                                <button id="deleteAll" class="btn btn-danger col-md-6" style="display: none;">
+                                    <i class="fas fa-trash-alt mr-1"></i>
+                                    Delete All
+                                </button>
+                            </div>
+                            <div class="col-md-4 row">
+                                <div class="info-badge col-md-6">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    <span class="info-label">Last Fetch:</span>
+                                    <span class="info-value last_fetch">NA</span>
+                                </div>
+                                <div class="info-badge col-md-6">
+                                    <i class="fas fa-calendar-alt mr-1"></i>
+                                    <span class="info-label">Scheduled Till:</span>
+                                    <span class="info-value scheduled_till">NA</span>
                                 </div>
                             </div>
                         </div>
@@ -945,9 +973,7 @@
                     start: (page - 1) * perPage,
                     length: perPage,
                     account: $("#account").find(":selected").val(),
-                    account_type: $("#account").find(":selected").val() ? $("#account").find(":selected").data(
-                        "type") : 0,
-                    domain: $("#domains").val(),
+                    account_type: $("#account").find(":selected").data("type") ?? 0,
                     status: $("#status").find(":selected").val(),
                 },
                 success: function(response) {
@@ -1164,34 +1190,49 @@
     </script>
     <script>
         $(document).ready(function() {
-            // fetch feed posts
+            // multiple fetch feed posts
             $("#fetchPostForm").on('submit', function(event) {
                 event.preventDefault();
                 var form = $(this);
-                var submit_button = form.find("#fetchPostsBtn");
-                var selected_account = $("#fetch_account").find(":selected").val();
-                var selected_type = $("#fetch_account").find(":selected").data("type");
-                var selected_time = $("#time").val();
-                var selected_url = $("#feed_url").val();
-                var new_url = $(".new_feed_url").val();
+                var submit_botton = form.find('#fetchPostsBtn');
+                fetchPosts('multiple', submit_botton);
+            });
+            // single fetch feed posts
+            $(document).on('click', '.fetch_url_btn', function() {
+                var submit_botton = $(this);
+                fetchPosts('single', submit_botton);
+            });
+            // fetch posts function
+            function fetchPosts(type = 'single', submit_button) {
+                if (type == 'single') {
+                    var url_body = submit_button.closest('.url_body');
+                } else {
+                    var url_body = $('.url_body');
+                }
+                // validate post
+                var is_valid = true;
+                var selected_account = $("#account").find(":selected").val();
+                var selected_type = $("#account").find(":selected").data("type");
+                // object to be sent to server
+                var dataObj = {
+                    "account": selected_account,
+                    "type": selected_type,
+                    "body": []
+                };
+                $.each(url_body, function(index, body) {
+                    dataObj.body[index] = {
+                        'time': $(this).find('.time_dropdown').val(),
+                        'feed_url': $(this).find('input[name="feed_url[]"]').val(),
+                    };
+                });
                 var token = $('meta[name="csrf-token"]').attr('content');
                 submit_button.attr('disabled', true);
-                new_url = new_url == undefined ? [] : new_url;
-                var urls = selected_url.concat(new_url);
-                if (urls.length == 0) {
-                    toastr.error("Feed URL not selected!");
-                    submit_button.attr('disabled', false);
-                    return false;
-                }
-                toastr.warning("Your posts are being fetched. This process may take around 5 minutes!");
+                toastr.warning("Your feed posts are being fetched. Please wait...");
                 $.ajax({
                     url: "{{ route('panel.automation.feedUrl') }}",
                     type: "POST",
                     data: {
-                        "account": selected_account,
-                        "type": selected_type,
-                        "time": selected_time,
-                        "url": urls,
+                        "feedBody": dataObj,
                         "_token": token,
                     },
                     success: function(response) {
@@ -1206,24 +1247,57 @@
                         }
                     }
                 });
-            });
+
+            }
             // add new url input
             $(document).on('click', '#addNewUrl', function() {
-                var new_url = $('.new_url');
+                var timeslots = @json($timeslots);
+                var new_url = $('.new_url_section');
                 new_url.show();
-                var new_url_body =
-                    '<div class="col-md-12 form-group d-flex justify-content-between new_url_body">';
+                var new_url_body = '';
+                new_url_body += '<div class="col-md-8 row url_body">';
+                new_url_body += '<div class="col-md-6 form-group mb-0">';
+                new_url_body += '<label for="time">Time <span class="text-danger">*</span></label>';
                 new_url_body +=
-                    '<input type="text" name="new_feed_url[]" class="form-control new_feed_url col-md-9" placeholder="Add new Feed URL" required>';
+                    '<select name="time[]" class="form-control select2 time_dropdown" multiple required>';
+                $.each(timeslots, function(index, timeslot) {
+                    new_url_body += '<option value="' + timeslot + '">' + timeslot + '</option>';
+                });
+                new_url_body += '</select>';
+                new_url_body += '</div>';
+                new_url_body += '<div class="col-md-6 form-group mb-0">';
+                new_url_body += '<label for="feed_url">Feed Url <span class="text-danger">*</span></label>';
+                new_url_body += '<div class="row col-md-12 d-flex justify-content-between form-group">';
                 new_url_body +=
-                    '<button class="btn btn-outline-danger new_url_delete_btn"><i class="fa fa-trash"></i></button>';
+                    '<input type="text" name="feed_url[]" class="col-md-10 form-control mb-2" required>';
+                new_url_body += '<div class="row">'
+                new_url_body +=
+                    '<button type="button" class="btn btn-outline-success btn-sm ml-2 fetch_url_btn">';
+                new_url_body += '<i class="fas fa-download"></i>';
+                new_url_body += '</button>';
+                new_url_body +=
+                    '<button type="button" class="btn btn-outline-danger btn-sm ml-2 new_url_delete_btn"';
+                new_url_body += 'title="Delete Selected Domains">';
+                new_url_body += '<i class="fas fa-trash"></i>';
+                new_url_body += '</button>';
+                new_url_body += '</div>';
+                new_url_body += '</div>';
                 new_url_body += '</div>';
                 new_url.append(new_url_body);
+                initializeDynamicSelect2();
             })
+            // Initilize Select2s
+            function initializeDynamicSelect2() {
+                $('.time_dropdown').each(function() {
+                    if (!$(this).hasClass("select2-hidden-accessible")) {
+                        $(this).select2();
+                    }
+                });
+            }
             // delete new url input
             $(document).on("click", ".new_url_delete_btn", function() {
                 var delete_button = $(this);
-                var new_url = delete_button.closest(".new_url_body");
+                var new_url = delete_button.closest(".url_body");
                 new_url.remove();
             })
             // Fetch domains
@@ -1232,8 +1306,12 @@
                 var selected_type = $(this).find(":selected").data("type");
                 var shuffle = $(this).find(":selected").data('shuffle');
                 var rss_paused = $(this).find(":selected").data('rss-paused');
-                var select = $('#domains');
-                shuffle == 1 ? $('.shuffle').attr('checked', true) : $('.shuffle').attr('checked', false);
+                // toggle check shuiffle checkbox
+                if (shuffle == 1) {
+                    $('.shuffle').attr('checked', true)
+                } else {
+                    $('.shuffle').attr('checked', false)
+                }
                 // RSS automation: checked means active (not paused), unchecked means paused
                 if (rss_paused == 1) {
                     $('.rss_automation').prop('checked', false);
@@ -1242,13 +1320,14 @@
                     $('.rss_automation').prop('checked', true);
                     $('.rss_toggle').addClass('active');
                 }
-                select.empty();
+                // hide/show shuffle button
                 toggleShuffle(account_id);
+                // hide/show rss button
                 toggleRssToggle(account_id);
+                // hide/show delete all button
                 toggleDelete(account_id);
-                $("#deleteDomains").hide(); // Hide delete domains button when account changes
                 if (account_id != '') {
-                    fetchDomains(account_id, selected_type, select, 'id');
+                    fetchDomains(account_id, selected_type);
                 }
             });
             // Fetch domains
@@ -1258,15 +1337,11 @@
                 var select = $('#feed_url');
                 select.empty();
                 if (account_id != '') {
-                    fetchDomains(account_id, selected_type, select, 'name');
+                    fetchDomains(account_id, selected_type);
                 }
             });
             // Fetch domains function
-            var fetchDomains = function(account_id, selected_type, select, mode) {
-                var saved_domains = $('#saved_domains').val();
-                saved_domains = saved_domains.split(',').map(function(value) {
-                    return Number(value);
-                });
+            var fetchDomains = function(account_id, selected_type) {
                 $.ajax({
                     url: "{{ route('panel.automation.getDomain') }}",
                     method: "GET",
@@ -1276,68 +1351,122 @@
                     },
                     success: function(response) {
                         if (response.success) {
-                            options = response.data;
-                            var allDomainIds = []; // Track all domain IDs for pre-selection
-                            $.each(options, function(index, value) {
-                                var option = $("<option></option>");
-                                mode == "id" ? option.val(value.id).text(value.name) :
-                                    option.val(value.name).text(value.name);
-                                // If mode is 'id' (for domains filter), pre-select all domains
-                                if (mode == "id") {
-                                    option.attr('selected', 'selected');
-                                    allDomainIds.push(value.id);
-                                } else if (saved_domains.includes(value.id)) {
-                                    // For feed_url select, only select saved domains
-                                    option.attr('selected', 'selected');
-                                }
-                                select.append(option);
-                            });
-                            // Trigger Select2 update if it's the domains select
-                            if (mode == "id" && select.hasClass('select2')) {
-                                // Update Select2 to reflect the selected options
-                                select.trigger('change');
+                            feed_urls = response.data;
+                            if (feed_urls.length > 0) {
+                                setFeedUrls(feed_urls);
+                            } else {
+                                setNewFeedUrl();
                             }
                         }
                     }
                 });
             }
+            // set Feed Urls
+            function setFeedUrls(feed_urls) {
+                var url_body = $('.url_body');
+                url_body.empty();
+                var timeslots = @json($timeslots);
+                $.each(feed_urls, function(index, feed_url) {
+                    var selectedUrl = feed_url.name;
+                    var selectedTimeslots = feed_url.time;
+                    var new_url_body = '';
+                    new_url_body += '<div class="col-md-6 form-group mb-0">';
+                    new_url_body += '<label for="time">Time <span class="text-danger">*</span></label>';
+                    new_url_body +=
+                        '<select name="time[]" class="form-control select2 time_dropdown" multiple required>';
+                    $.each(timeslots, function(index, timeslot) {
+                        new_url_body += '<option value="' + timeslot + '"';
+                        if (selectedTimeslots.includes(timeslot)) {
+                            new_url_body += ' selected>';
+                        }
+                        new_url_body += timeslot;
+                        new_url_body += '</option>';
+                    });
+                    new_url_body += '</select>';
+                    new_url_body += '</div>';
+                    new_url_body += '<div class="col-md-6 form-group mb-0">';
+                    new_url_body +=
+                        '<label for="feed_url">Feed Url <span class="text-danger">*</span></label>';
+                    new_url_body += '<div class="row col-md-12 d-flex justify-content-between form-group">';
+                    new_url_body +=
+                        '<input type="text" name="feed_url[]" class="col-md-10 form-control mb-2" value="' +
+                        selectedUrl + '" required>';
+                    new_url_body += '<div class="row">';
+                    new_url_body +=
+                        '<button type="button" class="btn btn-outline-success btn-sm ml-2 fetch_url_btn">';
+                    new_url_body += '<i class="fas fa-download"></i>';
+                    new_url_body += '</button>';
+                    new_url_body +=
+                        '<button type="button" class="btn btn-outline-danger btn-sm ml-2 delete_domain_btn"';
+                    new_url_body += 'data-url-id="' + feed_url.id + '"';
+                    new_url_body += 'title="Delete Selected Domains">';
+                    new_url_body += '<i class="fas fa-trash"></i>';
+                    new_url_body += '</button>';
+                    new_url_body += '</div>';
+                    new_url_body += '</div>';
+
+                    url_body.append(new_url_body);
+                    initializeDynamicSelect2();
+                });
+            }
+            // set New Feed Url
+            function setNewFeedUrl() {
+                var url_body = $('.url_body');
+                url_body.empty();
+                var timeslots = @json($timeslots);
+                var new_url_body = '';
+                new_url_body += '<div class="col-md-6 form-group mb-0">';
+                new_url_body += '<label for="time">Time <span class="text-danger">*</span></label>';
+                new_url_body +=
+                    '<select name="time[]" class="form-control select2 time_dropdown" multiple required>';
+                $.each(timeslots, function(index, timeslot) {
+                    new_url_body += '<option value="{{ $timeslot }}">';
+                    new_url_body += timeslot;
+                    new_url_body += '</option>';
+                });
+                new_url_body += '</select>';
+                new_url_body += '</div>';
+                new_url_body += '<div class="col-md-6 form-group mb-0">';
+                new_url_body += '<label for="feed_url">Feed Url <span class="text-danger">*</span></label>';
+                new_url_body += '<div class="row col-md-12 d-flex justify-content-between form-group">';
+                new_url_body +=
+                    '<input type="text" name="feed_url[]" class="col-md-10 form-control mb-2" required>';
+                new_url_body += '<div class="row">';
+                new_url_body += '<button type="button" class="btn btn-outline-success btn-sm ml-2 fetch_url_btn">';
+                new_url_body += '<i class="fas fa-download"></i>';
+                new_url_body += '</button>';
+                new_url_body += '</div>';
+                new_url_body += '</div>';
+                new_url_body += '</div>';
+                url_body.append(new_url_body);
+                initializeDynamicSelect2();
+            }
             // Filters and Reset
-            $('.adv_filter').on('change', function() {
+            $(document).on('change', '.adv_filter', function() {
                 save_filters();
                 loadPosts(1);
-                toggleDeleteDomains();
             });
 
-            // Toggle delete domains button visibility
-            var toggleDeleteDomains = function() {
-                var selectedDomains = $("#domains").val();
-                if (selectedDomains && selectedDomains.length > 0) {
-                    $("#deleteDomains").show();
-                } else {
-                    $("#deleteDomains").hide();
-                }
-            }
-
             // Delete Selected Domains
-            $(document).on('click', '#deleteDomains', function() {
-                var selectedDomains = $("#domains").val();
-                if (!selectedDomains || selectedDomains.length === 0) {
-                    toastr.warning("Please select domains to delete!");
+            $(document).on('click', '.delete_domain_btn', function() {
+                var url_body = $(this).closest('.url_body');
+                var feed_url = url_body.find('input[name="feed_url[]"]').val();
+                var feed_url_id = $(this).data('url-id');
+
+                if (empty(feed_url)) {
+                    toastr.warning("Feed URL is empty!");
                     return;
                 }
 
-                var confirmMessage = selectedDomains.length === 1 ?
-                    "Are you sure you want to delete this domain and all its associated posts?" :
-                    "Are you sure you want to delete " + selectedDomains.length +
-                    " domains and all their associated posts?";
-
+                var confirmMessage =
+                    "Are you sure you want to delete this domain and all its associated posts?"
                 if (confirm(confirmMessage)) {
                     var token = $('meta[name="csrf-token"]').attr('content');
                     $.ajax({
                         url: "{{ route('panel.automation.deleteDomain') }}",
                         method: "POST",
                         data: {
-                            "domain_ids": selectedDomains,
+                            "domain_id": feed_url_id,
                             "_token": token
                         },
                         success: function(response) {
@@ -1353,7 +1482,7 @@
                                     fetchDomains(account_id, selected_type, select, 'id');
                                 }
                                 // Hide delete button
-                                $("#deleteDomains").hide();
+                                $(".delete_domain_btn").hide();
                                 // Clear saved domains for this selection
                                 $('#saved_domains').val('');
                                 // Reload posts
@@ -1368,13 +1497,10 @@
                     });
                 }
             });
-            $('.adv_filter_search').on('keyup', function() {
-                reloadPosts();
-            })
             $("#clearFilters").on("click", function() {
                 $("#adv_filter_form").trigger("reset");
                 $("#account").trigger("change");
-                $("#deleteDomains").hide();
+                $(".delete_domain_btn").hide();
                 reloadPosts();
             })
             // reload posts
@@ -1642,8 +1768,7 @@
                 var token = $('meta[name="csrf-token"]').attr('content');
                 var selected_account = $("#account").find(":selected").val();
                 var selected_type = $("#account").find(":selected").data("type");
-                var domain = $("#domains").val();
-                if (selected_account && selected_type && domain) {
+                if (selected_account && selected_type) {
                     $.ajax({
                         url: "{{ route('panel.automation.saveFilters') }}",
                         method: "POST",
@@ -1651,7 +1776,6 @@
                             "_token": token,
                             "selected_account": selected_account,
                             "selected_type": selected_type,
-                            "domain": domain,
                         }
                     });
                 }

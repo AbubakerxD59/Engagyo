@@ -243,9 +243,9 @@ class User extends Authenticatable
         return $accounts;
     }
 
-    public function getDomains($id)
+    public function getDomains($id, $type)
     {
-        $domains = $this->domains()->where("account_id", $id)->get();
+        $domains = $this->domains()->where("account_id", $id)->where('type', $type)->get();
         return count($domains) > 0 ? $domains : [];
     }
 
