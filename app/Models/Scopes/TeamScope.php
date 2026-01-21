@@ -25,14 +25,6 @@ class TeamScope implements Scope
                 }
                 $user = Auth::guard("user")->user();
                 
-                // If the user is an admin, return without applying scope
-                if ($user instanceof User) {
-                    $role = $user->roles()->first();
-                    if ($role && $role->name !== 'User') {
-                        return;
-                    }
-                }
-                
                 $builder->where("user_id", $user->id);
                 // Logic for Team Members
                 if ($user instanceof User) {
