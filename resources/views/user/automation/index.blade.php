@@ -170,23 +170,23 @@
 
                         {{-- Control Panel Section --}}
                         <div class="automation-control-panel">
-                            <div class="col-md-4 row">
-                                <button id="clearFilters" class="btn btn-secondary col-md-6">
+                            <div class="col-md-6 row">
+                                <button id="clearFilters" class="btn btn-secondary">
                                     <i class="fas fa-eraser mr-1"></i>
                                     Clear Filters
                                 </button>
-                                <button id="deleteAll" class="btn btn-danger col-md-6" style="display: none;">
+                                <button id="deleteAll" class="btn btn-danger" style="display: none;">
                                     <i class="fas fa-trash-alt mr-1"></i>
                                     Delete All
                                 </button>
                             </div>
-                            <div class="col-md-4 row">
-                                <div class="info-badge col-md-6">
+                            <div class="col-md-6 row justify-content-end">
+                                <div class="info-badge">
                                     <i class="fas fa-clock mr-1"></i>
                                     <span class="info-label">Last Fetch:</span>
                                     <span class="info-value last_fetch">NA</span>
                                 </div>
-                                <div class="info-badge col-md-6">
+                                <div class="info-badge">
                                     <i class="fas fa-calendar-alt mr-1"></i>
                                     <span class="info-label">Scheduled Till:</span>
                                     <span class="info-value scheduled_till">NA</span>
