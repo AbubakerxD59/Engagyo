@@ -74,7 +74,7 @@ class HttpService
             return $this->handleResponse($response);
         } catch (GuzzleException $e) {
             $this->handleException($e);
-            return null;
+            return ["success" => false, 'message' => $e->getMessage()];
         }
     }
 
