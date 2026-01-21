@@ -112,7 +112,7 @@ class PinterestService
         );
         $postToken = $this->client->post($this->baseUrl . "oauth/token", $data,  $this->header);
         $jsonToken = $this->client->postJson($this->baseUrl . "oauth/token", $data,  $this->header);
-        dd($data, $postToken, $jsonToken);
+        dd($data, $this->header, $postToken, $jsonToken);
         // return $token;
     }
 
