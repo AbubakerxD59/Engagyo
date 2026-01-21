@@ -238,7 +238,6 @@ class User extends Authenticatable
         $pages = Page::with("facebook", "timeslots")->get();
         // TikTok Accounts
         $tiktoks = Tiktok::with("timeslots")->get();
-        dd($tiktoks, $pages);
         $accounts = collect();
         $accounts = $boards->concat($pages)->concat($tiktoks);
         return $accounts;
