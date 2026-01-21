@@ -87,7 +87,7 @@ class PinterestService
     {
         $this->scopes = ['user_accounts:read', 'boards:read', 'pins:read', 'boards:write', 'pins:write'];
         $pinterest_id = env("PINTEREST_KEY");
-        $pinterest_secret = env("PINTEREST_SECRET");
+        $pinterest_secret = env("PINTEREST_CLIENT_SECRET");
         $this->pinterest = new Pinterest($pinterest_id, $pinterest_secret);
         $this->client = new HttpService();
         $this->post = new Post();
@@ -112,7 +112,7 @@ class PinterestService
         );
         $postToken = $this->client->post($this->baseUrl . "oauth/token", $data,  $this->header);
         $jsonToken = $this->client->postJson($this->baseUrl . "oauth/token", $data,  $this->header);
-        dd($data, $this->header, $this->auth, env("PINTEREST_KEY"), env("PINTEREST_SECRET"), $postToken, $jsonToken);
+        dd($data, $this->header, $this->auth, env("PINTEREST_KEY"), env("PINTEREST_CLIENT_SECRET"), $postToken, $jsonToken);
         // return $token;
     }
 
