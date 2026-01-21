@@ -28,13 +28,15 @@ class PinterestController extends Controller
     }
     public function pinterestCallback(Request $request)
     {
-        dd($request->all());
         $user = User::with("pinterest")->find(Auth::guard('user')->id());
         if ($request->has('code') && $request->has('state')) {
-            $token = $this->pinterestService->getOauthToken($request->code);
+            $code = $request->code;
+            $state = $request->state;
+            $token = $this->pinterestService->getOauthToken($code);
+            dd($token);
             if (isset($token["access_token"])) {
                 $me = $this->pinterestService->me($token["access_token"]);
-                
+
                 // Log "me" API call
                 if (isset($me['id'])) {
                     $this->logService->log('pinterest', 'me_api', 'User info retrieved successfully', [
@@ -47,7 +49,7 @@ class PinterestController extends Controller
                 } else {
                     $this->logService->logApiError('pinterest', '/user_account', 'Failed to get user info', ['user_id' => $user->id]);
                 }
-                
+
                 if (isset($me['id'])) {
                     $profile_pic = saveImageFromUrl($me["profile_image"]) ? saveImageFromUrl($me["profile_image"]) : '';
                     $data = [
@@ -75,11 +77,11 @@ class PinterestController extends Controller
                     if (isset($boards['items'])) {
                         // Get the Pinterest account's database ID (not the API pin_id)
                         $pinterestDbId = $pinterestAccount->id;
-                        
+
                         foreach ($boards["items"] as $key => $board) {
                             // Check if board is already connected using the Pinterest account's database ID
                             $connected = $this->board->connected([
-                                'pin_id' => $pinterestDbId, 
+                                'pin_id' => $pinterestDbId,
                                 'board_id' => $board["id"]
                             ])->first() ? true : false;
                             $boards["items"][$key]["connected"] = $connected;

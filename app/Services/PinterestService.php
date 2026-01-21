@@ -105,9 +105,9 @@ class PinterestService
     public function getOauthToken($code = null)
     {
         $data = array(
-            "grant_type" => "authorization_code",
             "code" => (string) $code,
             "redirect_uri" => route("pinterest.callback"),
+            "grant_type" => "authorization_code",
             "continuous_refresh" => true,
         );
         $token = $this->client->post($this->baseUrl . "oauth/token", $data,  $this->header);
@@ -378,7 +378,7 @@ class PinterestService
             $this->logService->logPost('pinterest', 'video', $id, [], 'failed');
             $this->logService->logApiError('pinterest', '/media', $errorMessage, ['post_id' => $id]);
         }
-        
+
         // Don't remove video from S3 if post source is "test"
         if ($post_row->source !== 'test') {
             // removeFromS3($post["video_key"]);
