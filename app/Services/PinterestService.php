@@ -110,8 +110,10 @@ class PinterestService
             "grant_type" => "authorization_code",
             "continuous_refresh" => true,
         );
-        $token = $this->client->postJson($this->baseUrl . "oauth/token", $data,  $this->header);
-        return $token;
+        $postToken = $this->client->post($this->baseUrl . "oauth/token", $data,  $this->header);
+        $jsonToken = $this->client->postJson($this->baseUrl . "oauth/token", $data,  $this->header);
+        dd($postToken, $jsonToken);
+        // return $token;
     }
 
     public function refreshAccessToken($refresh_token, $pinterest_id)
