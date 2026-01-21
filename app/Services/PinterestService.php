@@ -92,7 +92,7 @@ class PinterestService
         $this->client = new HttpService();
         $this->post = new Post();
         $this->auth = base64_encode("{$pinterest_id}:{$pinterest_secret}");
-        $this->header = array("Content-Type" => "application/x-www-form-urlencoded", "Authorization" => "Basic " . $this->auth);
+        $this->header = array("Content-Type" => "application/x-www-form-urlencoded", "Authorization" => "Basic " . (string) $this->auth);
         $this->logService = new SocialMediaLogService();
     }
 
@@ -112,7 +112,7 @@ class PinterestService
         );
         $postToken = $this->client->post($this->baseUrl . "oauth/token", $data,  $this->header);
         $jsonToken = $this->client->postJson($this->baseUrl . "oauth/token", $data,  $this->header);
-        dd($data, $this->header, $postToken, $jsonToken);
+        dd($data, $this->header, $this->auth, env("PINTEREST_KEY"), env("PINTEREST_SECRET"), $postToken, $jsonToken);
         // return $token;
     }
 
