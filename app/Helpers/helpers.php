@@ -123,6 +123,11 @@ function saveImageFromUrl($url)
         if ($imageData !== false) {
             $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.png';
             $path = public_path() . "/images" . '/';
+            if (!is_dir($path)) {
+                if (!mkdir($path, 0755, true)) {
+                    return false;
+                }
+            }
             $path .= $fileName;
             if (file_put_contents($path, $imageData)) {
                 return $fileName;
