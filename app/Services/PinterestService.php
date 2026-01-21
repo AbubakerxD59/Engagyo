@@ -108,7 +108,7 @@ class PinterestService
             "code" => (string) $code,
             "redirect_uri" => route("pinterest.callback"),
             "grant_type" => "authorization_code",
-            "continuous_refresh" => true,
+            // "continuous_refresh" => true,
         );
         $postToken = $this->client->post($this->baseUrl . "oauth/token", $data,  $this->header);
         $jsonToken = $this->client->postJson($this->baseUrl . "oauth/token", $data,  $this->header);

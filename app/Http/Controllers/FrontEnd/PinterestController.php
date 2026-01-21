@@ -30,6 +30,7 @@ class PinterestController extends Controller
     {
         $user = User::with("pinterest")->find(Auth::guard('user')->id());
         if ($request->has('code') && $request->has('state')) {
+            dd($request->all());
             $code = $request->code;
             $state = $request->state;
             $token = $this->pinterestService->getOauthToken($code);
