@@ -1180,6 +1180,9 @@
             }
         });
 
+        $('#status').on('change', function(){
+            loadPosts(1);
+        });
         // Reload posts function (for use after actions)
         function reloadPosts() {
             loadPosts(currentPage);
