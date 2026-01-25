@@ -69,6 +69,8 @@ class PinterestController extends Controller
                     ];
                     $pinterestAccount = $user->pinterest()->updateOrCreate(["pin_id" => $me["id"]], $data);
 
+                    // Pinterest Account
+                    $pinterest = Pinterest::with("board")->where('pin_id', $me["id"])->first();
                     // Log account connection
                     $this->logService->logAccountConnection('pinterest', $pinterestAccount->id, $me["username"], 'connected');
 
@@ -85,6 +87,7 @@ class PinterestController extends Controller
                             ])->first() ? true : false;
                             $boards["items"][$key]["connected"] = $connected;
                         }
+                        session_set('pinterest', $pinterest);
                         session_set('pinterest_auth', '1');
                         session_set('account', 'Pinterest');
                         session_set('items', $boards["items"]);

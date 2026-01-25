@@ -51,8 +51,8 @@ class PackageController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-            'duration' => 'required|integer|min:1',
-            'date_type' => 'required|in:day,month,year',
+            'duration' => [$request->is_lifetime ? 'nullable' : 'required', 'integer', 'min:1'],
+            'date_type' => 'required_with:duration |in:day,month,year',
             'trial_days' => 'nullable|integer|min:0',
             'sort_order' => 'nullable|integer',
             'is_active' => 'nullable|boolean',
@@ -98,8 +98,8 @@ class PackageController extends Controller
                 // Create Stripe price
                 $stripePrice = $this->stripeService->createPrice([
                     'product_id' => $stripeProduct->id,
-                    'unit_amount' => $data['price'], // Price is already in cents
-                    'currency' => 'gbp',
+                    'unit_amount' => $data['price'] * 100,
+                    'currency' => 'usd',
                     'metadata' => [
                         'package_id' => null, // Will be updated after package creation
                     ],
@@ -184,8 +184,8 @@ class PackageController extends Controller
             'name' => 'required|string|max:255',
             'description' => 'nullable|string',
             'price' => 'required|numeric|min:0',
-            'duration' => 'required|integer|min:1',
-            'date_type' => 'required|in:day,month,year',
+            'duration' => [$request->is_lifetime ? 'nullable' : 'required', 'integer', 'min:1'],
+            'date_type' => 'required_with:duration |in:day,month,year',
             'trial_days' => 'nullable|integer|min:0',
             'sort_order' => 'nullable|integer',
             'is_active' => 'nullable|boolean',
@@ -254,7 +254,9 @@ class PackageController extends Controller
 
                 // Determine if recurring or one-time payment
                 $recurring = null;
-                if ($data['date_type'] !== 'day' || $data['duration'] > 1) {
+                if ($data['date_type'] == 'day' &&  $data['duration'] == 1) {
+                    $recurring = null;
+                } else {
                     // Only day with duration 1 is one-time, others are recurring
                     $interval = $data['date_type'] === 'day' ? 'day' : ($data['date_type'] === 'month' ? 'month' : 'year');
                     $intervalCount = $data['duration'];
@@ -263,14 +265,16 @@ class PackageController extends Controller
                         'interval_count' => $intervalCount,
                     ];
                 }
-
+                if ($request->has('is_lifetime') && $request->is_lifetime) {
+                    $recurring = false;
+                }
                 // Create new price if price/duration/date_type changed OR if no price exists (prices are immutable in Stripe)
                 if ($needsNewPrice && $stripeProductId) {
                     // Create a new price (old price remains in Stripe but won't be used)
                     $stripePrice = $this->stripeService->createPrice([
                         'product_id' => $stripeProductId,
-                        'unit_amount' => (int)$data['price'], // Price is already in cents (matching store method)
-                        'currency' => 'gbp',
+                        'unit_amount' => (int)$data['price'] * 100,
+                        'currency' => 'usd',
                         'recurring' => $recurring,
                         'metadata' => [
                             'package_id' => $package->id,
@@ -282,8 +286,8 @@ class PackageController extends Controller
                     // Create price if it doesn't exist
                     $stripePrice = $this->stripeService->createPrice([
                         'product_id' => $stripeProductId,
-                        'unit_amount' => (int)$data['price'], // Price is already in cents (matching store method)
-                        'currency' => 'gbp',
+                        'unit_amount' => (int)$data['price'] * 100,
+                        'currency' => 'usd',
                         'recurring' => $recurring,
                         'metadata' => [
                             'package_id' => $package->id,

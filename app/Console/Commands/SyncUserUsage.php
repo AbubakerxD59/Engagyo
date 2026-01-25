@@ -36,7 +36,7 @@ class SyncUserUsage extends Command
     public function handle()
     {
         $userId = $this->option('user_id');
-        
+
         if ($userId) {
             $this->info("Starting user usage sync for user ID: {$userId}...");
         } else {
@@ -54,7 +54,7 @@ class SyncUserUsage extends Command
                     $query->where('is_active', true);
                 })
                 ->get();
-            
+
             if ($users->isEmpty()) {
                 $this->warn("User ID {$userId} not found or has no active package.");
                 return Command::FAILURE;
@@ -197,14 +197,6 @@ class SyncUserUsage extends Command
                 return Post::whereIn('account_id', $accounts->pluck('id'))
                     ->where('source', 'rss')
                     ->count();
-
-            case Feature::$features_list[3]:
-                return Post::whereIn('account_id', $accounts->pluck('id'))
-                    ->where('type', 'video')
-                    ->count();
-
-            case Feature::$features_list[4]:
-                return ApiKey::where('user_id', $user->id)->count();
 
             default:
                 // For unknown features, return 0 or try to get from existing usage record

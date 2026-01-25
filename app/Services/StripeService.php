@@ -182,7 +182,7 @@ class StripeService
             $priceData = [
                 'product' => $data['product_id'],
                 'unit_amount' => $data['unit_amount'], // Amount in cents
-                'currency' => $data['currency'] ?? 'gbp',
+                'currency' => $data['currency'] ?? 'usd',
             ];
 
             // Add recurring if provided

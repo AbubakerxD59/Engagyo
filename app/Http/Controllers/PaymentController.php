@@ -64,6 +64,9 @@ class PaymentController extends Controller
             ]];
 
             $mode = 'subscription';
+            if ($package->is_lifetime) {
+                $mode = 'payment';
+            }
 
             $trialDays = $package->trial_days ?? 0;
 
@@ -122,18 +125,7 @@ class PaymentController extends Controller
                     $package = Package::find($packageId);
 
                     if ($user && $package) {
-                        $subscription = UserSubscription::where('user_id', $user->id)
-                            ->where('package_id', $package->id)
-                            ->where('status', 'active')
-                            ->first();
-
-                        if (!$subscription) {
-                            $this->activatePackageFromSession($session, $user, $package);
-                        } else {
-                            if ($user->package_id != $package->id) {
-                                $user->update(['package_id' => $package->id]);
-                            }
-                        }
+                        $this->activatePackageFromSession($session, $user, $package);
                     }
                 }
 
@@ -339,7 +331,7 @@ class PaymentController extends Controller
                     'starts_at' => $startsAt,
                     'ends_at' => $endsAt,
                     'amount_paid' => $session->amount_total ? ($session->amount_total / 100) : $package->price / 100,
-                    'currency' => $session->currency ?? 'gbp',
+                    'currency' => $session->currency ?? 'usd',
                     'metadata' => [
                         'session_id' => $session->id,
                         'mode' => $session->mode,
@@ -422,12 +414,10 @@ class PaymentController extends Controller
                 ->where('is_active', true)
                 ->update(['is_active' => false]);
 
-            $userPackage = UserPackage::updateOrCreate(
+            $userPackage = UserPackage::create(
                 [
                     'user_id' => $user->id,
                     'package_id' => $package->id,
-                ],
-                [
                     'is_active' => true,
                     'assigned_at' => $startsAt,
                     'expires_at' => $endsAt,
@@ -439,8 +429,6 @@ class PaymentController extends Controller
                 [
                     'user_id' => $user->id,
                     'package_id' => $package->id,
-                ],
-                [
                     'stripe_subscription_id' => $subscriptionId,
                     'stripe_customer_id' => $customerId,
                     'stripe_payment_intent_id' => $paymentIntentId,
@@ -448,7 +436,7 @@ class PaymentController extends Controller
                     'starts_at' => $startsAt,
                     'ends_at' => $endsAt,
                     'amount_paid' => $session->amount_total ? ($session->amount_total / 100) : $package->price / 100,
-                    'currency' => $session->currency ?? 'gbp',
+                    'currency' => $session->currency ?? 'usd',
                     'metadata' => [
                         'session_id' => $session->id,
                         'mode' => $session->mode,
@@ -593,7 +581,7 @@ class PaymentController extends Controller
                     'starts_at' => $startsAt,
                     'ends_at' => $endsAt,
                     'amount_paid' => ($subscription->items->data[0]->price->unit_amount ?? 0) / 100,
-                    'currency' => $subscription->currency ?? 'gbp',
+                    'currency' => $subscription->currency ?? 'usd',
                     'metadata' => [
                         'subscription_status' => $subscription->status,
                         'trial_days' => $trialDays,
@@ -783,7 +771,7 @@ class PaymentController extends Controller
                     'starts_at' => Carbon::createFromTimestamp($subscription->current_period_start),
                     'ends_at' => $endsAt,
                     'amount_paid' => ($invoice->amount_paid ?? 0) / 100,
-                    'currency' => $invoice->currency ?? 'gbp',
+                    'currency' => $invoice->currency ?? 'usd',
                 ]);
 
                 $userPackage = UserPackage::where('user_id', $userSubscription->user_id)

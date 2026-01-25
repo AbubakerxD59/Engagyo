@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Menu;
 use App\Models\Post;
 use App\Models\Role;
 use App\Models\User;
@@ -32,6 +33,11 @@ function no_image()
 {
     $image = asset("assets/img/noimage.png");
     return $image;
+}
+
+function get_menus(){
+    $menus = Menu::with("features")->orderBy("display_order")->get();
+    return $menus;
 }
 
 function default_user_avatar($userId = null, $userName = null)

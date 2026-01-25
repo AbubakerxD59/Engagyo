@@ -29,5 +29,13 @@ class AppServiceProvider extends ServiceProvider
             }
             return $user->canUseFeature($featureKey);
         });
+        // Custom Blade directive to check if user can access a menu
+        Blade::if('canAccessMenu', function ($menuId = null) {
+            $user = User::find(auth()->user()->id);
+            if (!$user) {
+                return false;
+            }
+            return $user->canAccessMenu($menuId);
+        });
     }
 }

@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
             PermissionSeeder::class,
             PackageSeeder::class,
             FeatureSeeder::class,
+            MenuSeeder::class
         ]);
     }
 }

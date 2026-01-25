@@ -21,10 +21,9 @@ class CheckFeatureLimit
      * Handle an incoming request.
      *
      * @param  \Closure(\Illuminate\Http\Request): (\Symfony\Component\HttpFoundation\Response)  $next
-     * @param  string  $featureKey  The feature key to check
      * @param  bool  $increment  Whether to increment usage if allowed (default: false)
      */
-    public function handle(Request $request, Closure $next, string $featureKey, bool $increment = false): Response
+    public function handle(Request $request, Closure $next, $featureKey = null, bool $increment = false): Response
     {
         $user = User::find(auth()->user()->id);
 
@@ -52,8 +51,12 @@ class CheckFeatureLimit
                 }
             }
         }
-        view()->share('isPackageExpired', $isPackageExpired);
+        $renew = $isPackageExpired ? true : false;
+        view()->share(['isPackageExpired', $isPackageExpired, 'renew' => $renew]);
 
+        if (empty($featureKey)) {
+            return $next($request);
+        }
         // If user has full access, bypass all limit checks
         if ($user->hasFullAccess()) {
             // If increment is requested, just increment without checking limits

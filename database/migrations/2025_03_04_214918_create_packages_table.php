@@ -15,8 +15,8 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->string('icon');
-            $table->integer('duration');
-            $table->string('date_type');
+            $table->integer('duration')->nullable();
+            $table->string('date_type')->nullable();
             $table->integer('price');
             $table->text('stripe_product_id')->nullable();
             $table->text('stripe_price_id')->nullable();

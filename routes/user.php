@@ -73,7 +73,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
         });
     });
     // API Keys Routes
-    Route::controller(ApiKeysController::class)->middleware(['feature:' . Feature::$features_list[4]])->group(function () {
+    Route::controller(ApiKeysController::class)->middleware(['feature:' . Feature::$features_list[5]])->group(function () {
         Route::get("api-keys", "index")->name("api-keys");
         Route::name("api-keys.")->prefix("api-keys/")->group(function () {
             Route::post("store", "store")->name("store");
@@ -106,7 +106,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
         });
     });
     // Plan & Billing Routes
-    Route::controller(App\Http\Controllers\User\PlanBillingController::class)->group(function () {
+    Route::controller(App\Http\Controllers\User\PlanBillingController::class)->middleware(['feature'])->group(function () {
         Route::get("plan-billing", "index")->name("plan.billing");
     });
     // Notifications Routes

@@ -8,6 +8,7 @@
                         <div class="platform-icon-wrapper facebook-icon">
                             <i class="fab fa-facebook-f"></i>
                         </div>
+                        @php $facebook = session_get('facebook'); @endphp
                         <div class="modal-title-info">
                             <h5 class="modal-title">{{ $facebook->username }}</h5>
                             <p class="modal-subtitle">Select the pages you want to connect</p>
@@ -25,9 +26,8 @@
                             <div class="account-item-content">
                                 <div class="account-avatar-section">
                                     @if (!empty($item['profile_image']))
-                                        <img src="{{ asset('images/' . $item['profile_image']) }}" 
-                                            alt="{{ $item['name'] }}" 
-                                            class="account-item-avatar"
+                                        <img src="{{ asset('images/' . $item['profile_image']) }}"
+                                            alt="{{ $item['name'] }}" class="account-item-avatar"
                                             onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
                                     @else
                                         <div class="account-item-avatar-placeholder">
@@ -47,10 +47,8 @@
                                         <span>Connected</span>
                                     </button>
                                 @else
-                                    <button class="btn btn-connect facebook_connect" 
-                                        data-id="{{ $key }}"
-                                        data-fb-id="{{ @$facebook->fb_id }}"
-                                        data-page-data="{{ json_encode($item) }}">
+                                    <button class="btn btn-connect facebook_connect" data-id="{{ $key }}"
+                                        data-fb-id="{{ @$facebook->fb_id }}" data-page-data="{{ json_encode($item) }}">
                                         <i class="fas fa-plus"></i>
                                         <span>Connect</span>
                                     </button>

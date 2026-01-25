@@ -8,6 +8,7 @@
                         <div class="platform-icon-wrapper pinterest-icon">
                             <i class="fab fa-pinterest-p"></i>
                         </div>
+                        @php $pinterest = session_get('pinterest'); @endphp
                         <div class="modal-title-info">
                             <h5 class="modal-title">{{ $pinterest->username }}</h5>
                             <p class="modal-subtitle">Select the boards you want to connect</p>
@@ -25,9 +26,8 @@
                             <div class="account-item-content">
                                 <div class="account-avatar-section">
                                     @if (!empty($item['image_cover_url']) || !empty($item['cover_image_url']))
-                                        <img src="{{ $item['image_cover_url'] ?? $item['cover_image_url'] }}" 
-                                            alt="{{ $item['name'] }}" 
-                                            class="account-item-avatar"
+                                        <img src="{{ $item['image_cover_url'] ?? $item['cover_image_url'] }}"
+                                            alt="{{ $item['name'] }}" class="account-item-avatar"
                                             onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
                                     @else
                                         <div class="account-item-avatar-placeholder pinterest-placeholder">
@@ -47,8 +47,7 @@
                                         <span>Connected</span>
                                     </button>
                                 @else
-                                    <button class="btn btn-connect pinterest_connect" 
-                                        data-id="{{ $key }}"
+                                    <button class="btn btn-connect pinterest_connect" data-id="{{ $key }}"
                                         data-pin-id="{{ @$pinterest->pin_id }}"
                                         data-board-data="{{ json_encode($item) }}">
                                         <i class="fas fa-plus"></i>

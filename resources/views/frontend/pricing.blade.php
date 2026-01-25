@@ -37,7 +37,7 @@
                                     <span>{{ $package->description }}</span>
                                 @endif
                                 <h1>
-                                    ${{ number_format($package->price / 100, 2) }}
+                                    ${{ number_format($package->price, 2) }}
                                     @if ($package->date_type)
                                         <span style="font-size: 0.6em; font-weight: normal;">
                                             / {{ $package->duration }} {{ $package->date_type }}
@@ -77,7 +77,7 @@
                                 @else
                                     @if (Auth::guard('user')->check())
                                         <a href="{{ route('payment.checkout', $package->id) }}">
-                                            Buy Now - ${{ number_format($package->price / 100, 2) }}
+                                            Buy Now - ${{ number_format($package->price, 2) }}
                                         </a>
                                     @else
                                         <a href="{{ route('frontend.showRegister') }}">

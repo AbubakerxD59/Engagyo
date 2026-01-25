@@ -22,8 +22,6 @@ class Feature extends Model
         "0" => "social_accounts",
         "1" => "scheduled_posts_per_account",
         "2" => "rss_feed_automation",
-        "3" => "video_publishing",
-        "4" => "api_keys",
         "5" => "api_access",
     ];
 
@@ -31,6 +29,11 @@ class Feature extends Model
         'is_active' => 'boolean',
         'default_value' => 'integer',
     ];
+
+    public function menu()
+    {
+        return $this->belongsTo(Menu::class, 'parent_id', 'id');
+    }
 
     public function scopeSearch($query, $search)
     {

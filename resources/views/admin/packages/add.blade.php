@@ -83,7 +83,7 @@
                                             </div>
                                             <div class="col-md-4">
                                                 <input type="number" class="form-control" name="duration" id="duration"
-                                                    value="{{ old('duration') }}" placeholder="Enter package duration" required>
+                                                    value="{{ old('duration') }}" placeholder="Enter package duration">
                                                 @error('duration')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror

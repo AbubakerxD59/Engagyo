@@ -87,7 +87,7 @@
                                             <div class="col-md-4">
                                                 <input type="number" class="form-control" name="duration" id="duration"
                                                     value="{{ old('duration', $package->duration) }}"
-                                                    placeholder="Enter package duration" required>
+                                                    placeholder="Enter package duration">
                                                 @error('duration')
                                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                                 @enderror

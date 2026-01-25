@@ -544,6 +544,24 @@ class User extends Authenticatable
         return true;
     }
 
+    public function canAccessMenu($menuId)
+    {
+        $menu = Menu::with("features")->find($menuId);
+        if (!$menu) {
+            return false;
+        }
+        $menuFeatures = $menu->features->pluck('id')->toArray();
+        if (count($menuFeatures) == 0) {
+            return true;
+        }
+        foreach ($menuFeatures as $featureId) {
+            if ($this->canUseFeature($featureId)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     /**
      * Check if user has full access (lifetime package or no expiration)
      * 
