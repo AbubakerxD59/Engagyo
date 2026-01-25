@@ -70,7 +70,7 @@ class PinterestController extends Controller
                     $pinterestAccount = $user->pinterest()->updateOrCreate(["pin_id" => $me["id"]], $data);
 
                     // Pinterest Account
-                    $pinterest = Pinterest::with("board")->where('pin_id', $me["id"])->first();
+                    $pinterest = Pinterest::with("boards")->where('pin_id', $me["id"])->first();
                     // Log account connection
                     $this->logService->logAccountConnection('pinterest', $pinterestAccount->id, $me["username"], 'connected');
 
