@@ -10,6 +10,7 @@ class Feature extends Model
     use HasFactory;
 
     protected $fillable = [
+        'parent_id',
         'key',
         'name',
         'type',
