@@ -12,6 +12,8 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 
+use function Laravel\Prompts\info;
+
 class DownloadPhoto implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
@@ -30,29 +32,33 @@ class DownloadPhoto implements ShouldQueue
      */
     public function handle(): void
     {
-        $service = new DownloadPhotoService();
-        $photo = Photo::with("post")->findOrFail($this->data['id']);
-        $response = $service->fetch($this->data);
-        echo 'Status: ' . $response['success'];
-        if ($response['success']) {
-            echo 'Url: ' . $response['data'];
-            $status = empty($response['data']) ? "pending" : "fetched";
-            $tries = $photo->tries + 1;
-            if ($status == "fetched") {
-                $photo->post->update([
-                    "image" => $response['data']
+        try {
+            $service = new DownloadPhotoService();
+            $photo = Photo::with("post")->findOrFail($this->data['id']);
+            $response = $service->fetch($this->data);
+            echo 'Status: ' . $response['success'];
+            if ($response['success']) {
+                echo 'Url: ' . $response['data'];
+                $status = empty($response['data']) ? "pending" : "fetched";
+                $tries = $photo->tries + 1;
+                if ($status == "fetched") {
+                    $photo->post->update([
+                        "image" => $response['data']
+                    ]);
+                }
+                $photo->update([
+                    "status" => $status,
+                    "tries" => $tries,
+                    "response" => $response['data']
+                ]);
+            } else {
+                $photo->update([
+                    "status" => "failed",
+                    "response" => $response['message']
                 ]);
             }
-            $photo->update([
-                "status" => $status,
-                "tries" => $tries,
-                "response" => $response['data']
-            ]);
-        } else {
-            $photo->update([
-                "status" => "failed",
-                "response" => $response['message']
-            ]);
+        } catch (Exception $e) {
+            info("Download Photo line# {$e->getLine()}, Error: {$e->getMessage()}");
         }
     }
 }
