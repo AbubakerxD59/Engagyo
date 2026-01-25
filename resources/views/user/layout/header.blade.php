@@ -56,6 +56,9 @@
                 <a class="dropdown-item" href="{{ route('panel.settings') }}">
                     <i class="fas fa-cog mr-2"></i> Settings
                 </a>
+                <a class="dropdown-item" href="{{ route('panel.plan.billing') }}">
+                    <i class="fas fa-file-invoice-dollar mr-2"></i> Plan & Billing
+                </a>
                 <a class="dropdown-item" href="{{ route('panel.api-keys') }}">
                     <i class="fas fa-key mr-2"></i> API Keys
                 </a>

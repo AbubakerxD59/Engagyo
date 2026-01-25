@@ -105,6 +105,10 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
             Route::post("update-password", "updatePassword")->name("updatePassword");
         });
     });
+    // Plan & Billing Routes
+    Route::controller(App\Http\Controllers\User\PlanBillingController::class)->group(function () {
+        Route::get("plan-billing", "index")->name("plan.billing");
+    });
     // Notifications Routes
     Route::controller(NotificationController::class)->name("notifications.")->prefix("notifications/")->group(function () {
         Route::get("fetch", "fetch")->name("fetch");

@@ -29,8 +29,11 @@ class DownloadPhotoCron extends Command
     public function handle()
     {
         $pending_photos = Photo::with("post")->pending()->available($this->max_tries)->limit(1)->get();
+
         foreach ($pending_photos as $photo) {
+            echo 'Current Image: ' . $photo->id;
             DownloadPhoto::dispatch($photo->toArray());
         }
+        echo 'Total images: ' . count($pending_photos);
     }
 }

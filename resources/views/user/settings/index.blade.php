@@ -36,52 +36,7 @@
                             </div>
                         </div>
 
-                        {{-- Package Information Card --}}
-                        <div class="card">
-                            <div class="card-header">
-                                <h5 class="card-title mb-0">
-                                    <i class="fas fa-box mr-2"></i>Current Package
-                                </h5>
-                            </div>
-                            <div class="card-body">
-                                @if ($package)
-                                    <div class="package-info">
-                                        <h6 class="mb-2">{{ $package->name }}</h6>
-                                        <div class="package-status mb-2">
-                                            <span class="badge badge-{{ $packageStatus === 'Active' ? 'success' : ($packageStatus === 'Expired' ? 'danger' : ($packageStatus === 'Lifetime' ? 'info' : 'secondary')) }} package-status-badge"
-                                                @if ($expiryDate && $packageStatus !== 'Lifetime')
-                                                    data-toggle="tooltip" 
-                                                    data-placement="top" 
-                                                    title="Expiry date: {{ $expiryDate->format('jS M, Y') }}"
-                                                @endif
-                                                style="cursor: {{ $expiryDate && $packageStatus !== 'Lifetime' ? 'help' : 'default' }};">
-                                                <i class="fas fa-{{ $packageStatus === 'Active' ? 'check-circle' : ($packageStatus === 'Expired' ? 'times-circle' : ($packageStatus === 'Lifetime' ? 'infinity' : 'question-circle')) }} mr-1"></i>
-                                                {{ $packageStatus }}
-                                            </span>
-                                        </div>
-                                        @if ($expiryDate && $packageStatus !== 'Lifetime')
-                                            <p class="text-muted mb-0 small">
-                                                <i class="fas fa-calendar-alt mr-1"></i>
-                                                Expires: {{ $expiryDate->format('jS M, Y') }}
-                                                <span class="ml-1" data-toggle="tooltip" data-placement="top" title="Expiry date: {{ $expiryDate->format('jS M, Y') }}">
-                                                    <i class="fas fa-info-circle"></i>
-                                                </span>
-                                            </p>
-                                        @elseif ($packageStatus === 'Lifetime')
-                                            <p class="text-muted mb-0 small">
-                                                <i class="fas fa-infinity mr-1"></i>
-                                                No expiration
-                                            </p>
-                                        @endif
-                                    </div>
-                                @else
-                                    <div class="text-center text-muted">
-                                        <i class="fas fa-box-open fa-2x mb-2"></i>
-                                        <p class="mb-0">No active package</p>
-                                    </div>
-                                @endif
-                            </div>
-                        </div>
+
 
                         {{-- Change Password Card --}}
                         <div class="card">
@@ -203,70 +158,7 @@
                             </div>
                         </div>
 
-                        {{-- Features & Usage Card --}}
-                        @if ($package && count($featuresWithUsage) > 0)
-                            <div class="card mt-3">
-                                <div class="card-header">
-                                    <h5 class="card-title mb-0">
-                                        <i class="fas fa-list-check mr-2"></i>Available Features & Usage
-                                    </h5>
-                                </div>
-                                <div class="card-body">
-                                    <div class="features-list">
-                                        @foreach ($featuresWithUsage as $feature)
-                                            <div class="feature-item mb-3 pb-3 border-bottom">
-                                                <div class="d-flex justify-content-between align-items-start mb-2">
-                                                    <div class="flex-grow-1">
-                                                        <h6 class="mb-1">{{ $feature['name'] }}</h6>
-                                                        @if (!empty($feature['description']))
-                                                            <p class="text-muted small mb-2">{{ $feature['description'] }}</p>
-                                                        @endif
-                                                    </div>
-                                                </div>
-                                                <div class="feature-usage">
-                                                    @if ($feature['is_unlimited'])
-                                                        <div class="d-flex align-items-center">
-                                                            <span class="badge badge-success mr-2">
-                                                                <i class="fas fa-infinity mr-1"></i>Unlimited
-                                                            </span>
-                                                            <span class="text-muted small">Usage: {{ number_format($feature['usage']) }}</span>
-                                                        </div>
-                                                    @elseif ($feature['limit'] !== null)
-                                                        <div class="usage-info">
-                                                            <div class="d-flex justify-content-between align-items-center mb-1">
-                                                                <span class="small text-muted">
-                                                                    {{ number_format($feature['usage']) }} / {{ number_format($feature['limit']) }}
-                                                                </span>
-                                                                <span class="small font-weight-bold {{ $feature['remaining'] === 0 ? 'text-danger' : ($feature['remaining'] !== null && $feature['remaining'] <= ($feature['limit'] * 0.2) ? 'text-warning' : 'text-success') }}">
-                                                                    {{ $feature['remaining'] !== null ? $feature['remaining'] . ' remaining' : 'N/A' }}
-                                                                </span>
-                                                            </div>
-                                                            <div class="progress" style="height: 8px;">
-                                                                @php
-                                                                    $usagePercentage = $feature['limit'] > 0 ? min(100, round(($feature['usage'] / $feature['limit']) * 100, 2)) : 0;
-                                                                    $progressClass = $usagePercentage >= 100 ? 'bg-danger' : ($usagePercentage >= 80 ? 'bg-warning' : 'bg-success');
-                                                                @endphp
-                                                                <div class="progress-bar {{ $progressClass }}" role="progressbar" 
-                                                                     style="width: {{ $usagePercentage }}%" 
-                                                                     aria-valuenow="{{ $usagePercentage }}" 
-                                                                     aria-valuemin="0" 
-                                                                     aria-valuemax="100">
-                                                                </div>
-                                                            </div>
-                                                        </div>
-                                                    @else
-                                                        <div class="d-flex align-items-center">
-                                                            <span class="text-muted small">Usage: {{ number_format($feature['usage']) }}</span>
-                                                            <span class="badge badge-secondary ml-2">No limit</span>
-                                                        </div>
-                                                    @endif
-                                                </div>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                            </div>
-                        @endif
+
                     </div>
                 </div>
             </div>
@@ -346,42 +238,7 @@
             box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.1);
         }
 
-        .package-info h6 {
-            font-size: 18px;
-            font-weight: 600;
-            color: #333;
-        }
 
-        .package-status-badge {
-            font-size: 13px;
-            padding: 6px 12px;
-            cursor: help;
-        }
-
-        .feature-item:last-child {
-            border-bottom: none !important;
-            margin-bottom: 0 !important;
-            padding-bottom: 0 !important;
-        }
-
-        .feature-item h6 {
-            font-size: 15px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .usage-info {
-            width: 100%;
-        }
-
-        .progress {
-            border-radius: 4px;
-            background-color: #e9ecef;
-        }
-
-        .progress-bar {
-            transition: width 0.6s ease;
-        }
     </style>
 @endpush
 

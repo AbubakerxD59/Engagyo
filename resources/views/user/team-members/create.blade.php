@@ -25,32 +25,39 @@
 
                                     <div class="row">
                                         <!-- Menus Access Column -->
-                                        <div class="col-md-6">
+                                        <div class="col-md-12">
                                             <div class="form-group">
                                                 <label class="font-weight-bold mb-3">Menus Access</label>
-                                                <p class="text-muted small mb-3">Select the menu items this team member can access.</p>
-                                                <div class="menus-container"
-                                                    style="max-height: 600px; overflow-y: auto; padding: 10px 0;">
-                                                    <div class="menu-items-grid">
+                                                <p class="text-muted small mb-3">Select the menu items this team member can
+                                                    access.</p>
+                                                <div class="menus-container">
+                                                    <div class="row">
                                                         @foreach ($menuItems as $menuItem)
-                                                            <div class="menu-item-card" data-menu-id="{{ $menuItem['id'] }}">
-                                                                <div class="menu-item-content">
-                                                                    <div class="menu-item-icon-wrapper">
-                                                                        <i class="{{ $menuItem['icon'] }} menu-item-icon"></i>
-                                                                    </div>
-                                                                    <div class="menu-item-info">
-                                                                        <div class="menu-item-name">{{ $menuItem['name'] }}</div>
-                                                                        <div class="menu-item-route">{{ $menuItem['route'] }}</div>
-                                                                    </div>
-                                                                    <div class="menu-item-checkbox-wrapper">
-                                                                        <input
-                                                                            class="menu-checkbox"
-                                                                            type="checkbox" name="menu_access[]"
-                                                                            value="{{ $menuItem['id'] }}"
-                                                                            id="menu_{{ $menuItem['id'] }}">
-                                                                        <label for="menu_{{ $menuItem['id'] }}" class="menu-checkbox-label">
-                                                                            <span class="checkmark"></span>
-                                                                        </label>
+                                                            <div class="col-md-6 p-1">
+                                                                <div class="menu-item-card"
+                                                                    data-menu-id="{{ $menuItem['id'] }}">
+                                                                    <div class="menu-item-content">
+                                                                        <div class="menu-item-icon-wrapper">
+                                                                            <i
+                                                                                class="{{ $menuItem['icon'] }} menu-item-icon"></i>
+                                                                        </div>
+                                                                        <div class="menu-item-info">
+                                                                            <div class="menu-item-name">
+                                                                                {{ $menuItem['name'] }}
+                                                                            </div>
+                                                                            <div class="menu-item-route">
+                                                                                {{ $menuItem['route'] }}</div>
+                                                                        </div>
+                                                                        <div class="menu-item-checkbox-wrapper">
+                                                                            <input class="menu-checkbox" type="checkbox"
+                                                                                name="menu_access[]"
+                                                                                value="{{ $menuItem['id'] }}"
+                                                                                id="menu_{{ $menuItem['id'] }}">
+                                                                            <label for="menu_{{ $menuItem['id'] }}"
+                                                                                class="menu-checkbox-label">
+                                                                                <span class="checkmark"></span>
+                                                                            </label>
+                                                                        </div>
                                                                     </div>
                                                                 </div>
                                                             </div>
@@ -67,7 +74,7 @@
                                         </div>
 
                                         <!-- Features Column -->
-                                        <div class="col-md-6 shadow-sm">
+                                        {{-- <div class="col-md-6 shadow-sm">
                                             <div class="form-group">
                                                 <label>Feature Limits</label>
                                                 <p class="text-muted small">Leave empty to use your package limits.</p>
@@ -93,7 +100,7 @@
                                                     @endif
                                                 </div>
                                             </div>
-                                        </div>
+                                        </div> --}}
                                     </div>
 
                                     <div class="form-group">
@@ -576,12 +583,12 @@
             position: relative;
         }
 
-        .menu-checkbox:checked + .menu-checkbox-label .checkmark {
+        .menu-checkbox:checked+.menu-checkbox-label .checkmark {
             background: #007bff;
             border-color: #007bff;
         }
 
-        .menu-checkbox:checked + .menu-checkbox-label .checkmark::after {
+        .menu-checkbox:checked+.menu-checkbox-label .checkmark::after {
             content: '';
             position: absolute;
             left: 7px;
@@ -636,7 +643,8 @@
             // Handle menu item card click to toggle checkbox
             $('.menu-item-card').on('click', function(e) {
                 // Don't toggle if clicking directly on the checkbox
-                if ($(e.target).is('input[type="checkbox"]') || $(e.target).closest('.menu-item-checkbox-wrapper').length) {
+                if ($(e.target).is('input[type="checkbox"]') || $(e.target).closest(
+                        '.menu-item-checkbox-wrapper').length) {
                     return;
                 }
 

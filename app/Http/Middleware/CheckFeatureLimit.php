@@ -32,6 +32,28 @@ class CheckFeatureLimit
             return redirect()->route('login')->with('error', 'Please login to continue.');
         }
 
+        // Check if package is expired
+        $isPackageExpired = false;
+        $activePackage = $user->activeUserPackage;
+
+        if ($activePackage && $activePackage->expires_at && $activePackage->expires_at->isPast()) {
+            if ($activePackage->package && !$activePackage->package->is_lifetime) {
+                $isPackageExpired = true;
+
+                // Block non-GET requests (actions) if package is expired
+                if (!$request->isMethod('get')) {
+                    if ($request->expectsJson()) {
+                        return response()->json([
+                            'success' => false,
+                            'message' => 'Your package has expired. Please renew your subscription.',
+                        ], 403);
+                    }
+                    return redirect()->back()->with('error', 'Your package has expired. Please renew your subscription.');
+                }
+            }
+        }
+        view()->share('isPackageExpired', $isPackageExpired);
+
         // If user has full access, bypass all limit checks
         if ($user->hasFullAccess()) {
             // If increment is requested, just increment without checking limits

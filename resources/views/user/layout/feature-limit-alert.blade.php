@@ -1,4 +1,4 @@
-@if (isset($featureLimitReached) && $featureLimitReached)
+@if (isset($featureLimitReached) && $featureLimitReached || isset($isPackageExpired) && $isPackageExpired)
     <div class="feature-limit-alert-container">
         <div class="feature-limit-banner">
             <div class="container-fluid">
@@ -10,10 +10,14 @@
                             </div>
                             <div class="feature-limit-text">
                                 <h4 class="feature-limit-title">
-                                    <strong>Feature Limit Reached</strong>
+                                    <strong>{{ isset($isPackageExpired) && $isPackageExpired ? 'Package Expired' : 'Feature Limit Reached' }}</strong>
                                 </h4>
                                 <p class="feature-limit-message">
-                                    {{ $featureLimitMessage ?? 'You have reached your feature limit. Upgrade your package to continue using this feature.' }}
+                                    @if(isset($isPackageExpired) && $isPackageExpired)
+                                        Your package has expired. Please renew your subscription to continue using features.
+                                    @else
+                                        {{ $featureLimitMessage ?? 'You have reached your feature limit. Upgrade your package to continue using this feature.' }}
+                                    @endif
                                 </p>
                                 @if (isset($featureLimitStats) && $featureLimitStats['limit'] !== null)
                                     <div class="feature-limit-stats">
@@ -26,11 +30,19 @@
                                 @endif
                             </div>
                             <div class="feature-limit-action">
-                                <button type="button" class="btn btn-upgrade" id="upgradeNowBtn" data-toggle="modal"
-                                    data-target="#upgradePackagesModal">
-                                    <i class="fas fa-arrow-up mr-2"></i>
-                                    <span>Upgrade Now</span>
-                                </button>
+                                @if(isset($isPackageExpired) && $isPackageExpired)
+                                    <a href="{{ route('panel.plan.billing') }}#upgrade" class="btn btn-upgrade">
+                                        <i class="fas fa-sync-alt mr-2"></i>
+                                        <span>Renew / Upgrade Now</span>
+                                    </a>
+                                @else
+                                    <button type="button" class="btn btn-upgrade" id="upgradeNowBtn" data-toggle="modal"
+                                        data-target="#upgradePackagesModal">
+                                        <i class="fas fa-arrow-up mr-2"></i>
+                                        <span>Upgrade Now</span>
+                                    </button>
+                                @endif
+
                             </div>
                         </div>
                     </div>
@@ -43,7 +55,7 @@
 <style>
     .feature-limit-alert-container {
         position: relative;
-        z-index: 1051;
+        /* z-index: 1051; */
         margin: 0;
         padding: 0;
         width: 100%;
