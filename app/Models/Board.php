@@ -102,7 +102,7 @@ class Board extends Model
 
     public function getAccountNameAttribute()
     {
-        $account = $this->pinterest;
+        $account = $this->pinterest()->first();
         return $account ? $account->username : "";
     }
 

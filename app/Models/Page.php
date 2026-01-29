@@ -127,7 +127,7 @@ class Page extends Model
 
     public function getAccountNameAttribute()
     {
-        $account = $this->facebook;
+        $account = $this->facebook()->first();
         return $account ? $account->username : "";
     }
 
