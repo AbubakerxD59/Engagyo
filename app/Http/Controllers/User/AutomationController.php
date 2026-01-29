@@ -23,6 +23,7 @@ use App\Services\PinterestService;
 use App\Http\Controllers\Controller;
 use App\Models\Tiktok;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AutomationController extends Controller
 {
@@ -369,8 +370,7 @@ class AutomationController extends Controller
                         "success" => true,
                         "message" => "Your post is being Published!"
                     );
-                }
-                if ($type == 'facebook') {
+                } else if ($type == 'facebook') {
                     $post = $this->post->with(relations: "page.facebook")->notPublished()->where("id", $id)->firstOrFail();
                     $page = $post->page;
 
@@ -399,12 +399,20 @@ class AutomationController extends Controller
                         "message" => "Your post is being Published!"
                     );
                 } else {
+                    Log::info("invalid social type", [
+                        "type" => $request->type,
+                        "postId" => $id,
+                    ]);
                     $response = array(
                         "success" => false,
                         "message" => "Something went Wrong!!"
                     );
                 }
             } else {
+                Log::info("Post not found!", [
+                        "type" => $request->type,
+                        "postId" => $id,
+                    ]);
                 $response = array(
                     "success" => false,
                     "message" => "Something went Wrong!"
