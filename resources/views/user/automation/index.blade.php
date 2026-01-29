@@ -40,7 +40,7 @@
                                                         $selectedAccountDomains = $user->getDomains($selectedAccount, $selectedType);
                                                     } @endphp
                                                 @selected($selected)>
-                                                {{ strtoupper($account->name . ' -  ' . $account->type . "($account->username)") }}
+                                                {{ strtoupper($account->name . ' -  ' . $account->type . "($account->account_name)") }}
                                             </option>
                                         @endforeach
                                     </select>

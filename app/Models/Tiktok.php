@@ -123,6 +123,11 @@ class Tiktok extends Model
         return $this->display_name ?? $this->username;
     }
 
+    public function getAccountNameAttribute()
+    {
+        return $this->name;
+    }
+
     protected static function booted()
     {
         static::addGlobalScope(new TeamScope);
