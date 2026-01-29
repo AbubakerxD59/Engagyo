@@ -1378,7 +1378,6 @@
                     new_url_body +=
                         '<select name="time[]" class="form-control select2 time_dropdown" multiple required>';
                     $.each(timeslots, function(index, timeslot) {
-                        console.log(timeslot);
                         new_url_body += '<option value="' + timeslot + '"';
                         if (selectedTimeslots.includes(timeslot)) {
                             new_url_body += ' selected>';
@@ -1421,14 +1420,17 @@
                 var new_url_body = '';
                 new_url_body += '<div class="col-md-6 form-group mb-0">';
                 new_url_body += '<label for="time">Time <span class="text-danger">*</span></label>';
-                new_url_body +=
+                // time dropdown
+                time_dropdown +=
                     '<select name="time[]" class="form-control select2 time_dropdown" multiple required>';
                 $.each(timeslots, function(index, timeslot) {
-                    new_url_body += '<option value="{{ $timeslot }}">';
-                    new_url_body += timeslot;
-                    new_url_body += '</option>';
+                    time_dropdown += '<option value="{{ $timeslot }}">';
+                    time_dropdown += timeslot;
+                    time_dropdown += '</option>';
                 });
-                new_url_body += '</select>';
+                time_dropdown += '</select>';
+                // time dropdown
+                new_url_body += time_dropdown;
                 new_url_body += '</div>';
                 new_url_body += '<div class="col-md-6 form-group mb-0">';
                 new_url_body += '<label for="feed_url">Feed Url <span class="text-danger">*</span></label>';
