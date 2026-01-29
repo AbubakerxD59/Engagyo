@@ -125,6 +125,12 @@ class Page extends Model
         return $date ? date("jS M, Y h:i A", strtotime($date)) : '';
     }
 
+    public function getAccountNameAttribute()
+    {
+        $account = $this->facebook;
+        return $account ? $account->username : "";
+    }
+
     protected static function booted()
     {
         static::addGlobalScope(new TeamScope);

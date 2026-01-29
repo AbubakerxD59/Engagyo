@@ -40,7 +40,7 @@
                                                         $selectedAccountDomains = $user->getDomains($selectedAccount, $selectedType);
                                                     } @endphp
                                                 @selected($selected)>
-                                                {{ strtoupper($account->name . ' - ' . $account->type) }}
+                                                {{ strtoupper($account->name . ' -  ' . $account->type . "($account->username)") }}
                                             </option>
                                         @endforeach
                                     </select>
@@ -1180,7 +1180,7 @@
             }
         });
 
-        $('#status').on('change', function(){
+        $('#status').on('change', function() {
             loadPosts(1);
         });
         // Reload posts function (for use after actions)

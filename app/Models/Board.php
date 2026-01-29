@@ -100,6 +100,12 @@ class Board extends Model
         return $date ? date("jS M, Y h:i A", strtotime($date)) : '';
     }
 
+    public function getAccountNameAttribute()
+    {
+        $account = $this->pinterest;
+        return $account ? $account->username : "";
+    }
+
     protected static function booted()
     {
         static::addGlobalScope(new TeamScope);
