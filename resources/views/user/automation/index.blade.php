@@ -1376,7 +1376,7 @@
                     new_url_body += '<div class="col-md-6 form-group mb-0">';
                     new_url_body += '<label for="time">Time <span class="text-danger">*</span></label>';
                     // time dropdown
-                    time_dropdown +=
+                    time_dropdown =
                         '<select name="time[]" class="form-control select2 time_dropdown" multiple required>';
                     $.each(timeslots, function(index, timeslot) {
                         time_dropdown += '<option value="' + timeslot + '"';
@@ -1424,7 +1424,7 @@
                 new_url_body += '<div class="col-md-6 form-group mb-0">';
                 new_url_body += '<label for="time">Time <span class="text-danger">*</span></label>';
                 // time dropdown
-                time_dropdown +=
+                time_dropdown =
                     '<select name="time[]" class="form-control select2 time_dropdown" multiple required>';
                 $.each(timeslots, function(index, timeslot) {
                     time_dropdown += '<option value="{{ $timeslot }}">';
