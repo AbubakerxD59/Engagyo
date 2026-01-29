@@ -1381,8 +1381,9 @@
                     $.each(timeslots, function(index, timeslot) {
                         time_dropdown += '<option value="' + timeslot + '"';
                         if (selectedTimeslots.includes(timeslot)) {
-                            time_dropdown += ' selected>';
+                            time_dropdown += ' selected';
                         }
+                        time_dropdown += '>';
                         time_dropdown += timeslot;
                         time_dropdown += '</option>';
                     });
