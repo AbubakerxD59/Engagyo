@@ -410,9 +410,9 @@ class AutomationController extends Controller
                 }
             } else {
                 Log::info("Post not found!", [
-                        "type" => $request->type,
-                        "postId" => $id,
-                    ]);
+                    "type" => $request->type,
+                    "postId" => $id,
+                ]);
                 $response = array(
                     "success" => false,
                     "message" => "Something went Wrong!"
