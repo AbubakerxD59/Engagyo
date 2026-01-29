@@ -46,7 +46,7 @@ class FeatureSeeder extends Seeder
             ],
             [
                 'id' => '4',
-                'parent_id' => null,
+                'parent_id' => 'Api Posts',
                 'key' => Feature::$features_list[5],
                 'name' => 'API Access',
                 'type' => 'boolean',

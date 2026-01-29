@@ -21,7 +21,7 @@
                             <i class="nav-icon {{ $menu->icon }}"></i>
                             <p>{{ $menu->name }}</p>
                         </a>
-                        @elsecanAccessMenu($menu->id)
+                        @elsecanAccessMenu($menu->id)   
                         <a href="#"
                             class="nav-link {{ in_array(request()->route()->getName(), [$menu->route]) ? 'active' : '' }}">
                             <i class="nav-icon {{ $menu->icon }}"></i>

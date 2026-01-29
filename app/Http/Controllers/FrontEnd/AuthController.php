@@ -3,15 +3,17 @@
 namespace App\Http\Controllers\FrontEnd;
 
 use Exception;
-use App\Models\User;
 use App\Models\Role;
+use App\Models\User;
+use App\Models\Package;
 use App\Models\TeamMember;
-use App\Services\TeamMemberService;
 use Illuminate\Support\Str;
 use Illuminate\Http\Request;
+use App\Services\TeamMemberService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Providers\RouteServiceProvider;
+use Illuminate\Support\Facades\Artisan;
 use App\Http\Requests\FrontEnd\LoginRequest;
 use App\Http\Requests\FrontEnd\RegisterRequest;
 
@@ -19,7 +21,7 @@ class AuthController extends Controller
 {
     private $user;
     private $teamMemberService;
-    
+
     public function __construct(User $user, TeamMemberService $teamMemberService)
     {
         $this->user = $user;
@@ -32,17 +34,26 @@ class AuthController extends Controller
 
     public function showRegister(Request $request)
     {
+        session()->forget('selected_package');
         $invitationToken = $request->get('token');
         $invitationEmail = $request->get('email');
         $teamMember = null;
-        
+        $package = null;
+        if ($request->has("plan")) {
+            $package = Package::where('name', 'like', $request->plan)->active()->first();
+            if (!$package) {
+                return back()->with("Something went wrong!");
+            }
+            session()->put('selected_package', $package->id);
+        }
+
         if ($invitationToken && $invitationEmail) {
             $teamMember = TeamMember::where('invitation_token', $invitationToken)
                 ->where('email', $invitationEmail)
                 ->where('status', 'pending')
                 ->first();
         }
-        
+
         return view("frontend.auth.register", compact('invitationToken', 'invitationEmail', 'teamMember'));
     }
 
@@ -98,24 +109,29 @@ class AuthController extends Controller
             ]);
 
             if ($user) {
+                Auth::loginUsingId($user->id, true);
+                // Selected Package
+                $package_id = session()->get('selected_package');
+                $package = Package::where('id', $package_id)->active()->first();
+                $freePackage = Package::free()->active()->first();
                 // Find and assign the User role
                 // Try to find User role with 'web' guard first (matching User model's default guard)
                 $userRole = Role::where('name', 'User')
                     ->where('guard_name', 'web')
                     ->first();
-                
+
                 // If not found, try 'user' guard
                 if (!$userRole) {
                     $userRole = Role::where('name', 'User')
                         ->where('guard_name', 'user')
                         ->first();
                 }
-                
+
                 // If still not found, try any User role
                 if (!$userRole) {
                     $userRole = Role::where('name', 'User')->first();
                 }
-                
+
                 // If role doesn't exist, create it with 'web' guard
                 if (!$userRole) {
                     $userRole = Role::create([
@@ -123,17 +139,17 @@ class AuthController extends Controller
                         'guard_name' => 'web',
                     ]);
                 }
-                
+
                 // Assign the role using the role object to ensure proper guard matching
                 $user->assignRole($userRole);
-                
+
                 // Handle team invitation if token is provided
                 if ($request->has('invitation_token') && $request->invitation_token) {
                     $invitationResult = $this->teamMemberService->acceptInvitation(
                         $request->invitation_token,
                         $user
                     );
-                    
+
                     if ($invitationResult['success']) {
                         $response = [
                             "success" => true,
@@ -159,6 +175,15 @@ class AuthController extends Controller
             }
 
             if ($response['success']) {
+                // if a package is selected and not free
+                if ($package && $package->price > 0) {
+                    return redirect()->route("payment.checkout", $package->id);
+                } elseif ($freePackage) { //assign free package
+                    $user->assignFreePackage();
+                    $user->update(["package_id" => $freePackage->id]);
+                    Artisan::call('usage:sync', ['--user_id' => $user->id]);
+                }
+
                 return redirect()->route("frontend.showLogin")->with("success", $response["message"]);
             } else {
                 return back()->with("error", $response["message"]);

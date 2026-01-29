@@ -69,23 +69,23 @@
                                     @endforelse
                                 </ul>
                             </div>
-                            <button class="btn btn-plans mt-auto">
-                                @if ($package->price == 0)
-                                    <a href="{{ route('frontend.showRegister') }}">
-                                        Get Started - It's free
+                            @if ($package->price == 0)
+                                <a class="btn btn-plans mt-auto"
+                                    href="{{ route('frontend.showRegister', ['plan' => 'free']) }}">
+                                    Get Started - It's free
+                                </a>
+                            @else
+                                @if (Auth::guard('user')->check())
+                                    <a class="btn btn-plans mt-auto" href="{{ route('payment.checkout', $package->id) }}">
+                                        Buy Now - ${{ number_format($package->price, 2) }}
                                     </a>
                                 @else
-                                    @if (Auth::guard('user')->check())
-                                        <a href="{{ route('payment.checkout', $package->id) }}">
-                                            Buy Now - ${{ number_format($package->price, 2) }}
-                                        </a>
-                                    @else
-                                        <a href="{{ route('frontend.showRegister') }}">
-                                            Start a free {{ $package->trial_days ?? 7 }}-day trial
-                                        </a>
-                                    @endif
+                                    <a class="btn btn-plans mt-auto"
+                                        href="{{ route('frontend.showRegister', ['plan' => $package->name]) }}">
+                                        Start a free {{ $package->trial_days ?? 7 }}-day trial
+                                    </a>
                                 @endif
-                            </button>
+                            @endif
                         </div>
                     </div>
                 @empty

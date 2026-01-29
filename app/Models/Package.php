@@ -70,4 +70,14 @@ class Package extends Model
         $features = check_features($currentFeatures, $this->id);
         return $features;
     }
+
+    public function scopeActive($query)
+    {
+        $query->where('is_active', 1);
+    }
+
+    public function scopeFree($query)
+    {
+        $query->where('price', 0);
+    }
 }

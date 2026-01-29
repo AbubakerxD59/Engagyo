@@ -2,14 +2,16 @@
 
 namespace App\Models;
 
+use PDO;
+use Carbon\Carbon;
+use App\Models\UserPackage;
 use Laravel\Sanctum\HasApiTokens;
+use Illuminate\Support\Facades\Log;
 use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
-use Carbon\Carbon;
-use PDO;
 
 class User extends Authenticatable
 {
@@ -528,6 +530,7 @@ class User extends Authenticatable
             ->where('is_active', true)
             ->first();
 
+
         if (!$feature) {
             return false;
         }
@@ -550,12 +553,14 @@ class User extends Authenticatable
         if (!$menu) {
             return false;
         }
-        $menuFeatures = $menu->features->pluck('id')->toArray();
+
+        $menuFeatures = $menu->features->pluck('key')->toArray();
+
         if (count($menuFeatures) == 0) {
             return true;
         }
-        foreach ($menuFeatures as $featureId) {
-            if ($this->canUseFeature($featureId)) {
+        foreach ($menuFeatures as $featureKey) {
+            if ($this->canUseFeature($featureKey)) {
                 return true;
             }
         }
@@ -719,5 +724,78 @@ class User extends Authenticatable
             ->whereIn('account_type', $social_types)
             ->pluck('account_id')
             ->toArray();
+    }
+
+    // Assign Free Package To User
+    public function assignFreePackage()
+    {
+        $package = Package::free()->active()->first();
+        $durationInDays = $package->date_type == "month" ? $package->duration * 30 . " days" : $package->duration . " days";
+        $startsAt = date("Y-m-d H:i:s");
+        $endsAt = date("Y-m-d H:i:s", strtotime("+ $durationInDays"));
+        // user package record
+        $userPackage = UserPackage::create(
+            [
+                'user_id' => $this->id,
+                'package_id' => $package->id,
+                'is_active' => true,
+                'assigned_at' => $startsAt,
+                'expires_at' => $endsAt,
+                'assigned_by' => null,
+            ]
+        );
+        // user subscription record
+        UserSubscription::create(
+            [
+                'user_id' => $this->id,
+                'package_id' => $package->id,
+                'stripe_subscription_id' => null,
+                'stripe_customer_id' => null,
+                'stripe_payment_intent_id' => null,
+                'status' => 'active',
+                'starts_at' => $startsAt,
+                'ends_at' => $endsAt,
+                'amount_paid' => 0,
+                'currency' => 'gbp',
+                'metadata' => null,
+            ]
+        );
+    }
+
+    /**
+     * Update user feature limits based on package features
+     */
+    protected function updateUserFeatureLimits(User $user, Package $package)
+    {
+        try {
+            $packageFeatures = $package->features()
+                ->wherePivot('is_enabled', true)
+                ->get();
+
+            $currentPeriodStart = Carbon::now()->startOfMonth()->format('Y-m-d');
+
+            foreach ($packageFeatures as $feature) {
+                $limitValue = $feature->pivot->limit_value;
+                $isUnlimited = $feature->pivot->is_unlimited ?? false;
+
+                UserFeatureUsage::create(
+                    [
+                        'user_id' => $user->id,
+                        'feature_id' => $feature->id,
+                        'period_start' => $currentPeriodStart,
+                        'is_archived' => false,
+                        'usage_count' => 0,
+                        'is_unlimited' => $isUnlimited,
+                        'period_end' => Carbon::now()->endOfMonth()->format('Y-m-d'),
+                    ]
+                );
+            }
+        } catch (\Exception $e) {
+            Log::error('Error updating user feature limits: ' . $e->getMessage(), [
+                'user_id' => $user->id,
+                'package_id' => $package->id,
+                'trace' => $e->getTraceAsString()
+            ]);
+        }
     }
 }

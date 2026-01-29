@@ -40,8 +40,8 @@ class PaymentController extends Controller
         if (!$package->stripe_price_id) {
             return back()->with('error', 'This package is not configured for payment. Please contact support.');
         }
-
-        $user = Auth::guard('user')->user();
+        $user_id = Auth::guard('user')->id() ?? Auth::id();
+        $user = User::find($user_id);
 
         try {
             $customerId = $user->stripe_id;
@@ -128,7 +128,7 @@ class PaymentController extends Controller
                         $this->activatePackageFromSession($session, $user, $package);
                     }
                 }
-
+                Auth::loginUsingId($user->id);
                 return redirect()->route('panel.schedule')->with('success', 'Payment successful! Your package has been activated.');
             }
 
