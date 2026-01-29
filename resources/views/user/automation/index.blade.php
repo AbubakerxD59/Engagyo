@@ -1378,6 +1378,7 @@
                     new_url_body +=
                         '<select name="time[]" class="form-control select2 time_dropdown" multiple required>';
                     $.each(timeslots, function(index, timeslot) {
+                        console.log(timeslot);
                         new_url_body += '<option value="' + timeslot + '"';
                         if (selectedTimeslots.includes(timeslot)) {
                             new_url_body += ' selected>';
