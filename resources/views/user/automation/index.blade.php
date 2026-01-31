@@ -1367,10 +1367,13 @@
             // set Feed Urls
             function setFeedUrls(feed_urls) {
                 var url_body = $('.url_body');
-                url_body.empty();
+                url_body.remove();
+                var new_url_section = $('.new_url_section');
+                new_url_section.remove();
                 var timeslots = @json($timeslots);
                 console.log(feed_urls);
                 $.each(feed_urls, function(index, feed_url) {
+                    var url_body = $('.url_body');
                     var selectedUrl = feed_url.name;
                     var selectedTimeslots = feed_url.time;
                     var new_url_body = '';
@@ -1420,7 +1423,9 @@
             // set New Feed Url
             function setNewFeedUrl() {
                 var url_body = $('.url_body');
-                url_body.empty();
+                url_body.remove();
+                var new_url_section = $('.new_url_section');
+                new_url_section.remove();
                 var timeslots = @json($timeslots);
                 var new_url_body = '';
                 new_url_body += '<div class="col-md-6 form-group mb-0">';
