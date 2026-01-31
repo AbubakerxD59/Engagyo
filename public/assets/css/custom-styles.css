@@ -655,3 +655,8 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
     display: block !important;
     max-width: 100% !important;
 }
+
+.disabled {
+    pointer-events: none;
+    cursor: default;
+}

@@ -5,6 +5,7 @@ namespace App\Console;
 use App\Console\Commands\FeedCron;
 use App\Console\Commands\ResetMonthlyUsage;
 use App\Console\Commands\CheckFeatureLimits;
+use App\Console\Commands\ShuffleRssPosts;
 use App\Console\Commands\SyncUserUsage;
 use App\Console\Commands\PublishRssPostsCron;
 use App\Console\Commands\PinterestPublishCron;
@@ -45,6 +46,7 @@ class Kernel extends ConsoleKernel
         CleanupPinterestTestPosts::class,
         RunTikTokTests::class,
         CleanupTikTokTestPosts::class,
+        ShuffleRssPosts::class,
     ];
     /**
      * Define the application's command schedule.
@@ -83,6 +85,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('tiktok:run-tests')->dailyAt('01:00');
         // Command to cleanup TikTok test posts older than 24 hours (runs hourly)
         $schedule->command('tiktok:cleanup-tests')->hourly();
+        // Command to shuffle rss posts
+        $schedule->command('app:shuffle-rss-posts')->dailyAt('01:00');
     }
 
     /**

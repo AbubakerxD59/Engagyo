@@ -21,11 +21,14 @@
                             <i class="nav-icon {{ $menu->icon }}"></i>
                             <p>{{ $menu->name }}</p>
                         </a>
-                        @elsecanAccessMenu($menu->id)   
+                    @else
                         <a href="#"
-                            class="nav-link {{ in_array(request()->route()->getName(), [$menu->route]) ? 'active' : '' }}">
+                            class="nav-link disabled {{ in_array(request()->route()->getName(), [$menu->route]) ? 'active' : '' }}">
                             <i class="nav-icon {{ $menu->icon }}"></i>
-                            <p>{{ $menu->name }}</p>
+                            <p>
+                                {{ $menu->name }}
+                                <i class="fas fa-lock float-right mt-1" style="font-size: 0.8rem;"></i>
+                            </p>
                         </a>
                         @endcanAccessMenu
                     </li>

@@ -64,6 +64,11 @@ class Board extends Model
         $query->where('status', '1');
     }
 
+    public function scopeShuffleEnabled($query)
+    {
+        $query->where('shuffle', '1');
+    }
+
     public function scopewhereScheduledActive($query)
     {
         $query->where("schedule_status", "active");
