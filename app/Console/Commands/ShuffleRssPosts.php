@@ -34,17 +34,17 @@ class ShuffleRssPosts extends Command
         // $posts = Post::has("domain")->with(["domain", "board", "page", "tiktok"])->whereNotNull("domain_id")->isRss()->notPublished()->get();
         // for testing
         $posts = Post::has("domain")->with(["domain", "board", "page", "tiktok"])->where('user_id', ['4'])->whereNotNull("domain_id")->isRss()->notPublished()->get();
-        echo 'total posts: ' . count($posts) . '<br';
+        echo 'total posts: ' . count($posts) . '<br>';
         $userBasedPosts = $posts->groupBy('user_id');
         foreach ($userBasedPosts as $user_id => $userBasedPost) {
-            echo 'user_id: ' . $user_id . '<br';
+            echo 'user_id: ' . $user_id . '<br>';
             $socialTypeBasedPosts = $userBasedPost->groupBy('social_type');
             foreach ($socialTypeBasedPosts as $social_type => $socialTypeBasedPost) {
-                echo 'social_type: ' . $social_type . '<br';
+                echo 'social_type: ' . $social_type . '<br>';
                 $accountBasedPosts = $socialTypeBasedPost->groupBy('account_id');
                 foreach ($accountBasedPosts as $account_id => $accountBasedPost) {
-                    echo 'account_id: ' . $account_id . '<br';
-                    echo 'total_posts_for_account: ' . count($accountBasedPost) . '<br';
+                    echo 'account_id: ' . $account_id . '<br>';
+                    echo 'total_posts_for_account: ' . count($accountBasedPost) . '<br>';
                     if ($social_type == "facebook") {
                         $account = Page::find($account_id);
                     }
@@ -55,7 +55,7 @@ class ShuffleRssPosts extends Command
                         $account = Tiktok::find($account_id);
                     }
                     $shuffle = $account ? $account->shuffle : false;
-                    echo 'shuffle: ' . $shuffle . '<br';
+                    echo 'shuffle: ' . $shuffle . '<br>';
                     if (!$shuffle) {
                         break;
                     }
