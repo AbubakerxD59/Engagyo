@@ -1413,6 +1413,7 @@
                     new_url_body += '</button>';
                     new_url_body += '</div>';
                     new_url_body += '</div>';
+                    console.log(new_url_body);
 
                     url_body.append(new_url_body);
                     initializeDynamicSelect2();
