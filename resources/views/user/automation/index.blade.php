@@ -1368,8 +1368,8 @@
             function setFeedUrls(feed_urls) {
                 var url_body = $('.url_body');
                 url_body.empty();
-                return;
                 var timeslots = @json($timeslots);
+                console.log(feed_urls);
                 $.each(feed_urls, function(index, feed_url) {
                     var selectedUrl = feed_url.name;
                     var selectedTimeslots = feed_url.time;
