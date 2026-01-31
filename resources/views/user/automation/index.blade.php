@@ -1435,9 +1435,7 @@
                 time_dropdown =
                     '<select name="time[]" class="form-control select2 time_dropdown" multiple required>';
                 $.each(timeslots, function(index, timeslot) {
-                    time_dropdown += '<option value="' + timeslot + '"';
-                    time_dropdown += timeslot;
-                    time_dropdown += '</option>';
+                    time_dropdown += '<option value="' + timeslot + '">' + timeslot + '</option>';
                 });
                 time_dropdown += '</select>';
                 // time dropdown
