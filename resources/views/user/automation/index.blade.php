@@ -45,7 +45,7 @@
                                         @endforeach
                                     </select>
                                 </div>
-                                @forelse ($selectedAccountDomains as $index => $domain)
+                                {{-- @forelse ($selectedAccountDomains as $index => $domain)
                                     <div class="col-md-8 row url_body">
                                         <div class="col-md-6 form-group mb-0">
                                             <label for="time">Time <span class="text-danger">*</span></label>
@@ -107,7 +107,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                @endforelse
+                                @endforelse --}}
                             </div>
                             <div class="row justify-content-end new_url_section" style="display: none;"></div>
                             <div class="row justify-content-end">
