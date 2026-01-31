@@ -1369,9 +1369,9 @@
                 console.log('here');
                 var url_body = $('.url_body');
                 url_body.remove();
+                return;
                 var timeslots = @json($timeslots);
                 $.each(feed_urls, function(index, feed_url) {
-                    console.log(index);
                     var selectedUrl = feed_url.name;
                     var selectedTimeslots = feed_url.time;
                     var new_url_body = '';
@@ -1413,7 +1413,6 @@
                     new_url_body += '</button>';
                     new_url_body += '</div>';
                     new_url_body += '</div>';
-                    console.log(new_url_body);
 
                     url_body.append(new_url_body);
                     initializeDynamicSelect2();
