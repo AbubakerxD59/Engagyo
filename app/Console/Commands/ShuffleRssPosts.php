@@ -31,7 +31,7 @@ class ShuffleRssPosts extends Command
     public function handle()
     {
         // get posts
-        $posts = Post::has("domain")->with(["domain", "board", "page", "tiktok"])->whereNotNull("domain_id")->isRss()->notPublished()->get();
+        $posts = Post::with(["domain", "board", "page", "tiktok"])->whereNotNull("domain_id")->isRss()->notPublished()->get();
         echo 'total posts: ' . count($posts) . '<br>';
         $userBasedPosts = $posts->groupBy('user_id');
         foreach ($userBasedPosts as $user_id => $userBasedPost) {
