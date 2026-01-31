@@ -342,7 +342,7 @@ class AutomationController extends Controller
             $user = Auth::guard('user')->user();
             if (!empty($id)) {
                 $type = $request->type;
-                $post = $this->post->with(["board.pinterest", "page.facebook", "tiktok"])->notPublished()->findOrFail($id);
+                $post = $this->post->with(["board.pinterest", "page.facebook", "tiktok"])->where("status", "!=", 1)->findOrFail($id);
                 $pinterest_active = $post->social_type == "pinterest" ? true : false;
                 $dom = new HtmlParseService($pinterest_active);
                 $get_info = $dom->get_info($post->url, 1);
