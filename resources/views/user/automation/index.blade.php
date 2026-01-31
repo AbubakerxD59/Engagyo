@@ -1065,8 +1065,17 @@
                 `;
             } else {
                 actionButtons = `
+                    <button class="btn btn-outline-primary btn-sm edit_btn" data-id="${post.id}" title="Edit">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-outline-warning btn-sm fix-post" data-post-id="${post.id}" title="Fix Post">
+                        <i class="fas fa-wrench"></i>
+                    </button>
+                    <button class="btn btn-outline-success btn-sm publish-post" data-id="${post.id}" data-type="${post.social_type}" title="Publish Now">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
                     <button class="btn btn-outline-danger btn-sm delete_btn" data-id="${post.id}" title="Delete">
-                        <i class="fas fa-trash"></i> Delete
+                        <i class="fas fa-trash"></i>
                     </button>
                 `;
             }

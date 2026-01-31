@@ -342,8 +342,29 @@ class AutomationController extends Controller
             $user = Auth::guard('user')->user();
             if (!empty($id)) {
                 $type = $request->type;
+                $post = $this->post->with(["board.pinterest", "page.facebook", "tiktok"])->notPublished()->findOrFail($id);
+                $pinterest_active = $post->social_type == "pinterest" ? true : false;
+                $dom = new HtmlParseService($pinterest_active);
+                $get_info = $dom->get_info($post->url, 1);
+                if ($get_info['status']) {
+                    $title = !empty($get_info["title"]) ? $get_info["title"] : $post->title;
+                    $image = !empty($get_info["image"]) ? $get_info["image"] : $post->image;
+                    $post->update([
+                        'title' => $title,
+                        'image' => $image,
+                    ]);
+                    $response = [
+                        "success" => true,
+                        "data" => "Post fixed Successfully!"
+                    ];
+                } else {
+                    $response = [
+                        "success" => false,
+                        "message" => $get_info['message'] ?? "Image could not be fetched. Try again later!"
+                    ];
+                    return response()->json($response);
+                }
                 if ($type == "pinterest") {
-                    $post = $this->post->with("board.pinterest")->notPublished()->findOrFail($id);
                     $board = $post->board;
 
                     if (!$board) {
