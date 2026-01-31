@@ -45,6 +45,7 @@
                                         @endforeach
                                     </select>
                                 </div>
+                                <div class="col-md-8 row url_body"></div>
                                 {{-- @forelse ($selectedAccountDomains as $index => $domain)
                                     <div class="col-md-8 row url_body">
                                         <div class="col-md-6 form-group mb-0">
