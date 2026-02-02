@@ -30,11 +30,14 @@ Route::get('shuffle-test', function () {
         $posts = Post::with(["domain", "board", "page", "tiktok"])->whereNotNull("domain_id")->isRss()->notPublished()->get();
         $socialTypeBasedPosts = $posts->groupBy('social_type');
         print_r("Social types: " . $socialTypeBasedPosts->keys());
+        echo '<br>';
         foreach ($socialTypeBasedPosts as $social_type => $socialTypeBasedPost) {
             $accountBasedPosts = $socialTypeBasedPost->groupBy('account_id');
             print_r("Account IDS: " . $accountBasedPosts->keys());
+            echo '<br>';
             foreach ($accountBasedPosts as $account_id => $accountBasedPost) {
                 echo 'account_id: ' . $account_id;
+                echo '<br>';
                 $post = $accountBasedPost->first();
                 $user_id = $post->user_id;
                 echo 'total_posts_for_account: ' . count($accountBasedPost) . '<br>';
@@ -65,7 +68,7 @@ Route::get('shuffle-test', function () {
                         $count++;
                     }
                 });
-
+                echo '-----------------------------';
                 // Shuffle end
             }
         }
