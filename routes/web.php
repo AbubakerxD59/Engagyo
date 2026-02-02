@@ -29,10 +29,10 @@ Route::get('shuffle-test', function () {
     try {
         $posts = Post::with(["domain", "board", "page", "tiktok"])->whereNotNull("domain_id")->isRss()->notPublished()->get();
         $socialTypeBasedPosts = $posts->groupBy('social_type');
-        print_r("Social types: " . $socialTypeBasedPosts->getKeys());
+        print_r("Social types: " . $socialTypeBasedPosts->keys());
         foreach ($socialTypeBasedPosts as $social_type => $socialTypeBasedPost) {
             $accountBasedPosts = $socialTypeBasedPost->groupBy('account_id');
-            print_r("Account IDS: " . $accountBasedPosts->getKeys());
+            print_r("Account IDS: " . $accountBasedPosts->keys());
             foreach ($accountBasedPosts as $account_id => $accountBasedPost) {
                 echo 'account_id: ' . $account_id;
                 $post = $accountBasedPost->first();
