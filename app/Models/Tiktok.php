@@ -93,7 +93,7 @@ class Tiktok extends Model
     protected function profileImage(): Attribute
     {
         return Attribute::make(
-            get: fn($value) => !empty($value) ? $value : no_image()
+            get: fn($value) => !empty($value) ? asset("images/" . $value) : no_image()
         );
     }
 
