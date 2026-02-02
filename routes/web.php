@@ -35,6 +35,7 @@ Route::get('shuffle-test', function () {
             $accountBasedPosts = $socialTypeBasedPost->groupBy('account_id');
             print_r("Account IDS: " . $accountBasedPosts->keys());
             echo '<br>';
+            dd($accountBasedPosts);
             foreach ($accountBasedPosts as $account_id => $accountBasedPost) {
                 echo 'account_id: ' . $account_id;
                 echo '<br>';
