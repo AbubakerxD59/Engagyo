@@ -35,7 +35,6 @@ Route::get('shuffle-test', function () {
         }
         echo 'social_type: ' . $social_type . '<br>';
         $accountBasedPosts = $socialTypeBasedPost->groupBy('account_id');
-        dd($accountBasedPosts);
         foreach ($accountBasedPosts as $account_id => $accountBasedPost) {
             $post = $accountBasedPost->first();
             $user_id = $post->user_id;
