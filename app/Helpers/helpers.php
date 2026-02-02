@@ -35,7 +35,8 @@ function no_image()
     return $image;
 }
 
-function get_menus(){
+function get_menus()
+{
     $menus = Menu::with("features")->orderBy("display_order")->get();
     return $menus;
 }

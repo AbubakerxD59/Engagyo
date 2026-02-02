@@ -50,11 +50,11 @@ class TikTokController extends Controller
                     } else {
                         $this->logService->logApiError('tiktok', '/user/info/', 'Failed to get user info', ['user_id' => $user->id]);
                     }
-                    dd($userInfo);
+
                     if (!empty($userInfo)) {
                         $tiktok_id = $userInfo["open_id"] ?? ($userInfo["union_id"] ?? null);
                         if ($tiktok_id) {
-                            $profile_pic = isset($userInfo["avatar_url"]) ? $userInfo["avatar_url"] : null;
+                            $profile_pic = isset($userInfo["avatar_url"]) ? saveImageFromUrl($userInfo["avatar_url"]) : null;
                             $data = [
                                 "user_id" => $user->id,
                                 "tiktok_id" => $tiktok_id,
