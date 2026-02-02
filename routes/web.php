@@ -6,6 +6,7 @@ use App\Models\Board;
 use App\Models\Tiktok;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GeneralController;
+use Illuminate\Support\Facades\DB;
 
 // General Routes
 Route::name("general.")->controller(GeneralController::class)->group(function () {
@@ -27,11 +28,14 @@ require __DIR__ . '/api-docs.php';
 Route::get('shuffle-test', function () {
     $posts = Post::with(["domain", "board", "page", "tiktok"])->whereNotNull("domain_id")->isRss()->notPublished()->get();
     echo 'total posts: ' . count($posts) . '<br>';
-    $socialTypeBasedPosts = $posts->groupBy('social_type', 'account_id');
-    dd($socialTypeBasedPosts);
+    $socialTypeBasedPosts = $posts->groupBy('social_type');
     foreach ($socialTypeBasedPosts as $social_type => $socialTypeBasedPost) {
+        if($social_type == "facebook"){
+            continue;
+        }
         echo 'social_type: ' . $social_type . '<br>';
         $accountBasedPosts = $socialTypeBasedPost->groupBy('account_id');
+        dd($accountBasedPosts);
         foreach ($accountBasedPosts as $account_id => $accountBasedPost) {
             $post = $accountBasedPost->first();
             $user_id = $post->user_id;
