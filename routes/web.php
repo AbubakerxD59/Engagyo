@@ -40,7 +40,6 @@ Route::get('shuffle-test', function () {
                 echo '<br>';
                 $post = $accountBasedPost->first();
                 $user_id = $post->user_id;
-                echo 'total_posts_for_account: ' . count($accountBasedPost) . '<br>';
                 if ($social_type == "facebook") {
                     $account = Page::find($account_id);
                 }
@@ -50,25 +49,29 @@ Route::get('shuffle-test', function () {
                 if ($social_type == "tiktok") {
                     $account = Tiktok::find($account_id);
                 }
+                echo 'Total Posts for account: ' . $account->name . " are " . count($accountBasedPost) . '<br>';
                 $shuffle = $account ? $account->shuffle : false;
                 echo 'shuffle: ' . $shuffle . '<br>';
                 if (!$shuffle) {
+                    echo '-----------------------------';
+                    echo '<br>';
                     break;
                 }
                 echo "shuffling posts for user_id: $user_id, account: $account->name, social_type: $social_type <br>";
                 // Shuffle start
                 $publisheDates = $accountBasedPost->pluck('publish_date');
                 $shuffledDates = $publisheDates->shuffle();
-                DB::transaction(function () use ($accountBasedPost, $shuffledDates) {
-                    $count = 0;
-                    foreach ($accountBasedPost as $index => $post) {
-                        $post->update([
-                            "publish_date" => $shuffledDates[$count],
-                        ]);
-                        $count++;
-                    }
-                });
+                // DB::transaction(function () use ($accountBasedPost, $shuffledDates) {
+                //     $count = 0;
+                //     foreach ($accountBasedPost as $index => $post) {
+                //         $post->update([
+                //             "publish_date" => $shuffledDates[$count],
+                //         ]);
+                //         $count++;
+                //     }
+                // });
                 echo '-----------------------------';
+                echo '<br>';
                 // Shuffle end
             }
         }
