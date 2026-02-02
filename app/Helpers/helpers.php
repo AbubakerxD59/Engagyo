@@ -5,8 +5,6 @@ use App\Models\Post;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Package;
-use App\Models\Notification;
-use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Storage;
 
@@ -498,48 +496,6 @@ function social_logo($type = null)
     return $logo;
 }
 
-/**
- * Create a notification for a user
- * 
- * @param int|null $userId User ID (null for system notifications)
- * @param string $title Notification title
- * @param string|array $body Notification body (can be string or array)
- * @param bool $isSystem Whether this is a system notification (shown to all users)
- * @return \App\Models\Notification
- */
-function createNotification($userId, $title, $body, $isSystem = false)
-{
-    return Notification::create([
-        'user_id' => $isSystem ? null : $userId,
-        'title' => $title,
-        'body' => is_array($body) ? $body : ['message' => $body],
-        'is_read' => false,
-        'is_system' => $isSystem,
-    ]);
-}
-
-/**
- * Create a success notification
- */
-function createSuccessNotification($userId, $title, $message, $isSystem = false)
-{
-    return createNotification($userId, $title, [
-        'type' => 'success',
-        'message' => $message
-    ], $isSystem);
-}
-
-/**
- * Create an error notification
- */
-function createErrorNotification($userId, $title, $message, $isSystem = false)
-{
-    return createNotification($userId, $title, [
-        'type' => 'error',
-        'message' => $message
-    ], $isSystem);
-}
-
 function social_icon($type = null)
 {
     $type = strtolower($type);
@@ -596,16 +552,6 @@ function check_for($string, $find)
         return true;
     }
     return false;
-}
-
-function create_notification($user_id, $body, $modal)
-{
-    Notification::create([
-        "user_id" => $user_id,
-        "body" => json_encode($body),
-        "modal" => $modal
-    ]);
-    return true;
 }
 
 function getError($string)

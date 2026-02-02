@@ -27,12 +27,12 @@ class FeedCron extends Command
     /**
      * Create a success notification
      */
-    private function successNotification($userId, $title, $message)
+    private function successNotification($userId, $title, $message, $social_type, $account_image)
     {
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'success', 'message' => $message],
+            'body' => ['type' => 'success', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image],
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -41,12 +41,12 @@ class FeedCron extends Command
     /**
      * Create an error notification
      */
-    private function errorNotification($userId, $title, $message)
+    private function errorNotification($userId, $title, $message, $social_type, $account_image)
     {
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'error', 'message' => $message],
+            'body' => ['type' => 'error', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image],
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -66,16 +66,19 @@ class FeedCron extends Command
 
             if ($user) {
                 echo "User: " . $user->id . "\n";
+                $account_image = null;
                 if ($type == 'pinterest') {
                     echo "Pinterest\n";
                     $sub_account = $value->board;
                     $account = $sub_account ? $sub_account->pinterest : null;
                     $account_id = $sub_account ? $sub_account->id : null;
+                    $account_image = $account->profile_image;
                 } elseif ($type == 'facebook') {
                     echo "Facebook\n";
                     $sub_account = $value->page;
                     $account = $sub_account ? $sub_account->facebook : null;
                     $account_id = $sub_account ? $sub_account->id : null;
+                    $account_image = $account->page?->profile_image ?? $account->profile_image;
                 }
 
                 if ($sub_account && $account) {
@@ -142,13 +145,13 @@ class FeedCron extends Command
                             Log::warning("Failed to fetch feed for domain {$value->id}: " . $errorMessage);
                             // Create error notification (cron job)
                             $platform = ucfirst($type);
-                            $this->errorNotification($user->id, "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed for domain '{$urlDomain}'. " . $errorMessage);
+                            $this->errorNotification($user->id, "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed for domain '{$urlDomain}'. " . $errorMessage, $type, $account_image);
                         } else {
                             // Create success notification (cron job)
                             $platform = ucfirst($type);
                             $postCount = isset($feedUrl['items']) ? count($feedUrl['items']) : 0;
                             if ($postCount > 0) {
-                                $this->successNotification($user->id, "RSS Feed Fetched", "Successfully fetched {$postCount} new post(s) from {$platform} RSS feed for domain '{$urlDomain}'.");
+                                $this->successNotification($user->id, "RSS Feed Fetched", "Successfully fetched {$postCount} new post(s) from {$platform} RSS feed for domain '{$urlDomain}'.", $type, $account_image);
                             }
                         }
                     }

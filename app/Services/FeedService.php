@@ -2,9 +2,11 @@
 
 namespace App\Services;
 
+use App\Models\Board;
 use Exception;
 use App\Models\Post;
 use App\Models\Notification;
+use App\Models\Page;
 use SimpleXMLElement;
 
 class FeedService
@@ -17,12 +19,12 @@ class FeedService
     /**
      * Create a success notification
      */
-    private function successNotification($userId, $title, $message)
+    private function successNotification($userId, $title, $message, $social_type, $account_image)
     {
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'success', 'message' => $message],
+            'body' => ['type' => 'success', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image],
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -31,12 +33,12 @@ class FeedService
     /**
      * Create an error notification
      */
-    private function errorNotification($userId, $title, $message)
+    private function errorNotification($userId, $title, $message, $social_type, $account_image)
     {
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'error', 'message' => $message],
+            'body' => ['type' => 'error', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image],
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -57,6 +59,16 @@ class FeedService
     }
     public function fetch()
     {
+        $social_type = $this->data["social_type"];
+        $account_image = null;
+        if ($social_type == "facebook") {
+            $account = Page::with("facebook")->find($this->data["account_id"]);
+            $account_image = $account->profile_image ?? $account->facebook->profile_image;
+        }
+        if ($social_type == "pinterest") {
+            $account = Board::with("pinterest")->find($this->data["account_id"]);
+            $account_image = $account->pinterest->profile_image;
+        }
         $websiteUrl = $this->data["url"];
         if ($this->data["exist"]) {
             $feedUrls = $this->fetchSitemap($websiteUrl);
@@ -98,7 +110,7 @@ class FeedService
                     $errorMessage = "Posts not Fetched!";
                     // Create error notification (background job)
                     $platform = ucfirst($this->data["social_type"] ?? "Social Media");
-                    $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. No new posts found.");
+                    $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. No new posts found.", $social_type, $account_image);
                     return array(
                         "success" => false,
                         "message" => $errorMessage
@@ -108,7 +120,7 @@ class FeedService
                 $errorMessage = $e->getMessage();
                 // Create error notification (background job)
                 $platform = ucfirst($this->data["social_type"] ?? "Social Media");
-                $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage);
+                $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage, $social_type, $account_image);
                 return array(
                     "success" => false,
                     "message" => $errorMessage
@@ -118,7 +130,7 @@ class FeedService
             $errorMessage = $feedUrls["message"] ?? "Failed to fetch RSS feed.";
             // Create error notification (background job)
             $platform = ucfirst($this->data["social_type"] ?? "Social Media");
-            $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage);
+            $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage, $social_type, $account_image);
             return array(
                 "success" => false,
                 "message" => $errorMessage
