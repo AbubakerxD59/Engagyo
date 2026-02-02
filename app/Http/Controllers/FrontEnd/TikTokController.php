@@ -50,7 +50,7 @@ class TikTokController extends Controller
                     } else {
                         $this->logService->logApiError('tiktok', '/user/info/', 'Failed to get user info', ['user_id' => $user->id]);
                     }
-
+                    dd($userInfo);
                     if (!empty($userInfo)) {
                         $tiktok_id = $userInfo["open_id"] ?? ($userInfo["union_id"] ?? null);
                         if ($tiktok_id) {
