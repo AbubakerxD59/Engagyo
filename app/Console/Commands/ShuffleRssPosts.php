@@ -54,7 +54,7 @@ class ShuffleRssPosts extends Command
                 $shuffle = $account ? $account->shuffle : false;
                 echo 'shuffle: ' . $shuffle . '<br>';
                 if (!$shuffle) {
-                    break;
+                    continue;
                 }
                 echo "shuffling posts for user_id: $user_id, account: $account->name, social_type: $social_type <br>";
                 // Shuffle start
