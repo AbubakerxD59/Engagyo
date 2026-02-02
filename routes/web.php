@@ -35,7 +35,6 @@ Route::get('shuffle-test', function () {
             $accountBasedPosts = $socialTypeBasedPost->groupBy('account_id');
             print_r("Account IDS: " . $accountBasedPosts->keys());
             echo '<br>';
-            dd($accountBasedPosts);
             foreach ($accountBasedPosts as $account_id => $accountBasedPost) {
                 echo 'account_id: ' . $account_id;
                 echo '<br>';
@@ -56,7 +55,7 @@ Route::get('shuffle-test', function () {
                 if (!$shuffle) {
                     echo '-----------------------------';
                     echo '<br>';
-                    break;
+                    continue;
                 }
                 echo "shuffling posts for user_id: $user_id, account: $account->name, social_type: $social_type <br>";
                 // Shuffle start
