@@ -107,8 +107,10 @@ function fetchFromS3($path)
 function saveImageFromUrl($url)
 {
     $image_info = pathinfo($url);
-    dd($image_info);
     if (isset($image_info["extension"])) {
+        if (str_contains($image_info["extension"], 'jepg')) {
+            $image_info["extension"] = 'jepg';
+        }
         $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.' . $image_info["extension"];
         $path = public_path() . "/images" . '/';
         if (!is_dir($path)) {
