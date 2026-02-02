@@ -73,16 +73,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('features:check-limits')->dailyAt('09:00');
         // Command to sync user usage records (runs daily at 02:00)
         $schedule->command('usage:sync')->dailyAt('02:00');
-        // Command to run Facebook publishing tests (runs daily at 00:00)
-        $schedule->command('facebook:run-tests')->dailyAt('00:00');
         // Command to cleanup test posts older than 24 hours (runs hourly)
         $schedule->command('facebook:cleanup-tests')->hourly();
-        // Command to run Pinterest publishing tests (runs daily at 00:30)
-        $schedule->command('pinterest:run-tests')->dailyAt('00:30');
         // Command to cleanup Pinterest test posts older than 24 hours (runs hourly)
         $schedule->command('pinterest:cleanup-tests')->hourly();
-        // Command to run TikTok publishing tests (runs daily at 01:00)
-        $schedule->command('tiktok:run-tests')->dailyAt('01:00');
         // Command to cleanup TikTok test posts older than 24 hours (runs hourly)
         $schedule->command('tiktok:cleanup-tests')->hourly();
         // Command to shuffle rss posts
