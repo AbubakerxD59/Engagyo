@@ -28,18 +28,15 @@ require __DIR__ . '/api-docs.php';
 Route::get('shuffle-test', function () {
     try {
         $posts = Post::with(["domain", "board", "page", "tiktok"])->whereNotNull("domain_id")->isRss()->notPublished()->get();
-        echo 'total posts: ' . count($posts) . '<br>';
         $socialTypeBasedPosts = $posts->groupBy('social_type');
+        print_r("Social types: " . $socialTypeBasedPosts->getKeys());
         foreach ($socialTypeBasedPosts as $social_type => $socialTypeBasedPost) {
-            if ($social_type == "facebook") {
-                continue;
-            }
-            echo 'social_type: ' . $social_type . '<br>';
             $accountBasedPosts = $socialTypeBasedPost->groupBy('account_id');
+            print_r("Account IDS: " . $accountBasedPosts->getKeys());
             foreach ($accountBasedPosts as $account_id => $accountBasedPost) {
+                echo 'account_id: ' . $account_id;
                 $post = $accountBasedPost->first();
                 $user_id = $post->user_id;
-                echo 'account_id: ' . $account_id . '<br>';
                 echo 'total_posts_for_account: ' . count($accountBasedPost) . '<br>';
                 if ($social_type == "facebook") {
                     $account = Page::find($account_id);
