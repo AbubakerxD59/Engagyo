@@ -72,13 +72,13 @@ class FeedCron extends Command
                     $sub_account = $value->board;
                     $account = $sub_account ? $sub_account->pinterest : null;
                     $account_id = $sub_account ? $sub_account->id : null;
-                    $account_image = $account->profile_image;
+                    $account_image = $account ? $account->profile_image : null;
                 } elseif ($type == 'facebook') {
                     echo "Facebook\n";
                     $sub_account = $value->page;
                     $account = $sub_account ? $sub_account->facebook : null;
                     $account_id = $sub_account ? $sub_account->id : null;
-                    $account_image = $account->page?->profile_image ?? $account->profile_image;
+                    $account_image = $account ? ($account->page?->profile_image ?? $account->profile_image) : null;
                 }
 
                 if ($sub_account && $account) {
