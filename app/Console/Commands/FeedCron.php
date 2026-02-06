@@ -92,7 +92,7 @@ class FeedCron extends Command
                     }
 
                     $sub_account->update([
-                        "last_fetch" => date("Y-m-d H:i A")
+                        "last_fetch" => date("Y-m-d h:i A")
                     ]);
                     echo "Last fetch updated: " . date("Y-m-d H:i A") . "\n";
                     // Parse domain name to extract protocol, host, and category

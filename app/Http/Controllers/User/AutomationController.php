@@ -70,17 +70,17 @@ class AutomationController extends Controller
         if ($account) {
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($account);
-                $lastFetch = $account->last_fetch;
+                $lastFetch = $account->last_fetched;
                 $account_id = $account->id;
             }
             if ($type == 'facebook') {
                 $account = $this->page->findOrFail($account);
-                $lastFetch = $account->last_fetch;
+                $lastFetch = $account->last_fetched;
                 $account_id = $account->id;
             }
             if ($type == 'tiktok') {
                 $account = Tiktok::findOrFail($account);
-                $lastFetch = $account->last_fetch;
+                $lastFetch = $account->last_fetched;
                 $account_id = $account->id;
             }
             $posts = $posts->where("account_id", $account_id);
@@ -273,7 +273,7 @@ class AutomationController extends Controller
                     ];
                     // Update last fetch
                     $account->update([
-                        "last_fetch" => date("Y-m-d H:i A")
+                        "last_fetch" => date("Y-m-d h:i A")
                     ]);
                     if ($exist) {
                         FetchPost::dispatch($data);
