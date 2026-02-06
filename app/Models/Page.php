@@ -27,6 +27,7 @@ class Page extends Model
 
     protected $casts = [
         'rss_paused' => 'boolean',
+        'last_fetch' => 'datetime',
     ];
 
     protected $appends = ["type"];

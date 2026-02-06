@@ -27,6 +27,10 @@ class Tiktok extends Model
         "last_fetch",
     ];
 
+    protected $casts = [
+        'last_fetch' => 'datetime',
+    ];
+
     protected $appends = ["type"];
 
     public function user()
