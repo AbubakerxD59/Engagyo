@@ -68,7 +68,6 @@ class AutomationController extends Controller
         $lastFetch = '';
         $posts = $this->post->with("page.facebook", "board.pinterest", "domain")->isRss()->accountExist();
         if ($account) {
-            $lastFetch = $account->lastFetched;
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($account);
                 $account_id = $account->id;
@@ -81,6 +80,7 @@ class AutomationController extends Controller
                 $account = Tiktok::findOrFail($account);
                 $account_id = $account->id;
             }
+            $lastFetch = $account->lastFetched;
             $posts = $posts->where("account_id", $account_id);
         }
         if (count($domain) > 0) {
