@@ -379,7 +379,7 @@ class  ScheduleController extends Controller
                 }
                 if ($account->type == "tiktok") {
                     $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
-                    
+
                     // Check if this is a TikTok-specific post (from modal)
                     $tiktokAccountId = $request->get("tiktok_account_id");
                     if ($tiktokAccountId && $tiktokAccountId == $account->id && $file) {
@@ -1559,6 +1559,243 @@ class  ScheduleController extends Controller
         return response()->json($response);
     }
 
+    public function saveTimeslotSettings(Request $request)
+    {
+        $user = Auth::guard('user')->user();
+        $timeslotData = $request->timeslot_data ?? [];
+
+        if (empty($timeslotData) || !is_array($timeslotData)) {
+            return response()->json([
+                "success" => false,
+                "message" => "No timeslot data provided!"
+            ]);
+        }
+
+        try {
+            foreach ($timeslotData as $item) {
+                $type = $item['type'] ?? null;
+                $id = $item['id'] ?? null;
+                $timeslots = $item['timeslots'] ?? [];
+
+                if (!$type || !$id || empty($timeslots)) {
+                    continue;
+                }
+
+                $account = null;
+                $accountId = null;
+
+                if ($type == "facebook") {
+                    $account = Page::with("timeslots")->where("id", $id)->first();
+                    if ($account) {
+                        $accountId = $account->id;
+                    }
+                } else if ($type == "pinterest") {
+                    $account = Board::with("timeslots")->where("id", $id)->first();
+                    if ($account) {
+                        $accountId = $account->id;
+                    }
+                } else if ($type == "tiktok") {
+                    $account = Tiktok::with("timeslots")->where("id", $id)->first();
+                    if ($account) {
+                        $accountId = $account->id;
+                    }
+                }
+
+                if ($account && $accountId) {
+                    // Remove previous timeslots
+                    Timeslot::where("account_id", $accountId)
+                        ->where("account_type", $type)
+                        ->where("type", "schedule")
+                        ->delete();
+
+                    // Create new timeslots
+                    foreach ($timeslots as $timeslot) {
+                        Timeslot::create([
+                            "user_id" => $user->id,
+                            "account_id" => $accountId,
+                            "account_type" => $type,
+                            "timeslot" => date("H:i", strtotime($timeslot)),
+                            "type" => "schedule",
+                        ]);
+                    }
+
+                    // Rearrange posts according to updated timeslots
+                    $allTimeslots = [];
+                    foreach ($timeslots as $timeslot) {
+                        $allTimeslots[] = $timeslot;
+                    }
+
+                    if (!empty($allTimeslots)) {
+                        // Sort timeslots chronologically
+                        usort($allTimeslots, function ($a, $b) {
+                            $timeA = strtotime($a);
+                            $timeB = strtotime($b);
+                            return $timeA - $timeB;
+                        });
+
+                        // Get all unpublished scheduled posts for this account
+                        $posts = Post::where('account_id', $accountId)
+                            ->where('status', '!=', 1) // Not published
+                            ->where('scheduled', 1) // Scheduled posts only
+                            ->orderBy('publish_date', 'ASC')
+                            ->get();
+
+                        if ($posts->count() > 0) {
+                            $currentDateTime = now();
+                            $currentDate = $currentDateTime->format('Y-m-d');
+                            $currentTime = $currentDateTime->format('H:i:s');
+
+                            $currentScheduleDate = $currentDate;
+                            $timeslotIndex = 0;
+                            // Track used timeslots for each date
+                            $usedTimeslotsByDate = [];
+
+                            foreach ($posts as $post) {
+                                $assigned = false;
+
+                                // Initialize used timeslots array for current schedule date if not exists
+                                if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                    $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                }
+
+                                // First, check if there are any available timeslots for the current date
+                                $availableTimeslotForCurrentDate = null;
+                                $availableTimeslotIndex = null;
+
+                                if ($currentScheduleDate == $currentDate) {
+                                    // Check current date for available timeslots
+                                    foreach ($allTimeslots as $idx => $timeslot) {
+                                        $timeslot24Hour = date('H:i:s', strtotime($timeslot));
+                                        $timeslotKey = $timeslot24Hour;
+
+                                        // Check if timeslot is available (not passed and not used)
+                                        if (
+                                            $timeslot24Hour > $currentTime &&
+                                            !in_array($timeslotKey, $usedTimeslotsByDate[$currentScheduleDate])
+                                        ) {
+                                            $availableTimeslotForCurrentDate = $timeslot;
+                                            $availableTimeslotIndex = $idx;
+                                            break;
+                                        }
+                                    }
+                                }
+
+                                // If available timeslot found for current date, use it
+                                if ($availableTimeslotForCurrentDate !== null) {
+                                    $timeslot24Hour = date('H:i:s', strtotime($availableTimeslotForCurrentDate));
+                                    $timeslotKey = $timeslot24Hour;
+
+                                    // Assign post to this timeslot on current date
+                                    $publishDateTime = $currentScheduleDate . ' ' . $timeslot24Hour;
+                                    $post->update([
+                                        'publish_date' => $publishDateTime
+                                    ]);
+
+                                    // Mark timeslot as used for this date
+                                    $usedTimeslotsByDate[$currentScheduleDate][] = $timeslotKey;
+
+                                    // Move to next timeslot index
+                                    $timeslotIndex = ($availableTimeslotIndex + 1) % count($allTimeslots);
+
+                                    // If we've used all timeslots for this day, move to next day
+                                    if (count($usedTimeslotsByDate[$currentScheduleDate]) >= count($allTimeslots)) {
+                                        $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                        $timeslotIndex = 0;
+                                        if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                            $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                        }
+                                    }
+
+                                    $assigned = true;
+                                } else {
+                                    // No available timeslot for current date, find next available
+                                    $attempts = 0;
+                                    $maxAttempts = count($allTimeslots) * 100; // Safety limit
+
+                                    while (!$assigned && $attempts < $maxAttempts) {
+                                        // Get current timeslot
+                                        $timeslot = $allTimeslots[$timeslotIndex];
+
+                                        // Convert timeslot to 24-hour format
+                                        $timeslot24Hour = date('H:i:s', strtotime($timeslot));
+
+                                        // Initialize used timeslots array for current schedule date if not exists
+                                        if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                            $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                        }
+
+                                        // Check if timeslot is already used for this date
+                                        $timeslotKey = $timeslot24Hour;
+                                        if (in_array($timeslotKey, $usedTimeslotsByDate[$currentScheduleDate])) {
+                                            // Timeslot already used for this date, try next timeslot
+                                            $timeslotIndex++;
+                                            if ($timeslotIndex >= count($allTimeslots)) {
+                                                // All timeslots used for this day, move to next day and reset timeslot index
+                                                $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                                $timeslotIndex = 0;
+                                                // Reset used timeslots tracking for new date (timeslots reset on new date)
+                                                if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                                    $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                                }
+                                            }
+                                            $attempts++;
+                                            continue;
+                                        }
+
+                                        // Check if timeslot has passed for current day
+                                        if ($currentScheduleDate == $currentDate && $timeslot24Hour <= $currentTime) {
+                                            // Timeslot has passed, move to next day (keep same timeslot index since it's a new date)
+                                            $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                            // Reset used timeslots tracking for new date (timeslots reset on new date)
+                                            if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                                $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                            }
+                                            $attempts++;
+                                            continue;
+                                        }
+
+                                        // Timeslot is available for this date, assign post
+                                        $publishDateTime = $currentScheduleDate . ' ' . $timeslot24Hour;
+                                        $post->update([
+                                            'publish_date' => $publishDateTime
+                                        ]);
+
+                                        // Mark timeslot as used for this date
+                                        $usedTimeslotsByDate[$currentScheduleDate][] = $timeslotKey;
+
+                                        // Move to next timeslot
+                                        $timeslotIndex++;
+                                        if ($timeslotIndex >= count($allTimeslots)) {
+                                            // All timeslots used for this day, move to next day and reset timeslot index
+                                            $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                            $timeslotIndex = 0;
+                                            // Reset used timeslots tracking for new date
+                                            if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                                $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                            }
+                                        }
+
+                                        $assigned = true;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            return response()->json([
+                "success" => true,
+                "message" => "Timeslot settings saved and posts rearranged successfully!"
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => $e->getMessage()
+            ]);
+        }
+    }
+
     public function postsListing(Request $request)
     {
         $data = $request->all();
@@ -1573,12 +1810,12 @@ class  ScheduleController extends Controller
         if (!empty($request->post_type)) {
             $posts = $posts->whereIn("type", $request->post_type);
         }
-        if (!empty($request->status)) {
-            $posts = $posts->whereIn("status", $request->status);
+        if ($request->has('status')) {
+            $posts = $posts->where("status", $request->status);
         }
         $totalRecordswithFilter = clone $posts;
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
-        $posts = $posts->orderBy("publish_date", "desc")->get();
+        $posts = $posts->orderBy("publish_date", "asc")->get();
         $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "account_name", "account_profile", "published_at_formatted"]);
         $response = [
             "draw" => intval($data['draw']),
@@ -1665,5 +1902,4 @@ class  ScheduleController extends Controller
         $response = PostService::publishNow($request->id);
         return response()->json($response);
     }
-
 }

@@ -147,24 +147,7 @@
                     </div>
                     <div class="card-body">
                         <div class="row m-0 p-0 mb-4">
-                            <div class="col-md-3">
-                                <label for="filter_account">Account</label>
-                                <select name="filter_account" id="filter_account" class="form-control select2 filter"
-                                    multiple>
-                                    @foreach ($accounts as $account)
-                                        <option value="{{ $account->id }}">{{ ucfirst($account->name) }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-3">
-                                <label for="filter_type">Social type</label>
-                                <select name="filter_type" id="filter_type" class="form-control select2 filter" multiple>
-                                    @foreach (get_options('social_accounts') as $social_account)
-                                        <option value="{{ $social_account }}">{{ ucfirst($social_account) }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-3">
+                            <div class="col-md-6">
                                 <label for="filter_post_type">Post Type</label>
                                 <select name="filter_post_type" id="filter_post_type" class="form-control select2 filter"
                                     multiple>
@@ -174,10 +157,10 @@
                                     <option value="video">Video</option>
                                 </select>
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-6">
                                 <label for="filter_status">Status</label>
-                                <select name="filter_status" id="filter_status" class="form-control select2 filter"
-                                    multiple>
+                                <select name="filter_status" id="filter_status" class="form-control filter">
+                                    <option value="all">All Status</option>
                                     <option value="0" selected>Pending</option>
                                     <option value="1">Published</option>
                                     <option value="-1">Failed</option>

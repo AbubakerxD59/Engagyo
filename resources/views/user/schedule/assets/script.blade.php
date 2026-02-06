@@ -7,6 +7,26 @@
         var is_video = 0;
         // character count
         getCharacterCount($('.check_count'));
+        // Get selected accounts from account cards
+        function getSelectedAccounts() {
+            var accountIds = [];
+            var accountTypes = [];
+            $('.account-card.active').each(function() {
+                var accountId = $(this).data("id");
+                var accountType = $(this).data("type");
+                if (accountId && accountType) {
+                    accountIds.push(accountId);
+                    if (accountTypes.indexOf(accountType) === -1) {
+                        accountTypes.push(accountType);
+                    }
+                }
+            });
+            return {
+                accountIds: accountIds,
+                accountTypes: accountTypes
+            };
+        }
+
         // account status
         $(".account-card").on("click", function() {
             var $card = $(this);
@@ -25,6 +45,8 @@
                 success: function(response) {
                     if (response.success) {
                         toastr.success(response.message);
+                        // Reload posts when account selection changes
+                        loadPosts(1);
                     } else {
                         $card.toggleClass("active");
                         toastr.error(response.message);
@@ -379,6 +401,26 @@
             var modal = $('.settings-modal');
             modal.find(".modal-body").empty();
             modal.modal("toggle");
+            
+            // Reset tracking when modal opens
+            originalQueueTimeslots = {};
+            queueTimeslotsChanged = false;
+            $('#saveQueueSettings').hide();
+            
+            // Store original timeslots after modal is shown and select2 is initialized
+            modal.off('shown.bs.modal').on('shown.bs.modal', function() {
+                setTimeout(function() {
+                    $('.timeslot').each(function() {
+                        var $select = $(this);
+                        var accountId = $select.data("id");
+                        var accountType = $select.data("type");
+                        var key = accountType + '_' + accountId;
+                        var originalValue = $select.val() ? $select.val().sort().join(',') : '';
+                        originalQueueTimeslots[key] = originalValue;
+                    });
+                }, 300);
+            });
+            
             // $.ajax({
             //     url: "{{ route('panel.schedule.get.setting') }}",
             //     type: "GET",
@@ -395,26 +437,110 @@
             //     }
             // });
         });
-        // update timeslots
+        // Track original timeslots for queue settings modal
+        var originalQueueTimeslots = {};
+        var queueTimeslotsChanged = false;
+
+        // Track timeslot changes (don't update immediately)
         $(document).on("change", ".timeslot", function() {
-            var id = $(this).data("id");
-            var type = $(this).data("type");
-            var timeslots = $(this).val();
+            var $select = $(this);
+            var accountId = $select.data("id");
+            var accountType = $select.data("type");
+            var key = accountType + '_' + accountId;
+            var currentValue = $select.val() ? $select.val().sort().join(',') : '';
+            
+            // Check if timeslots have changed
+            if (originalQueueTimeslots[key] !== currentValue) {
+                queueTimeslotsChanged = true;
+                $('#saveQueueSettings').show();
+            } else {
+                // Check if all timeslots match originals
+                checkQueueTimeslotChanges();
+            }
+        });
+
+        // Check if queue timeslots have changed
+        function checkQueueTimeslotChanges() {
+            queueTimeslotsChanged = false;
+            $('.timeslot').each(function() {
+                var $select = $(this);
+                var accountId = $select.data("id");
+                var accountType = $select.data("type");
+                var key = accountType + '_' + accountId;
+                var currentValue = $select.val() ? $select.val().sort().join(',') : '';
+                
+                if (originalQueueTimeslots[key] !== currentValue) {
+                    queueTimeslotsChanged = true;
+                    return false; // break loop
+                }
+            });
+            if (!queueTimeslotsChanged) {
+                $('#saveQueueSettings').hide();
+            }
+        }
+
+        // Save queue settings
+        $(document).on('click', '#saveQueueSettings', function() {
+            var timeslotData = [];
+            $('.timeslot').each(function() {
+                var $select = $(this);
+                var accountId = $select.data("id");
+                var accountType = $select.data("type");
+                var timeslots = $select.val();
+                
+                if (timeslots && timeslots.length > 0) {
+                    timeslotData.push({
+                        id: accountId,
+                        type: accountType,
+                        timeslots: timeslots
+                    });
+                }
+            });
+
+            if (timeslotData.length === 0) {
+                toastr.warning("Please select at least one timeslot for an account.");
+                return;
+            }
+
+            var token = "{{ csrf_token() }}";
+            var $saveBtn = $(this);
+            $saveBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Saving...');
+
             $.ajax({
-                url: "{{ route('panel.schedule.timeslot.setting') }}",
+                url: "{{ route('panel.schedule.timeslot.setting.save') }}",
                 type: "POST",
                 data: {
-                    "_token": "{{ csrf_token() }}",
-                    "id": id,
-                    "type": type,
-                    "timeslots": timeslots,
+                    "_token": token,
+                    "timeslot_data": timeslotData,
                 },
                 success: function(response) {
+                    $saveBtn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Save Changes');
                     if (response.success) {
                         toastr.success(response.message);
+                        // Reset tracking
+                        originalQueueTimeslots = {};
+                        queueTimeslotsChanged = false;
+                        $('#saveQueueSettings').hide();
+                        // Update original timeslots
+                        $('.timeslot').each(function() {
+                            var $select = $(this);
+                            var accountId = $select.data("id");
+                            var accountType = $select.data("type");
+                            var key = accountType + '_' + accountId;
+                            var currentValue = $select.val() ? $select.val().sort().join(',') : '';
+                            originalQueueTimeslots[key] = currentValue;
+                        });
+                        // Reload posts if needed
+                        if (typeof reloadPosts === 'function') {
+                            reloadPosts();
+                        }
                     } else {
                         toastr.error(response.message);
                     }
+                },
+                error: function() {
+                    $saveBtn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Save Changes');
+                    toastr.error('Something went wrong!');
                 }
             });
         });
@@ -495,6 +621,22 @@
                 </div>
             `);
 
+            // Get selected accounts from account cards
+            var selectedAccounts = getSelectedAccounts();
+            
+            // If no account is selected, show empty posts
+            if (selectedAccounts.accountIds.length === 0) {
+                $('#postsGrid').html(`
+                    <div class="empty-state text-center py-5" style="grid-column: 1/-1;">
+                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                        <p class="text-muted">Please select an account above to view posts.</p>
+                    </div>
+                `);
+                totalPosts = 0;
+                renderPagination();
+                return;
+            }
+
             $.ajax({
                 url: "{{ route('panel.schedule.posts.listing') }}",
                 type: "GET",
@@ -502,10 +644,10 @@
                     draw: 1,
                     start: (page - 1) * perPage,
                     length: perPage,
-                    account_id: $("#filter_account").val(),
-                    type: $("#filter_type").val(),
+                    account_id: selectedAccounts.accountIds,
+                    type: selectedAccounts.accountTypes,
                     post_type: $("#filter_post_type").val(),
-                    status: $("#filter_status").val(),
+                    status: getStatusFilterValue(),
                 },
                 success: function(response) {
                     totalPosts = response.iTotalDisplayRecords;
@@ -711,8 +853,56 @@
             }
         });
 
-        // Filter change
-        $(document).on('change', '.filter', function() {
+        // Get status filter value (handle "all" option)
+        function getStatusFilterValue() {
+            var statusValues = $("#filter_status").val();
+            if (!statusValues || statusValues.length === 0) {
+                return [];
+            }
+            // If "all" is selected, return empty array to show all statuses
+            if (statusValues.includes('all')) {
+                return [];
+            }
+            return statusValues;
+        }
+
+        // Handle "All Status" option in status filter
+        $(document).on('change', '#filter_status', function() {
+            var selectedValues = $(this).val();
+            if (!selectedValues) {
+                selectedValues = [];
+            }
+            
+            var $select = $(this);
+            var hasAll = selectedValues.includes('all');
+            var individualStatuses = ['0', '1', '-1'];
+            var hasIndividualStatuses = individualStatuses.some(function(status) {
+                return selectedValues.includes(status);
+            });
+            
+            // If "all" is selected
+            if (hasAll) {
+                // If "all" was just selected, deselect individual statuses to avoid confusion
+                if (hasIndividualStatuses) {
+                    $select.val(['all']).trigger('change.select2');
+                }
+            } else {
+                // If all individual statuses are selected, automatically select "all"
+                var allSelected = individualStatuses.every(function(status) {
+                    return selectedValues.includes(status);
+                });
+                if (allSelected && selectedValues.length === 3) {
+                    $select.val(['all']).trigger('change.select2');
+                    return; // Don't reload yet, let the change event trigger again
+                }
+            }
+            
+            // Reload posts with updated filter
+            loadPosts(1);
+        });
+
+        // Filter change (for other filters)
+        $(document).on('change', '.filter:not(#filter_status)', function() {
             loadPosts(1);
         });
 

@@ -21,6 +21,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
             Route::post("process/post", "processPost")->name("process.post");
             Route::get("get/setting", "getSetting")->name("get.setting");
             Route::post("timeslot/setting", "timeslotSetting")->name("timeslot.setting");
+            Route::post("timeslot/setting/save", "saveTimeslotSettings")->name("timeslot.setting.save");
             Route::get("posts/listing", "postsListing")->name("posts.listing");
             Route::prefix("post/")->name("post.")->group(function () {
                 Route::get("delete/{id?}", "postDelete")->name('delete');

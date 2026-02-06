@@ -64,6 +64,10 @@
             </table>
 
             <div class="modal-footer">
+                <button type="button" class="btn btn-success" id="saveQueueSettings" style="display: none;">
+                    <i class="fas fa-save mr-1"></i>
+                    Save Changes
+                </button>
                 <button type="button" class="btn btn-outline-danger" data-dismiss="modal" aria-label="Close">
                     Close
                 </button>
