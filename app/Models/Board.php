@@ -6,6 +6,7 @@ use App\Models\Scopes\TeamScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 
 class Board extends Model
 {
@@ -102,7 +103,7 @@ class Board extends Model
     public function getlastFetchedAttribute()
     {
         $date = $this->last_fetch;
-        return $date ? date("jS M, Y h:i A", strtotime($date)) : '';
+        return $date ? Carbon::parse($date)->format("jS M, Y h:i A") : '';
     }
 
     public function getAccountNameAttribute()

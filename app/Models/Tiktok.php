@@ -6,6 +6,7 @@ use App\Models\Scopes\TeamScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Carbon\Carbon;
 
 class Tiktok extends Model
 {
@@ -24,6 +25,7 @@ class Tiktok extends Model
         "refresh_token",
         "refresh_token_expires_in",
         "schedule_status",
+        "last_fetch",
     ];
 
     protected $appends = ["type"];
@@ -126,6 +128,12 @@ class Tiktok extends Model
     public function getAccountNameAttribute()
     {
         return $this->name;
+    }
+
+    public function getlastFetchedAttribute()
+    {
+        $date = $this->last_fetch;
+        return $date ? Carbon::parse($date)->format("jS M, Y h:i A") : '';
     }
 
     protected static function booted()
