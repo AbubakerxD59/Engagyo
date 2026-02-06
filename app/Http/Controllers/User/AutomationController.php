@@ -739,7 +739,7 @@ class AutomationController extends Controller
                             $domain->update([
                                 "time" => $times
                             ]);
-                            
+
                             // Collect timeslots
                             foreach ($times as $time) {
                                 if (!in_array($time, $allTimeslots)) {
@@ -753,7 +753,7 @@ class AutomationController extends Controller
                 // Rearrange posts according to updated timeslots
                 if (!empty($allTimeslots)) {
                     // Sort timeslots chronologically
-                    usort($allTimeslots, function($a, $b) {
+                    usort($allTimeslots, function ($a, $b) {
                         $timeA = strtotime($a);
                         $timeB = strtotime($b);
                         return $timeA - $timeB;
@@ -769,38 +769,158 @@ class AutomationController extends Controller
                         $currentDateTime = now();
                         $currentDate = $currentDateTime->format('Y-m-d');
                         $currentTime = $currentDateTime->format('H:i:s');
-                        
+
                         $currentScheduleDate = $currentDate;
                         $timeslotIndex = 0;
+                        // Track used timeslots for each date
+                        $usedTimeslotsByDate = [];
 
                         foreach ($posts as $post) {
-                            // Get current timeslot
-                            $timeslot = $allTimeslots[$timeslotIndex];
-                            
-                            // Convert timeslot to 24-hour format
-                            $timeslot24Hour = date('H:i:s', strtotime($timeslot));
-                            
-                            // Check if timeslot has passed for current day
-                            if ($currentScheduleDate == $currentDate && $timeslot24Hour <= $currentTime) {
-                                // Timeslot has passed, schedule for next day
-                                $scheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
-                            } else {
-                                // Timeslot hasn't passed, use current schedule date
-                                $scheduleDate = $currentScheduleDate;
+                            $assigned = false;
+
+                            // Initialize used timeslots array for current schedule date if not exists
+                            if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                $usedTimeslotsByDate[$currentScheduleDate] = [];
                             }
-                            
-                            // Assign post to this timeslot
-                            $publishDateTime = $scheduleDate . ' ' . $timeslot24Hour;
-                            $post->update([
-                                'publish_date' => $publishDateTime
-                            ]);
-                            
-                            // Move to next timeslot
-                            $timeslotIndex++;
-                            if ($timeslotIndex >= count($allTimeslots)) {
-                                // All timeslots used for this day, move to next day
-                                $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
-                                $timeslotIndex = 0;
+
+                            // First, check if there are any available timeslots for the current date
+                            $availableTimeslotForCurrentDate = null;
+                            $availableTimeslotIndex = null;
+
+                            if ($currentScheduleDate == $currentDate) {
+                                // Check current date for available timeslots
+                                foreach ($allTimeslots as $idx => $timeslot) {
+                                    $timeslot24Hour = date('H:i:s', strtotime($timeslot));
+                                    $timeslotKey = $timeslot24Hour;
+
+                                    // Check if timeslot is available (not passed and not used)
+                                    if (
+                                        $timeslot24Hour > $currentTime &&
+                                        !in_array($timeslotKey, $usedTimeslotsByDate[$currentScheduleDate])
+                                    ) {
+                                        $availableTimeslotForCurrentDate = $timeslot;
+                                        $availableTimeslotIndex = $idx;
+                                        break;
+                                    }
+                                }
+                            }
+
+                            // If available timeslot found for current date, use it
+                            if ($availableTimeslotForCurrentDate !== null) {
+                                $timeslot24Hour = date('H:i:s', strtotime($availableTimeslotForCurrentDate));
+                                $timeslotKey = $timeslot24Hour;
+
+                                // Assign post to this timeslot on current date
+                                $publishDateTime = $currentScheduleDate . ' ' . $timeslot24Hour;
+                                $post->update([
+                                    'publish_date' => $publishDateTime
+                                ]);
+
+                                // Mark timeslot as used for this date
+                                $usedTimeslotsByDate[$currentScheduleDate][] = $timeslotKey;
+
+                                // Move to next timeslot index
+                                $timeslotIndex = ($availableTimeslotIndex + 1) % count($allTimeslots);
+
+                                // If we've used all timeslots for this day, move to next day
+                                if (count($usedTimeslotsByDate[$currentScheduleDate]) >= count($allTimeslots)) {
+                                    $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                    $timeslotIndex = 0;
+                                    if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                        $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                    }
+                                }
+
+                                $assigned = true;
+                            } else {
+                                // No available timeslot for current date, find next available
+                                $attempts = 0;
+                                $maxAttempts = count($allTimeslots) * 100; // Safety limit
+
+                                while (!$assigned && $attempts < $maxAttempts) {
+                                    // Get current timeslot
+                                    $timeslot = $allTimeslots[$timeslotIndex];
+
+                                    // Convert timeslot to 24-hour format
+                                    $timeslot24Hour = date('H:i:s', strtotime($timeslot));
+
+                                    // Initialize used timeslots array for current schedule date if not exists
+                                    if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                        $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                    }
+
+                                    // Check if timeslot is already used for this date
+                                    $timeslotKey = $timeslot24Hour;
+                                    if (in_array($timeslotKey, $usedTimeslotsByDate[$currentScheduleDate])) {
+                                        // Timeslot already used for this date, try next timeslot
+                                        $timeslotIndex++;
+                                        if ($timeslotIndex >= count($allTimeslots)) {
+                                            // All timeslots used for this day, move to next day and reset timeslot index
+                                            $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                            $timeslotIndex = 0;
+                                            // Reset used timeslots tracking for new date (timeslots reset on new date)
+                                            if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                                $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                            }
+                                        }
+                                        $attempts++;
+                                        continue;
+                                    }
+
+                                    // Check if timeslot has passed for current day
+                                    if ($currentScheduleDate == $currentDate && $timeslot24Hour <= $currentTime) {
+                                        // Timeslot has passed, move to next day (keep same timeslot index since it's a new date)
+                                        $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                        // Reset used timeslots tracking for new date (timeslots reset on new date)
+                                        if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                            $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                        }
+                                        $attempts++;
+                                        continue;
+                                    }
+
+                                    // Timeslot is available for this date, assign post
+                                    $publishDateTime = $currentScheduleDate . ' ' . $timeslot24Hour;
+                                    $post->update([
+                                        'publish_date' => $publishDateTime
+                                    ]);
+
+                                    // Mark timeslot as used for this date
+                                    $usedTimeslotsByDate[$currentScheduleDate][] = $timeslotKey;
+
+                                    // Move to next timeslot
+                                    $timeslotIndex++;
+                                    if ($timeslotIndex >= count($allTimeslots)) {
+                                        // All timeslots used for this day, move to next day and reset timeslot index
+                                        $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                        $timeslotIndex = 0;
+                                        // Reset used timeslots tracking for new date
+                                        if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                            $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                        }
+                                    }
+
+                                    $assigned = true;
+                                }
+
+                                // If we couldn't assign (shouldn't happen with proper logic), fallback
+                                if (!$assigned) {
+                                    // Fallback: assign to next day with first timeslot
+                                    $fallbackDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                    $fallbackTimeslot = $allTimeslots[0];
+                                    $fallbackTime = date('H:i:s', strtotime($fallbackTimeslot));
+                                    $publishDateTime = $fallbackDate . ' ' . $fallbackTime;
+                                    $post->update([
+                                        'publish_date' => $publishDateTime
+                                    ]);
+                                    $currentScheduleDate = $fallbackDate;
+                                    $timeslotIndex = 1;
+                                    // Mark as used
+                                    if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                        $usedTimeslotsByDate[$currentScheduleDate] = [];
+                                    }
+                                    $usedTimeslotsByDate[$currentScheduleDate][] = $fallbackTime;
+                                }
                             }
                         }
                     }

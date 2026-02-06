@@ -1366,6 +1366,88 @@
             function hideSaveButton() {
                 $('#saveChanges').hide();
             }
+
+            // Check if there are unsaved changes
+            function hasUnsavedChanges() {
+                return $('#saveChanges').is(':visible');
+            }
+
+            // Warn user about unsaved changes before leaving
+            function warnUnsavedChanges() {
+                if (hasUnsavedChanges()) {
+                    return "You have unsaved changes. Are you sure you want to leave? All unsaved changes will be lost.";
+                }
+            }
+
+            // Handle page unload (refresh, close tab, navigate away)
+            $(window).on('beforeunload', function(e) {
+                var message = warnUnsavedChanges();
+                if (message) {
+                    e.preventDefault();
+                    e.returnValue = message; // For Chrome
+                    return message; // For other browsers
+                }
+            });
+
+            // Handle link clicks (navigation menu, sidebar links, etc.)
+            $(document).on('click', 'a[href]:not([href^="#"]):not([href^="javascript:"]):not([href^="mailto:"]):not([href^="tel:"])', function(e) {
+                // Skip if it's the save button or delete all button
+                if ($(this).is('#saveChanges, #deleteAll, #clearFilters')) {
+                    return true;
+                }
+                
+                // Skip if target is blank (opens in new tab)
+                if ($(this).attr('target') === '_blank') {
+                    return true;
+                }
+                
+                // Skip if it's a modal trigger or dropdown toggle
+                if ($(this).data('toggle') === 'modal' || $(this).data('toggle') === 'dropdown') {
+                    return true;
+                }
+                
+                if (hasUnsavedChanges()) {
+                    var href = $(this).attr('href');
+                    // Only warn if it's not the current page
+                    if (href && href !== window.location.href && !href.startsWith('#')) {
+                        if (!confirm("You have unsaved changes. Are you sure you want to leave? All unsaved changes will be lost.")) {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            return false;
+                        }
+                    }
+                }
+            });
+
+            // Handle form submissions that might navigate away (except our own forms)
+            $(document).on('submit', 'form', function(e) {
+                // Skip our own forms that don't navigate away
+                var formId = $(this).attr('id');
+                if (formId === 'fetchPostForm' || formId === 'adv_filter_form' || formId === 'editPostForm') {
+                    return true;
+                }
+                
+                if (hasUnsavedChanges()) {
+                    if (!confirm("You have unsaved changes. Are you sure you want to submit? All unsaved changes will be lost.")) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            });
+
+            // Handle browser back/forward buttons
+            $(window).on('popstate', function(e) {
+                if (hasUnsavedChanges()) {
+                    if (!confirm("You have unsaved changes. Are you sure you want to leave? All unsaved changes will be lost.")) {
+                        // Push current state back to prevent navigation
+                        history.pushState(null, null, window.location.href);
+                        return false;
+                    }
+                }
+            });
+
+            // Store initial state for back/forward button handling
+            history.pushState(null, null, window.location.href);
             // delete new url input
             $(document).on("click", ".new_url_delete_btn", function() {
                 var delete_button = $(this);
@@ -1602,42 +1684,40 @@
             }
             // Delete Post
             $(document).on("click", ".delete_btn", function() {
-                if (confirm("Are you sure you want to delete this post?")) {
-                    var id = $(this).data('id');
-                    var postCard = $(this).closest('.automation-post-card');
+                var id = $(this).data('id');
+                var postCard = $(this).closest('.automation-post-card');
 
-                    // Comment out AJAX request - don't delete immediately
-                    // var token = $('meta[name="csrf-token"]').attr('content');
-                    // $.ajax({
-                    //     url: "{{ route('panel.automation.posts.destroy') }}",
-                    //     type: "POST",
-                    //     data: {
-                    //         "id": id,
-                    //         "_token": token
-                    //     },
-                    //     success: function(response) {
-                    //         if (response.success) {
-                    //             toastr.success(response.message);
-                    //             reloadPosts();
-                    //         } else {
-                    //             toastr.error(response.message);
-                    //         }
-                    //     }
-                    // });
+                // Comment out AJAX request - don't delete immediately
+                // var token = $('meta[name="csrf-token"]').attr('content');
+                // $.ajax({
+                //     url: "{{ route('panel.automation.posts.destroy') }}",
+                //     type: "POST",
+                //     data: {
+                //         "id": id,
+                //         "_token": token
+                //     },
+                //     success: function(response) {
+                //         if (response.success) {
+                //             toastr.success(response.message);
+                //             reloadPosts();
+                //         } else {
+                //             toastr.error(response.message);
+                //         }
+                //     }
+                // });
 
-                    // Add post ID to deleted array if not already there
-                    if (deletedPostIds.indexOf(id) === -1) {
-                        deletedPostIds.push(id);
-                    }
-
-                    // Remove card from list
-                    postCard.fadeOut(300, function() {
-                        $(this).remove();
-                    });
-
-                    // Show save button
-                    showSaveButton();
+                // Add post ID to deleted array if not already there
+                if (deletedPostIds.indexOf(id) === -1) {
+                    deletedPostIds.push(id);
                 }
+
+                // Remove card from list
+                postCard.fadeOut(300, function() {
+                    $(this).remove();
+                });
+
+                // Show save button
+                showSaveButton();
             })
             // Edit Post
             $(document).on('click', '.edit_btn', function() {
