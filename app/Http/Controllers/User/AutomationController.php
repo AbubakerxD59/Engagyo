@@ -70,17 +70,19 @@ class AutomationController extends Controller
         if ($account) {
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($account);
+                $lastFetch = $account->lastFetched ?? $account->last_fetched;
                 $account_id = $account->id;
             }
             if ($type == 'facebook') {
                 $account = $this->page->findOrFail($account);
+                $lastFetch = $account->lastFetched ?? $account->last_fetched;
                 $account_id = $account->id;
             }
             if ($type == 'tiktok') {
                 $account = Tiktok::findOrFail($account);
+                $lastFetch = $account->lastFetched ?? $account->last_fetched;
                 $account_id = $account->id;
             }
-            $lastFetch = $account->lastFetched;
             $posts = $posts->where("account_id", $account_id);
         }
         if (count($domain) > 0) {
