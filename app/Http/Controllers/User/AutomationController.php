@@ -628,4 +628,194 @@ class AutomationController extends Controller
             ]);
         }
     }
+
+    public function saveChanges(Request $request)
+    {
+        try {
+            $user = Auth::guard('user')->user();
+            $accountId = $request->account;
+            $type = $request->type;
+            $deletedPostIds = $request->deleted_post_ids ?? [];
+            $timeslotData = $request->timeslot_data ?? [];
+
+            if (empty($accountId) || empty($type)) {
+                return response()->json([
+                    "success" => false,
+                    "message" => "Account information is required!"
+                ]);
+            }
+
+            // Get account
+            if ($type == 'pinterest') {
+                $account = $this->board->findOrFail($accountId);
+            } elseif ($type == 'facebook') {
+                $account = $this->page->findOrFail($accountId);
+            } elseif ($type == 'tiktok') {
+                $account = Tiktok::findOrFail($accountId);
+            } else {
+                return response()->json([
+                    "success" => false,
+                    "message" => "Invalid account type!"
+                ]);
+            }
+
+            $accountId = $account->id;
+
+            // Delete posts if any
+            if (!empty($deletedPostIds) && is_array($deletedPostIds)) {
+                $postsToDelete = $this->post->whereIn('id', $deletedPostIds)
+                    ->where('account_id', $accountId)
+                    ->get();
+
+                // Get the earliest publish date from deleted posts
+                $earliestDeletedDate = null;
+                foreach ($postsToDelete as $post) {
+                    $postDate = strtotime($post->publish_date);
+                    if ($earliestDeletedDate === null || $postDate < $earliestDeletedDate) {
+                        $earliestDeletedDate = $postDate;
+                    }
+                    // Delete post photos
+                    $post->photo()->delete();
+                }
+
+                // Delete posts
+                $this->post->whereIn('id', $deletedPostIds)
+                    ->where('account_id', $accountId)
+                    ->delete();
+
+                // Rearrange remaining posts
+                if ($earliestDeletedDate !== null) {
+                    $earliestDate = date('Y-m-d', $earliestDeletedDate);
+
+                    // Get all remaining posts for this account, ordered by publish_date
+                    $remainingPosts = $this->post->where('account_id', $accountId)
+                        ->where('status', '!=', 1) // Not published
+                        ->orderBy('publish_date', 'ASC')
+                        ->get();
+
+                    // Rearrange posts starting from the earliest deleted date
+                    $currentDate = $earliestDate;
+                    foreach ($remainingPosts as $post) {
+                        // Get the time from the original publish_date
+                        $originalTime = date('H:i:s', strtotime($post->publish_date));
+                        $newPublishDate = $currentDate . ' ' . $originalTime;
+
+                        $post->update([
+                            'publish_date' => $newPublishDate
+                        ]);
+
+                        // Move to next day
+                        $currentDate = date('Y-m-d', strtotime($currentDate . ' +1 day'));
+                    }
+                }
+            }
+
+            // Update timeslots if changed and rearrange posts
+            if (!empty($timeslotData) && is_array($timeslotData)) {
+                // Collect all unique timeslots from all domains
+                $allTimeslots = [];
+                foreach ($timeslotData as $item) {
+                    $feedUrl = $item['feed_url'] ?? null;
+                    $times = $item['times'] ?? [];
+
+                    if ($feedUrl && !empty($times)) {
+                        $parsedUrl = parse_url($feedUrl);
+                        if (isset($parsedUrl['host'])) {
+                            $urlDomain = $parsedUrl["host"];
+                            if (isset($parsedUrl["path"])) {
+                                $category = str_contains($parsedUrl["path"], "rss") || str_contains($parsedUrl["path"], "feed") ? null : $parsedUrl["path"];
+                            } else {
+                                $category = null;
+                            }
+                        } else {
+                            $urlDomain = $parsedUrl["path"];
+                            $category = null;
+                        }
+
+                        $search = ["account_id" => $accountId, "type" => $type, "name" => $urlDomain, "category" => $category];
+                        $domain = $this->domain->exists($search)->first();
+
+                        if ($domain) {
+                            $domain->update([
+                                "time" => $times
+                            ]);
+                            
+                            // Collect timeslots
+                            foreach ($times as $time) {
+                                if (!in_array($time, $allTimeslots)) {
+                                    $allTimeslots[] = $time;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Rearrange posts according to updated timeslots
+                if (!empty($allTimeslots)) {
+                    // Sort timeslots chronologically
+                    usort($allTimeslots, function($a, $b) {
+                        $timeA = strtotime($a);
+                        $timeB = strtotime($b);
+                        return $timeA - $timeB;
+                    });
+
+                    // Get all unpublished posts for this account
+                    $posts = $this->post->where('account_id', $accountId)
+                        ->where('status', '!=', 1) // Not published
+                        ->orderBy('publish_date', 'ASC')
+                        ->get();
+
+                    if ($posts->count() > 0) {
+                        $currentDateTime = now();
+                        $currentDate = $currentDateTime->format('Y-m-d');
+                        $currentTime = $currentDateTime->format('H:i:s');
+                        
+                        $currentScheduleDate = $currentDate;
+                        $timeslotIndex = 0;
+
+                        foreach ($posts as $post) {
+                            // Get current timeslot
+                            $timeslot = $allTimeslots[$timeslotIndex];
+                            
+                            // Convert timeslot to 24-hour format
+                            $timeslot24Hour = date('H:i:s', strtotime($timeslot));
+                            
+                            // Check if timeslot has passed for current day
+                            if ($currentScheduleDate == $currentDate && $timeslot24Hour <= $currentTime) {
+                                // Timeslot has passed, schedule for next day
+                                $scheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                            } else {
+                                // Timeslot hasn't passed, use current schedule date
+                                $scheduleDate = $currentScheduleDate;
+                            }
+                            
+                            // Assign post to this timeslot
+                            $publishDateTime = $scheduleDate . ' ' . $timeslot24Hour;
+                            $post->update([
+                                'publish_date' => $publishDateTime
+                            ]);
+                            
+                            // Move to next timeslot
+                            $timeslotIndex++;
+                            if ($timeslotIndex >= count($allTimeslots)) {
+                                // All timeslots used for this day, move to next day
+                                $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                $timeslotIndex = 0;
+                            }
+                        }
+                    }
+                }
+            }
+
+            return response()->json([
+                "success" => true,
+                "message" => "Changes saved successfully!"
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                "success" => false,
+                "message" => $e->getMessage()
+            ]);
+        }
+    }
 }

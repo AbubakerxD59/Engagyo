@@ -69,6 +69,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
                 Route::post("posts-shuffle", "postShuffle")->name("shuffle");
                 Route::post("posts-delete-all", "deleteAll")->name("deleteAll");
                 Route::post("post-fix", "postFix")->name("fix");
+                Route::post("save-changes", "saveChanges")->name("saveChanges");
             });
         });
     });

@@ -180,6 +180,10 @@
                                     <i class="fas fa-trash-alt mr-1"></i>
                                     Delete All
                                 </button>
+                                <button id="saveChanges" class="btn btn-success" style="display: none;">
+                                    <i class="fas fa-save mr-1"></i>
+                                    Save Changes
+                                </button>
                             </div>
                             <div class="col-md-6 row justify-content-end">
                                 <div class="info-badge">
@@ -955,6 +959,11 @@
         var perPage = 9;
         var totalPosts = 0;
 
+        // Track deleted posts and timeslot changes
+        var deletedPostIds = [];
+        var timeslotChanged = false;
+        var originalTimeslots = {};
+
         // Load posts
         function loadPosts(page = 1) {
             currentPage = page;
@@ -1289,20 +1298,81 @@
                 new_url_body += '</div>';
                 new_url.append(new_url_body);
                 initializeDynamicSelect2();
+                // Track new timeslot addition as change
+                timeslotChanged = true;
+                showSaveButton();
             })
             // Initilize Select2s
             function initializeDynamicSelect2() {
                 $('.time_dropdown').each(function() {
                     if (!$(this).hasClass("select2-hidden-accessible")) {
-                        $(this).select2();
+                        var $select = $(this);
+                        var urlBody = $select.closest('.url_body');
+                        var feedUrl = urlBody.find('input[name="feed_url[]"]').val();
+                        var uniqueKey = feedUrl || 'new_' + urlBody.index();
+
+                        // Initialize select2
+                        $select.select2();
+
+                        // Store original value for comparison
+                        var originalValue = $select.val() ? $select.val().sort().join(',') : '';
+                        originalTimeslots[uniqueKey] = originalValue;
+
+                        // Remove existing change handlers to avoid duplicates
+                        $select.off('change.timeslotTrack');
+
+                        // Track changes
+                        $select.on('change.timeslotTrack', function() {
+                            var currentValue = $(this).val() ? $(this).val().sort().join(',') : '';
+                            var currentKey = feedUrl || 'new_' + urlBody.index();
+                            if (originalTimeslots[currentKey] !== currentValue) {
+                                timeslotChanged = true;
+                                showSaveButton();
+                            } else {
+                                // Check if all timeslots match originals
+                                checkTimeslotChanges();
+                            }
+                        });
                     }
                 });
+            }
+
+            // Check if timeslots have changed
+            function checkTimeslotChanges() {
+                timeslotChanged = false;
+                $('.time_dropdown').each(function() {
+                    var $select = $(this);
+                    var urlBody = $select.closest('.url_body');
+                    var feedUrl = urlBody.find('input[name="feed_url[]"]').val();
+                    var uniqueKey = feedUrl || 'new_' + urlBody.index();
+                    var currentValue = $select.val() ? $select.val().sort().join(',') : '';
+
+                    if (originalTimeslots[uniqueKey] !== currentValue) {
+                        timeslotChanged = true;
+                        return false; // break loop
+                    }
+                });
+                if (!timeslotChanged && deletedPostIds.length === 0) {
+                    hideSaveButton();
+                }
+            }
+
+            // Show save button
+            function showSaveButton() {
+                $('#saveChanges').show();
+            }
+
+            // Hide save button
+            function hideSaveButton() {
+                $('#saveChanges').hide();
             }
             // delete new url input
             $(document).on("click", ".new_url_delete_btn", function() {
                 var delete_button = $(this);
                 var new_url = delete_button.closest(".url_body");
                 new_url.remove();
+                // Check if timeslots changed after removal
+                checkTimeslotChanges();
             })
             // Fetch domains
             $('#account').on('change', function() {
@@ -1310,6 +1380,13 @@
                 var selected_type = $(this).find(":selected").data("type");
                 var shuffle = $(this).find(":selected").data('shuffle');
                 var rss_paused = $(this).find(":selected").data('rss-paused');
+
+                // Reset tracking variables
+                deletedPostIds = [];
+                timeslotChanged = false;
+                originalTimeslots = {};
+                hideSaveButton();
+
                 // toggle check shuiffle checkbox
                 if (shuffle == 1) {
                     $('.shuffle').attr('checked', true)
@@ -1372,7 +1449,7 @@
                 var new_url_section = $('.new_url_section');
                 new_url_section.empty();
                 var timeslots = @json($timeslots);
-                console.log(feed_urls);
+                originalTimeslots = {}; // Reset original timeslots
                 $.each(feed_urls, function(index, feed_url) {
                     var url_body = $('.url_body');
                     var selectedUrl = feed_url.name;
@@ -1427,6 +1504,7 @@
                 url_body.empty();
                 var new_url_section = $('.new_url_section');
                 new_url_section.empty();
+                originalTimeslots = {}; // Reset original timeslots
                 var timeslots = @json($timeslots);
                 var new_url_body = '';
                 new_url_body += '<div class="col-md-6 form-group mb-0">';
@@ -1526,23 +1604,39 @@
             $(document).on("click", ".delete_btn", function() {
                 if (confirm("Are you sure you want to delete this post?")) {
                     var id = $(this).data('id');
-                    var token = $('meta[name="csrf-token"]').attr('content');
-                    $.ajax({
-                        url: "{{ route('panel.automation.posts.destroy') }}",
-                        type: "POST",
-                        data: {
-                            "id": id,
-                            "_token": token
-                        },
-                        success: function(response) {
-                            if (response.success) {
-                                toastr.success(response.message);
-                                reloadPosts();
-                            } else {
-                                toastr.error(response.message);
-                            }
-                        }
+                    var postCard = $(this).closest('.automation-post-card');
+
+                    // Comment out AJAX request - don't delete immediately
+                    // var token = $('meta[name="csrf-token"]').attr('content');
+                    // $.ajax({
+                    //     url: "{{ route('panel.automation.posts.destroy') }}",
+                    //     type: "POST",
+                    //     data: {
+                    //         "id": id,
+                    //         "_token": token
+                    //     },
+                    //     success: function(response) {
+                    //         if (response.success) {
+                    //             toastr.success(response.message);
+                    //             reloadPosts();
+                    //         } else {
+                    //             toastr.error(response.message);
+                    //         }
+                    //     }
+                    // });
+
+                    // Add post ID to deleted array if not already there
+                    if (deletedPostIds.indexOf(id) === -1) {
+                        deletedPostIds.push(id);
+                    }
+
+                    // Remove card from list
+                    postCard.fadeOut(300, function() {
+                        $(this).remove();
                     });
+
+                    // Show save button
+                    showSaveButton();
                 }
             })
             // Edit Post
@@ -1748,12 +1842,67 @@
                             if (response.success) {
                                 toastr.success(response.message);
                                 reloadPosts();
+                                // Reset tracking
+                                deletedPostIds = [];
+                                hideSaveButton();
                             } else {
                                 toastr.error(response.message);
                             }
                         }
                     });
                 }
+            })
+
+            // Save Changes
+            $(document).on('click', '#saveChanges', function() {
+                var selected_account = $("#account").find(":selected").val();
+                var selected_type = $("#account").find(":selected").data("type");
+                var token = $('meta[name="csrf-token"]').attr('content');
+
+                // Prepare timeslot changes
+                var timeslotData = [];
+                $('.url_body').each(function(index) {
+                    var feedUrl = $(this).find('input[name="feed_url[]"]').val();
+                    var times = $(this).find('.time_dropdown').val();
+                    if (feedUrl && times) {
+                        timeslotData.push({
+                            feed_url: feedUrl,
+                            times: times
+                        });
+                    }
+                });
+
+                $.ajax({
+                    url: "{{ route('panel.automation.posts.saveChanges') }}",
+                    method: "POST",
+                    data: {
+                        "account": selected_account,
+                        "type": selected_type,
+                        "deleted_post_ids": deletedPostIds,
+                        "timeslot_data": timeslotData,
+                        "_token": token
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                            // Reset tracking
+                            deletedPostIds = [];
+                            timeslotChanged = false;
+                            originalTimeslots = {};
+                            hideSaveButton();
+                            reloadPosts();
+                            // Reload domains to update timeslots
+                            if (selected_account != '') {
+                                fetchDomains(selected_account, selected_type);
+                            }
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    },
+                    error: function() {
+                        toastr.error('Something went wrong!');
+                    }
+                });
             })
             // Fix post image/title
             $(document).on('click', '.fix-post', function() {
