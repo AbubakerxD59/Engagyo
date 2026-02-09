@@ -1129,7 +1129,8 @@ class  ScheduleController extends Controller
                     if ($account->type == "tiktok") {
                         $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
 
-                        if (empty($content) || empty($image)) {
+                        $localImage = $image ? saveImageFromUrl($image) : null;
+                        if (empty($content) || empty($localImage)) {
                             return array(
                                 "success" => false,
                                 "message" => "Content or image is required."
@@ -1137,16 +1138,18 @@ class  ScheduleController extends Controller
                         }
 
                         // store in db as photo post (not link)
+                        // Add link to title so user can see it in the caption
+                        $titleWithLink = trim($content . "\n\n" . $url);
                         $data = [
                             "user_id" => $user->id,
                             "account_id" => $account->id,
                             "social_type" => "tiktok",
                             "type" => "photo", // Changed from "link" to "photo"
                             "source" => $this->source,
-                            "title" => $content,
+                            "title" => $titleWithLink,
                             "comment" => $comment,
                             "url" => $url,
-                            "image" => $image, // Store thumbnail image URL
+                            "image" => $localImage, // Store thumbnail image URL
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
                         ];
@@ -1300,6 +1303,8 @@ class  ScheduleController extends Controller
                         $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
                         if ($tiktok) {
                             // For TikTok, fetch title and thumbnail from link and convert to photo post
+
+                            $localImage = $image ? saveImageFromUrl($image) : null;
                             if (empty($content) || empty($image)) {
                                 return array(
                                     "success" => false,
@@ -1309,16 +1314,18 @@ class  ScheduleController extends Controller
 
                             $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots);
                             // store in db as photo post (not link)
+                            // Add link to title so user can see it in the caption
+                            $titleWithLink = trim($content . "\n\n" . $url);
                             $data = [
                                 "user_id" => $user->id,
                                 "account_id" => $account->id,
                                 "social_type" => "tiktok",
                                 "type" => "photo", // Changed from "link" to "photo"
                                 "source" => $this->source,
-                                "title" => $content,
+                                "title" => $titleWithLink,
                                 "comment" => $comment,
                                 "url" => $url,
-                                "image" => $image,
+                                "image" => $localImage,
                                 "status" => 0,
                                 "publish_date" => $nextTime,
                             ];
@@ -1466,6 +1473,8 @@ class  ScheduleController extends Controller
                     if ($account->type == "tiktok") {
                         $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
                         if ($tiktok) {
+
+                            $localImage = $image ? saveImageFromUrl($image) : null;
                             if (empty($content) || empty($image)) {
                                 return array(
                                     "success" => false,
@@ -1474,16 +1483,18 @@ class  ScheduleController extends Controller
                             }
 
                             // store in db as photo post (not link)
+                            // Add link to title so user can see it in the caption
+                            $titleWithLink = trim($content . "\n\n" . $url);
                             $data = [
                                 "user_id" => $user->id,
                                 "account_id" => $account->id,
                                 "social_type" => "tiktok",
                                 "type" => "photo", // Changed from "link" to "photo"
                                 "source" => $this->source,
-                                "title" => $content,
+                                "title" => $titleWithLink,
                                 "comment" => $comment,
                                 "url" => $url,
-                                "image" => $image,
+                                "image" => $localImage,
                                 "status" => 0,
                                 "publish_date" => $scheduleDateTime,
                             ];
