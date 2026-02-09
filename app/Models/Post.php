@@ -218,23 +218,141 @@ class Post extends Model
         return $accountUrl;
     }
 
-    public function nextTime($search, $time)
+
+    public function nextTime($search, array $times)
     {
+        // Sort timeslots chronologically
+        usort($times, function ($a, $b) {
+            $timeA = strtotime($a);
+            $timeB = strtotime($b);
+            return $timeA - $timeB;
+        });
+
+        $currentDateTime = now();
+        $currentDate = $currentDateTime->format('Y-m-d');
+        $currentTime = $currentDateTime->format('H:i:s');
+
+        // Get the last post to determine starting point
         $lastPost = $this->exist($search)->orderByDesc('publish_date')->first();
+
         if ($lastPost) {
-            $lastPublisDate = $lastPost->publish_date;
-            $nextDate = date("Y-m-d", strtotime($lastPublisDate . " +1 days"));
-        } else {
-            $hour = strtotime(date("H:i"));
-            $time = strtotime($time);
-            if ($time > $hour) {
-                $nextDate = date("Y-m-d");
-            } else {
-                $now = date("Y-m-d");
-                $nextDate = date("Y-m-d", strtotime($now . ' +1 days'));
+            // If there's a last post, check each timeslot starting from the last post's date
+            $lastPostDate = date('Y-m-d', strtotime($lastPost->publish_date));
+            $lastPostTime = date('H:i:s', strtotime($lastPost->publish_date));
+
+            // Find the index of the last post's timeslot
+            $lastTimeslotIndex = -1;
+            foreach ($times as $idx => $timeslot) {
+                $timeslot24Hour = date('H:i:s', strtotime($timeslot));
+                if ($lastPostTime == $timeslot24Hour) {
+                    $lastTimeslotIndex = $idx;
+                    break;
+                }
             }
+
+            // Start checking from the next timeslot
+            $startDate = $lastPostDate;
+            $timeslotIndex = ($lastTimeslotIndex >= 0) ? ($lastTimeslotIndex + 1) : 0;
+
+            // Track used timeslots for each date
+            $usedTimeslotsByDate = [];
+
+            // Check posts to see which timeslots are already used
+            $existingPosts = $this->exist($search)
+                ->where('status', '!=', 1) // Not published
+                ->orderBy('publish_date', 'ASC')
+                ->get();
+
+            foreach ($existingPosts as $post) {
+                $postDate = date('Y-m-d', strtotime($post->publish_date));
+                $postTime = date('H:i:s', strtotime($post->publish_date));
+                if (!isset($usedTimeslotsByDate[$postDate])) {
+                    $usedTimeslotsByDate[$postDate] = [];
+                }
+                $usedTimeslotsByDate[$postDate][] = $postTime;
+            }
+
+            // Find next available timeslot
+            $attempts = 0;
+            $maxAttempts = count($times) * 100; // Safety limit
+            $selectedDate = null;
+            $selectedTimeslot = null;
+
+            while ($attempts < $maxAttempts && !$selectedDate) {
+                // Initialize used timeslots array for current date if not exists
+                if (!isset($usedTimeslotsByDate[$startDate])) {
+                    $usedTimeslotsByDate[$startDate] = [];
+                }
+
+                // Get current timeslot
+                $timeslot = $times[$timeslotIndex % count($times)];
+                $timeslot24Hour = date('H:i:s', strtotime($timeslot));
+                $timeslotKey = $timeslot24Hour;
+
+                // Check if timeslot is already used for this date
+                if (in_array($timeslotKey, $usedTimeslotsByDate[$startDate])) {
+                    // Timeslot already used, try next timeslot
+                    $timeslotIndex++;
+                    if ($timeslotIndex >= count($times)) {
+                        // All timeslots used for this day, move to next day
+                        $startDate = date('Y-m-d', strtotime($startDate . ' +1 day'));
+                        $timeslotIndex = 0;
+                        if (!isset($usedTimeslotsByDate[$startDate])) {
+                            $usedTimeslotsByDate[$startDate] = [];
+                        }
+                    }
+                    $attempts++;
+                    continue;
+                }
+
+                // Check if timeslot has passed for current day
+                if ($startDate == $currentDate && $timeslot24Hour <= $currentTime) {
+                    // Timeslot has passed, move to next day
+                    $startDate = date('Y-m-d', strtotime($startDate . ' +1 day'));
+                    if (!isset($usedTimeslotsByDate[$startDate])) {
+                        $usedTimeslotsByDate[$startDate] = [];
+                    }
+                    $attempts++;
+                    continue;
+                }
+
+                // Timeslot is available
+                $selectedDate = $startDate;
+                $selectedTimeslot = $timeslot;
+                break;
+            }
+
+            // Fallback if no timeslot found
+            if (!$selectedDate) {
+                $selectedDate = date('Y-m-d', strtotime($startDate . ' +1 day'));
+                $selectedTimeslot = $times[0];
+            }
+
+            return $selectedDate . ' ' . date('H:i:s', strtotime($selectedTimeslot));
+        } else {
+            // No posts exist, find first available timeslot from today
+            $selectedDate = $currentDate;
+            $selectedTimeslot = null;
+
+            // Check for available timeslot today
+            foreach ($times as $timeslot) {
+                $timeslot24Hour = date('H:i:s', strtotime($timeslot));
+
+                // Check if timeslot is available (not passed)
+                if ($timeslot24Hour > $currentTime) {
+                    $selectedTimeslot = $timeslot;
+                    break;
+                }
+            }
+
+            // If no timeslot available today, use first timeslot tomorrow
+            if (!$selectedTimeslot) {
+                $selectedDate = date('Y-m-d', strtotime($currentDate . ' +1 day'));
+                $selectedTimeslot = $times[0];
+            }
+
+            return $selectedDate . ' ' . date('H:i:s', strtotime($selectedTimeslot));
         }
-        return $nextDate;
     }
     public function nextScheduleTime($search, $timeslots)
     {

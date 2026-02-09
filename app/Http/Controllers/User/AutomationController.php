@@ -219,82 +219,81 @@ class AutomationController extends Controller
             foreach ($body as $item) {
                 $times = $item['time'];
                 $domain = $item['feed_url'];
-                foreach ($times as $time) {
-                    $parsedUrl = parse_url($domain);
-                    if (isset($parsedUrl['host'])) {
-                        $urlDomain = $parsedUrl["host"];
-                        if (isset($parsedUrl["path"])) {
-                            $category = str_contains($parsedUrl["path"], "rss") || str_contains($parsedUrl["path"], "feed") ? null : $parsedUrl["path"];
-                        } else {
-                            $category = null;
-                        }
+
+                $parsedUrl = parse_url($domain);
+                if (isset($parsedUrl['host'])) {
+                    $urlDomain = $parsedUrl["host"];
+                    if (isset($parsedUrl["path"])) {
+                        $category = str_contains($parsedUrl["path"], "rss") || str_contains($parsedUrl["path"], "feed") ? null : $parsedUrl["path"];
                     } else {
-                        $urlDomain = $parsedUrl["path"];
                         $category = null;
                     }
-                    $search = ["account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
-                    $domain = $this->domain->exists($search)->first();
-                    if (!$domain) {
-                        $domain = $this->domain->create([
-                            "user_id" => $user->id,
-                            "account_id" => $account_id,
-                            "type" => $type,
-                            "name" => $urlDomain,
-                            "category" => $category,
-                            "time" => $times
-                        ]);
-                        $domain_id = $domain->id;
-                    } else {
-                        $domain_id = $domain->id;
-                        $domain->update([
-                            "time" => $times
-                        ]);
-                    }
-                    $posts = $domain->posts()->get();
-                    $exist = count($posts) > 0 ? true : false;
-                    if ($exist) {
-                        $link = $urlDomain;
-                    } else {
-                        $link = !empty($category) ? $urlDomain . $category : $urlDomain;
-                    }
-
-                    $data = [
-                        "protocol" => $parsedUrl["scheme"],
-                        "url" => $link,
-                        "category" => $category,
-                        "domain_id" => $domain_id,
+                } else {
+                    $urlDomain = $parsedUrl["path"];
+                    $category = null;
+                }
+                $search = ["account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
+                $domain = $this->domain->exists($search)->first();
+                if (!$domain) {
+                    $domain = $this->domain->create([
                         "user_id" => $user->id,
                         "account_id" => $account_id,
-                        "type" => "link",
-                        "social_type" => $type,
-                        "source" => "rss",
-                        "time" => $time,
-                        "exist" => $exist
-                    ];
-                    // Update last fetch
-                    $account->update([
-                        "last_fetch" => date("Y-m-d h:i A")
+                        "type" => $type,
+                        "name" => $urlDomain,
+                        "category" => $category,
+                        "time" => $times
                     ]);
-                    if ($exist) {
-                        FetchPost::dispatch($data);
+                    $domain_id = $domain->id;
+                } else {
+                    $domain_id = $domain->id;
+                    $domain->update([
+                        "time" => $times
+                    ]);
+                }
+                $posts = $domain->posts()->get();
+                $exist = count($posts) > 0 ? true : false;
+                if ($exist) {
+                    $link = $urlDomain;
+                } else {
+                    $link = !empty($category) ? $urlDomain . $category : $urlDomain;
+                }
+
+                $data = [
+                    "protocol" => $parsedUrl["scheme"],
+                    "url" => $link,
+                    "category" => $category,
+                    "domain_id" => $domain_id,
+                    "user_id" => $user->id,
+                    "account_id" => $account_id,
+                    "type" => "link",
+                    "social_type" => $type,
+                    "source" => "rss",
+                    "time" => $times,
+                    "exist" => $exist
+                ];
+                // Update last fetch
+                $account->update([
+                    "last_fetch" => date("Y-m-d h:i A")
+                ]);
+                if ($exist) {
+                    FetchPost::dispatch($data);
+                    $response = array(
+                        "success" => true,
+                        "message" => "Your posts are being Fetched!"
+                    );
+                } else {
+                    $feedService = new FeedService($data);
+                    $feedUrl = $feedService->fetch();
+                    if ($feedUrl['success']) {
                         $response = array(
                             "success" => true,
-                            "message" => "Your posts are being Fetched!"
+                            "message" => "Your posts are Fetched!"
                         );
                     } else {
-                        $feedService = new FeedService($data);
-                        $feedUrl = $feedService->fetch();
-                        if ($feedUrl['success']) {
-                            $response = array(
-                                "success" => true,
-                                "message" => "Your posts are Fetched!"
-                            );
-                        } else {
-                            $response = array(
-                                "success" => false,
-                                "message" => $feedUrl['message'] ?? "Failed to fetch RSS feed."
-                            );
-                        }
+                        $response = array(
+                            "success" => false,
+                            "message" => $feedUrl['message'] ?? "Failed to fetch RSS feed."
+                        );
                     }
                 }
             }
