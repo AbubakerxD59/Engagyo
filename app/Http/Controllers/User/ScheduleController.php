@@ -660,17 +660,27 @@ class  ScheduleController extends Controller
                 // Handle TikTok draft link posts
                 if ($account->type == "tiktok" && DraftEnum::isDraftActiveFor("tiktok")) {
                     if ($file && $image) {
-                        // Store in db
+                        // For TikTok, fetch title and thumbnail from link and convert to photo post
+                        $linkInfo = $this->fetchTikTokLinkInfo($link);
+                        if (!$linkInfo || empty($linkInfo['image'])) {
+                            return [
+                                "success" => false,
+                                "message" => "Failed to fetch title and thumbnail from the link. Please ensure the link is accessible."
+                            ];
+                        }
+
+                        // Store in db as photo post (not link)
                         $data = [
                             "user_id" => $user->id,
                             "account_id" => $account->id,
                             "social_type" => "tiktok",
-                            "type" => "link",
+                            "type" => "photo", // Changed from "link" to "photo"
                             "source" => $this->source,
-                            "title" => $content,
+                            "title" => !empty($linkInfo['title']) ? $linkInfo['title'] : $content,
                             "comment" => $comment,
-                            "url" => $image,
-                            "link" => $link,
+                            "url" => $linkInfo['image'], // Store thumbnail image URL
+                            "image" => $linkInfo['image'], // Store thumbnail image URL
+                            "link" => $link, // Keep original link for reference
                             "status" => 0, // Draft status
                             "publish_date" => date("Y-m-d H:i"),
                         ];
@@ -692,7 +702,7 @@ class  ScheduleController extends Controller
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
 
-                        // For link posts, TikTok treats them as photo posts with link in caption
+                        // Upload as photo draft
                         $this->tiktokService->uploadPhotoDraft($post->id, $postData, $access_token);
                     } else {
                         return [
@@ -1118,17 +1128,25 @@ class  ScheduleController extends Controller
                     }
                     if ($account->type == "tiktok") {
                         $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
-                        // store in db
+
+                        if (empty($content) || empty($image)) {
+                            return array(
+                                "success" => false,
+                                "message" => "Content or image is required."
+                            );
+                        }
+
+                        // store in db as photo post (not link)
                         $data = [
                             "user_id" => $user->id,
                             "account_id" => $account->id,
                             "social_type" => "tiktok",
-                            "type" => "link",
+                            "type" => "photo", // Changed from "link" to "photo"
                             "source" => $this->source,
                             "title" => $content,
                             "comment" => $comment,
                             "url" => $url,
-                            "image" => $image,
+                            "image" => $image, // Store thumbnail image URL
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
                         ];
@@ -1149,7 +1167,7 @@ class  ScheduleController extends Controller
                         }
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
-                        PublishTikTokPost::dispatch($post->id, $postData, $access_token, "link");
+                        PublishTikTokPost::dispatch($post->id, $postData, $access_token, "photo"); // Changed from "link" to "photo"
                     }
                 }
                 $response = array(
@@ -1281,13 +1299,21 @@ class  ScheduleController extends Controller
                     if ($account->type == "tiktok") {
                         $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
                         if ($tiktok) {
+                            // For TikTok, fetch title and thumbnail from link and convert to photo post
+                            if (empty($content) || empty($image)) {
+                                return array(
+                                    "success" => false,
+                                    "message" => "Content or image is required."
+                                );
+                            }
+
                             $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots);
-                            // store in db
+                            // store in db as photo post (not link)
                             $data = [
                                 "user_id" => $user->id,
                                 "account_id" => $account->id,
                                 "social_type" => "tiktok",
-                                "type" => "link",
+                                "type" => "photo", // Changed from "link" to "photo"
                                 "source" => $this->source,
                                 "title" => $content,
                                 "comment" => $comment,
@@ -1313,7 +1339,7 @@ class  ScheduleController extends Controller
                             }
                             $access_token = $tokenResponse['access_token'];
                             $postData = PostService::postTypeBody($post);
-                            PublishTikTokPost::dispatch($post->id, $postData, $access_token, "link");
+                            PublishTikTokPost::dispatch($post->id, $postData, $access_token, "photo"); // Changed from "link" to "photo"
                         }
                     }
                 }
@@ -1440,12 +1466,19 @@ class  ScheduleController extends Controller
                     if ($account->type == "tiktok") {
                         $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
                         if ($tiktok) {
-                            // store in db
+                            if (empty($content) || empty($image)) {
+                                return array(
+                                    "success" => false,
+                                    "message" => "Content or image is required."
+                                );
+                            }
+
+                            // store in db as photo post (not link)
                             $data = [
                                 "user_id" => $user->id,
                                 "account_id" => $account->id,
                                 "social_type" => "tiktok",
-                                "type" => "link",
+                                "type" => "photo", // Changed from "link" to "photo"
                                 "source" => $this->source,
                                 "title" => $content,
                                 "comment" => $comment,
@@ -1471,7 +1504,7 @@ class  ScheduleController extends Controller
                             }
                             $access_token = $tokenResponse['access_token'];
                             $postData = PostService::postTypeBody($post);
-                            PublishTikTokPost::dispatch($post->id, $postData, $access_token, "link");
+                            PublishTikTokPost::dispatch($post->id, $postData, $access_token, "photo"); // Changed from "link" to "photo"
                         }
                     }
                 }
