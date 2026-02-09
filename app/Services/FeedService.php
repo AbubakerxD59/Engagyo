@@ -75,9 +75,11 @@ class FeedService
         } else {
             $feedUrls = $this->fetchRss($websiteUrl);
         }
+        info("feedUrls: " . json_encode($feedUrls));
         if ($feedUrls["success"]) {
             try {
                 $items = $feedUrls["data"];
+                info("items_count: " . count($items));
                 if (count($items) > 0) {
                     foreach ($items as $key => $item) {
                         $nextTime = $this->post->nextTime(["account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"]], $this->data["time"]);
