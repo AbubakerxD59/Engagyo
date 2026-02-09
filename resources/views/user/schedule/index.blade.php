@@ -160,8 +160,8 @@
                             <div class="col-md-6">
                                 <label for="filter_status">Status</label>
                                 <select name="filter_status" id="filter_status" class="form-control filter">
-                                    <option value="all">All Status</option>
-                                    <option value="0" selected>Pending</option>
+                                    <option value="all" selected>All Status</option>
+                                    <option value="0">Pending</option>
                                     <option value="1">Published</option>
                                     <option value="-1">Failed</option>
                                 </select>

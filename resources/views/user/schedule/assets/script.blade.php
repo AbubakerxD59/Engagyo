@@ -942,6 +942,38 @@
             loadPosts(currentPage);
         }
 
+        // Track last notification count to detect new notifications
+        var lastNotificationCount = 0;
+        
+        // Function to check for new notifications and refresh posts
+        function checkNotificationsAndRefresh() {
+            $.ajax({
+                url: '{{ route("panel.notifications.fetch") }}',
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        var currentCount = response.count || 0;
+                        // If notification count increased, refresh posts
+                        if (currentCount > lastNotificationCount && lastNotificationCount > 0) {
+                            // New notification received, refresh posts
+                            reloadPosts();
+                        }
+                        lastNotificationCount = currentCount;
+                    }
+                },
+                error: function(xhr) {
+                    console.error('Failed to check notifications:', xhr);
+                }
+            });
+        }
+        
+        // Set up notification polling to refresh posts when new notifications arrive
+        // Poll every 5 seconds (same as notification refresh interval)
+        var notificationCheckInterval = setInterval(checkNotificationsAndRefresh, 5000);
+        
+        // Initial notification count fetch
+        checkNotificationsAndRefresh();
+
         // Initial load
         loadPosts(1)
         // delete post
