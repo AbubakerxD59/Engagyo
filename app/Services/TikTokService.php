@@ -531,8 +531,10 @@ class TikTokService
                     $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
                 }
                 // If both are selected, use BRANDED_CONTENT
-                if (isset($post['your_brand']) && $post['your_brand'] && 
-                    isset($post['branded_content']) && $post['branded_content']) {
+                if (
+                    isset($post['your_brand']) && $post['your_brand'] &&
+                    isset($post['branded_content']) && $post['branded_content']
+                ) {
                     $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
                 }
             }
@@ -699,8 +701,10 @@ class TikTokService
                     $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
                 }
                 // If both are selected, use BRANDED_CONTENT
-                if (isset($post['your_brand']) && $post['your_brand'] && 
-                    isset($post['branded_content']) && $post['branded_content']) {
+                if (
+                    isset($post['your_brand']) && $post['your_brand'] &&
+                    isset($post['branded_content']) && $post['branded_content']
+                ) {
                     $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
                 }
             }
@@ -835,7 +839,7 @@ class TikTokService
 
             // Get title from link or use provided title
             $title = !empty($linkInfo['title']) ? $linkInfo['title'] : ($post['title'] ?? "");
-            
+
             // Get thumbnail image from link
             $thumbnailUrl = $linkInfo['image'] ?? null;
 
@@ -863,7 +867,7 @@ class TikTokService
             // Download the thumbnail image
             // First, download it to a temporary location
             $thumbnailContent = @file_get_contents($thumbnailUrl);
-            
+
             if ($thumbnailContent === false) {
                 // Try with curl if file_get_contents fails
                 $ch = curl_init($thumbnailUrl);
@@ -875,7 +879,7 @@ class TikTokService
                 $thumbnailContent = curl_exec($ch);
                 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
                 curl_close($ch);
-                
+
                 if ($httpCode !== 200 || $thumbnailContent === false) {
                     throw new Exception("Failed to download thumbnail image from URL");
                 }
@@ -930,6 +934,8 @@ class TikTokService
                     "photo_images" => [$imageUrl]
                 ]
             ];
+
+            $this->logService->logPost('tiktok', 'link', $id, $requestBody, 'success');
 
             // Make API call to TikTok Content Posting API
             $endpoint = $this->baseUrl . "post/publish/content/init/";
