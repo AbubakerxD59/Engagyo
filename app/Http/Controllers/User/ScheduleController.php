@@ -592,8 +592,6 @@ class  ScheduleController extends Controller
                         ];
                     }
                 }
-                // Add other draft-active platforms here in the future
-                // Example: if ($account->type == "facebook" && DraftEnum::isDraftActiveFor("facebook")) { ... }
             }
 
             $response = array(

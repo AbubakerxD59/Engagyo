@@ -800,8 +800,8 @@ class TikTokService
 
     /**
      * Publish a link to TikTok
-     * Note: TikTok doesn't support clickable links in posts.
-     * This method posts the image with the link included in the caption.
+     * Note: TikTok doesn't provide API to post links directly.
+     * This method fetches the title and thumbnail from the link, then publishes as a photo.
      *
      * @param int $id Post ID
      * @param array $post Post data
@@ -818,30 +818,101 @@ class TikTokService
         $localFilePath = null;
 
         try {
-            // Get link and image URL or S3 key
+            // Get link URL
             $linkUrl = $post['link'] ?? null;
-            $imageSource = $post['url'] ?? null;
-
-            if (empty($imageSource)) {
-                throw new Exception("Image URL is required for TikTok link post");
-            }
 
             if (empty($linkUrl)) {
                 throw new Exception("Link URL is required for TikTok link post");
             }
 
-            // Download from S3 to local storage if needed
-            $downloadResult = $this->downloadFromS3ToLocal($imageSource, 'image');
+            // Fetch title and thumbnail from the link
+            $htmlParser = new \App\Services\HtmlParseService();
+            $linkInfo = $htmlParser->get_info($linkUrl, 1); // 1 = fetch photo too
 
-            if (!$downloadResult['success']) {
-                throw new Exception("Failed to download image: " . ($downloadResult['message'] ?? "Unknown error"));
+            if (!$linkInfo || !isset($linkInfo['status']) || !$linkInfo['status']) {
+                throw new Exception("Failed to fetch link information: " . ($linkInfo['message'] ?? "Unknown error"));
             }
 
-            $imageUrl = $downloadResult['local_url'];
-            $localFilePath = $downloadResult['local_path'];
+            // Get title from link or use provided title
+            $title = !empty($linkInfo['title']) ? $linkInfo['title'] : ($post['title'] ?? "");
+            
+            // Get thumbnail image from link
+            $thumbnailUrl = $linkInfo['image'] ?? null;
 
-            // Combine title with link (TikTok doesn't support clickable links, so we include it in the caption)
-            $title = $post['title'] ?? "";
+            if (empty($thumbnailUrl)) {
+                throw new Exception("Failed to fetch thumbnail image from the link");
+            }
+
+            // Handle relative URLs - convert to absolute URL
+            if (strpos($thumbnailUrl, 'http') !== 0) {
+                $parsedLinkUrl = parse_url($linkUrl);
+                $baseUrl = $parsedLinkUrl['scheme'] . '://' . $parsedLinkUrl['host'];
+                if (isset($parsedLinkUrl['port'])) {
+                    $baseUrl .= ':' . $parsedLinkUrl['port'];
+                }
+                if (strpos($thumbnailUrl, '/') === 0) {
+                    // Absolute path on same domain
+                    $thumbnailUrl = $baseUrl . $thumbnailUrl;
+                } else {
+                    // Relative path
+                    $path = isset($parsedLinkUrl['path']) ? dirname($parsedLinkUrl['path']) : '';
+                    $thumbnailUrl = $baseUrl . $path . '/' . $thumbnailUrl;
+                }
+            }
+
+            // Download the thumbnail image
+            // First, download it to a temporary location
+            $thumbnailContent = @file_get_contents($thumbnailUrl);
+            
+            if ($thumbnailContent === false) {
+                // Try with curl if file_get_contents fails
+                $ch = curl_init($thumbnailUrl);
+                curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+                curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+                curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+                curl_setopt($ch, CURLOPT_USERAGENT, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36");
+                $thumbnailContent = curl_exec($ch);
+                $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+                curl_close($ch);
+                
+                if ($httpCode !== 200 || $thumbnailContent === false) {
+                    throw new Exception("Failed to download thumbnail image from URL");
+                }
+            }
+
+            // Determine file extension from URL or content type
+            $extension = 'jpg';
+            $parsedUrl = parse_url($thumbnailUrl);
+            $pathInfo = pathinfo($parsedUrl['path'] ?? '');
+            if (!empty($pathInfo['extension'])) {
+                $extension = strtolower($pathInfo['extension']);
+                // Limit to valid image extensions
+                if (!in_array($extension, ['jpg', 'jpeg', 'png', 'gif', 'webp'])) {
+                    $extension = 'jpg';
+                }
+            }
+
+            // Save thumbnail to local storage
+            $localDir = 'uploads/images';
+            $localPublicPath = $localDir . '/' . uniqid('tiktok_link_', true) . '.' . $extension;
+            $fullPath = public_path($localPublicPath);
+            $directory = dirname($fullPath);
+
+            if (!file_exists($directory)) {
+                mkdir($directory, 0755, true);
+            }
+
+            $bytesWritten = file_put_contents($fullPath, $thumbnailContent);
+
+            if ($bytesWritten === false) {
+                throw new Exception("Failed to save thumbnail image to local storage");
+            }
+
+            $imageUrl = url($localPublicPath);
+            $localFilePath = $fullPath;
+
+            // Use the fetched title (TikTok doesn't support clickable links, so we include it in the caption)
             $caption = trim($title . "\n\n" . $linkUrl);
 
             // Prepare the request body for TikTok Content Posting API
@@ -869,19 +940,22 @@ class TikTokService
 
                 if ($publishId) {
                     // Post was successfully published
+                    // Update post with fetched title and image
                     $post_row->update([
+                        "title" => $title,
+                        "image" => $thumbnailUrl, // Store the original thumbnail URL
                         "post_id" => $publishId,
                         "status" => 1,
                         "published_at" => date("Y-m-d H:i:s"),
                         "response" => json_encode([
                             "success" => true,
                             "publish_id" => $publishId,
-                            "message" => "Link post published successfully to TikTok (link included in caption - not clickable)",
-                            "note" => "TikTok API does not support clickable links. The link has been included in the post caption."
+                            "message" => "Link post published successfully to TikTok as photo",
+                            "note" => "TikTok API does not support link posts. Title and thumbnail were fetched from the link and published as a photo."
                         ])
                     ]);
                     // Create success notification (background job)
-                    $this->successNotification($post_row->user_id, "Post Published", "Your TikTok link post has been published successfully.", $post_row);
+                    $this->successNotification($post_row->user_id, "Post Published", "Your TikTok link post has been published successfully as a photo.", $post_row);
                     $this->logService->logPost('tiktok', 'link', $id, ['publish_id' => $publishId], 'success');
                 } else {
                     // Check if there's an error in the response

@@ -105,6 +105,8 @@ class AutomationController extends Controller
                 $post->account_name = $post->page->name;
             } elseif ($post->social_type == 'pinterest' && $post->board) {
                 $post->account_name = $post->board->name;
+            } elseif ($post->social_type == 'tiktok' && $post->tiktok) {
+                $post->account_name = $post->tiktok->name;
             } else {
                 $post->account_name = 'Unknown';
             }
@@ -206,6 +208,10 @@ class AutomationController extends Controller
             }
             if ($type == 'facebook') {
                 $account = $this->page->findOrFail($account);
+                $account_id = $account->id;
+            }
+            if ($type == 'tiktok') {
+                $account = Tiktok::findOrFail($account);
                 $account_id = $account->id;
             }
 
@@ -460,6 +466,9 @@ class AutomationController extends Controller
             if ($type == 'facebook') {
                 $account = $this->page->where("id", $id)->first();
             }
+            if ($type == 'tiktok') {
+                $account = Tiktok::where("id", $id)->first();
+            }
             if ($account) {
                 $account->update([
                     "shuffle" => $shuffle
@@ -495,6 +504,9 @@ class AutomationController extends Controller
             }
             if ($type == 'facebook') {
                 $account = $this->page->with("posts.photo")->where("id", $id)->first();
+            }
+            if ($type == 'tiktok') {
+                $account = Tiktok::find($id);
             }
             if ($account) {
                 $posts = $account->posts()->notPublished();
