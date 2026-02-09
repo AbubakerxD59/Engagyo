@@ -1139,7 +1139,7 @@ class  ScheduleController extends Controller
 
                         // store in db as photo post (not link)
                         // Add link to title so user can see it in the caption
-                        $titleWithLink = trim($content . "\n\n" . $url);
+                        $titleWithLink = $url;
                         $data = [
                             "user_id" => $user->id,
                             "account_id" => $account->id,
@@ -1315,7 +1315,7 @@ class  ScheduleController extends Controller
                             $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots);
                             // store in db as photo post (not link)
                             // Add link to title so user can see it in the caption
-                            $titleWithLink = trim($content . "\n\n" . $url);
+                            $titleWithLink = $url;
                             $data = [
                                 "user_id" => $user->id,
                                 "account_id" => $account->id,
@@ -1484,7 +1484,7 @@ class  ScheduleController extends Controller
 
                             // store in db as photo post (not link)
                             // Add link to title so user can see it in the caption
-                            $titleWithLink = trim($content . "\n\n" . $url);
+                            $titleWithLink = $url;
                             $data = [
                                 "user_id" => $user->id,
                                 "account_id" => $account->id,
