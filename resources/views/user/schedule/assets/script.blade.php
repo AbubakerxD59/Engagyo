@@ -5,6 +5,14 @@
         var current_file = 0;
         var is_link = 0;
         var is_video = 0;
+        // TikTok Modal Functions
+        var currentTikTokFile = null;
+        var currentTikTokAccounts = [];
+        // Variables for TikTok link posts
+        var currentTikTokLinkUrl = null;
+        var currentTikTokLinkImage = null;
+        var currentTikTokScheduleDate = null;
+        var currentTikTokScheduleTime = null;
         // character count
         getCharacterCount($('.check_count'));
         // Get selected accounts from account cards
@@ -293,10 +301,10 @@
         }
         // process link post
         var processLink = function() {
+            console.log('processLink');
             var content = $('#content').val();
             var comment = $('#comment').val();
             var image = $('#link_image').attr('src');
-            // var url = $('#article-container .link_url').text();
             var url = $('#content').val();
             var schedule_date = $("#schedule_date").val();
             var schedule_time = $("#schedule_time").val();
@@ -316,6 +324,7 @@
             
             // If TikTok accounts are selected, show TikTok modal for link posts
             if (hasTikTokAccounts && url && image) {
+                console.log('showTikTokLinkModal');
                 showTikTokLinkModal(url, image, tiktokAccounts, schedule_date, schedule_time);
                 return;
             }
@@ -345,52 +354,6 @@
                 }
             });
         }
-        
-        // Show TikTok modal for link posts
-        function showTikTokLinkModal(url, imageUrl, accounts, scheduleDate, scheduleTime) {
-            currentTikTokAccounts = Array.isArray(accounts) ? accounts : [accounts];
-            currentTikTokLinkUrl = url;
-            currentTikTokLinkImage = imageUrl;
-            currentTikTokScheduleDate = scheduleDate;
-            currentTikTokScheduleTime = scheduleTime;
-            
-            // Reset modal
-            resetTikTokModal();
-            
-            // Set account ID (use first account)
-            if (currentTikTokAccounts.length > 0) {
-                $('#tiktok-account-id').val(currentTikTokAccounts[0].id);
-            }
-            
-            // Set post type to photo (since links are converted to photos)
-            $('#tiktok-post-type').val('photo');
-            $('#tiktok-file-url').val(imageUrl);
-            
-            // Show link image preview
-            $('#preview-image').show().find('img').attr('src', imageUrl);
-            $('#preview-video').hide();
-            $('#preview-title').text(url);
-            $('#content-preview').show();
-            
-            // Pre-fill title with link URL (user can edit it)
-            $('#tiktok-title').val(url);
-            $('#title-char-count').text(url.length);
-            
-            // Display account names
-            displayTikTokAccountNames(currentTikTokAccounts);
-            
-            // Populate form options
-            populateTikTokFormOptions();
-            
-            // Show modal
-            $('.tiktok-post-modal').modal('show');
-        }
-        
-        // Variables for TikTok link posts
-        var currentTikTokLinkUrl = null;
-        var currentTikTokLinkImage = null;
-        var currentTikTokScheduleDate = null;
-        var currentTikTokScheduleTime = null;
         // reset post area
         var resetPostArea = function() {
             dropZone.removeAllFiles(true);
@@ -1142,15 +1105,6 @@
             $('body').css('overflow', '');
         }
 
-        // TikTok Modal Functions
-        var currentTikTokFile = null;
-        var currentTikTokAccounts = [];
-        // Variables for TikTok link posts
-        var currentTikTokLinkUrl = null;
-        var currentTikTokLinkImage = null;
-        var currentTikTokScheduleDate = null;
-        var currentTikTokScheduleTime = null;
-
         function showTikTokModal(file, accounts) {
             currentTikTokFile = file;
             currentTikTokAccounts = Array.isArray(accounts) ? accounts : [accounts];
@@ -1208,15 +1162,15 @@
         }
         
         // Show TikTok modal for link posts
+        // Note: For link posts, no file in dropzone is needed since fetchLink already provides the image
         function showTikTokLinkModal(url, imageUrl, accounts, scheduleDate, scheduleTime) {
             currentTikTokAccounts = Array.isArray(accounts) ? accounts : [accounts];
             currentTikTokLinkUrl = url;
-            currentTikTokLinkImage = imageUrl;
+            console.log("url", url);
+            console.log("currentTikTokLinkUrl", currentTikTokLinkUrl);
+            currentTikTokLinkImage = imageUrl; // Use fetched link image, no dropzone file needed
             currentTikTokScheduleDate = scheduleDate;
             currentTikTokScheduleTime = scheduleTime;
-            
-            // Reset modal
-            resetTikTokModal();
             
             // Set account ID (use first account)
             if (currentTikTokAccounts.length > 0) {
@@ -1225,9 +1179,9 @@
             
             // Set post type to photo (since links are converted to photos)
             $('#tiktok-post-type').val('photo');
-            $('#tiktok-file-url').val(imageUrl);
+            $('#tiktok-file-url').val(imageUrl); // Use fetched link image URL
             
-            // Show link image preview
+            // Show link image preview (from fetched link, not dropzone)
             $('#preview-image').show().find('img').attr('src', imageUrl);
             $('#preview-video').hide();
             $('#preview-title').text(url);
@@ -1460,8 +1414,13 @@
             }
             
             // Check if this is a link post
+            // For link posts, no dropzone file is needed - we use the fetched link image
+            console.log("currentTikTokLinkUrl", currentTikTokLinkUrl);
+            console.log("currentTikTokLinkImage", currentTikTokLinkImage);
+            console.log("currentTikTokFile", currentTikTokFile);
             var isLinkPost = currentTikTokLinkUrl && currentTikTokLinkImage;
-            
+
+            // Only require file for non-link posts
             if (!isLinkPost && !currentTikTokFile) {
                 toastr.error('No file selected');
                 return;
@@ -1471,14 +1430,15 @@
             var formData = new FormData();
             
             if (isLinkPost) {
-                // For link posts, use the title from modal textarea and send link data
+                // For link posts: use fetched link image (no dropzone file needed)
+                // Title comes from modal textarea, image comes from fetched link
                 var title = $('#tiktok-title').val();
                 var comment = $('#comment').val();
                 formData.append('content', title); // Use title from modal textarea
                 formData.append('comment', comment);
                 formData.append('link', 1);
                 formData.append('url', currentTikTokLinkUrl);
-                formData.append('image', currentTikTokLinkImage);
+                formData.append('image', currentTikTokLinkImage); // Fetched link image, not from dropzone
                 if (currentTikTokScheduleDate) {
                     formData.append('schedule_date', currentTikTokScheduleDate);
                 }
@@ -1486,7 +1446,7 @@
                     formData.append('schedule_time', currentTikTokScheduleTime);
                 }
             } else {
-                // For regular file posts
+                // For regular file posts (requires dropzone file)
                 formData.append('files', currentTikTokFile);
                 formData.append('content', $('#tiktok-title').val());
             }
@@ -1521,14 +1481,14 @@
                         $('.tiktok-post-modal').modal('hide');
                         
                         if (isLinkPost) {
-                            // Reset link post variables
+                            // For link posts: no dropzone files to handle, just reset variables
                             currentTikTokLinkUrl = null;
                             currentTikTokLinkImage = null;
                             currentTikTokScheduleDate = null;
                             currentTikTokScheduleTime = null;
                             resetPostArea();
                         } else {
-                            // Remove the file from dropzone
+                            // For file posts: remove file from dropzone and process remaining files
                             if (currentTikTokFile) {
                                 dropZone.removeFile(currentTikTokFile);
                             }
