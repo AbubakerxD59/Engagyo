@@ -102,7 +102,7 @@ function fetchFromS3($path)
     return $url;
 }
 
-function saveImageFromUrl($url)
+function saveImageFromUrl($url, $folder = 'images')
 {
     $image_info = pathinfo($url);
     if (isset($image_info["extension"])) {
@@ -110,7 +110,7 @@ function saveImageFromUrl($url)
             $image_info["extension"] = 'jpeg';
         }
         $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.' . $image_info["extension"];
-        $path = public_path() . "/images" . '/';
+        $path = public_path() . "/$folder" . '/';
         if (!is_dir($path)) {
             if (!mkdir($path, 0755, true)) {
                 return false;

@@ -1129,7 +1129,7 @@ class  ScheduleController extends Controller
                     if ($account->type == "tiktok") {
                         $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
 
-                        $localImage = $image ? saveImageFromUrl($image) : null;
+                        $localImage = $image ? saveImageFromUrl($image, 'uploads') : null;
                         if (empty($content) || empty($localImage)) {
                             return array(
                                 "success" => false,
@@ -1304,7 +1304,7 @@ class  ScheduleController extends Controller
                         if ($tiktok) {
                             // For TikTok, fetch title and thumbnail from link and convert to photo post
 
-                            $localImage = $image ? saveImageFromUrl($image) : null;
+                            $localImage = $image ? saveImageFromUrl($image, 'uploads') : null;
                             if (empty($content) || empty($image)) {
                                 return array(
                                     "success" => false,
@@ -1474,7 +1474,7 @@ class  ScheduleController extends Controller
                         $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
                         if ($tiktok) {
 
-                            $localImage = $image ? saveImageFromUrl($image) : null;
+                            $localImage = $image ? saveImageFromUrl($image, 'uploads') : null;
                             if (empty($content) || empty($image)) {
                                 return array(
                                     "success" => false,
