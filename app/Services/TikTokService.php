@@ -934,7 +934,6 @@ class TikTokService
                     "photo_images" => [$imageUrl]
                 ]
             ];
-            dd($requestBody);
 
             $this->logService->logPost('tiktok', 'link', $id, $requestBody, 'success');
 
