@@ -296,9 +296,31 @@
             var content = $('#content').val();
             var comment = $('#comment').val();
             var image = $('#link_image').attr('src');
-            var url = $('#article-container .link_url').text();
+            // var url = $('#article-container .link_url').text();
+            var url = $('#content').val();
             var schedule_date = $("#schedule_date").val();
             var schedule_time = $("#schedule_time").val();
+            
+            // Check if TikTok accounts are selected
+            var hasTikTokAccounts = false;
+            var tiktokAccounts = [];
+            $('.account-card.active').each(function() {
+                if ($(this).data('type') === 'tiktok') {
+                    hasTikTokAccounts = true;
+                    tiktokAccounts.push({
+                        id: $(this).data('id'),
+                        name: $(this).find('.account-name').text().trim()
+                    });
+                }
+            });
+            
+            // If TikTok accounts are selected, show TikTok modal for link posts
+            if (hasTikTokAccounts && url && image) {
+                showTikTokLinkModal(url, image, tiktokAccounts, schedule_date, schedule_time);
+                return;
+            }
+            
+            // For non-TikTok accounts, process normally
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",
                 type: "POST",
@@ -323,6 +345,52 @@
                 }
             });
         }
+        
+        // Show TikTok modal for link posts
+        function showTikTokLinkModal(url, imageUrl, accounts, scheduleDate, scheduleTime) {
+            currentTikTokAccounts = Array.isArray(accounts) ? accounts : [accounts];
+            currentTikTokLinkUrl = url;
+            currentTikTokLinkImage = imageUrl;
+            currentTikTokScheduleDate = scheduleDate;
+            currentTikTokScheduleTime = scheduleTime;
+            
+            // Reset modal
+            resetTikTokModal();
+            
+            // Set account ID (use first account)
+            if (currentTikTokAccounts.length > 0) {
+                $('#tiktok-account-id').val(currentTikTokAccounts[0].id);
+            }
+            
+            // Set post type to photo (since links are converted to photos)
+            $('#tiktok-post-type').val('photo');
+            $('#tiktok-file-url').val(imageUrl);
+            
+            // Show link image preview
+            $('#preview-image').show().find('img').attr('src', imageUrl);
+            $('#preview-video').hide();
+            $('#preview-title').text(url);
+            $('#content-preview').show();
+            
+            // Pre-fill title with link URL (user can edit it)
+            $('#tiktok-title').val(url);
+            $('#title-char-count').text(url.length);
+            
+            // Display account names
+            displayTikTokAccountNames(currentTikTokAccounts);
+            
+            // Populate form options
+            populateTikTokFormOptions();
+            
+            // Show modal
+            $('.tiktok-post-modal').modal('show');
+        }
+        
+        // Variables for TikTok link posts
+        var currentTikTokLinkUrl = null;
+        var currentTikTokLinkImage = null;
+        var currentTikTokScheduleDate = null;
+        var currentTikTokScheduleTime = null;
         // reset post area
         var resetPostArea = function() {
             dropZone.removeAllFiles(true);
@@ -1077,6 +1145,11 @@
         // TikTok Modal Functions
         var currentTikTokFile = null;
         var currentTikTokAccounts = [];
+        // Variables for TikTok link posts
+        var currentTikTokLinkUrl = null;
+        var currentTikTokLinkImage = null;
+        var currentTikTokScheduleDate = null;
+        var currentTikTokScheduleTime = null;
 
         function showTikTokModal(file, accounts) {
             currentTikTokFile = file;
@@ -1122,6 +1195,56 @@
             $('#branded-content-privacy-warning').hide();
             $('#tiktok-publish-btn').prop('disabled', true);
             $('#tiktok-account-names').html('');
+            $('#content-preview').hide();
+            $('#preview-image').hide();
+            $('#preview-video').hide();
+            $('#preview-title').text('');
+            $('#title-char-count').text('0');
+            currentTikTokFile = null;
+            currentTikTokLinkUrl = null;
+            currentTikTokLinkImage = null;
+            currentTikTokScheduleDate = null;
+            currentTikTokScheduleTime = null;
+        }
+        
+        // Show TikTok modal for link posts
+        function showTikTokLinkModal(url, imageUrl, accounts, scheduleDate, scheduleTime) {
+            currentTikTokAccounts = Array.isArray(accounts) ? accounts : [accounts];
+            currentTikTokLinkUrl = url;
+            currentTikTokLinkImage = imageUrl;
+            currentTikTokScheduleDate = scheduleDate;
+            currentTikTokScheduleTime = scheduleTime;
+            
+            // Reset modal
+            resetTikTokModal();
+            
+            // Set account ID (use first account)
+            if (currentTikTokAccounts.length > 0) {
+                $('#tiktok-account-id').val(currentTikTokAccounts[0].id);
+            }
+            
+            // Set post type to photo (since links are converted to photos)
+            $('#tiktok-post-type').val('photo');
+            $('#tiktok-file-url').val(imageUrl);
+            
+            // Show link image preview
+            $('#preview-image').show().find('img').attr('src', imageUrl);
+            $('#preview-video').hide();
+            $('#preview-title').text(url);
+            $('#content-preview').show();
+            
+            // Pre-fill title with link URL (user can edit it)
+            $('#tiktok-title').val(url);
+            $('#title-char-count').text(url.length);
+            
+            // Display account names
+            displayTikTokAccountNames(currentTikTokAccounts);
+            
+            // Populate form options
+            populateTikTokFormOptions();
+            
+            // Show modal
+            $('.tiktok-post-modal').modal('show');
         }
 
         function displayTikTokAccountNames(accounts) {
@@ -1336,15 +1459,38 @@
                 return;
             }
             
-            if (!currentTikTokFile) {
+            // Check if this is a link post
+            var isLinkPost = currentTikTokLinkUrl && currentTikTokLinkImage;
+            
+            if (!isLinkPost && !currentTikTokFile) {
                 toastr.error('No file selected');
                 return;
             }
             
             // Prepare form data
             var formData = new FormData();
-            formData.append('files', currentTikTokFile);
-            formData.append('content', $('#tiktok-title').val());
+            
+            if (isLinkPost) {
+                // For link posts, use the title from modal textarea and send link data
+                var title = $('#tiktok-title').val();
+                var comment = $('#comment').val();
+                formData.append('content', title); // Use title from modal textarea
+                formData.append('comment', comment);
+                formData.append('link', 1);
+                formData.append('url', currentTikTokLinkUrl);
+                formData.append('image', currentTikTokLinkImage);
+                if (currentTikTokScheduleDate) {
+                    formData.append('schedule_date', currentTikTokScheduleDate);
+                }
+                if (currentTikTokScheduleTime) {
+                    formData.append('schedule_time', currentTikTokScheduleTime);
+                }
+            } else {
+                // For regular file posts
+                formData.append('files', currentTikTokFile);
+                formData.append('content', $('#tiktok-title').val());
+            }
+            
             formData.append('action', action_name);
             formData.append('tiktok_account_id', $('#tiktok-account-id').val());
             formData.append('tiktok_privacy_level', $('#tiktok-privacy-level').val());
@@ -1373,16 +1519,26 @@
                     if (response.success) {
                         toastr.success(response.message);
                         $('.tiktok-post-modal').modal('hide');
-                        // Remove the file from dropzone
-                        if (currentTikTokFile) {
-                            dropZone.removeFile(currentTikTokFile);
-                        }
-                        // Process remaining files
-                        var remainingFiles = dropZone.getAcceptedFiles();
-                        if (remainingFiles.length > 0) {
-                            processQueueWithDelay(remainingFiles);
-                        } else {
+                        
+                        if (isLinkPost) {
+                            // Reset link post variables
+                            currentTikTokLinkUrl = null;
+                            currentTikTokLinkImage = null;
+                            currentTikTokScheduleDate = null;
+                            currentTikTokScheduleTime = null;
                             resetPostArea();
+                        } else {
+                            // Remove the file from dropzone
+                            if (currentTikTokFile) {
+                                dropZone.removeFile(currentTikTokFile);
+                            }
+                            // Process remaining files
+                            var remainingFiles = dropZone.getAcceptedFiles();
+                            if (remainingFiles.length > 0) {
+                                processQueueWithDelay(remainingFiles);
+                            } else {
+                                resetPostArea();
+                            }
                         }
                     } else {
                         toastr.error(response.message);

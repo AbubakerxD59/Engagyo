@@ -1146,7 +1146,7 @@ class  ScheduleController extends Controller
                             "social_type" => "tiktok",
                             "type" => "photo", // Changed from "link" to "photo"
                             "source" => $this->source,
-                            "title" => $titleWithLink,
+                            "title" => $content, // Use content from modal textarea (title)
                             "comment" => $comment,
                             "url" => $url,
                             "image" => $localImage, // Store thumbnail image URL
@@ -1322,7 +1322,7 @@ class  ScheduleController extends Controller
                                 "social_type" => "tiktok",
                                 "type" => "photo", // Changed from "link" to "photo"
                                 "source" => $this->source,
-                                "title" => $titleWithLink,
+                                "title" => $content, // Use content from modal textarea (title)
                                 "comment" => $comment,
                                 "url" => $url,
                                 "image" => $localImage,
@@ -1491,7 +1491,7 @@ class  ScheduleController extends Controller
                                 "social_type" => "tiktok",
                                 "type" => "photo", // Changed from "link" to "photo"
                                 "source" => $this->source,
-                                "title" => $titleWithLink,
+                                "title" => $content, // Use content from modal textarea (title)
                                 "comment" => $comment,
                                 "url" => $url,
                                 "image" => $localImage,
