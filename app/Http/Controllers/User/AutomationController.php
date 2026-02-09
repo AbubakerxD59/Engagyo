@@ -219,46 +219,45 @@ class AutomationController extends Controller
             foreach ($body as $item) {
                 $times = $item['time'];
                 $domain = $item['feed_url'];
-
-                $parsedUrl = parse_url($domain);
-                if (isset($parsedUrl['host'])) {
-                    $urlDomain = $parsedUrl["host"];
-                    if (isset($parsedUrl["path"])) {
-                        $category = str_contains($parsedUrl["path"], "rss") || str_contains($parsedUrl["path"], "feed") ? null : $parsedUrl["path"];
+                foreach ($times as $time) {
+                    $parsedUrl = parse_url($domain);
+                    if (isset($parsedUrl['host'])) {
+                        $urlDomain = $parsedUrl["host"];
+                        if (isset($parsedUrl["path"])) {
+                            $category = str_contains($parsedUrl["path"], "rss") || str_contains($parsedUrl["path"], "feed") ? null : $parsedUrl["path"];
+                        } else {
+                            $category = null;
+                        }
                     } else {
+                        $urlDomain = $parsedUrl["path"];
                         $category = null;
                     }
-                } else {
-                    $urlDomain = $parsedUrl["path"];
-                    $category = null;
-                }
-                $search = ["account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
-                $domain = $this->domain->exists($search)->first();
-                if (!$domain) {
-                    $domain = $this->domain->create([
-                        "user_id" => $user->id,
-                        "account_id" => $account_id,
-                        "type" => $type,
-                        "name" => $urlDomain,
-                        "category" => $category,
-                        "time" => $times
-                    ]);
-                    $domain_id = $domain->id;
-                } else {
-                    $domain_id = $domain->id;
-                    $domain->update([
-                        "time" => $times
-                    ]);
-                }
-                $posts = $domain->posts()->get();
-                $exist = count($posts) > 0 ? true : false;
-                if ($exist) {
-                    $link = $urlDomain;
-                } else {
-                    $link = !empty($category) ? $urlDomain . $category : $urlDomain;
-                }
+                    $search = ["account_id" => $account_id, "type" => $type, "name" => $urlDomain, "category" => $category];
+                    $domain = $this->domain->exists($search)->first();
+                    if (!$domain) {
+                        $domain = $this->domain->create([
+                            "user_id" => $user->id,
+                            "account_id" => $account_id,
+                            "type" => $type,
+                            "name" => $urlDomain,
+                            "category" => $category,
+                            "time" => $times
+                        ]);
+                        $domain_id = $domain->id;
+                    } else {
+                        $domain_id = $domain->id;
+                        $domain->update([
+                            "time" => $times
+                        ]);
+                    }
+                    $posts = $domain->posts()->get();
+                    $exist = count($posts) > 0 ? true : false;
+                    if ($exist) {
+                        $link = $urlDomain;
+                    } else {
+                        $link = !empty($category) ? $urlDomain . $category : $urlDomain;
+                    }
 
-                foreach ($times as $time) {
                     $data = [
                         "protocol" => $parsedUrl["scheme"],
                         "url" => $link,
