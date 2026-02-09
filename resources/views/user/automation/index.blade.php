@@ -1298,9 +1298,7 @@
                 new_url_body += '</div>';
                 new_url.append(new_url_body);
                 initializeDynamicSelect2();
-                // Track new timeslot addition as change
-                timeslotChanged = true;
-                showSaveButton();
+                // Don't show save button for new URLs - only for existing feed URLs with changed timeslots
             })
             // Initilize Select2s
             function initializeDynamicSelect2() {
@@ -1321,13 +1319,21 @@
                         // Remove existing change handlers to avoid duplicates
                         $select.off('change.timeslotTrack');
 
-                        // Track changes
+                        // Track changes - only show save button for existing feed URLs
                         $select.on('change.timeslotTrack', function() {
                             var currentValue = $(this).val() ? $(this).val().sort().join(',') : '';
                             var currentKey = feedUrl || 'new_' + urlBody.index();
+                            
+                            // Check if this is an existing feed URL (has delete button with data-url-id)
+                            var isExistingFeedUrl = urlBody.find('.delete_domain_btn').length > 0 && 
+                                                   urlBody.find('.delete_domain_btn').data('url-id') !== undefined;
+                            
                             if (originalTimeslots[currentKey] !== currentValue) {
                                 timeslotChanged = true;
-                                showSaveButton();
+                                // Only show save button if this is an existing feed URL
+                                if (isExistingFeedUrl && feedUrl) {
+                                    showSaveButton();
+                                }
                             } else {
                                 // Check if all timeslots match originals
                                 checkTimeslotChanges();
@@ -1337,7 +1343,7 @@
                 });
             }
 
-            // Check if timeslots have changed
+            // Check if timeslots have changed (only for existing feed URLs)
             function checkTimeslotChanges() {
                 timeslotChanged = false;
                 $('.time_dropdown').each(function() {
@@ -1347,7 +1353,11 @@
                     var uniqueKey = feedUrl || 'new_' + urlBody.index();
                     var currentValue = $select.val() ? $select.val().sort().join(',') : '';
 
-                    if (originalTimeslots[uniqueKey] !== currentValue) {
+                    // Only check for existing feed URLs (has delete button with data-url-id)
+                    var isExistingFeedUrl = urlBody.find('.delete_domain_btn').length > 0 && 
+                                           urlBody.find('.delete_domain_btn').data('url-id') !== undefined;
+
+                    if (originalTimeslots[uniqueKey] !== currentValue && isExistingFeedUrl && feedUrl) {
                         timeslotChanged = true;
                         return false; // break loop
                     }
