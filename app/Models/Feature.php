@@ -24,6 +24,7 @@ class Feature extends Model
         "1" => "scheduled_posts_per_account",
         "2" => "rss_feed_automation",
         "5" => "api_access",
+        "6" => "url_tracking",
     ];
 
     protected $casts = [

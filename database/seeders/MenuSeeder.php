@@ -19,6 +19,7 @@ class MenuSeeder extends Seeder
             ["id" => "3", "name" => "Api Posts", "icon" => "fas fa-code", "route" => "panel.api-posts", "display_order" => "3"],
             ["id" => "4", "name" => "Accounts", "icon" => "fas fa-user-circle", "route" => "panel.accounts", "display_order" => "4"],
             ["id" => "5", "name" => "Teams", "icon" => "fas fa-users", "route" => "panel.team-members.index", "display_order" => "5"],
+            ["id" => "6", "name" => "Url Tracking", "icon" => "fas fa-link", "route" => "panel.url-tracking", "display_order" => "6"],
         ];
 
         foreach ($menus as $menu) {

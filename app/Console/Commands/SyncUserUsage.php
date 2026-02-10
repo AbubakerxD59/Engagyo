@@ -10,6 +10,7 @@ use App\Models\Board;
 use App\Models\ApiKey;
 use App\Models\Tiktok;
 use App\Models\Feature;
+use App\Models\DomainUtmCode;
 use Illuminate\Console\Command;
 use App\Models\UserFeatureUsage;
 use Illuminate\Support\Facades\Log;
@@ -191,16 +192,22 @@ class SyncUserUsage extends Command
             case Feature::$features_list[1]:
                 return Post::whereIn('account_id', $accounts->pluck('id'))
                     ->where('source', '!=', 'rss')
+                    ->where('user_id', $user->id)
                     ->count();
 
             case Feature::$features_list[2]:
                 return Post::whereIn('account_id', $accounts->pluck('id'))
                     ->where('source', 'rss')
+                    ->where('user_id', $user->id)
                     ->count();
 
+            case Feature::$features_list[6]:
+                $utmCodes = DomainUtmCode::where('user_id', $user->id)->get();
+                $utmCodes = $utmCodes->groupBy('domain_name');
+                return $utmCodes->count();
             default:
                 // For unknown features, return 0 or try to get from existing usage record
-                $feature = \App\Models\Feature::where('key', $featureKey)->first();
+                $feature = Feature::where('key', $featureKey)->first();
                 if ($feature) {
                     $existingUsage = UserFeatureUsage::where('user_id', $user->id)
                         ->where('feature_id', $feature->id)

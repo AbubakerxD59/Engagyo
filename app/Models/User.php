@@ -454,7 +454,30 @@ class User extends Authenticatable
      */
     public function decrementFeatureUsage($featureKey, $amount = 1)
     {
-        return $this->incrementFeatureUsage($featureKey, -$amount);
+        $feature = Feature::where('key', $featureKey)->first();
+        if (!$feature) {
+            return false;
+        }
+
+        $periodStart = now()->startOfMonth();
+
+        // Get usage record for current period
+        $featureUsage = $this->userFeatureUsages()
+            ->where('feature_id', $feature->id)
+            ->where('period_start', $periodStart)
+            ->where('is_archived', false)
+            ->first();
+
+        // If no usage record exists, there's nothing to decrement
+        if (!$featureUsage) {
+            return true; // Return true as there's nothing to decrement
+        }
+
+        // Decrement usage count (ensure it doesn't go below 0)
+        $newCount = max(0, $featureUsage->usage_count - $amount);
+        $featureUsage->update(['usage_count' => $newCount]);
+
+        return true;
     }
 
     /**

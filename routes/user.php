@@ -11,6 +11,7 @@ use App\Http\Controllers\User\SettingsController;
 use App\Http\Controllers\User\AutomationController;
 use App\Http\Controllers\User\NotificationController;
 use App\Http\Controllers\User\TeamMemberController;
+use App\Http\Controllers\User\UrlTrackingController;
 
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_admin", "team.menu"])->group(function () {
     // Schedule Routes
@@ -82,6 +83,18 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
             Route::post("refresh/{id}", "refresh")->name("refresh");
             Route::post("toggle/{id}", "toggle")->name("toggle");
             Route::delete("destroy/{id}", "destroy")->name("destroy");
+        });
+    });
+    // URL Tracking Routes
+    Route::controller(UrlTrackingController::class)->middleware(['feature:' . Feature::$features_list[6]])->group(function () {
+        Route::get("url-tracking", "index")->name("url-tracking");
+        Route::name("url-tracking.")->prefix("url-tracking/")->group(function () {
+            Route::post("store", "store")->name("store");
+            Route::get("{id}", "show")->name("show");
+            Route::post("update/{id}", "update")->name("update");
+            Route::delete("destroy/{id}", "destroy")->name("destroy");
+            Route::post("delete-all-domain", "deleteAllForDomain")->name("deleteAllDomain");
+            Route::post("get-by-domain", "getByDomain")->name("getByDomain");
         });
     });
     // API Posts Routes

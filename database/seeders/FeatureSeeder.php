@@ -54,6 +54,16 @@ class FeatureSeeder extends Seeder
                 'description' => 'Enable API access for programmatic posting and management',
                 'is_active' => true,
             ],
+            [
+                'id' => '5',
+                'parent_id' => 'URL Tracking',
+                'key' => Feature::$features_list[6],
+                'name' => 'URL Tracking',
+                'type' => 'numeric',
+                'default_value' => 1,
+                'description' => 'Number of URL tracking domains allowed',
+                'is_active' => true,
+            ],
         ];
 
         foreach ($features as $feature) {

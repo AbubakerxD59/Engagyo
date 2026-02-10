@@ -5,6 +5,7 @@ use App\Models\Post;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Package;
+use App\Models\DomainUtmCode;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Storage;
 
@@ -517,6 +518,9 @@ function get_options($type)
 {
     if ($type == "social_accounts") {
         $options = get_social_accounts();
+    }
+    if ($type == "utm_keys") {
+        $options = DomainUtmCode::$utm_keys;
     }
     return $options;
 }
