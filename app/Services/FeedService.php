@@ -7,6 +7,7 @@ use Exception;
 use App\Models\Post;
 use App\Models\Notification;
 use App\Models\Page;
+use App\Services\PostService;
 use SimpleXMLElement;
 
 class FeedService
@@ -85,7 +86,7 @@ class FeedService
                         $nextTime = $this->post->nextTime(["account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"]], $this->data["time"]);
                         $post = $this->post->exist(["account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();
                         if (!$post) {
-                            $post_row = $this->post->create([
+                            $post_row = PostService::create([
                                 "user_id" => $this->data["user_id"],
                                 "account_id" => $this->data["account_id"],
                                 "social_type" => $this->data["social_type"],
@@ -96,7 +97,6 @@ class FeedService
                                 "url" => $item["link"],
                                 "image" => isset($item["image"]) ? $item["image"] : automation_placeholder_image($item["title"] ?? null),
                                 "publish_date" => $nextTime,
-                                "status" => 0,
                             ]);
                             $post_row->photo()->create([
                                 "mode" => $this->data['social_type'],

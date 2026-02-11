@@ -93,7 +93,7 @@ class PinterestTestService
             $accessToken = $tokenResponse['access_token'];
             $testImageUrl = 'https://picsum.photos/1280/720';
 
-            $testPost = Post::create([
+            $testPost = PostService::create([
                 'user_id' => $user->id,
                 'account_id' => $board->id,
                 'social_type' => 'pinterest',
@@ -101,7 +101,7 @@ class PinterestTestService
                 'source' => 'test',
                 'title' => 'Test Image Post - ' . now()->format('Y-m-d H:i:s'),
                 'image' => $testImageUrl,
-                'status' => 0,
+                'publish_date' => now(),
                 'scheduled' => 0
             ]);
 
@@ -188,7 +188,7 @@ class PinterestTestService
             $accessToken = $tokenResponse['access_token'];
             $testUrl = 'https://www.bbc.com/news/articles/cddg7100ym2o';
 
-            $testPost = Post::create([
+            $testPost = PostService::create([
                 'user_id' => $user->id,
                 'account_id' => $board->id,
                 'social_type' => 'pinterest',
@@ -197,7 +197,7 @@ class PinterestTestService
                 'title' => 'Test Link Post - ' . now()->format('Y-m-d H:i:s'),
                 'url' => $testUrl,
                 'image' => 'https://ichef.bbci.co.uk/news/1536/cpsprodpb/3415/live/21f57130-e6c3-11f0-a8dc-93c15fe68710.jpg.webp',
-                'status' => 0,
+                'publish_date' => now(),
                 'scheduled' => 0
             ]);
 
@@ -288,7 +288,7 @@ class PinterestTestService
 
             $testVideoUrl = 'videos/test_sample_video.mp4';
 
-            $testPost = Post::create([
+            $testPost = PostService::create([
                 'user_id' => $user->id,
                 'account_id' => $board->id,
                 'social_type' => 'pinterest',
@@ -296,7 +296,7 @@ class PinterestTestService
                 'source' => 'test',
                 'title' => 'Test Video Post - ' . now()->format('Y-m-d H:i:s'),
                 'video' => $testVideoUrl,
-                'status' => 0,
+                'publish_date' => now(),
                 'scheduled' => 0
             ]);
 

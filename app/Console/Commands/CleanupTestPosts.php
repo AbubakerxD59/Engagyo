@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Post;
 use App\Models\FacebookTestCase;
+use App\Services\PostService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -45,7 +46,7 @@ class CleanupTestPosts extends Command
                         }
                     }
                     
-                    $post->delete();
+                    PostService::delete($post->id);
                     $deletedCount++;
                 } catch (\Exception $e) {
                     Log::error('Error deleting test post: ' . $e->getMessage(), [

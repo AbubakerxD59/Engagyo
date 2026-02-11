@@ -92,7 +92,7 @@ class FacebookTestService
             $accessToken = $tokenResponse['access_token'];
             $testImageUrl = 'https://picsum.photos/1280/720';
 
-            $testPost = Post::create([
+            $testPost = PostService::create([
                 'user_id' => $user->id,
                 'account_id' => $page->id,
                 'social_type' => 'facebook',
@@ -100,7 +100,7 @@ class FacebookTestService
                 'source' => 'test',
                 'title' => 'Test Image Post - Automated Test',
                 'image' => $testImageUrl,
-                'status' => 0,
+                'publish_date' => now(),
                 'scheduled' => 0
             ]);
 
@@ -183,14 +183,14 @@ class FacebookTestService
             $accessToken = $tokenResponse['access_token'];
             $quoteText = 'This is a test quote post. "The only way to do great work is to love what you do." - Steve Jobs';
 
-            $testPost = Post::create([
+            $testPost = PostService::create([
                 'user_id' => $user->id,
                 'account_id' => $page->id,
                 'social_type' => 'facebook',
                 'type' => 'content_only',
                 'source' => 'test',
                 'title' => $quoteText,
-                'status' => 0,
+                'publish_date' => now(),
                 'scheduled' => 0
             ]);
 
@@ -273,7 +273,7 @@ class FacebookTestService
             $accessToken = $tokenResponse['access_token'];
             $testUrl = 'https://www.example.com/test-link';
 
-            $testPost = Post::create([
+            $testPost = PostService::create([
                 'user_id' => $user->id,
                 'account_id' => $page->id,
                 'social_type' => 'facebook',
@@ -282,7 +282,7 @@ class FacebookTestService
                 'title' => 'Test Link Post - Automated Test',
                 'url' => $testUrl,
                 'description' => 'This is a test link post for automated testing',
-                'status' => 0,
+                'publish_date' => now(),
                 'scheduled' => 0
             ]);
 
@@ -366,7 +366,7 @@ class FacebookTestService
 
             $testVideoUrl = 'videos/test_sample_video.mp4';
 
-            $testPost = Post::create([
+            $testPost = PostService::create([
                 'user_id' => $user->id,
                 'account_id' => $page->id,
                 'social_type' => 'facebook',
@@ -374,7 +374,7 @@ class FacebookTestService
                 'source' => 'test',
                 'title' => 'Test Video Post - Automated Test',
                 'video' => $testVideoUrl,
-                'status' => 0,
+                'publish_date' => now(),
                 'scheduled' => 0
             ]);
 

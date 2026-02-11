@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Post;
 use App\Models\PinterestTestCase;
+use App\Services\PostService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -46,7 +47,7 @@ class CleanupPinterestTestPosts extends Command
                         }
                     }
                     
-                    $post->delete();
+                    PostService::delete($post->id);
                     $deletedCount++;
                 } catch (\Exception $e) {
                     Log::error('Error deleting Pinterest test post: ' . $e->getMessage(), [

@@ -132,9 +132,8 @@ class AutomationController extends Controller
             if ($post) {
                 $postData = $post->toArray();
                 $post->photo()->delete();
-                if ($post->delete()) {
-                    RefreshPosts::dispatch($postData, $user->id);
-                }
+                PostService::delete($post->id);
+                RefreshPosts::dispatch($postData, $user->id);
                 $response = array(
                     "success" => true,
                     "message" => "Post deleted Successfully!"
@@ -513,10 +512,10 @@ class AutomationController extends Controller
                 if (count($domain) > 0) {
                     $posts = $posts->domainSearch($domain);
                 }
-                foreach ($posts as $post) {
+                foreach ($posts->get() as $post) {
                     $post->photo()->delete();
+                    PostService::delete($post->id);
                 }
-                $posts->delete();
                 $response = array(
                     "success" => true,
                     "message" => "Posts deleted Successfully!!"
@@ -610,7 +609,7 @@ class AutomationController extends Controller
                 $posts = Post::where('domain_id', $domain->id)->get();
                 foreach ($posts as $post) {
                     $post->photo()->delete();
-                    $post->delete();
+                    PostService::delete($post->id);
                 }
                 // Delete the domain
                 $domain->delete();
@@ -687,12 +686,8 @@ class AutomationController extends Controller
                     }
                     // Delete post photos
                     $post->photo()->delete();
+                    PostService::delete($post->id);
                 }
-
-                // Delete posts
-                $this->post->whereIn('id', $deletedPostIds)
-                    ->where('account_id', $accountId)
-                    ->delete();
 
                 // Rearrange remaining posts
                 if ($earliestDeletedDate !== null) {

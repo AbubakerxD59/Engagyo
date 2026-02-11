@@ -11,6 +11,7 @@ use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishPinterestPost;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
+use App\Services\PostService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
@@ -104,9 +105,8 @@ class PostController extends BaseController
         $isScheduled = !$publishNow;
 
         // Create the post record
-        $post = Post::create([
+        $post = PostService::create([
             'user_id' => $user->id,
-            'api_key_id' => $apiKeyId,
             'account_id' => $page->id,
             'social_type' => 'facebook',
             'type' => $link ? 'link' : 'photo',
@@ -116,9 +116,13 @@ class PostController extends BaseController
             'url' => $link,
             'image' => $imageUrl,
             'publish_date' => $publishDate,
-            'status' => 0, // pending
             'scheduled' => $isScheduled ? 1 : 0,
         ]);
+        
+        // Update api_key_id if provided
+        if ($apiKeyId) {
+            $post->update(['api_key_id' => $apiKeyId]);
+        }
 
         if ($publishNow) {
             // Prepare post data for Facebook
@@ -220,9 +224,8 @@ class PostController extends BaseController
         $isScheduled = !$publishNow;
 
         // Create the post record
-        $post = Post::create([
+        $post = PostService::create([
             'user_id' => $user->id,
-            'api_key_id' => $apiKeyId,
             'account_id' => $board->id,
             'social_type' => 'pinterest',
             'type' => $link ? 'link' : 'photo',
@@ -232,9 +235,13 @@ class PostController extends BaseController
             'url' => $link,
             'image' => $imageUrl,
             'publish_date' => $publishDate,
-            'status' => 0, // pending
             'scheduled' => $isScheduled ? 1 : 0,
         ]);
+        
+        // Update api_key_id if provided
+        if ($apiKeyId) {
+            $post->update(['api_key_id' => $apiKeyId]);
+        }
 
         if ($publishNow) {
             // Prepare post data for Pinterest
@@ -505,19 +512,23 @@ class PostController extends BaseController
         $isScheduled = !$publishNow;
 
         // Create the post record - store local path instead of URL
-        $post = Post::create([
+        $post = PostService::create([
             'user_id' => $user->id,
-            'api_key_id' => $apiKeyId,
             'account_id' => $page->id,
+            'social_type' => 'facebook',
             'type' => 'video',
             'source' => 'api',
             'title' => $title,
             'description' => $description,
             'video' => $localVideoPath,
             'publish_date' => $publishDate,
-            'status' => 0, // pending
             'scheduled' => $isScheduled ? 1 : 0,
         ]);
+        
+        // Update api_key_id if provided
+        if ($apiKeyId) {
+            $post->update(['api_key_id' => $apiKeyId]);
+        }
 
         if ($publishNow) {
             // Prepare video post data for Facebook - use local file path
@@ -619,21 +630,24 @@ class PostController extends BaseController
         $isScheduled = !$publishNow;
 
         // Create the post record
-        $post = Post::create([
+        $post = PostService::create([
             'user_id' => $user->id,
-            'api_key_id' => $apiKeyId,
             'account_id' => $board->id,
             'social_type' => 'pinterest',
             'type' => 'video',
             'source' => 'api',
             'title' => $title,
             'description' => $description,
-            'link' => $link,
+            'url' => $link,
             'video' => $videoKey,
             'publish_date' => $publishDate,
-            'status' => 0, // pending
             'scheduled' => $isScheduled ? 1 : 0,
         ]);
+        
+        // Update api_key_id if provided
+        if ($apiKeyId) {
+            $post->update(['api_key_id' => $apiKeyId]);
+        }
 
         if ($publishNow) {
             // Prepare video post data for Pinterest

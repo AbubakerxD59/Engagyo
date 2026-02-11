@@ -99,7 +99,7 @@ class TikTokTestService
                 return ['success' => false, 'message' => 'Failed to download image to local storage'];
             }
 
-            $testPost = Post::create([
+            $testPost = PostService::create([
                 'user_id' => $user->id,
                 'account_id' => $tiktok->id,
                 'social_type' => 'tiktok',
@@ -107,7 +107,7 @@ class TikTokTestService
                 'source' => 'test',
                 'title' => 'Test Image Post - ' . now()->format('Y-m-d H:i:s'),
                 'image' => $localImageUrl,
-                'status' => 0,
+                'publish_date' => now(),
                 'scheduled' => 0
             ]);
 
@@ -195,7 +195,7 @@ class TikTokTestService
 
             $testVideoUrl = 'videos/test_sample_video.mp4';
 
-            $testPost = Post::create([
+            $testPost = PostService::create([
                 'user_id' => $user->id,
                 'account_id' => $tiktok->id,
                 'social_type' => 'tiktok',
@@ -203,7 +203,7 @@ class TikTokTestService
                 'source' => 'test',
                 'title' => 'Test Video Post - ' . now()->format('Y-m-d H:i:s'),
                 'video' => $testVideoUrl,
-                'status' => 0,
+                'publish_date' => now(),
                 'scheduled' => 0
             ]);
 

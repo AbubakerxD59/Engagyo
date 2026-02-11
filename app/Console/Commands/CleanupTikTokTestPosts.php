@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Post;
 use App\Models\TikTokTestCase;
+use App\Services\PostService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
@@ -47,7 +48,7 @@ class CleanupTikTokTestPosts extends Command
                     //     }
                     // }
                     
-                    $post->delete();
+                    PostService::delete($post->id);
                     $deletedCount++;
                 } catch (\Exception $e) {
                     Log::error('Error deleting TikTok test post: ' . $e->getMessage(), [

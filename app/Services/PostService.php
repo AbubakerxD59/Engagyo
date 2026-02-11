@@ -12,6 +12,12 @@ class PostService
 {
     public static function create($data)
     {
+        // enable url tracking (utm codes) for rss only start
+        if (isset($data["source"]) && $data["source"] === "rss" && !empty($data["url"]) && !empty($data["user_id"])) {
+            $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"]);
+        }
+        // enable url tracking (utm codes) for rss only end
+
         $post = Post::create([
             "user_id" => $data["user_id"],
             "account_id" => $data["account_id"],
@@ -201,7 +207,7 @@ class PostService
                 "url" => $post->image
             ];
         }
-        
+
         // Merge TikTok-specific metadata from response field if available
         if (!empty($post->response)) {
             $metadata = json_decode($post->response, true);
@@ -209,7 +215,7 @@ class PostService
                 $postData = array_merge($postData, $metadata);
             }
         }
-        
+
         return $postData;
     }
 }

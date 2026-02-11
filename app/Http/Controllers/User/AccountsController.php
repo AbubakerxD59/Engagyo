@@ -17,6 +17,7 @@ use Illuminate\Http\Request;
 use App\Services\TikTokService;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
+use App\Services\PostService;
 use App\Services\SocialMediaLogService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -78,7 +79,10 @@ class AccountsController extends Controller
                     $totalBoards++;
 
                     // Delete Posts
-                    Post::where("account_id", $board->id)->delete();
+                    $postsToDelete = Post::where("account_id", $board->id)->get();
+                    foreach ($postsToDelete as $post) {
+                        PostService::delete($post->id);
+                    }
                     // Delete Domains
                     Domain::where("account_id", $board->id)->delete();
                     // Delete Timeslots
@@ -190,7 +194,10 @@ class AccountsController extends Controller
                 $scheduledPostsCount = $board->posts()->where('source', 'schedule')->count();
 
                 // posts
-                $board->posts()->delete();
+                $postsToDelete = $board->posts()->get();
+                foreach ($postsToDelete as $post) {
+                    PostService::delete($post->id);
+                }
                 // domains
                 $board->domains()->delete();
                 // timeslots
@@ -241,7 +248,10 @@ class AccountsController extends Controller
                     $totalPages++;
 
                     // Delete Posts
-                    Post::where("account_id", $page->id)->delete();
+                    $postsToDelete = Post::where("account_id", $page->id)->get();
+                    foreach ($postsToDelete as $post) {
+                        PostService::delete($post->id);
+                    }
                     // Delete Domains
                     Domain::where("account_id", $page->id)->delete();
                     // Delete Timeslots
@@ -382,7 +392,10 @@ class AccountsController extends Controller
                 $scheduledPostsCount = $page->posts()->where('source', 'schedule')->count();
 
                 // posts
-                $page->posts()->delete();
+                $postsToDelete = $page->posts()->get();
+                foreach ($postsToDelete as $post) {
+                    PostService::delete($post->id);
+                }
                 // domains
                 $page->domains()->delete();
                 // timeslots
