@@ -552,7 +552,7 @@ class AutomationController extends Controller
                 ]);
                 $response = [
                     "success" => true,
-                    "data" => "Post fixed Successfully!"
+                    "message" => "Post fixed Successfully!"
                 ];
             } else {
                 $response = [
