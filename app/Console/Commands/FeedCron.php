@@ -122,37 +122,35 @@ class FeedCron extends Command
                     // Determine the link URL (always use domain + category if available)
                     $link = !empty($category) ? $urlDomain . $category : $urlDomain;
 
-                    foreach ($times as $time) {
-                        $data = [
-                            "protocol" => $protocol,
-                            "url" => $link,
-                            "category" => $category,
-                            "domain_id" => $value->id,
-                            "user_id" => $user->id,
-                            "account_id" => $account_id,
-                            "type" => "link",
-                            "social_type" => $type,
-                            "source" => "rss",
-                            "time" => $time,
-                            "exist" => false // Always set to false
-                        ];
+                    $data = [
+                        "protocol" => $protocol,
+                        "url" => $link,
+                        "category" => $category,
+                        "domain_id" => $value->id,
+                        "user_id" => $user->id,
+                        "account_id" => $account_id,
+                        "type" => "link",
+                        "social_type" => $type,
+                        "source" => "rss",
+                        "time" => $times,
+                        "exist" => false // Always set to false
+                    ];
 
-                        // Always use FeedService to fetch posts from Feed
-                        $feedService = new FeedService($data);
-                        $feedUrl = $feedService->fetch();
-                        if (!$feedUrl['success']) {
-                            $errorMessage = $feedUrl['message'] ?? 'Unknown error';
-                            Log::warning("Failed to fetch feed for domain {$value->id}: " . $errorMessage);
-                            // Create error notification (cron job)
-                            $platform = ucfirst($type);
-                            $this->errorNotification($user->id, "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed for domain '{$urlDomain}'. " . $errorMessage, $type, $account_image);
-                        } else {
-                            // Create success notification (cron job)
-                            $platform = ucfirst($type);
-                            $postCount = isset($feedUrl['items']) ? count($feedUrl['items']) : 0;
-                            if ($postCount > 0) {
-                                $this->successNotification($user->id, "RSS Feed Fetched", "Successfully fetched {$postCount} new post(s) from {$platform} RSS feed for domain '{$urlDomain}'.", $type, $account_image);
-                            }
+                    // Always use FeedService to fetch posts from Feed
+                    $feedService = new FeedService($data);
+                    $feedUrl = $feedService->fetch();
+                    if (!$feedUrl['success']) {
+                        $errorMessage = $feedUrl['message'] ?? 'Unknown error';
+                        Log::warning("Failed to fetch feed for domain {$value->id}: " . $errorMessage);
+                        // Create error notification (cron job)
+                        $platform = ucfirst($type);
+                        $this->errorNotification($user->id, "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed for domain '{$urlDomain}'. " . $errorMessage, $type, $account_image);
+                    } else {
+                        // Create success notification (cron job)
+                        $platform = ucfirst($type);
+                        $postCount = isset($feedUrl['items']) ? count($feedUrl['items']) : 0;
+                        if ($postCount > 0) {
+                            $this->successNotification($user->id, "RSS Feed Fetched", "Successfully fetched {$postCount} new post(s) from {$platform} RSS feed for domain '{$urlDomain}'.", $type, $account_image);
                         }
                     }
                 }
