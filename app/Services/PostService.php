@@ -6,6 +6,7 @@ use Exception;
 use App\Models\Post;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishPinterestPost;
+use App\Services\UtmService;
 use Illuminate\Support\Facades\Auth;
 
 class PostService
@@ -17,6 +18,12 @@ class PostService
             $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"]);
         }
         // enable url tracking (utm codes) for rss only end
+
+        // enable url tracking (utm codes) for schedule posts start
+        if (isset($data["source"]) && $data["source"] === "schedule" && !empty($data["url"]) && !empty($data["user_id"])) {
+            $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"]);
+        }
+        // enable url tracking (utm codes) for schedule posts end
 
         $post = Post::create([
             "user_id" => $data["user_id"],
