@@ -301,14 +301,14 @@
         }
         // process link post
         var processLink = function() {
-            console.log('processLink');
             var content = $('#content').val();
             var comment = $('#comment').val();
             var image = $('#link_image').attr('src');
-            var url = $('#content').val();
+            var title = $('#content').val();
+            var url = $('.link_url').text();
             var schedule_date = $("#schedule_date").val();
             var schedule_time = $("#schedule_time").val();
-            
+
             // Check if TikTok accounts are selected
             var hasTikTokAccounts = false;
             var tiktokAccounts = [];
@@ -321,14 +321,13 @@
                     });
                 }
             });
-            
+
             // If TikTok accounts are selected, show TikTok modal for link posts
             if (hasTikTokAccounts && url && image) {
-                console.log('showTikTokLinkModal');
-                showTikTokLinkModal(url, image, tiktokAccounts, schedule_date, schedule_time);
+                showTikTokLinkModal(title, url, image, tiktokAccounts, schedule_date, schedule_time);
                 return;
             }
-            
+
             // For non-TikTok accounts, process normally
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",
@@ -432,12 +431,12 @@
             var modal = $('.settings-modal');
             modal.find(".modal-body").empty();
             modal.modal("toggle");
-            
+
             // Reset tracking when modal opens
             originalQueueTimeslots = {};
             queueTimeslotsChanged = false;
             $('#saveQueueSettings').hide();
-            
+
             // Store original timeslots after modal is shown and select2 is initialized
             modal.off('shown.bs.modal').on('shown.bs.modal', function() {
                 setTimeout(function() {
@@ -446,12 +445,13 @@
                         var accountId = $select.data("id");
                         var accountType = $select.data("type");
                         var key = accountType + '_' + accountId;
-                        var originalValue = $select.val() ? $select.val().sort().join(',') : '';
+                        var originalValue = $select.val() ? $select.val().sort()
+                            .join(',') : '';
                         originalQueueTimeslots[key] = originalValue;
                     });
                 }, 300);
             });
-            
+
             // $.ajax({
             //     url: "{{ route('panel.schedule.get.setting') }}",
             //     type: "GET",
@@ -479,7 +479,7 @@
             var accountType = $select.data("type");
             var key = accountType + '_' + accountId;
             var currentValue = $select.val() ? $select.val().sort().join(',') : '';
-            
+
             // Check if timeslots have changed
             if (originalQueueTimeslots[key] !== currentValue) {
                 queueTimeslotsChanged = true;
@@ -499,7 +499,7 @@
                 var accountType = $select.data("type");
                 var key = accountType + '_' + accountId;
                 var currentValue = $select.val() ? $select.val().sort().join(',') : '';
-                
+
                 if (originalQueueTimeslots[key] !== currentValue) {
                     queueTimeslotsChanged = true;
                     return false; // break loop
@@ -518,7 +518,7 @@
                 var accountId = $select.data("id");
                 var accountType = $select.data("type");
                 var timeslots = $select.val();
-                
+
                 if (timeslots && timeslots.length > 0) {
                     timeslotData.push({
                         id: accountId,
@@ -535,7 +535,8 @@
 
             var token = "{{ csrf_token() }}";
             var $saveBtn = $(this);
-            $saveBtn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Saving...');
+            $saveBtn.prop('disabled', true).html(
+                '<i class="fas fa-spinner fa-spin mr-1"></i> Saving...');
 
             $.ajax({
                 url: "{{ route('panel.schedule.timeslot.setting.save') }}",
@@ -545,7 +546,8 @@
                     "timeslot_data": timeslotData,
                 },
                 success: function(response) {
-                    $saveBtn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Save Changes');
+                    $saveBtn.prop('disabled', false).html(
+                        '<i class="fas fa-save mr-1"></i> Save Changes');
                     if (response.success) {
                         toastr.success(response.message);
                         // Reset tracking
@@ -558,7 +560,8 @@
                             var accountId = $select.data("id");
                             var accountType = $select.data("type");
                             var key = accountType + '_' + accountId;
-                            var currentValue = $select.val() ? $select.val().sort().join(',') : '';
+                            var currentValue = $select.val() ? $select.val().sort()
+                                .join(',') : '';
                             originalQueueTimeslots[key] = currentValue;
                         });
                         // Reload posts if needed
@@ -570,7 +573,8 @@
                     }
                 },
                 error: function() {
-                    $saveBtn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Save Changes');
+                    $saveBtn.prop('disabled', false).html(
+                        '<i class="fas fa-save mr-1"></i> Save Changes');
                     toastr.error('Something went wrong!');
                 }
             });
@@ -654,7 +658,7 @@
 
             // Get selected accounts from account cards
             var selectedAccounts = getSelectedAccounts();
-            
+
             // If no account is selected, show empty posts
             if (selectedAccounts.accountIds.length === 0) {
                 $('#postsGrid').html(`
@@ -903,14 +907,14 @@
             if (!selectedValues) {
                 selectedValues = [];
             }
-            
+
             var $select = $(this);
             var hasAll = selectedValues.includes('all');
             var individualStatuses = ['0', '1', '-1'];
             var hasIndividualStatuses = individualStatuses.some(function(status) {
                 return selectedValues.includes(status);
             });
-            
+
             // If "all" is selected
             if (hasAll) {
                 // If "all" was just selected, deselect individual statuses to avoid confusion
@@ -927,7 +931,7 @@
                     return; // Don't reload yet, let the change event trigger again
                 }
             }
-            
+
             // Reload posts with updated filter
             loadPosts(1);
         });
@@ -944,11 +948,11 @@
 
         // Track last notification count to detect new notifications
         var lastNotificationCount = 0;
-        
+
         // Function to check for new notifications and refresh posts
         function checkNotificationsAndRefresh() {
             $.ajax({
-                url: '{{ route("panel.notifications.fetch") }}',
+                url: '{{ route('panel.notifications.fetch') }}',
                 method: 'GET',
                 success: function(response) {
                     if (response.success) {
@@ -962,15 +966,14 @@
                     }
                 },
                 error: function(xhr) {
-                    console.error('Failed to check notifications:', xhr);
                 }
             });
         }
-        
+
         // Set up notification polling to refresh posts when new notifications arrive
         // Poll every 5 seconds (same as notification refresh interval)
         var notificationCheckInterval = setInterval(checkNotificationsAndRefresh, 5000);
-        
+
         // Initial notification count fetch
         checkNotificationsAndRefresh();
 
@@ -1140,28 +1143,28 @@
         function showTikTokModal(file, accounts) {
             currentTikTokFile = file;
             currentTikTokAccounts = Array.isArray(accounts) ? accounts : [accounts];
-            
+
             // Reset modal
             resetTikTokModal();
-            
+
             // Set account ID (use first account)
             if (currentTikTokAccounts.length > 0) {
                 $('#tiktok-account-id').val(currentTikTokAccounts[0].id);
             }
-            
+
             // Determine post type
             var isVideo = file.type.startsWith('video/');
             $('#tiktok-post-type').val(isVideo ? 'video' : 'photo');
-            
+
             // Show preview
             showTikTokPreview(file);
-            
+
             // Display account names
             displayTikTokAccountNames(currentTikTokAccounts);
-            
+
             // Populate form options
             populateTikTokFormOptions();
-            
+
             // Show modal
             $('.tiktok-post-modal').modal('show');
         }
@@ -1192,43 +1195,41 @@
             currentTikTokScheduleDate = null;
             currentTikTokScheduleTime = null;
         }
-        
+
         // Show TikTok modal for link posts
         // Note: For link posts, no file in dropzone is needed since fetchLink already provides the image
-        function showTikTokLinkModal(url, imageUrl, accounts, scheduleDate, scheduleTime) {
+        function showTikTokLinkModal(title, url, imageUrl, accounts, scheduleDate, scheduleTime) {
             currentTikTokAccounts = Array.isArray(accounts) ? accounts : [accounts];
             currentTikTokLinkUrl = url;
-            console.log("url", url);
-            console.log("currentTikTokLinkUrl", currentTikTokLinkUrl);
             currentTikTokLinkImage = imageUrl; // Use fetched link image, no dropzone file needed
             currentTikTokScheduleDate = scheduleDate;
             currentTikTokScheduleTime = scheduleTime;
-            
+
             // Set account ID (use first account)
             if (currentTikTokAccounts.length > 0) {
                 $('#tiktok-account-id').val(currentTikTokAccounts[0].id);
             }
-            
+
             // Set post type to photo (since links are converted to photos)
             $('#tiktok-post-type').val('photo');
             $('#tiktok-file-url').val(imageUrl); // Use fetched link image URL
-            
+
             // Show link image preview (from fetched link, not dropzone)
             $('#preview-image').show().find('img').attr('src', imageUrl);
             $('#preview-video').hide();
-            $('#preview-title').text(url);
+            $('#preview-title').text(title);
             $('#content-preview').show();
-            
+
             // Pre-fill title with link URL (user can edit it)
-            $('#tiktok-title').val(url);
-            $('#title-char-count').text(url.length);
-            
+            $('#tiktok-title').val(title);
+            $('#title-char-count').text(title.length);
+
             // Display account names
             displayTikTokAccountNames(currentTikTokAccounts);
-            
+
             // Populate form options
             populateTikTokFormOptions();
-            
+
             // Show modal
             $('.tiktok-post-modal').modal('show');
         }
@@ -1237,9 +1238,11 @@
             var namesHtml = '';
             accounts.forEach(function(account) {
                 var accountCard = $('.account-card[data-type="tiktok"][data-id="' + account.id + '"]');
-                var accountName = accountCard.find('.account-name').text().trim() || account.name || 'TikTok Account';
-                var accountUsername = accountCard.find('.account-username').text().trim() || account.username || '';
-                
+                var accountName = accountCard.find('.account-name').text().trim() || account.name ||
+                    'TikTok Account';
+                var accountUsername = accountCard.find('.account-username').text().trim() || account
+                    .username || '';
+
                 namesHtml += '<div class="mb-1">';
                 namesHtml += '<strong>' + accountName + '</strong>';
                 if (accountUsername) {
@@ -1254,12 +1257,14 @@
             // Populate privacy options with defaults
             var select = $('#tiktok-privacy-level');
             select.html('<option value="">-- Select Privacy Level --</option>');
-            var defaultOptions = ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY'];
+            var defaultOptions = ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR',
+                'SELF_ONLY'
+            ];
             defaultOptions.forEach(function(option) {
                 var label = option.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
                 select.append($('<option></option>').attr('value', option).text(label));
             });
-            
+
             // Hide Duet and Stitch for photo posts
             var isPhoto = $('#tiktok-post-type').val() === 'photo';
             if (isPhoto) {
@@ -1269,7 +1274,7 @@
                 $('#duet-container').show();
                 $('#stitch-container').show();
             }
-            
+
             // Check video duration if video
             if (!isPhoto && currentTikTokFile) {
                 checkVideoDuration();
@@ -1294,10 +1299,10 @@
             var previewImage = $('#preview-image');
             var previewVideo = $('#preview-video');
             var previewTitle = $('#preview-title');
-            
+
             previewImage.hide();
             previewVideo.hide();
-            
+
             if (file.type.startsWith('image/')) {
                 var reader = new FileReader();
                 reader.onload = function(e) {
@@ -1313,7 +1318,7 @@
                 };
                 reader.readAsDataURL(file);
             }
-            
+
             previewTitle.text(file.name);
             previewDiv.show();
         }
@@ -1346,13 +1351,19 @@
             var brandedContent = $('#tiktok-branded-content').is(':checked');
             var prompts = $('#commercial-prompts');
             prompts.html('');
-            
+
             if (yourBrand && !brandedContent) {
-                prompts.html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Promotional content\'</div>');
+                prompts.html(
+                    '<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Promotional content\'</div>'
+                    );
             } else if (!yourBrand && brandedContent) {
-                prompts.html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Paid partnership\'</div>');
+                prompts.html(
+                    '<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Paid partnership\'</div>'
+                    );
             } else if (yourBrand && brandedContent) {
-                prompts.html('<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Paid partnership\'</div>');
+                prompts.html(
+                    '<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Paid partnership\'</div>'
+                    );
             }
         }
 
@@ -1361,15 +1372,21 @@
             var yourBrand = $('#tiktok-your-brand').is(':checked');
             var brandedContent = $('#tiktok-branded-content').is(':checked');
             var declaration = $('#tiktok-declaration');
-            
+
             if (commercialToggle && (yourBrand || brandedContent)) {
                 if (brandedContent) {
-                    declaration.html('<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Branded Content Policy and Music Usage Confirmation</strong>');
+                    declaration.html(
+                        '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Branded Content Policy and Music Usage Confirmation</strong>'
+                        );
                 } else {
-                    declaration.html('<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Music Usage Confirmation</strong>');
+                    declaration.html(
+                        '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Music Usage Confirmation</strong>'
+                        );
                 }
             } else {
-                declaration.html('<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Music Usage Confirmation</strong>');
+                declaration.html(
+                    '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Music Usage Confirmation</strong>'
+                    );
             }
         }
 
@@ -1383,7 +1400,7 @@
             var brandedContent = $('#tiktok-branded-content').is(':checked');
             var privacyLevel = $('#tiktok-privacy-level').val();
             var warning = $('#branded-content-privacy-warning');
-            
+
             if (brandedContent && privacyLevel === 'SELF_ONLY') {
                 warning.show();
                 // Auto-switch to public
@@ -1402,19 +1419,19 @@
 
         function validateTikTokForm() {
             var isValid = true;
-            
+
             // Check title
             var title = $('#tiktok-title').val().trim();
             if (!title) {
                 isValid = false;
             }
-            
+
             // Check privacy level
             var privacyLevel = $('#tiktok-privacy-level').val();
             if (!privacyLevel) {
                 isValid = false;
             }
-            
+
             // Check commercial content
             var commercialToggle = $('#tiktok-commercial-toggle').is(':checked');
             if (commercialToggle) {
@@ -1427,14 +1444,15 @@
                     $('#commercial-error').hide();
                 }
             }
-            
+
             // Check branded content privacy
-            if ($('#tiktok-branded-content').is(':checked') && $('#tiktok-privacy-level').val() === 'SELF_ONLY') {
+            if ($('#tiktok-branded-content').is(':checked') && $('#tiktok-privacy-level').val() ===
+                'SELF_ONLY') {
                 isValid = false;
             }
-            
+
             $('#tiktok-publish-btn').prop('disabled', !isValid);
-            
+
             return isValid;
         }
 
@@ -1444,12 +1462,9 @@
                 toastr.error('Please fill in all required fields correctly');
                 return;
             }
-            
+
             // Check if this is a link post
             // For link posts, no dropzone file is needed - we use the fetched link image
-            console.log("currentTikTokLinkUrl", currentTikTokLinkUrl);
-            console.log("currentTikTokLinkImage", currentTikTokLinkImage);
-            console.log("currentTikTokFile", currentTikTokFile);
             var isLinkPost = currentTikTokLinkUrl && currentTikTokLinkImage;
 
             // Only require file for non-link posts
@@ -1457,10 +1472,10 @@
                 toastr.error('No file selected');
                 return;
             }
-            
+
             // Prepare form data
             var formData = new FormData();
-            
+
             if (isLinkPost) {
                 // For link posts: use fetched link image (no dropzone file needed)
                 // Title comes from modal textarea, image comes from fetched link
@@ -1470,7 +1485,8 @@
                 formData.append('comment', comment);
                 formData.append('link', 1);
                 formData.append('url', currentTikTokLinkUrl);
-                formData.append('image', currentTikTokLinkImage); // Fetched link image, not from dropzone
+                formData.append('image',
+                currentTikTokLinkImage); // Fetched link image, not from dropzone
                 if (currentTikTokScheduleDate) {
                     formData.append('schedule_date', currentTikTokScheduleDate);
                 }
@@ -1482,27 +1498,30 @@
                 formData.append('files', currentTikTokFile);
                 formData.append('content', $('#tiktok-title').val());
             }
-            
+
             formData.append('action', action_name);
             formData.append('tiktok_account_id', $('#tiktok-account-id').val());
             formData.append('tiktok_privacy_level', $('#tiktok-privacy-level').val());
             formData.append('tiktok_allow_comment', $('#tiktok-allow-comment').is(':checked') ? 1 : 0);
             formData.append('tiktok_allow_duet', $('#tiktok-allow-duet').is(':checked') ? 1 : 0);
             formData.append('tiktok_allow_stitch', $('#tiktok-allow-stitch').is(':checked') ? 1 : 0);
-            formData.append('tiktok_commercial_toggle', $('#tiktok-commercial-toggle').is(':checked') ? 1 : 0);
+            formData.append('tiktok_commercial_toggle', $('#tiktok-commercial-toggle').is(':checked') ?
+                1 : 0);
             formData.append('tiktok_your_brand', $('#tiktok-your-brand').is(':checked') ? 1 : 0);
-            formData.append('tiktok_branded_content', $('#tiktok-branded-content').is(':checked') ? 1 : 0);
+            formData.append('tiktok_branded_content', $('#tiktok-branded-content').is(':checked') ? 1 :
+                0);
             formData.append('video', $('#tiktok-post-type').val() === 'video' ? 1 : 0);
-            
+
             // Add CSRF token
             formData.append('_token', '{{ csrf_token() }}');
-            
+
             // Disable button
-            $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-2"></i>Publishing...');
-            
+            $(this).prop('disabled', true).html(
+                '<i class="fas fa-spinner fa-spin mr-2"></i>Publishing...');
+
             // Submit via AJAX
             $.ajax({
-                url: '{{ route("panel.schedule.process.post") }}',
+                url: '{{ route('panel.schedule.process.post') }}',
                 type: 'POST',
                 data: formData,
                 processData: false,
@@ -1511,7 +1530,7 @@
                     if (response.success) {
                         toastr.success(response.message);
                         $('.tiktok-post-modal').modal('hide');
-                        
+
                         if (isLinkPost) {
                             // For link posts: no dropzone files to handle, just reset variables
                             currentTikTokLinkUrl = null;
@@ -1534,7 +1553,8 @@
                         }
                     } else {
                         toastr.error(response.message);
-                        $('#tiktok-publish-btn').prop('disabled', false).html('<i class="fas fa-paper-plane mr-2"></i>Publish');
+                        $('#tiktok-publish-btn').prop('disabled', false).html(
+                            '<i class="fas fa-paper-plane mr-2"></i>Publish');
                     }
                 },
                 error: function(xhr) {
@@ -1543,7 +1563,8 @@
                         errorMsg = xhr.responseJSON.message;
                     }
                     toastr.error(errorMsg);
-                    $('#tiktok-publish-btn').prop('disabled', false).html('<i class="fas fa-paper-plane mr-2"></i>Publish');
+                    $('#tiktok-publish-btn').prop('disabled', false).html(
+                        '<i class="fas fa-paper-plane mr-2"></i>Publish');
                 }
             });
         });
