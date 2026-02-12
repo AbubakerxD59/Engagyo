@@ -13,7 +13,6 @@ class PostService
 {
     public static function create($data)
     {
-        dd($data);
         // enable url tracking (utm codes) for rss only start
         if (isset($data["source"]) && $data["source"] === "rss" && !empty($data["url"]) && !empty($data["user_id"])) {
             $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"]);
