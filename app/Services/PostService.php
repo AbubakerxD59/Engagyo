@@ -20,8 +20,21 @@ class PostService
         // enable url tracking (utm codes) for rss only end
 
         // enable url tracking (utm codes) for schedule posts start
-        if (isset($data["source"]) && $data["source"] === "schedule" && !empty($data["url"]) && !empty($data["user_id"])) {
-            $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"]);
+        if (isset($data["source"]) && $data["source"] === "schedule" && !empty($data["user_id"])) {
+            // Track URL in url field
+            if (!empty($data["url"])) {
+                $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"]);
+            }
+            
+            // Track URLs in title field
+            if (!empty($data["title"])) {
+                $data["title"] = self::trackUrlsInText($data["title"], $data["user_id"]);
+            }
+            
+            // Track URLs in comment field
+            if (!empty($data["comment"])) {
+                $data["comment"] = self::trackUrlsInText($data["comment"], $data["user_id"]);
+            }
         }
         // enable url tracking (utm codes) for schedule posts end
 
@@ -224,5 +237,40 @@ class PostService
         }
 
         return $postData;
+    }
+
+    /**
+     * Extract URLs from text and append UTM codes if tracking is enabled for the domain
+     *
+     * @param string $text The text containing URLs
+     * @param int $userId The user ID
+     * @return string The text with URLs replaced with UTM-tracked versions
+     */
+    private static function trackUrlsInText($text, $userId)
+    {
+        if (empty($text) || empty($userId)) {
+            return $text;
+        }
+
+        // Regex pattern to match URLs (http://, https://, or www.)
+        // This pattern matches URLs and stops at whitespace or common punctuation
+        $urlPattern = '/(?:https?:\/\/|www\.)[^\s<>"{}|\\^`\[\]]+/i';
+        
+        return preg_replace_callback($urlPattern, function ($matches) use ($userId) {
+            $matchedUrl = $matches[0];
+            $urlToTrack = $matchedUrl;
+            
+            // Add http:// if URL starts with www. (and doesn't already have a scheme)
+            if (stripos($matchedUrl, 'www.') === 0 && stripos($matchedUrl, 'http://') === false && stripos($matchedUrl, 'https://') === false) {
+                $urlToTrack = 'http://' . $matchedUrl;
+            }
+            
+            // Append UTM codes (will return original URL if no tracking configured for domain)
+            $trackedUrl = UtmService::appendUtmCodes($urlToTrack, $userId);
+            
+            // If we added http:// prefix, preserve it in the tracked URL
+            // Otherwise, if tracking modified the URL, use the tracked version
+            return $trackedUrl;
+        }, $text);
     }
 }
