@@ -49,7 +49,7 @@
                                                                 <code
                                                                     class="text-primary font-weight-bold">{{ $code->utm_key }}</code>
                                                                 <span class="mx-2">=</span>
-                                                                <code class="text-dark">{{ $code->utm_value }}</code>
+                                                                <code class="text-dark">{{ $code->value }}</code>
                                                             </div>
                                                         @endforeach
                                                     </div>

@@ -13,16 +13,9 @@ use Illuminate\Support\Facades\Log;
 class UtmService
 {
     /**
-     * Append UTM codes to a URL if matching domain configuration exists.
-     * - utm_source: always "engagyo"
-     * - social_type: resolved to post's social type (facebook, pinterest, etc.) when context is provided
-     * - social_profile: resolved to parent account name when context is provided
-     * - All other stored values are used as-is. All values are lowercased.
+     * Append UTM codes to URL when domain config exists. All values lowercased.
      *
-     * @param string $url The original URL
-     * @param int $userId The user ID
-     * @param \App\Models\Post|array|null $context Optional. Post model or ['social_type' => string, 'account_id' => int] for resolving social_type/social_profile
-     * @return string The URL with UTM codes appended (or original URL if no match)
+     * @param \App\Models\Post|array|null $context Post or ['social_type', 'account_id', 'type'] for resolving social_type/social_profile/utm_posttype
      */
     public static function appendUtmCodes($url, $userId, $context = null)
     {
@@ -31,23 +24,18 @@ class UtmService
                 return $url;
             }
 
-            // Extract host from URL
             $host = self::extractHost($url);
             if (!$host) {
                 return $url;
             }
 
-            // Normalize host (remove www. prefix for matching)
             $normalizedHost = self::normalizeHost($host);
-
-            // Find matching UTM codes for this user and domain
             $utmCodes = DomainUtmCode::forUserAndDomain($userId, $normalizedHost)->get();
 
             if ($utmCodes->isEmpty()) {
                 return $url;
             }
 
-            // Build UTM parameters array with resolved values
             $utmParams = [];
             foreach ($utmCodes as $utmCode) {
                 $value = self::resolveUtmValue($utmCode->utm_key, $utmCode->utm_value, $context);
@@ -56,13 +44,11 @@ class UtmService
                 }
             }
 
-            // After all configured UTM codes, add utm_posttype from context (post type: video, link, etc.) when available
             $postType = self::getPostTypeFromContext($context);
             if ($postType !== null && $postType !== '') {
                 $utmParams['utm_posttype'] = strtolower($postType);
             }
 
-            // Append UTM codes to URL
             return self::appendQueryParams($url, $utmParams);
         } catch (Exception $e) {
             Log::error("Error appending UTM codes: " . $e->getMessage(), [
@@ -70,28 +56,21 @@ class UtmService
                 'user_id' => $userId,
                 'exception' => $e
             ]);
-            return $url; // Return original URL on error
+            return $url;
         }
     }
 
     /**
-     * Resolve UTM value: utm_source => engagyo; social_type/social_profile => from context when available; else stored value. All lowercase.
-     *
-     * @param string $utmKey
-     * @param string $storedValue
-     * @param \App\Models\Post|array|null $context
-     * @return string|null Value to append, or null to skip this param
+     * @return string|null
      */
     private static function resolveUtmValue($utmKey, $storedValue, $context)
     {
         $storedValue = $storedValue ? trim((string) $storedValue) : '';
 
-        // 1. For utm_source, always use "engagyo"
         if (strtolower($utmKey) === 'utm_source') {
             return 'engagyo';
         }
 
-        // 2. For social_type / social_profile, resolve from context when available
         $storedLower = strtolower($storedValue);
         if ($storedLower === 'social_type') {
             $resolved = self::getSocialTypeFromContext($context);
@@ -102,14 +81,10 @@ class UtmService
             return $resolved !== null && $resolved !== '' ? strtolower($resolved) : null;
         }
 
-        // 3. Else use the stored value, lowercased
         return $storedValue !== '' ? strtolower($storedValue) : null;
     }
 
     /**
-     * Get post type from context (Post or array with type). Used for utm_posttype.
-     *
-     * @param \App\Models\Post|array|null $context
      * @return string|null
      */
     private static function getPostTypeFromContext($context)
@@ -124,9 +99,6 @@ class UtmService
     }
 
     /**
-     * Get social type from context (Post or array with social_type).
-     *
-     * @param \App\Models\Post|array|null $context
      * @return string|null
      */
     private static function getSocialTypeFromContext($context)
@@ -140,20 +112,13 @@ class UtmService
         return null;
     }
 
-    /**
-     * Get parent account name from context (Post or array with social_type + account_id).
-     * For Facebook: Page's Facebook account username; for Pinterest: Board's Pinterest username; for TikTok: Tiktok username.
-     *
-     * @param \App\Models\Post|array|null $context
-     * @return string|null
-     */
+    /** Facebook: page name; Pinterest: board's username; TikTok: username. */
     private static function getParentAccountNameFromContext($context)
     {
         if ($context instanceof Post) {
             $post = $context;
             if ($post->social_type === 'facebook' && $post->page) {
-                $fb = $post->page->facebook;
-                return $fb ? $fb->username : null;
+                return $post->page->name ?? null;
             }
             if ($post->social_type === 'pinterest' && $post->board) {
                 $pin = $post->board->pinterest;
@@ -170,8 +135,7 @@ class UtmService
             $accountId = $context['account_id'];
             if ($socialType === 'facebook') {
                 $page = Page::find($accountId);
-                $fb = $page ? $page->facebook : null;
-                return $fb ? $fb->username : null;
+                return $page ? ($page->name ?? null) : null;
             }
             if ($socialType === 'pinterest') {
                 $board = Board::find($accountId);
@@ -187,19 +151,13 @@ class UtmService
         return null;
     }
 
-    /**
-     * Extract host from URL
-     *
-     * @param string $url
-     * @return string|null
-     */
+    /** @return string|null */
     private static function extractHost($url)
     {
         $parsed = parse_url($url);
         if (isset($parsed['host'])) {
             return $parsed['host'];
         }
-        // Fallback: if no host, try to extract from path
         if (isset($parsed['path'])) {
             $path = ltrim($parsed['path'], '/');
             $parts = explode('/', $path);
@@ -208,43 +166,26 @@ class UtmService
         return null;
     }
 
-    /**
-     * Normalize host name (remove www. prefix for matching)
-     *
-     * @param string $host
-     * @return string
-     */
     private static function normalizeHost($host)
     {
         $host = strtolower($host);
-        // Remove www. prefix if present
         if (strpos($host, 'www.') === 0) {
             $host = substr($host, 4);
         }
         return $host;
     }
 
-    /**
-     * Append query parameters to URL, preserving existing parameters
-     *
-     * @param string $url
-     * @param array $newParams
-     * @return string
-     */
     private static function appendQueryParams($url, $newParams)
     {
         $parsed = parse_url($url);
 
-        // Parse existing query parameters
         $existingParams = [];
         if (isset($parsed['query'])) {
             parse_str($parsed['query'], $existingParams);
         }
 
-        // Merge new params with existing (new params override existing if key matches)
         $allParams = array_merge($existingParams, $newParams);
 
-        // Rebuild URL
         $scheme = isset($parsed['scheme']) ? $parsed['scheme'] . '://' : '';
         $host = isset($parsed['host']) ? $parsed['host'] : '';
         $port = isset($parsed['port']) ? ':' . $parsed['port'] : '';

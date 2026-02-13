@@ -25,7 +25,7 @@ class DomainUtmCode extends Model
     ];
 
     public static $utm_values = [
-        "social_type" =>"Social Type",
+        "social_type" => "Platform",
         "social_profile" => "Social Profile",
         "custom" => "Custom"
     ];
@@ -57,6 +57,14 @@ class DomainUtmCode extends Model
     public function scopeForUserAndDomain($query, $userId, $domainName)
     {
         return $query->forUser($userId)->forDomainName($domainName);
+    }
+
+
+    protected function getValueAttribute()
+    {
+        $utm_values = DomainUtmCode::$utm_values;
+        $utm_value = $this->utm_value;
+        return isset($utm_values[$utm_value]) ? $utm_values[$utm_value] : $utm_value;
     }
 
     protected static function booted()
