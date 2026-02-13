@@ -90,12 +90,24 @@
                     } else {
                         itemClass += ' unread';
                     }
-                    // Get account image if available (for Facebook, TikTok, Pinterest notifications)
-                    let accountImageHtml = '';
-                    if (notification.account_image && notification.social_type) {
-                        const imageUrl = escapeHtml(notification.account_image);
-                        accountImageHtml =
-                            `<img src="${imageUrl}" alt="${notification.social_type || ''}" class="notification-account-image" onerror="this.style.display='none';">`;
+                    // Build account block (image + name + parent name) like schedule tab account container
+                    let accountBlockHtml = '';
+                    if (notification.account_image || notification.account_name || notification
+                        .account_username) {
+                        const imageUrl = notification.account_image ? escapeHtml(notification
+                            .account_image) : '';
+                        const accountName = notification.account_name ? escapeHtml(notification
+                            .account_name) : '';
+                        const accountUsername = notification.account_username ? escapeHtml(notification
+                            .account_username) : '';
+                        accountBlockHtml = `
+                            <div class="notification-account-info">
+                                ${imageUrl ? `<img src="${imageUrl}" alt="${notification.social_type || ''}" class="notification-account-image" onerror="this.style.display='none';">` : ''}
+                                <div class="notification-account-details">
+                                    ${accountName ? `<span class="notification-account-name">${accountName}</span>` : ''}
+                                    ${accountUsername ? `<span class="notification-account-username">${accountUsername}</span>` : ''}
+                                </div>
+                            </div>`;
                     }
 
                     // Get notification type from body to determine icon
@@ -120,9 +132,8 @@
                     html += `
                         <div class="${itemClass}" data-id="${notification.id}">
                             <div class="notification-title-wrapper">
-                                ${accountImageHtml}
-                                <div class="notification-title">${escapeHtml(notification.title)}</div>
-                                ${statusIconHtml}
+                                ${accountBlockHtml}
+                                <div class="notification-title">${escapeHtml(notification.title)} ${statusIconHtml}</div>
                             </div>
                             <div class="notification-body">${formatNotificationBody(notification.body)}</div>
                             <div class="notification-time">${notification.created_at}</div>

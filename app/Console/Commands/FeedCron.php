@@ -27,12 +27,19 @@ class FeedCron extends Command
     /**
      * Create a success notification
      */
-    private function successNotification($userId, $title, $message, $social_type, $account_image)
+    private function successNotification($userId, $title, $message, $social_type, $account_image, $account_name = null, $account_username = null)
     {
+        $body = ['type' => 'success', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image];
+        if ($account_name !== null) {
+            $body['account_name'] = $account_name;
+        }
+        if ($account_username !== null) {
+            $body['account_username'] = $account_username;
+        }
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'success', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image],
+            'body' => $body,
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -41,12 +48,19 @@ class FeedCron extends Command
     /**
      * Create an error notification
      */
-    private function errorNotification($userId, $title, $message, $social_type, $account_image)
+    private function errorNotification($userId, $title, $message, $social_type, $account_image, $account_name = null, $account_username = null)
     {
+        $body = ['type' => 'error', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image];
+        if ($account_name !== null) {
+            $body['account_name'] = $account_name;
+        }
+        if ($account_username !== null) {
+            $body['account_username'] = $account_username;
+        }
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'error', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image],
+            'body' => $body,
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -144,13 +158,13 @@ class FeedCron extends Command
                         Log::warning("Failed to fetch feed for domain {$value->id}: " . $errorMessage);
                         // Create error notification (cron job)
                         $platform = ucfirst($type);
-                        $this->errorNotification($user->id, "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed for domain '{$urlDomain}'. " . $errorMessage, $type, $account_image);
+                        $this->errorNotification($user->id, "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed for domain '{$urlDomain}'. " . $errorMessage, $type, $account_image, $sub_account->name, $account->username ?? null);
                     } else {
                         // Create success notification (cron job)
                         $platform = ucfirst($type);
                         $postCount = isset($feedUrl['items']) ? count($feedUrl['items']) : 0;
                         if ($postCount > 0) {
-                            $this->successNotification($user->id, "RSS Feed Fetched", "Successfully fetched {$postCount} new post(s) from {$platform} RSS feed for domain '{$urlDomain}'.", $type, $account_image);
+                            $this->successNotification($user->id, "RSS Feed Fetched", "Successfully fetched {$postCount} new post(s) from {$platform} RSS feed for domain '{$urlDomain}'.", $type, $account_image, $sub_account->name, $account->username ?? null);
                         }
                     }
                 }

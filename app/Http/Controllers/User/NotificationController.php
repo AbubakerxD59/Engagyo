@@ -49,13 +49,15 @@ class NotificationController extends Controller
                 $body = $notification->body ?? [];
                 $socialType = $body['social_type'] ?? null;
                 $accountImage = $body['account_image'] ?? null;
-                
+                $accountName = $body['account_name'] ?? null;
+                $accountUsername = $body['account_username'] ?? null;
+
                 // Get social media logo if account image is not available
                 $displayImage = $accountImage;
                 if (empty($displayImage) && $socialType) {
                     $displayImage = social_logo($socialType);
                 }
-                
+
                 return [
                     'id' => $notification->id,
                     'title' => $notification->title ?? 'Notification',
@@ -67,6 +69,8 @@ class NotificationController extends Controller
                     'created_at_full' => $notification->created_at->format('Y-m-d H:i:s'),
                     'social_type' => $socialType,
                     'account_image' => $displayImage,
+                    'account_name' => $accountName,
+                    'account_username' => $accountUsername,
                 ];
             });
 

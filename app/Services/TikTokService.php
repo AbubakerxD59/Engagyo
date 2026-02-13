@@ -40,6 +40,8 @@ class TikTokService
 
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
+            $body['account_name'] = $post->account_name ?? null;
+            $body['account_username'] = $post->account_username ?? null;
         }
 
         Notification::create([
@@ -70,6 +72,8 @@ class TikTokService
 
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
+            $body['account_name'] = $post->account_name ?? null;
+            $body['account_username'] = $post->account_username ?? null;
         }
 
         Notification::create([

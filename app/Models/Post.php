@@ -729,6 +729,24 @@ class Post extends Model
         return $account_name;
     }
 
+    /**
+     * Parent account username (Facebook/Pinterest username, or TikTok username)
+     */
+    public function getAccountUsernameAttribute()
+    {
+        $social_type = $this->social_type;
+        if ($social_type === 'facebook') {
+            return $this->page?->facebook?->username ?? '';
+        }
+        if ($social_type === 'pinterest') {
+            return $this->board?->pinterest?->username ?? '';
+        }
+        if ($social_type === 'tiktok') {
+            return $this->tiktok?->username ?? $this->tiktok?->display_name ?? '';
+        }
+        return '';
+    }
+
     public function getAccountProfileAttribute()
     {
         $social_type = $this->social_type;

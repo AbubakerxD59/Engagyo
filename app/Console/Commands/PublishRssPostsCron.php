@@ -32,12 +32,19 @@ class PublishRssPostsCron extends Command
     /**
      * Create a success notification
      */
-    private function successNotification($userId, $title, $message, $social_type, $account_image)
+    private function successNotification($userId, $title, $message, $social_type, $account_image, $account_name = null, $account_username = null)
     {
+        $body = ['type' => 'success', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image];
+        if ($account_name !== null) {
+            $body['account_name'] = $account_name;
+        }
+        if ($account_username !== null) {
+            $body['account_username'] = $account_username;
+        }
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'success', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image],
+            'body' => $body,
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -46,12 +53,19 @@ class PublishRssPostsCron extends Command
     /**
      * Create an error notification
      */
-    private function errorNotification($userId, $title, $message, $social_type, $account_image)
+    private function errorNotification($userId, $title, $message, $social_type, $account_image, $account_name = null, $account_username = null)
     {
+        $body = ['type' => 'error', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image];
+        if ($account_name !== null) {
+            $body['account_name'] = $account_name;
+        }
+        if ($account_username !== null) {
+            $body['account_username'] = $account_username;
+        }
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'error', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image],
+            'body' => $body,
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -90,7 +104,7 @@ class PublishRssPostsCron extends Command
                 ]);
                 // Create error notification (cron job)
                 $platform = ucfirst($post->social_type);
-                $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish {$platform} RSS post. " . $errorMessage, $social_type, $account_image);
+                $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish {$platform} RSS post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
             }
         }
 
@@ -130,7 +144,7 @@ class PublishRssPostsCron extends Command
                 'response' => $errorMessage
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage, $social_type, $account_image);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
             return;
         }
 
@@ -143,7 +157,7 @@ class PublishRssPostsCron extends Command
             ]);
             info("RSS Publish: Post ID {$post->id} skipped - RSS automation is paused for Facebook page '{$page->name}'.");
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage, $social_type, $account_image);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
             return;
         }
 
@@ -157,7 +171,7 @@ class PublishRssPostsCron extends Command
                 'response' => $errorMessage
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage, $social_type, $account_image);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Facebook RSS post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
             return;
         }
 
@@ -197,7 +211,7 @@ class PublishRssPostsCron extends Command
                 'response' => $errorMessage
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage, $social_type, $account_image);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
             return;
         }
 
@@ -210,7 +224,7 @@ class PublishRssPostsCron extends Command
             ]);
             info("RSS Publish: Post ID {$post->id} skipped - RSS automation is paused for Pinterest board '{$board->name}'.");
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage, $social_type, $account_image);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
             return;
         }
 
@@ -224,7 +238,7 @@ class PublishRssPostsCron extends Command
                 'response' => $errorMessage
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage, $social_type, $account_image);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
             return;
         }
 
@@ -240,7 +254,7 @@ class PublishRssPostsCron extends Command
                 'response' => $errorMessage
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage, $social_type, $account_image);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish Pinterest RSS post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
             return;
         }
 

@@ -20,12 +20,19 @@ class FeedService
     /**
      * Create a success notification
      */
-    private function successNotification($userId, $title, $message, $social_type, $account_image)
+    private function successNotification($userId, $title, $message, $social_type, $account_image, $account_name = null, $account_username = null)
     {
+        $body = ['type' => 'success', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image];
+        if ($account_name !== null) {
+            $body['account_name'] = $account_name;
+        }
+        if ($account_username !== null) {
+            $body['account_username'] = $account_username;
+        }
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'success', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image],
+            'body' => $body,
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -34,12 +41,19 @@ class FeedService
     /**
      * Create an error notification
      */
-    private function errorNotification($userId, $title, $message, $social_type, $account_image)
+    private function errorNotification($userId, $title, $message, $social_type, $account_image, $account_name = null, $account_username = null)
     {
+        $body = ['type' => 'error', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image];
+        if ($account_name !== null) {
+            $body['account_name'] = $account_name;
+        }
+        if ($account_username !== null) {
+            $body['account_username'] = $account_username;
+        }
         Notification::create([
             'user_id' => $userId,
             'title' => $title,
-            'body' => ['type' => 'error', 'message' => $message, 'social_type' => $social_type, 'account_image' => $account_image],
+            'body' => $body,
             'is_read' => false,
             'is_system' => false,
         ]);
@@ -62,13 +76,19 @@ class FeedService
     {
         $social_type = $this->data["social_type"];
         $account_image = null;
+        $account_name = null;
+        $account_username = null;
         if ($social_type == "facebook") {
             $account = Page::with("facebook")->find($this->data["account_id"]);
             $account_image = $account->profile_image ?? $account->facebook->profile_image;
+            $account_name = $account?->name;
+            $account_username = $account?->facebook?->username;
         }
         if ($social_type == "pinterest") {
             $account = Board::with("pinterest")->find($this->data["account_id"]);
             $account_image = $account->pinterest->profile_image;
+            $account_name = $account?->name;
+            $account_username = $account?->pinterest?->username;
         }
         $websiteUrl = $this->data["url"];
         if ($this->data["exist"]) {
@@ -112,7 +132,7 @@ class FeedService
                     $errorMessage = "Posts not Fetched!";
                     // Create error notification (background job)
                     $platform = ucfirst($this->data["social_type"] ?? "Social Media");
-                    $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. No new posts found.", $social_type, $account_image);
+                    $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. No new posts found.", $social_type, $account_image, $account_name, $account_username);
                     return array(
                         "success" => false,
                         "message" => $errorMessage
@@ -122,7 +142,7 @@ class FeedService
                 $errorMessage = $e->getMessage();
                 // Create error notification (background job)
                 $platform = ucfirst($this->data["social_type"] ?? "Social Media");
-                $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage, $social_type, $account_image);
+                $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage, $social_type, $account_image, $account_name, $account_username);
                 return array(
                     "success" => false,
                     "message" => $errorMessage
@@ -132,7 +152,7 @@ class FeedService
             $errorMessage = $feedUrls["message"] ?? "Failed to fetch RSS feed.";
             // Create error notification (background job)
             $platform = ucfirst($this->data["social_type"] ?? "Social Media");
-            $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage, $social_type, $account_image);
+            $this->errorNotification($this->data["user_id"], "RSS Feed Fetch Failed", "Failed to fetch {$platform} RSS feed. " . $errorMessage, $social_type, $account_image, $account_name, $account_username);
             return array(
                 "success" => false,
                 "message" => $errorMessage
