@@ -18,7 +18,7 @@ class PublishSchedulePostCron extends Command
      *
      * @var string
      */
-    protected $signature = 'schedule:publish {--post= : Publish only this post ID}';
+    protected $signature = 'schedule:publish';
 
     /**
      * The console command description.
@@ -76,11 +76,6 @@ class PublishSchedulePostCron extends Command
     {
         $now = date("Y-m-d H:i");
         $query = $post->with("user", "page.facebook", "board.pinterest")->notPublished()->past($now)->schedule();
-
-        $postId = $this->option('post');
-        if ($postId !== null && $postId !== '') {
-            $query->where('id', (int) $postId);
-        }
 
         $posts = $query->get();
 
