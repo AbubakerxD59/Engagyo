@@ -74,10 +74,12 @@ class PublishSchedulePostCron extends Command
      */
     public function handle(Post $post, PinterestService $pinterestService, FacebookService $facebookService)
     {
+        echo "PublishSchedulePostCron started\n";
         $now = date("Y-m-d H:i");
         $query = $post->with("user", "page.facebook", "board.pinterest")->notPublished()->past($now)->schedule();
 
         $posts = $query->get();
+        echo "Total posts: " . $posts->count() . "\n";
 
         foreach ($posts as $key => $post) {
             echo "Processing Post ID: " . $post->id . "\n";
