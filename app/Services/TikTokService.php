@@ -30,6 +30,7 @@ class TikTokService
 
         // Add account information if post is provided
         if ($post) {
+            $post->loadMissing(['tiktok']);
             $accountImage = null;
             $socialType = 'tiktok';
 
@@ -40,8 +41,8 @@ class TikTokService
 
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
-            $body['account_name'] = $post->account_name ?? null;
-            $body['account_username'] = $post->account_username ?? null;
+            $body['account_name'] = $post->tiktok?->display_name ?? $post->tiktok?->username ?? '';
+            $body['account_username'] = $post->tiktok?->username ?? $post->tiktok?->display_name ?? '';
         }
 
         Notification::create([
@@ -62,6 +63,7 @@ class TikTokService
 
         // Add account information if post is provided
         if ($post) {
+            $post->loadMissing(['tiktok']);
             $accountImage = null;
             $socialType = 'tiktok';
 
@@ -72,8 +74,8 @@ class TikTokService
 
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
-            $body['account_name'] = $post->account_name ?? null;
-            $body['account_username'] = $post->account_username ?? null;
+            $body['account_name'] = $post->tiktok?->display_name ?? $post->tiktok?->username ?? '';
+            $body['account_username'] = $post->tiktok?->username ?? $post->tiktok?->display_name ?? '';
         }
 
         Notification::create([

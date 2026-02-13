@@ -30,6 +30,7 @@ class FacebookService
 
         // Add account information if post is provided
         if ($post) {
+            $post->loadMissing(['page.facebook']);
             $accountImage = null;
             $socialType = 'facebook';
 
@@ -44,8 +45,8 @@ class FacebookService
 
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
-            $body['account_name'] = $post->account_name ?? null;
-            $body['account_username'] = $post->account_username ?? null;
+            $body['account_name'] = $post->page?->name ?? '';
+            $body['account_username'] = $post->page?->facebook?->username ?? '';
         }
 
         Notification::create([
@@ -66,6 +67,7 @@ class FacebookService
 
         // Add account information if post is provided
         if ($post) {
+            $post->loadMissing(['page.facebook']);
             $accountImage = null;
             $socialType = 'facebook';
 
@@ -80,8 +82,8 @@ class FacebookService
 
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
-            $body['account_name'] = $post->account_name ?? null;
-            $body['account_username'] = $post->account_username ?? null;
+            $body['account_name'] = $post->page?->name ?? '';
+            $body['account_username'] = $post->page?->facebook?->username ?? '';
         }
 
         Notification::create([

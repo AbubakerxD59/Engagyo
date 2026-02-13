@@ -32,6 +32,7 @@ class PinterestService
 
         // Add account information if post is provided
         if ($post) {
+            $post->loadMissing(['board.pinterest']);
             $accountImage = null;
             $socialType = 'pinterest';
 
@@ -42,8 +43,8 @@ class PinterestService
 
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
-            $body['account_name'] = $post->account_name ?? null;
-            $body['account_username'] = $post->account_username ?? null;
+            $body['account_name'] = $post->board?->name ?? '';
+            $body['account_username'] = $post->board?->pinterest?->username ?? '';
         }
 
         Notification::create([
@@ -64,6 +65,7 @@ class PinterestService
 
         // Add account information if post is provided
         if ($post) {
+            $post->loadMissing(['board.pinterest']);
             $accountImage = null;
             $socialType = 'pinterest';
 
@@ -74,8 +76,8 @@ class PinterestService
 
             $body['social_type'] = $socialType;
             $body['account_image'] = $accountImage;
-            $body['account_name'] = $post->account_name ?? null;
-            $body['account_username'] = $post->account_username ?? null;
+            $body['account_name'] = $post->board?->name ?? '';
+            $body['account_username'] = $post->board?->pinterest?->username ?? '';
         }
 
         Notification::create([
