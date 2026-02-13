@@ -119,8 +119,11 @@
                         fileExtension == 'webm') {
                         is_video = 1;
                     }
+                    // With file in dropzone, treat any pasted link as text and post as photo/video
+                    is_link = 0;
+                    $('#article-container').empty();
                 });
-                // file sending
+                // file sending (with file = always photo/video post, not link)
                 this.on("sending", function(file, xhr, data) {
                     var content = $("#content").val();
                     var comment = $("#comment").val();
@@ -130,7 +133,7 @@
 
                     data.append("content", content);
                     data.append("comment", comment);
-                    data.append("link", is_link);
+                    data.append("link", 0);
                     data.append("video", is_video);
                     // for schedule action
                     data.append("schedule_date", schedule_date);
@@ -168,8 +171,8 @@
                 var schedule_modal = $(".schedule-modal");
                 schedule_modal.modal("toggle");
             } else {
-                // for link posting
-                if (is_link) {
+                // for link posting only when no file in dropzone; with file we publish as photo/video
+                if (is_link && dropZone.getAcceptedFiles().length === 0) {
                     if (checkAccounts()) {
                         processLink();
                         return true;
@@ -177,7 +180,6 @@
                         toastr.error("Please select atleast one channel!");
                     }
                 } else {
-                    // schedule posting
                     validateAndProcess();
                 }
             }
@@ -190,7 +192,7 @@
                 return false;
             }
             if (!checkPastDateTime(schedule_date, schedule_time)) {
-                if (is_link) {
+                if (is_link && dropZone.getAcceptedFiles().length === 0) {
                     processLink();
                 } else {
                     validateAndProcess();
@@ -366,12 +368,12 @@
             reloadPosts();
             enableActionButton();
         }
-        // check link for content
+        // check link for content (only fetch when no file in dropzone; otherwise treat pasted URL as text)
         $('#content').on('input', function() {
             var value = $(this).val();
             is_link = 0;
-            if (checkLink(value)) {
-                var link_data = fetchFromLink(value);
+            if (checkLink(value) && dropZone.getAcceptedFiles().length === 0) {
+                fetchFromLink(value);
             }
         });
         // fetch from link
