@@ -26,6 +26,7 @@ class FacebookService
      */
     private function successNotification($userId, $title, $message, $post = null)
     {
+        info("FacebookService::successNotification", ['userId' => $userId, 'title' => $title, 'message' => $message, 'post' => $post]);
         $body = ['type' => 'success', 'message' => $message];
 
         // Add account information if post is provided
