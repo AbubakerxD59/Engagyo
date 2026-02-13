@@ -158,7 +158,9 @@ class PublishSchedulePostCron extends Command
         $access_token = $tokenResponse['access_token'];
 
         try {
+            echo "Dispatching Facebook post for Post ID: " . $post->id . "\n";
             $postData = PostService::postTypeBody($post);
+            echo "Post Data: " . json_encode($postData) . "\n";
             PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
         } catch (\Exception $e) {
             $errorMessage = "Error preparing post: " . $e->getMessage();
