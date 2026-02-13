@@ -74,15 +74,12 @@ class PublishSchedulePostCron extends Command
      */
     public function handle(Post $post, PinterestService $pinterestService, FacebookService $facebookService)
     {
-        echo "PublishSchedulePostCron started\n";
         $now = date("Y-m-d H:i");
         $query = $post->with("user", "page.facebook", "board.pinterest")->notPublished()->past($now)->schedule();
 
         $posts = $query->get();
-        echo "Total posts: " . $posts->count() . "\n";
 
         foreach ($posts as $key => $post) {
-            echo "Processing Post ID: " . $post->id . "\n";
             $social_type = $post->social_type;
             $account_image = $post->account_profile;
             try {
@@ -158,9 +155,7 @@ class PublishSchedulePostCron extends Command
         $access_token = $tokenResponse['access_token'];
 
         try {
-            echo "Dispatching Facebook post for Post ID: " . $post->id . "\n";
             $postData = PostService::postTypeBody($post);
-            echo "Post Data: " . json_encode($postData) . "\n";
             PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
         } catch (\Exception $e) {
             $errorMessage = "Error preparing post: " . $e->getMessage();

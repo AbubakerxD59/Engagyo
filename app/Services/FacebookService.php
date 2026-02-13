@@ -462,12 +462,10 @@ class FacebookService
 
     public function photo($id, $access_token, $postData)
     {
-        echo "Post Data: " . json_encode($postData) . "\n";
         try {
             $post = Post::with("page.facebook")->findOrFail($id);
             $page_id = $post->page ? $post->page->page_id : null;
             $publish = $this->facebook->post('/' . $page_id . '/photos', $postData, $access_token);
-            echo "Publish Response: " . json_encode($publish) . "\n";
             $response = [
                 "success" => true,
                 "data" => $publish
