@@ -80,6 +80,7 @@ class PublishSchedulePostCron extends Command
         $posts = $query->get();
 
         foreach ($posts as $key => $post) {
+            echo "Processing Post ID: " . $post->id . "\n";
             $social_type = $post->social_type;
             $account_image = $post->account_profile;
             try {
