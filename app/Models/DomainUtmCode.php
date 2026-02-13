@@ -24,6 +24,12 @@ class DomainUtmCode extends Model
         "utm_source" => 'Source',
     ];
 
+    public static $utm_values = [
+        "social_type" =>"Social Type",
+        "social_profile" => "Social Profile",
+        "custom" => "Custom"
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class, 'user_id', 'id');

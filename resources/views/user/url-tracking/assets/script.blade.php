@@ -6,6 +6,23 @@
             $('.utm-code-row').show();
         });
 
+        // Toggle custom value field when UTM value dropdown changes
+        $(document).on('change', '.utm-value-input', function() {
+            const $select = $(this);
+            if ($select.is('select')) {
+                const $row = $select.closest('.utm-code-row');
+                const $valueCol = $row.find('.utm-value-col');
+                const $customCol = $row.find('.utm-custom-value-col');
+                if ($select.val() === 'custom') {
+                    $valueCol.removeClass('col-md-8').addClass('col-md-4');
+                    $customCol.removeClass('d-none').addClass('col-md-4');
+                } else {
+                    $valueCol.removeClass('col-md-4').addClass('col-md-8');
+                    $customCol.addClass('d-none').removeClass('col-md-4');
+                }
+            }
+        });
+
         // Reset form when modal is closed
         $('#createUtmModal').on('hidden.bs.modal', function() {
             $('#utmCodeForm')[0].reset();
@@ -14,6 +31,9 @@
             $('#saveUtmBtn').html('<i class="fas fa-save mr-1"></i> Save UTM Code');
             // Show all rows for create mode
             $('.utm-code-row').show();
+            // Reset custom value columns: hide and restore value column width
+            $('.utm-value-col').removeClass('col-md-4').addClass('col-md-8');
+            $('.utm-custom-value-col').addClass('d-none').removeClass('col-md-4');
             // Reset readonly fields
             $('.utm-value-input[readonly]').each(function() {
                 const defaultValue = $(this).data('default-value') || $(this).attr('value');
@@ -37,11 +57,19 @@
 
             $('.utm-code-row').each(function() {
                 const key = $(this).data('utm-key');
-                const value = $(this).find('.utm-value-input').val();
-                if (value && value.trim() !== '') {
+                const valueInput = $(this).find('.utm-value-input');
+                let value = valueInput.val();
+                // Use custom value input when "Custom" is selected
+                if (valueInput.is('select') && value === 'custom') {
+                    const customVal = $(this).find('.utm-custom-value-input').val();
+                    value = (customVal && customVal.trim() !== '') ? customVal.trim() : '';
+                } else if (value) {
+                    value = value.trim();
+                }
+                if (value !== '') {
                     utmCodes.push({
                         key: key,
-                        value: value.trim()
+                        value: value
                     });
                 }
             });
@@ -149,20 +177,35 @@
                         $('.utm-code-row').each(function() {
                             const key = $(this).data('utm-key');
                             const valueInput = $(this).find('.utm-value-input');
+                            const $valueCol = $(this).find('.utm-value-col');
+                            const $customCol = $(this).find('.utm-custom-value-col');
                             
                             if (utmCodesMap.hasOwnProperty(key)) {
-                                valueInput.val(utmCodesMap[key]);
-                                // Make editable (remove readonly for utm_source if needed)
+                                const savedValue = utmCodesMap[key];
                                 if (key === 'utm_source') {
-                                    valueInput.prop('readonly', false);
+                                    valueInput.val(savedValue);
+                                    valueInput.prop('readonly', true);
+                                } else if (valueInput.is('select')) {
+                                    const optionExists = valueInput.find('option').filter(function() { return $(this).val() === savedValue; }).length > 0;
+                                    if (optionExists) {
+                                        valueInput.val(savedValue);
+                                        $valueCol.removeClass('col-md-4').addClass('col-md-8');
+                                        $customCol.addClass('d-none').removeClass('col-md-4');
+                                    } else {
+                                        valueInput.val('custom');
+                                        $(this).find('.utm-custom-value-input').val(savedValue);
+                                        $valueCol.removeClass('col-md-8').addClass('col-md-4');
+                                        $customCol.removeClass('d-none').addClass('col-md-4');
+                                    }
                                 }
                             } else {
-                                // Clear if not found
                                 if (key === 'utm_source') {
                                     valueInput.val('Engagyo');
                                     valueInput.prop('readonly', true);
                                 } else {
                                     valueInput.val('');
+                                    $valueCol.removeClass('col-md-4').addClass('col-md-8');
+                                    $customCol.addClass('d-none').removeClass('col-md-4');
                                 }
                             }
                         });

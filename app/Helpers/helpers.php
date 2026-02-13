@@ -518,10 +518,12 @@ function get_options($type)
 {
     if ($type == "social_accounts") {
         $options = get_social_accounts();
-    }
-    if ($type == "utm_keys") {
+    } else if ($type == "utm_keys") {
         $options = DomainUtmCode::$utm_keys;
+    } else if ($type == "utm_values") {
+        $options = DomainUtmCode::$utm_values;
     }
+
     return $options;
 }
 

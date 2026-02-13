@@ -1,6 +1,6 @@
 {{-- Create/Edit UTM Code Modal --}}
 <div class="modal fade" id="createUtmModal" tabindex="-1" role="dialog">
-    <div class="modal-dialog" role="document">
+    <div class="modal-dialog modal-lg" role="document">
         <div class="modal-content">
             <div class="modal-header bg-primary text-white">
                 <h5 class="modal-title">
@@ -25,22 +25,40 @@
                     <div class="form-group">
                         <label>UTM Codes <span class="text-danger">*</span></label>
                         @foreach (get_options('utm_keys') as $key => $label)
-                        <div class="d-flex align-items-end mb-2 utm-code-row" data-utm-key="{{ $key }}">
-                            <div class="col-md-4 pr-2">
-                                <label class="small">UTM Key</label>
-                                <select class="form-control utm-key-select" name="utm_codes[{{ $key }}][key]"
-                                    data-key="{{ $key }}" required>
-                                    <option value="{{ $key }}">{{ $label }}</option>
-                                </select>
+                            <div class="d-flex align-items-end mb-2 utm-code-row" data-utm-key="{{ $key }}">
+                                <div class="col-md-4 pr-2">
+                                    <label class="small">UTM Key</label>
+                                    <select class="form-control utm-key-select"
+                                        name="utm_codes[{{ $key }}][key]" data-key="{{ $key }}"
+                                        required>
+                                        <option value="{{ $key }}">{{ $label }}</option>
+                                    </select>
+                                </div>
+                                <div class="utm-value-col col-md-8">
+                                    <label class="small">UTM Value</label>
+                                    @if ($key == 'utm_source')
+                                        <input type="text" class="form-control utm-value-input"
+                                            name="utm_codes[{{ $key }}][value]" data-key="{{ $key }}"
+                                            placeholder="engagyo" value="engagyo" readonly>
+                                    @else
+                                        <select class="form-control utm-value-input"
+                                            name="utm_codes[{{ $key }}][value]" data-key="{{ $key }}">
+                                            <option value="">-- Select Value --</option>
+                                            @foreach (get_options('utm_values') as $utmValueKey => $utmValueLabel)
+                                                <option value="{{ $utmValueKey }}">{{ $utmValueLabel }}</option>
+                                            @endforeach
+                                        </select>
+                                    @endif
+                                </div>
+                                @if ($key != 'utm_source')
+                                    <div class="utm-custom-value-col col-md-4 d-none">
+                                        <label class="small">Custom Value</label>
+                                        <input type="text" class="form-control utm-custom-value-input"
+                                            name="utm_codes[{{ $key }}][custom_value]"
+                                            data-key="{{ $key }}" placeholder="Enter custom value">
+                                    </div>
+                                @endif
                             </div>
-                            <div class="col-md-8">
-                                <label class="small">UTM Value</label>
-                                <input type="text" class="form-control utm-value-input"
-                                    name="utm_codes[{{ $key }}][value]" data-key="{{ $key }}" @if ($key=='utm_source' )
-                                    placeholder="Engagyo" value="Engagyo" readonly data-default-value="Engagyo" @else
-                                    placeholder="e.g., value1" @endif>
-                            </div>
-                        </div>
                         @endforeach
                         <small class="form-text text-muted d-block mt-2">
                             Configure UTM parameters that will be appended to matching URLs. Leave value empty to skip a

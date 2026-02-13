@@ -13,27 +13,35 @@ class PostService
 {
     public static function create($data)
     {
-        // enable url tracking (utm codes) for rss only start
+        // enable url tracking (utm codes) for rss only start (no post context)
         if (isset($data["source"]) && $data["source"] === "rss" && !empty($data["url"]) && !empty($data["user_id"])) {
-            $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"]);
+            $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"], null);
         }
         // enable url tracking (utm codes) for rss only end
 
-        // enable url tracking (utm codes) for schedule posts start
+        // enable url tracking (utm codes) for schedule posts start (pass social_type + account_id for social_type/social_profile resolution)
         if (isset($data["source"]) && $data["source"] === "schedule" && !empty($data["user_id"])) {
+            $utmContext = null;
+            if (isset($data["type"]) || (!empty($data["social_type"]) && !empty($data["account_id"]))) {
+                $utmContext = [
+                    'social_type' => $data["social_type"] ?? null,
+                    'account_id' => $data["account_id"] ?? null,
+                    'type' => $data["type"] ?? null,
+                ];
+            }
             // Track URL in url field
             if (!empty($data["url"])) {
-                $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"]);
+                $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"], $utmContext);
             }
             
             // Track URLs in title field
             if (!empty($data["title"])) {
-                $data["title"] = self::trackUrlsInText($data["title"], $data["user_id"]);
+                $data["title"] = self::trackUrlsInText($data["title"], $data["user_id"], $utmContext);
             }
             
             // Track URLs in comment field
             if (!empty($data["comment"])) {
-                $data["comment"] = self::trackUrlsInText($data["comment"], $data["user_id"]);
+                $data["comment"] = self::trackUrlsInText($data["comment"], $data["user_id"], $utmContext);
             }
         }
         // enable url tracking (utm codes) for schedule posts end
@@ -244,9 +252,10 @@ class PostService
      *
      * @param string $text The text containing URLs
      * @param int $userId The user ID
+     * @param array|null $utmContext Optional context for resolving social_type/social_profile (e.g. ['social_type' => ..., 'account_id' => ...])
      * @return string The text with URLs replaced with UTM-tracked versions
      */
-    private static function trackUrlsInText($text, $userId)
+    private static function trackUrlsInText($text, $userId, $utmContext = null)
     {
         if (empty($text) || empty($userId)) {
             return $text;
@@ -256,7 +265,7 @@ class PostService
         // This pattern matches URLs and stops at whitespace or common punctuation
         $urlPattern = '/(?:https?:\/\/|www\.)[^\s<>"{}|\\^`\[\]]+/i';
         
-        return preg_replace_callback($urlPattern, function ($matches) use ($userId) {
+        return preg_replace_callback($urlPattern, function ($matches) use ($userId, $utmContext) {
             $matchedUrl = $matches[0];
             $urlToTrack = $matchedUrl;
             
@@ -266,7 +275,7 @@ class PostService
             }
             
             // Append UTM codes (will return original URL if no tracking configured for domain)
-            $trackedUrl = UtmService::appendUtmCodes($urlToTrack, $userId);
+            $trackedUrl = UtmService::appendUtmCodes($urlToTrack, $userId, $utmContext);
             
             // If we added http:// prefix, preserve it in the tracked URL
             // Otherwise, if tracking modified the URL, use the tracked version
