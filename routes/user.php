@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Feature;
+use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\User\ApiKeysController;
 use App\Http\Controllers\User\PaymentController;
@@ -135,4 +136,14 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
 
     // Team Members Routes
     Route::resource('team-members', TeamMemberController::class)->except(['show']);
+
+    // Test route: run schedule:publish for post ID 2064 only
+    Route::get("test/publish-post/{id}", function ($id) {
+        Artisan::call('schedule:publish', ['--post' => $id]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Ran schedule:publish for post ' . $id,
+            'output' => Artisan::output(),
+        ]);
+    })->name("test.publish.post");
 });

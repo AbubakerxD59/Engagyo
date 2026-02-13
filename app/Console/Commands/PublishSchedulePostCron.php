@@ -18,7 +18,7 @@ class PublishSchedulePostCron extends Command
      *
      * @var string
      */
-    protected $signature = 'schedule:publish';
+    protected $signature = 'schedule:publish {--post= : Publish only this post ID}';
 
     /**
      * The console command description.
@@ -75,7 +75,14 @@ class PublishSchedulePostCron extends Command
     public function handle(Post $post, PinterestService $pinterestService, FacebookService $facebookService)
     {
         $now = date("Y-m-d H:i");
-        $posts = $post->with("user", "page.facebook", "board.pinterest")->notPublished()->past($now)->schedule()->get();
+        $query = $post->with("user", "page.facebook", "board.pinterest")->notPublished()->past($now)->schedule();
+
+        $postId = $this->option('post');
+        if ($postId !== null && $postId !== '') {
+            $query->where('id', (int) $postId);
+        }
+
+        $posts = $query->get();
 
         foreach ($posts as $key => $post) {
             $social_type = $post->social_type;
