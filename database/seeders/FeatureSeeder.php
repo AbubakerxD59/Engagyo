@@ -64,6 +64,16 @@ class FeatureSeeder extends Seeder
                 'description' => 'Number of URL tracking domains allowed',
                 'is_active' => true,
             ],
+            [
+                'id' => '7',
+                'parent_id' => 'Link Shortener',
+                'key' => Feature::$features_list[7],
+                'name' => 'Link Shortener',
+                'type' => 'numeric',
+                'default_value' => 50,
+                'description' => 'Number of shortened links allowed',
+                'is_active' => true,
+            ],
         ];
 
         foreach ($features as $feature) {

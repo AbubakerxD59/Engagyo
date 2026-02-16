@@ -12,7 +12,14 @@ class Authenticate extends Middleware
      */
     protected function redirectTo(Request $request): ?string
     {
-        return $request->expectsJson() ? null : route('login');
+        if ($request->expectsJson()) {
+            return null;
+        }
+        // Admin panel uses /admin/ prefix; frontend users use frontend login
+        if (str_starts_with($request->path(), 'admin')) {
+            return route('admin.showLogin');
+        }
+        return route('frontend.showLogin');
     }
 
     /**

@@ -25,6 +25,7 @@ class Feature extends Model
         "2" => "rss_feed_automation",
         "5" => "api_access",
         "6" => "url_tracking",
+        "7" => "link_shortener",
     ];
 
     protected $casts = [

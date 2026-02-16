@@ -109,7 +109,7 @@ class AuthController extends Controller
             ]);
 
             if ($user) {
-                Auth::loginUsingId($user->id, true);
+                Auth::guard('user')->loginUsingId($user->id, true);
                 // Selected Package
                 $package_id = session()->get('selected_package');
                 $package = Package::where('id', $package_id)->active()->first();
@@ -184,7 +184,11 @@ class AuthController extends Controller
                     Artisan::call('usage:sync', ['--user_id' => $user->id]);
                 }
 
-                return redirect()->route("frontend.showLogin")->with("success", $response["message"]);
+                if (session()->has('url.intended')) {
+                    return redirect()->intended(session()->get('url.intended'))->with("success", $response["message"]);
+                }
+
+                return redirect()->route("frontend.home")->with("success", $response["message"]);
             } else {
                 return back()->with("error", $response["message"]);
             }

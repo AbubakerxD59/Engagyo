@@ -1,260 +1,636 @@
 @extends('frontend.layout.features')
+
+@push('styles')
+<style>
+.utm-card {
+    max-width: 420px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+    border: 1px solid rgba(0,0,0,0.06);
+    background: #fff;
+}
+.utm-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 20px 20px 16px;
+    background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
+    border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.utm-card-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.1rem;
+    flex-shrink: 0;
+}
+.utm-card-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 2px 0;
+}
+.utm-card-subtitle {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin: 0;
+}
+.utm-card-body {
+    padding: 20px;
+}
+.utm-field {
+    margin-bottom: 18px;
+}
+.utm-field:last-of-type { margin-bottom: 0; }
+.utm-row.utm-field { margin-bottom: 18px; }
+.utm-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #334155;
+    margin-bottom: 6px;
+}
+.utm-required { color: #dc2626; }
+.utm-input {
+    width: 100%;
+    padding: 10px 12px;
+    font-size: 0.9rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    background: #fff;
+    color: #1e293b;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+.utm-input:focus {
+    outline: none;
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+.utm-hint {
+    display: block;
+    font-size: 0.75rem;
+    color: #94a3b8;
+    margin-top: 4px;
+}
+.utm-source-badge {
+    display: inline-block;
+    padding: 8px 14px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #1e40af;
+    background: #eff6ff;
+    border-radius: 8px;
+    border: 1px solid #bfdbfe;
+}
+.utm-actions {
+    margin-top: 22px;
+    padding-top: 18px;
+    border-top: 1px solid #e2e8f0;
+}
+.utm-btn-start {
+    width: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 12px 20px;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: #fff;
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+}
+.utm-btn-start:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+}
+.utm-btn-start:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+}
+.utm-btn-icon {
+    font-size: 0.75rem;
+    opacity: 0.9;
+}
+</style>
+@endpush
+
 @section('body')
-    <!-- URL Link Shortner Banner -->
+    {{-- Free URL Shortener Hero --}}
     <div class="container-fluid bg-light-gradient">
         <div class="container mt-48 py-5">
             <div class="text-wrapper center">
                 <div class="animated-text">
-                    Shorten URL's for <span></span>
+                    Free URL Shortener <span></span>
                 </div>
                 <p>
-                    Paste the URL of the post or media and press to download in HD.
+                    Shorten long links instantly. Create clean, shareable short URLs that redirect to your original link.
+                    <br>
+                    No sign-up required to learn more—create your first short link free in your dashboard.
                 </p>
             </div>
+            @php
+                $utmKeys = \App\Models\DomainUtmCode::$utm_keys;
+                $utmValues = \App\Models\DomainUtmCode::$utm_values;
+                $userLoggedIn = auth()->guard('user')->check();
+            @endphp
             <div class="col-12">
-                <div class="url-shortner mx-auto d-block d-lg-flex align-items-center">
-                    <input type="text" placeholder="https://" class="short-linker-field">
-                    <button class="btn btn-link-shortner">Download</button>
+                <div class="url-shortner mx-auto d-block d-lg-flex align-items-center flex-wrap gap-2">
+                    <input type="url" id="shorten-url-input" placeholder="https://example.com/your-long-url"
+                        class="short-linker-field" value="">
+                    <button type="button" class="btn btn-link-shortner" id="btn-link-shortner">Shorten Link</button>
                 </div>
+                <div id="shorten-result" class="mt-4 mx-auto text-center" style="display: none;">
+                    <p class="text-success mb-2 small">Your short link:</p>
+                    <div class="d-flex align-items-center justify-content-center flex-wrap gap-2">
+                        <input type="text" id="short-url-output" class="form-control form-control-sm"
+                            style="max-width: 360px;" readonly>
+                        <button type="button" class="btn btn-sm btn-outline-primary" id="copy-short-url"
+                            title="Copy">Copy</button>
+                    </div>
+                    <p class="text-muted small mt-2 mb-0">Anyone who opens this link will be redirected to your original
+                        URL.</p>
+                </div>
+                <div id="url-tracking-wrap" class="mt-4 mx-auto text-center" style="display: none;">
+                    <label class="d-flex align-items-center justify-content-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="url-tracking-toggle" class="form-check-input">
+                        <span class="small">Enable URL Tracking</span>
+                    </label>
+                    <p class="small text-muted mb-0 mt-1">Add UTM parameters to track where your links are clicked.</p>
+                    <div id="url-tracking-fields" class="utm-card mt-3 mx-auto text-start" style="display: none;">
+                        <div class="utm-card-header">
+                            <span class="utm-card-icon" aria-hidden="true">↗</span>
+                            <div>
+                                <h3 class="utm-card-title">UTM parameters</h3>
+                                <p class="utm-card-subtitle">Track traffic source, medium, and campaign for this domain.</p>
+                            </div>
+                        </div>
+                        <div class="utm-card-body">
+                            <div class="utm-field">
+                                <label for="utm-domain-name" class="utm-label">Domain <span class="utm-required">*</span></label>
+                                <input type="text" id="utm-domain-name" class="utm-input" placeholder="example.com" maxlength="255" autocomplete="off">
+                                <span class="utm-hint">From your shortened URL or enter manually</span>
+                            </div>
+                            @foreach ($utmKeys as $key => $label)
+                                <div class="utm-field utm-row" data-utm-key="{{ $key }}">
+                                    <label class="utm-label">{{ $label }}</label>
+                                    @if ($key === 'utm_source')
+                                        <div class="utm-source-badge">Engagyo</div>
+                                        <input type="hidden" class="utm-value" data-key="{{ $key }}" value="Engagyo">
+                                    @else
+                                        <select class="utm-input utm-value utm-select" data-key="{{ $key }}">
+                                            <option value="">Select option</option>
+                                            @foreach ($utmValues as $vKey => $vLabel)
+                                                <option value="{{ $vKey }}">{{ $vLabel }}</option>
+                                            @endforeach
+                                        </select>
+                                        <input type="text" class="utm-input utm-custom d-none mt-1" data-key="{{ $key }}" placeholder="Enter custom value" autocomplete="off">
+                                    @endif
+                                </div>
+                            @endforeach
+                            <div class="utm-actions">
+                                <button type="button" class="utm-btn-start" id="start-tracking-btn">
+                                    <span class="utm-btn-icon">▶</span>
+                                    Start Tracking
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div id="shorten-error" class="mt-3 mx-auto text-center text-danger small" style="display: none;"></div>
             </div>
         </div>
     </div>
 
-    <!-- URL Link Shortner Features -->
+    {{-- Why use our URL shortener --}}
     <div class="container-fluid bg-light-white">
         <div class="container py-5">
             <div class="col-12">
                 <div class="text-wrapper center">
-                    <h2>
-                        Signup to use free url tracking?
-                    </h2>
+                    <h2>Why use our free URL shortener?</h2>
                     <p class="desc-small">
-                        No need to waste storage & bandwidth as this tool is fully integrated within
-                        <a href="{{ route('frontend.home') }}">
-                            {{ env('APP_NAME', 'Engagyo') }}
-                        </a>!
+                        Built into {{ env('APP_NAME', 'Engagyo') }}—no extra cost. Shorten links, track clicks, and manage
+                        everything in one place.
                     </p>
                 </div>
             </div>
-            <div class="col-12">
-                <div class="row">
-                    <div class="col-12 col-lg-5">
-                        <div class="share__content__item">
-                            <div class="share__content__link">
-                                <h3>
-                                    <i class='bx bxl-instagram'></i>
-                                    Instagram photos, videos, stories and reels
-                                </h3>
-                                <i class="bx bx-chevron-down"></i>
-                            </div>
-                            <div class="share__content">
-                                <p>
-                                    Download photos, videos, stories & reels from Instagram and share them natively on your
-                                    social accounts.
-                                </p>
-                            </div>
+            <div class="row justify-content-center g-4 py-3">
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="share__content__item h-100">
+                        <div class="share__content__link">
+                            <h3><i class='bx bx-link-alt'></i> Short, clean links</h3>
                         </div>
-                        <div class="share__content__item">
-                            <div class="share__content__link">
-                                <h3>
-                                    <i class='bx bxl-tiktok'></i>
-                                    TikTok videos without a watermark.
-                                </h3>
-                                <i class="bx bx-chevron-down"></i>
-                            </div>
-                            <div class="share__content">
-                                <p>
-                                    Download videos from TikTok and share them natively on your social accounts.
-                                </p>
-                            </div>
-                        </div>
-                        <div class="share__content__item">
-                            <div class="share__content__link">
-                                <h3>
-                                    <i class='bx bxl-youtube'></i>
-                                    Youtube videos and shorts
-                                </h3>
-                                <i class="bx bx-chevron-down"></i>
-                            </div>
-                            <div class="share__content">
-                                <p>
-                                    Download videos and shorts from YouTube and share them natively on your social accounts.
-                                </p>
-                            </div>
-                        </div>
-                        <div class="share__content__item">
-                            <div class="share__content__link">
-                                <h3>
-                                    <i class='bx bxl-facebook-square'></i>
-                                    Facebook videos
-                                </h3>
-                                <i class="bx bx-chevron-down"></i>
-                            </div>
-                            <div class="share__content">
-                                <p>
-                                    Download videos from Facebook, and share them natively on your social accounts.
-                                </p>
-                            </div>
-                        </div>
-                        <div class="share__content__item">
-                            <div class="share__content__link">
-                                <h3>
-                                    <i class='bx bxl-linkedin'></i>
-                                    LinkedIn Videos
-                                </h3>
-                                <i class="bx bx-chevron-down"></i>
-                            </div>
-                            <div class="share__content">
-                                <p>
-                                    Download videos from LinkedIn, and share them natively on your social accounts.
-                                </p>
-                            </div>
-                        </div>
-                        <div class="share__content__item">
-                            <div class="share__content__link">
-                                <h3>
-                                    <i class='bx bxl-twitter'></i>
-                                    Twitter photos and videos
-                                </h3>
-                                <i class="bx bx-chevron-down"></i>
-                            </div>
-                            <div class="share__content">
-                                <p>
-                                    Download videos from LinkedIn, and share them natively on your social accounts.
-                                </p>
-                            </div>
-                        </div>
-                        <button class="btn btn-featured">
-                            <a href="{{ route('frontend.showRegister') }}">Start using Url Tracking</a>
-                        </button>
-                    </div>
-                    <div class="d-none d-lg-flex col-12 col-md-6 col-lg-7">
-                        <div class="featured-images">
-                            <img src="{{ asset('assets/frontend/images/LinkShortner/LinksTeaching.jpg') }}">
+                        <div class="share__content">
+                            <p>Turn long URLs into short, easy-to-share links (e.g. yoursite.com/s/abc123) that look
+                                professional in posts and messages.</p>
                         </div>
                     </div>
                 </div>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="share__content__item h-100">
+                        <div class="share__content__link">
+                            <h3><i class='bx bx-transfer-alt'></i> Instant redirect</h3>
+                        </div>
+                        <div class="share__content">
+                            <p>Anyone who clicks your short link is taken straight to your original URL. Fast and reliable
+                                redirects every time.</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="share__content__item h-100">
+                        <div class="share__content__link">
+                            <h3><i class='bx bx-line-chart'></i> See click counts</h3>
+                        </div>
+                        <div class="share__content">
+                            <p>View how many times each short link was clicked so you can see what’s working and what’s not.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-wrapper center mt-4">
+                <a href="{{ route('frontend.showRegister') }}" class="btn btn-featured">Start using free Link Shortener</a>
             </div>
         </div>
     </div>
 
-    <!-- Browser Integrations -->
+    {{-- How it works --}}
     <div class="container-fluid">
-        <div class="container py-24">
+        <div class="container py-5">
             <div class="col-12">
                 <div class="text-wrapper center">
-                    <h2>
-                        Use {{ env('APP_NAME', 'Engagyo') }} in many Browers
-                    </h2>
-                    <p class="desc-small">
-                        Install our free <a href="#"> browser extension </a> and easily share links, photos, and
-                        quotes across multiple social networks!
-                    </p>
+                    <h2>How it works</h2>
+                    <p class="desc-small">Create and use short links in three simple steps.</p>
                 </div>
             </div>
-            <div class="row pb-5">
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="review-container left text-center">
-                        <i class='bx bxl-google'></i>
-                        <h3>Google Chrome</h3>
-                        <a href="https://www.google.com/chrome/">Install now</a>
+            <div class="row g-4 py-3">
+                <div class="col-12 col-md-4 text-center">
+                    <div class="review-container left h-100">
+                        <span
+                            class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary text-white mb-3"
+                            style="width: 48px; height: 48px; font-weight: 700;">1</span>
+                        <h3>Sign up free</h3>
+                        <p class="mb-0">Create your {{ env('APP_NAME', 'Engagyo') }} account and open Link Shortener from
+                            your dashboard.</p>
                     </div>
                 </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="review-container left text-center">
-                        <i class='bx bxl-firefox'></i>
-                        <h3>Mozilla Firefox</h3>
-                        <a href="https://www.mozilla.org">Install now</a>
+                <div class="col-12 col-md-4 text-center">
+                    <div class="review-container left h-100">
+                        <span
+                            class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary text-white mb-3"
+                            style="width: 48px; height: 48px; font-weight: 700;">2</span>
+                        <h3>Paste your long URL</h3>
+                        <p class="mb-0">Enter any URL you want to shorten. We generate a unique short code for you.</p>
                     </div>
                 </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="review-container left text-center">
-                        <i class='bx bxl-meta'></i>
-                        <h3>Safari</h3>
-                        <a href="http://apple.com/safari/">Install now</a>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-lg-3">
-                    <div class="review-container left text-center">
-                        <i class='bx bxl-edge'></i>
-                        <h3>Edge</h3>
-                        <a href="https://www.microsoft.com/en-us/edge">Install now</a>
+                <div class="col-12 col-md-4 text-center">
+                    <div class="review-container left h-100">
+                        <span
+                            class="d-inline-flex align-items-center justify-content-center rounded-circle bg-primary text-white mb-3"
+                            style="width: 48px; height: 48px; font-weight: 700;">3</span>
+                        <h3>Share your short link</h3>
+                        <p class="mb-0">Copy the short link and use it anywhere. Clicks redirect to your original URL.
+                        </p>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Schedule -->
-    <div id="schedule" class="py-24 container-fluid bg-img-holder">
+    {{-- CTA --}}
+    <div class="container-fluid bg-light-white py-5">
         <div class="container">
-            <div class="col-12">
-                <div class="text-wrapper align-items-center justify-content-center text-center">
-                    <h2>
-                        Schedule your social media posts
-                    </h2>
-                    <p>
-                        With a suite of powerful tools and a user-friendly interface, you will be able to craft, preview,
-                        <br class="d-none d-md-flex">
-                        schedule, and analyze your online content with ease.
-                    </p>
-                    <button class="btn btn-colored">
-                        <a href="{{ route('frontend.showRegister') }}">Get started for free</a>
-                    </button>
-                </div>
-            </div>
-        </div>
-        <div class="col-12">
-            <div class="container img-container-center">
-                <img src="{{ asset('assets/frontend/images/composer.png') }}" class="h-100 w-100">
+            <div class="text-wrapper center">
+                <h2>Free link shortener, no hidden fees</h2>
+                <p class="desc-small">Part of {{ env('APP_NAME', 'Engagyo') }}. Create short links, track clicks, and
+                    manage
+                    them in your dashboard.</p>
+                <a href="{{ route('frontend.showRegister') }}" class="btn btn-colored">Get started for free</a>
             </div>
         </div>
     </div>
 
-    <!-- Testimonials -->
-    <div class="container my-48 text-center justify-content-center">
-        <div class="row">
-            <div class="col-12 p-0 m-0">
-                <div class="text-wrapper center">
-                    <h2>
-                        Trusted by Agencies and Brands Worldwide
-                    </h2>
-                    <p>
-                        {{ env('APP_NAME', 'Engagyo') }}s is part of daily lives of thousands of social media marketers
-                        <br class="d-none d-md-block">
-                        and highly recoomended for it's capabilities.
-                    </p>
+    {{-- Auth modal for URL Tracking (when not logged in) --}}
+    <div class="modal fade" id="urlTrackingAuthModal" tabindex="-1" aria-labelledby="urlTrackingAuthModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="urlTrackingAuthModalLabel">Sign in to start tracking</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-            </div>
-            <!-- Slider -->
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="review-container">
-                    <i class='bx bxs-group' style="color:#1e97f3 ;"></i>
-                    <h2>13K+</h2>
-                    <p>
-                        Customers across Industries
-                    </p>
-                </div>
-            </div>
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="review-container">
-                    <i class='bx bxs-star' style="color:#f4c315 ;"></i>
-                    <h2>4.5</h2>
-                    <p>
-                        Rated on G2 for ease of use
-                    </p>
-                </div>
-            </div>
-            <div class="col-12 col-md-6 col-lg-4">
-                <div class="review-container">
-                    <i class='bx bxs-shapes' style="color:rgb(21, 152, 54) ;"></i>
-                    <h2>10M+</h2>
-                    <p>
-                        Posts published monthly
-                    </p>
+                <div class="modal-body">
+                    <p class="mb-3">Your UTM settings are saved. Sign in or create a free account to add them to your URL Tracking dashboard.</p>
+                    <div id="auth-modal-short-url-wrap" class="mb-3" style="display: none;">
+                        <label class="small text-muted">Your short link:</label>
+                        <div class="input-group input-group-sm">
+                            <input type="text" id="auth-modal-short-url" class="form-control" readonly>
+                            <button type="button" class="btn btn-outline-secondary" id="auth-modal-copy">Copy</button>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-column gap-2">
+                        <a href="{{ route('general.setIntendedAndShowLogin') }}" class="btn btn-primary">Sign In</a>
+                        <a href="{{ route('general.setIntendedAndShowRegister') }}" class="btn btn-outline-primary">Sign
+                            Up</a>
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        (function() {
+            var shortenUrl = "{{ route('general.shorten') }}";
+            var savePendingUrlTrackingUrl = "{{ route('general.savePendingUrlTracking') }}";
+            var panelUrlTrackingStoreUrl = "{{ route('panel.url-tracking.store') }}";
+            var csrfToken = "{{ csrf_token() }}";
+            var userLoggedIn = {{ $userLoggedIn ? 'true' : 'false' }};
+
+            function showResult(shortUrl, isExisting, originalUrl) {
+                document.getElementById('short-url-output').value = shortUrl;
+                var label = document.querySelector('#shorten-result .text-success');
+                if (label) label.textContent = isExisting ? 'You already shortened this URL. Your short link:' :
+                    'Your short link:';
+                document.getElementById('shorten-result').style.display = 'block';
+                document.getElementById('shorten-error').style.display = 'none';
+                document.getElementById('shorten-error').textContent = '';
+                var wrap = document.getElementById('url-tracking-wrap');
+                if (wrap) {
+                    wrap.style.display = 'block';
+                    var toggle = document.getElementById('url-tracking-toggle');
+                    var fields = document.getElementById('url-tracking-fields');
+                    if (toggle) toggle.checked = false;
+                    if (fields) fields.style.display = 'none';
+                    var domainInput = document.getElementById('utm-domain-name');
+                    if (domainInput && originalUrl) domainInput.value = domainFromUrl(originalUrl);
+                }
+            }
+
+            function showError(msg) {
+                document.getElementById('shorten-error').textContent = msg || 'Something went wrong. Please try again.';
+                document.getElementById('shorten-error').style.display = 'block';
+                document.getElementById('shorten-result').style.display = 'none';
+                var wrap = document.getElementById('url-tracking-wrap');
+                if (wrap) wrap.style.display = 'none';
+            }
+
+            function isValidUrl(s) {
+                try {
+                    var u = new URL(s);
+                    return u.protocol === 'http:' || u.protocol === 'https:';
+                } catch (e) {
+                    return false;
+                }
+            }
+
+            function domainFromUrl(url) {
+                try {
+                    var u = new URL(url);
+                    var host = u.hostname || '';
+                    if (host.toLowerCase().indexOf('www.') === 0) host = host.slice(4);
+                    return host;
+                } catch (e) {
+                    return '';
+                }
+            }
+
+            function getUtmCodes() {
+                var codes = [];
+                document.querySelectorAll('.utm-row').forEach(function(row) {
+                    var key = row.getAttribute('data-utm-key');
+                    var valueEl = row.querySelector('.utm-value');
+                    var customEl = row.querySelector('.utm-custom');
+                    var val = valueEl ? valueEl.value : '';
+                    if (key === 'utm_source') val = 'Engagyo';
+                    else if (valueEl && valueEl.classList.contains('utm-select') && val === 'custom' &&
+                        customEl) val = (customEl.value || '').trim();
+                    if (val) codes.push({
+                        key: key,
+                        value: val
+                    });
+                });
+                return codes;
+            }
+
+            function collectPayload(url) {
+                var domainInput = document.getElementById('utm-domain-name');
+                var domain = (domainInput && domainInput.value) ? domainInput.value.trim() : domainFromUrl(url);
+                if (!domain) domain = domainFromUrl(url);
+                return {
+                    domain_name: domain,
+                    utm_codes: getUtmCodes()
+                };
+            }
+
+            document.addEventListener('DOMContentLoaded', function() {
+                var toggle = document.getElementById('url-tracking-toggle');
+                var urlTrackingFields = document.getElementById('url-tracking-fields');
+                var urlInput = document.getElementById('shorten-url-input');
+                var domainInput = document.getElementById('utm-domain-name');
+
+                if (toggle && urlTrackingFields) {
+                    toggle.addEventListener('change', function() {
+                        urlTrackingFields.style.display = this.checked ? 'block' : 'none';
+                    });
+                }
+
+                if (urlInput && domainInput) {
+                    urlInput.addEventListener('blur', function() {
+                        var url = (this.value || '').trim();
+                        if (url && isValidUrl(url) && !domainInput.value) domainInput.value =
+                            domainFromUrl(url);
+                    });
+                }
+
+                document.querySelectorAll('.utm-select').forEach(function(sel) {
+                    sel.addEventListener('change', function() {
+                        var row = this.closest('.utm-row');
+                        var custom = row ? row.querySelector('.utm-custom') : null;
+                        if (custom) custom.classList.toggle('d-none', this.value !== 'custom');
+                    });
+                });
+
+                var startTrackingBtnEl = document.getElementById('start-tracking-btn');
+                if (startTrackingBtnEl) {
+                    startTrackingBtnEl.addEventListener('click', function() {
+                        var trackingBtn = this;
+                        var url = (urlInput && urlInput.value) ? urlInput.value.trim() : '';
+                        var payload = collectPayload(url);
+                        if (!payload.domain_name) {
+                            if (typeof toastr !== 'undefined') toastr.error(
+                                'Enter a domain name or shorten a URL first so we can extract the domain.');
+                            return;
+                        }
+                        if (!payload.utm_codes || payload.utm_codes.length === 0) {
+                            if (typeof toastr !== 'undefined') toastr.error(
+                                'Add at least one UTM value (Source is set to Engagyo).');
+                            return;
+                        }
+                        trackingBtn.disabled = true;
+                        if (userLoggedIn) {
+                            var storeXhr = new XMLHttpRequest();
+                            storeXhr.open('POST', panelUrlTrackingStoreUrl, true);
+                            storeXhr.setRequestHeader('Content-Type', 'application/json');
+                            storeXhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+                            storeXhr.setRequestHeader('Accept', 'application/json');
+                            storeXhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                            storeXhr.onload = function() {
+                                trackingBtn.disabled = false;
+                                try {
+                                    var sr = JSON.parse(storeXhr.responseText);
+                                    if (sr.success && typeof toastr !== 'undefined') toastr.success(sr.message || 'URL Tracking saved.');
+                                    else if (!sr.success && typeof toastr !== 'undefined') toastr.error(sr.message || 'Could not save URL Tracking.');
+                                } catch (e) {}
+                            };
+                            storeXhr.onerror = function() { trackingBtn.disabled = false; };
+                            storeXhr.send(JSON.stringify({ domain_name: payload.domain_name, utm_codes: payload.utm_codes, _token: csrfToken }));
+                        } else {
+                            var saveXhr = new XMLHttpRequest();
+                            saveXhr.open('POST', savePendingUrlTrackingUrl, true);
+                            saveXhr.setRequestHeader('Content-Type', 'application/json');
+                            saveXhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+                            saveXhr.setRequestHeader('Accept', 'application/json');
+                            saveXhr.onload = function() {
+                                trackingBtn.disabled = false;
+                                try {
+                                    var sr = JSON.parse(saveXhr.responseText);
+                                    if (sr.success) {
+                                        var el = document.getElementById('auth-modal-short-url');
+                                        var wrap = document.getElementById('auth-modal-short-url-wrap');
+                                        var shortOut = document.getElementById('short-url-output');
+                                        if (el && shortOut) el.value = shortOut.value;
+                                        if (wrap) wrap.style.display = 'block';
+                                        var modal = document.getElementById('urlTrackingAuthModal');
+                                        if (modal && typeof bootstrap !== 'undefined') new bootstrap.Modal(modal).show();
+                                    }
+                                } catch (e) {}
+                            };
+                            saveXhr.onerror = function() { trackingBtn.disabled = false; };
+                            saveXhr.send(JSON.stringify({ domain_name: payload.domain_name, utm_codes: payload.utm_codes, _token: csrfToken }));
+                        }
+                    });
+                }
+
+                var btn = document.getElementById('btn-link-shortner');
+                var input = document.getElementById('shorten-url-input');
+                var copyBtn = document.getElementById('copy-short-url');
+
+                if (btn && input) {
+                    btn.addEventListener('click', function() {
+                        var url = (input.value || '').trim();
+                        if (!url) {
+                            showError('Please enter a URL to shorten.');
+                            return;
+                        }
+                        if (!isValidUrl(url)) {
+                            showError('Please enter a valid URL (e.g. https://example.com).');
+                            return;
+                        }
+
+                        btn.disabled = true;
+                        btn.textContent = 'Shortening...';
+                        showError('');
+
+                        var xhr = new XMLHttpRequest();
+                        xhr.open('POST', shortenUrl, true);
+                        xhr.setRequestHeader('Content-Type', 'application/json');
+                        xhr.setRequestHeader('X-CSRF-TOKEN', csrfToken);
+                        xhr.setRequestHeader('Accept', 'application/json');
+                        xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+
+                        xhr.onload = function() {
+                            try {
+                                var res = JSON.parse(xhr.responseText);
+                                if (res.success && res.short_url) {
+                                    showResult(res.short_url, res.existing === true, url);
+                                    if (typeof toastr !== 'undefined') toastr.success(res.existing ?
+                                        'You already shortened this URL. Here is your short link.' :
+                                        'Link shortened!');
+                                } else {
+                                    showError(res.message || 'Could not shorten link.');
+                                }
+                            } catch (e) {
+                                showError('Could not shorten link. Please try again.');
+                            }
+                            btn.disabled = false;
+                            btn.textContent = 'Shorten Link';
+                        };
+
+                        xhr.onerror = function() {
+                            btn.disabled = false;
+                            btn.textContent = 'Shorten Link';
+                            showError('Network error. Please try again.');
+                        };
+
+                        var payload = JSON.stringify({
+                            original_url: url,
+                            user_agent: navigator.userAgent || '',
+                            _token: csrfToken
+                        });
+                        xhr.send(payload);
+                    });
+                }
+
+                if (copyBtn) {
+                    copyBtn.addEventListener('click', function() {
+                        var out = document.getElementById('short-url-output');
+                        if (!out || !out.value) return;
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(out.value).then(function() {
+                                if (typeof toastr !== 'undefined') toastr.success(
+                                    'Copied to clipboard!');
+                            }).catch(function() {
+                                copyFallback(out);
+                            });
+                        } else {
+                            copyFallback(out);
+                        }
+                    });
+                }
+
+                var authModalCopy = document.getElementById('auth-modal-copy');
+                if (authModalCopy) {
+                    authModalCopy.addEventListener('click', function() {
+                        var out = document.getElementById('auth-modal-short-url');
+                        if (!out || !out.value) return;
+                        if (navigator.clipboard && navigator.clipboard.writeText) {
+                            navigator.clipboard.writeText(out.value).then(function() {
+                                if (typeof toastr !== 'undefined') toastr.success(
+                                    'Copied to clipboard!');
+                            }).catch(function() {
+                                copyFallback(out);
+                            });
+                        } else {
+                            copyFallback(out);
+                        }
+                    });
+                }
+
+                function copyFallback(el) {
+                    el.select();
+                    el.setSelectionRange(0, 99999);
+                    try {
+                        document.execCommand('copy');
+                        if (typeof toastr !== 'undefined') toastr.success('Copied to clipboard!');
+                    } catch (e) {
+                        if (typeof toastr !== 'undefined') toastr.error(
+                            'Could not copy. Select and copy manually.');
+                    }
+                }
+            });
+        })();
+    </script>
+@endpush

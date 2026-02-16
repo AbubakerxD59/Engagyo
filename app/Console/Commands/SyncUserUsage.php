@@ -11,6 +11,7 @@ use App\Models\ApiKey;
 use App\Models\Tiktok;
 use App\Models\Feature;
 use App\Models\DomainUtmCode;
+use App\Models\ShortLink;
 use Illuminate\Console\Command;
 use App\Models\UserFeatureUsage;
 use Illuminate\Support\Facades\Log;
@@ -205,6 +206,10 @@ class SyncUserUsage extends Command
                 $utmCodes = DomainUtmCode::where('user_id', $user->id)->get();
                 $utmCodes = $utmCodes->groupBy('domain_name');
                 return $utmCodes->count();
+
+            case Feature::$features_list[7]:
+                return ShortLink::where('user_id', $user->id)->count();
+
             default:
                 // For unknown features, return 0 or try to get from existing usage record
                 $feature = Feature::where('key', $featureKey)->first();

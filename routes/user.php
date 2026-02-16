@@ -13,6 +13,7 @@ use App\Http\Controllers\User\AutomationController;
 use App\Http\Controllers\User\NotificationController;
 use App\Http\Controllers\User\TeamMemberController;
 use App\Http\Controllers\User\UrlTrackingController;
+use App\Http\Controllers\User\LinkShortenerController;
 
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_admin", "team.menu"])->group(function () {
     // Schedule Routes
@@ -96,6 +97,15 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
             Route::delete("destroy/{id}", "destroy")->name("destroy");
             Route::post("delete-all-domain", "deleteAllForDomain")->name("deleteAllDomain");
             Route::post("get-by-domain", "getByDomain")->name("getByDomain");
+        });
+    });
+    // Link Shortener Routes
+    Route::controller(LinkShortenerController::class)->middleware(['feature:' . Feature::$features_list[7]])->group(function () {
+        Route::get("link-shortener", "index")->name("link-shortener");
+        Route::name("link-shortener.")->prefix("link-shortener/")->group(function () {
+            Route::post("store", "store")->name("store");
+            Route::post("update/{id}", "update")->name("update");
+            Route::delete("destroy/{id}", "destroy")->name("destroy");
         });
     });
     // API Posts Routes
