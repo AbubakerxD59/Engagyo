@@ -879,7 +879,7 @@ class  ScheduleController extends Controller
                 } else {
                     $response = array(
                         "success" => false,
-                        "message" => "Please select atleast 1 posting hour from Setting!"
+                        "message" => "Please select atleast 1 posting hour for " . $account->name . " account!"
                     );
                 }
             }
@@ -1202,176 +1202,183 @@ class  ScheduleController extends Controller
     // publish link post
     private function queueLink($request)
     {
-        // try {
-        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
-        // get scheduled active
-        $accounts = $user->getScheduledActiveAccounts();
-        $content = $request->get("content") ?? null;
-        $comment = $request->get("comment") ?? null;
-        $url = $request->get("url") ?? null;
-        $image = $request->get("image") ?? null;
-        if (!empty($url) && !empty($image)) {
-            // Count how many posts will be created (accounts with timeslots)
-            $postsToCreate = 0;
-            foreach ($accounts as $account) {
-                if (count($account->timeslots) > 0) {
-                    $postsToCreate++;
-                }
-            }
-
-            // Check scheduled posts limit before creating any posts
-            if ($postsToCreate > 0) {
-                /** @var User $user */
-                $limitCheck = $this->checkScheduledPostsLimit($user, $postsToCreate);
-                if (!$limitCheck['allowed']) {
-                    return [
-                        "success" => false,
-                        "message" => $limitCheck['message']
-                    ];
-                }
-            }
-
-            foreach ($accounts as $account) {
-                if ($account->type == "facebook") {
-                    Facebook::where("id", $account->fb_id)->firstOrFail();
-                    $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots);
-                    // store in db
-                    $data = [
-                        "user_id" => $user->id,
-                        "account_id" => $account->id,
-                        "social_type" => "facebook",
-                        "type" => "link",
-                        "source" => $this->source,
-                        "title" => $content,
-                        "comment" => $comment,
-                        "url" => $url,
-                        "image" => $image,
-                        "status" => 0,
-                        "publish_date" => $nextTime
-                    ];
-                    $post = PostService::create($data);
-
-                    // Verify account belongs to user before incrementing
-                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
-                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+        try {
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
+            // get scheduled active
+            $accounts = $user->getScheduledActiveAccounts();
+            $content = $request->get("content") ?? null;
+            $comment = $request->get("comment") ?? null;
+            $url = $request->get("url") ?? null;
+            $image = $request->get("image") ?? null;
+            if (!empty($url) && !empty($image)) {
+                // Count how many posts will be created (accounts with timeslots)
+                $postsToCreate = 0;
+                foreach ($accounts as $account) {
+                    if (count($account->timeslots) > 0) {
+                        $postsToCreate++;
                     }
+                }
 
-                    // Use validateToken for proper error handling
-                    $tokenResponse = FacebookService::validateToken($account);
-                    if (!$tokenResponse['success']) {
-                        return array(
+                // Check scheduled posts limit before creating any posts
+                if ($postsToCreate > 0) {
+                    /** @var User $user */
+                    $limitCheck = $this->checkScheduledPostsLimit($user, $postsToCreate);
+                    if (!$limitCheck['allowed']) {
+                        return [
                             "success" => false,
-                            "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
+                            "message" => $limitCheck['message']
+                        ];
+                    }
+                }
+
+                foreach ($accounts as $account) {
+                    if (count($account->timeslots) > 0) {
+                        if ($account->type == "facebook") {
+                            Facebook::where("id", $account->fb_id)->firstOrFail();
+                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots);
+                            // store in db
+                            $data = [
+                                "user_id" => $user->id,
+                                "account_id" => $account->id,
+                                "social_type" => "facebook",
+                                "type" => "link",
+                                "source" => $this->source,
+                                "title" => $content,
+                                "comment" => $comment,
+                                "url" => $url,
+                                "image" => $image,
+                                "status" => 0,
+                                "publish_date" => $nextTime
+                            ];
+                            $post = PostService::create($data);
+
+                            // Verify account belongs to user before incrementing
+                            if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                                $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                            }
+
+                            // Use validateToken for proper error handling
+                            $tokenResponse = FacebookService::validateToken($account);
+                            if (!$tokenResponse['success']) {
+                                return array(
+                                    "success" => false,
+                                    "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
+                                );
+                            }
+                            $access_token = $tokenResponse['access_token'];
+                            $postData = PostService::postTypeBody($post);
+                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
+                        }
+                        if ($account->type == "pinterest") {
+                            $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
+                            if ($pinterest) {
+                                $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots);
+                                // store in db
+                                $data = [
+                                    "user_id" => $user->id,
+                                    "account_id" => $account->id,
+                                    "social_type" => "pinterest",
+                                    "type" => "link",
+                                    "source" => $this->source,
+                                    "title" => $content,
+                                    "comment" => $comment,
+                                    "url" => $url,
+                                    "image" => $image,
+                                    "status" => 0,
+                                    "publish_date" => $nextTime,
+                                ];
+                                $post = PostService::create($data);
+
+                                // Verify account belongs to user before incrementing
+                                if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                                    $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                                }
+
+                                // Use validateToken for proper error handling
+                                $tokenResponse = PinterestService::validateToken($account);
+                                if (!$tokenResponse['success']) {
+                                    return array(
+                                        "success" => false,
+                                        "message" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token."
+                                    );
+                                }
+                                $access_token = $tokenResponse['access_token'];
+                                $postData = PostService::postTypeBody($post);
+                                PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
+                            }
+                        }
+                        if ($account->type == "tiktok") {
+                            $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
+                            if ($tiktok) {
+                                // For TikTok, fetch title and thumbnail from link and convert to photo post
+
+                                $localImage = $image ? saveImageFromUrl($image, 'uploads') : null;
+                                if (empty($content) || empty($image)) {
+                                    return array(
+                                        "success" => false,
+                                        "message" => "Content or image is required."
+                                    );
+                                }
+
+                                $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots);
+
+                                // store in db as photo post (not link)
+                                $data = [
+                                    "user_id" => $user->id,
+                                    "account_id" => $account->id,
+                                    "social_type" => "tiktok",
+                                    "type" => "photo", // Changed from "link" to "photo"
+                                    "source" => $this->source,
+                                    "title" => $url, // Use content from modal textarea (title)
+                                    "comment" => $comment,
+                                    "url" => $url,
+                                    "image" => $localImage,
+                                    "status" => 0,
+                                    "publish_date" => $nextTime,
+                                ];
+                                $post = PostService::create($data);
+
+                                // Verify account belongs to user before incrementing
+                                if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                                    $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                                }
+
+                                // Use validateToken for proper error handling
+                                $tokenResponse = TikTokService::validateToken($account);
+                                if (!$tokenResponse['success']) {
+                                    return array(
+                                        "success" => false,
+                                        "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
+                                    );
+                                }
+                                $access_token = $tokenResponse['access_token'];
+                                $postData = PostService::postTypeBody($post);
+                                PublishTikTokPost::dispatch($post->id, $postData, $access_token, "photo"); // Changed from "link" to "photo"
+                            }
+                        }
+                    } else {
+                        $response = array(
+                            "success" => false,
+                            "message" => "Please select atleast 1 posting hour for " . $account->name . " account!"
                         );
                     }
-                    $access_token = $tokenResponse['access_token'];
-                    $postData = PostService::postTypeBody($post);
-                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                 }
-                if ($account->type == "pinterest") {
-                    $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
-                    if ($pinterest) {
-                        $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots);
-                        // store in db
-                        $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "pinterest",
-                            "type" => "link",
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "url" => $url,
-                            "image" => $image,
-                            "status" => 0,
-                            "publish_date" => $nextTime,
-                        ];
-                        $post = PostService::create($data);
-
-                        // Verify account belongs to user before incrementing
-                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
-                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
-                        }
-
-                        // Use validateToken for proper error handling
-                        $tokenResponse = PinterestService::validateToken($account);
-                        if (!$tokenResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token."
-                            );
-                        }
-                        $access_token = $tokenResponse['access_token'];
-                        $postData = PostService::postTypeBody($post);
-                        PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
-                    }
-                }
-                if ($account->type == "tiktok") {
-                    $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
-                    if ($tiktok) {
-                        // For TikTok, fetch title and thumbnail from link and convert to photo post
-
-                        $localImage = $image ? saveImageFromUrl($image, 'uploads') : null;
-                        if (empty($content) || empty($image)) {
-                            return array(
-                                "success" => false,
-                                "message" => "Content or image is required."
-                            );
-                        }
-
-                        $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots);
-
-                        // store in db as photo post (not link)
-                        $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "tiktok",
-                            "type" => "photo", // Changed from "link" to "photo"
-                            "source" => $this->source,
-                            "title" => $url, // Use content from modal textarea (title)
-                            "comment" => $comment,
-                            "url" => $url,
-                            "image" => $localImage,
-                            "status" => 0,
-                            "publish_date" => $nextTime,
-                        ];
-                        $post = PostService::create($data);
-
-                        // Verify account belongs to user before incrementing
-                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
-                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
-                        }
-
-                        // Use validateToken for proper error handling
-                        $tokenResponse = TikTokService::validateToken($account);
-                        if (!$tokenResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
-                            );
-                        }
-                        $access_token = $tokenResponse['access_token'];
-                        $postData = PostService::postTypeBody($post);
-                        PublishTikTokPost::dispatch($post->id, $postData, $access_token, "photo"); // Changed from "link" to "photo"
-                    }
-                }
+                $response = array(
+                    "success" => true,
+                    "message" => "Your posts are being Published!"
+                );
+            } else {
+                $response = array(
+                    "success" => false,
+                    "message" => "Invalid link provided!"
+                );
             }
-            $response = array(
-                "success" => true,
-                "message" => "Your posts are being Published!"
-            );
-        } else {
+        } catch (Exception $e) {
             $response = array(
                 "success" => false,
-                "message" => "Invalid link provided!"
+                "message" => $e->getMessage()
             );
         }
-        // } catch (Exception $e) {
-        //     $response = array(
-        //         "success" => false,
-        //         "message" => $e->getMessage()
-        //     );
-        // }
         sleep(1);
         return $response;
     }
