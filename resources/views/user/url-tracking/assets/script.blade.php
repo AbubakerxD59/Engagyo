@@ -1,9 +1,44 @@
 <script>
     $(document).ready(function() {
+        var utmValueOptions = @json(get_options('utm_values'));
+
         // Show all rows when modal opens
         $('#createUtmModal').on('show.bs.modal', function() {
             // Always show all rows
             $('.utm-code-row').show();
+        });
+
+        // Add custom UTM code row
+        $('#addUtmCodeBtn').on('click', function() {
+            var optionsHtml = '<option value="">-- Select Value --</option>';
+            for (var k in utmValueOptions) {
+                if (utmValueOptions.hasOwnProperty(k)) {
+                    optionsHtml += '<option value="' + k + '">' + utmValueOptions[k] + '</option>';
+                }
+            }
+            var row = '<div class="d-flex align-items-end mb-2 utm-code-row utm-code-row-custom">' +
+                '<div class="col-md-4 pr-2">' +
+                '<label class="small">UTM Key</label>' +
+                '<input type="text" class="form-control utm-custom-key-input" placeholder="e.g. utm_term" maxlength="255">' +
+                '</div>' +
+                '<div class="utm-value-col col-md-6">' +
+                '<label class="small">UTM Value</label>' +
+                '<select class="form-control utm-value-input">' + optionsHtml + '</select>' +
+                '</div>' +
+                '<div class="utm-custom-value-col col-md-4 d-none">' +
+                '<label class="small">Custom Value</label>' +
+                '<input type="text" class="form-control utm-custom-value-input" placeholder="Enter custom value">' +
+                '</div>' +
+                '<div class="col-md-2 pl-1">' +
+                '<label class="small d-block">&nbsp;</label>' +
+                '<button type="button" class="btn btn-sm btn-outline-danger remove-custom-utm-row" title="Remove"><i class="fas fa-times"></i></button>' +
+                '</div>' +
+                '</div>';
+            $('#customUtmRowsContainer').append(row);
+        });
+
+        $(document).on('click', '.remove-custom-utm-row', function() {
+            $(this).closest('.utm-code-row-custom').remove();
         });
 
         // Toggle custom value field when UTM value dropdown changes
@@ -45,6 +80,8 @@
             $('.utm-value-input').prop('readonly', function() {
                 return $(this).data('key') === 'utm_source';
             });
+            // Remove dynamically added custom UTM rows
+            $('#customUtmRowsContainer').empty();
         });
 
         // Create/Update UTM Code
@@ -56,7 +93,12 @@
             const utmCodes = [];
 
             $('.utm-code-row').each(function() {
-                const key = $(this).data('utm-key');
+                var key = $(this).data('utm-key');
+                if (!key) {
+                    key = $(this).find('.utm-custom-key-input').val();
+                    if (key) key = key.trim();
+                }
+                if (!key) return;
                 const valueInput = $(this).find('.utm-value-input');
                 let value = valueInput.val();
                 // Use custom value input when "Custom" is selected

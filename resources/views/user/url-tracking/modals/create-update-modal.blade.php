@@ -60,6 +60,12 @@
                                 @endif
                             </div>
                         @endforeach
+                        <div class="mt-2 mb-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" id="addUtmCodeBtn">
+                                <i class="fas fa-plus mr-1"></i> Add UTM Code
+                            </button>
+                        </div>
+                        <div id="customUtmRowsContainer"></div>
                         <small class="form-text text-muted d-block mt-2">
                             Configure UTM parameters that will be appended to matching URLs. Leave value empty to skip a
                             parameter.
