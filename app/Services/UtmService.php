@@ -40,13 +40,13 @@ class UtmService
             foreach ($utmCodes as $utmCode) {
                 $value = self::resolveUtmValue($utmCode->utm_key, $utmCode->utm_value, $context);
                 if ($value !== null && $value !== '') {
-                    $utmParams[$utmCode->utm_key] = $value;
+                    $utmParams[strtolower($utmCode->utm_key)] = $value;
                 }
             }
 
             $postType = self::getPostTypeFromContext($context);
             if ($postType !== null && $postType !== '') {
-                $utmParams['utm_posttype'] = strtolower($postType);
+                $utmParams[strtolower('utm_posttype')] = strtolower($postType);
             }
 
             return self::appendQueryParams($url, $utmParams);
