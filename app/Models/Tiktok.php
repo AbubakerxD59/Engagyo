@@ -25,10 +25,13 @@ class Tiktok extends Model
         "refresh_token_expires_in",
         "schedule_status",
         "last_fetch",
+        "shuffle",
+        "rss_paused",
     ];
 
     protected $casts = [
         'last_fetch' => 'datetime',
+        'rss_paused' => 'boolean',
     ];
 
     protected $appends = ["type"];
