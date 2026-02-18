@@ -448,7 +448,9 @@ class AutomationController extends Controller
 
                     $access_token = $tokenResponse['access_token'];
                     $postData = PostService::postTypeBody($post);
-                    
+
+                    $postData['url'] = saveImageFromUrl($postData['url'], 'uploads') ?? $postData['url'];
+
                     PublishTikTokPost::dispatch($post->id, $postData, $access_token, "photo");
                     $response = array(
                         "success" => true,

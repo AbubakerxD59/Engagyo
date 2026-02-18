@@ -228,13 +228,6 @@ class PostService
                 "file_url" => $post->video_key ?: $post->video
             ];
         }
-        if ($post->type == "link") { // Link
-            $postData = [
-                "title" => $post->title,
-                "link" => $post->url,
-                "url" => $post->image
-            ];
-        }
 
         // Merge TikTok-specific metadata from response field if available
         if (!empty($post->response)) {
