@@ -115,7 +115,7 @@ class Post extends Model
 
     public function scopeAccountExist($query)
     {
-        $query->has("page")->orHas("board");
+        $query->has("page")->orHas("board")->orHas("tiktok");
     }
 
     public function scopePageExist($query)
@@ -214,6 +214,9 @@ class Post extends Model
         }
         if ($social_type == 'facebook') {
             $accountUrl = "https://www.facebook.com/" . $account->page_id;
+        }
+        if ($social_type == 'tiktok') {
+            $accountUrl = "https://www.tiktok.com/" . $account->tiktok_id;
         }
         return $accountUrl;
     }
@@ -761,6 +764,9 @@ class Post extends Model
         }
         if ($social_type == "pinterest") {
             $profile_image = $this->board?->pinterest ? $this->board->pinterest->profile_image : null;
+        }
+        if ($social_type == "tiktok") {
+            $profile_image = $this->tiktok?->profile_image ?? null;
         }
         return $profile_image;
     }
