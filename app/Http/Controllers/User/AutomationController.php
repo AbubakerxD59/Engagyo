@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Models\Board;
 use App\Models\Domain;
+use App\Models\Tiktok;
 use App\Jobs\FetchPost;
 use App\Models\Facebook;
 use App\Models\Pinterest;
@@ -15,15 +16,16 @@ use App\Jobs\RefreshPosts;
 use Illuminate\Http\Request;
 use App\Services\FeedService;
 use App\Services\PostService;
+use App\Jobs\PublishTikTokPost;
+use App\Services\TikTokService;
 use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
 use App\Services\HtmlParseService;
 use App\Services\PinterestService;
-use App\Http\Controllers\Controller;
-use App\Models\Tiktok;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Auth;
 
 class AutomationController extends Controller
 {
@@ -419,6 +421,35 @@ class AutomationController extends Controller
                     $access_token = $tokenResponse['access_token'];
                     $postData = PostService::postTypeBody($post);
                     PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link");
+                    $response = array(
+                        "success" => true,
+                        "message" => "Your post is being Published!"
+                    );
+                } else if ($type == 'tiktok') {
+                    $post = $this->post->with(relations: "tiktok")->notPublished()->where("id", $id)->firstOrFail();
+                    $tiktok = $post->tiktok;
+
+                    if (!$tiktok) {
+                        return response()->json([
+                            "success" => false,
+                            "message" => "Tiktok account not found."
+                        ]);
+                    }
+
+                    // Use validateToken for proper error handling
+                    $tokenResponse = TikTokService::validateToken($tiktok);
+
+                    if (!$tokenResponse['success']) {
+                        return response()->json([
+                            "success" => false,
+                            "message" => $tokenResponse["message"] ?? "Failed to validate Tiktok access token."
+                        ]);
+                    }
+
+                    $access_token = $tokenResponse['access_token'];
+                    $postData = PostService::postTypeBody($post);
+                    dd($postData);
+                    PublishTikTokPost::dispatch($post->id, $postData, $access_token, "photo");
                     $response = array(
                         "success" => true,
                         "message" => "Your post is being Published!"
