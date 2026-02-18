@@ -1066,7 +1066,6 @@ class  ScheduleController extends Controller
 
                 foreach ($accounts as $account) {
                     if ($account->type == "facebook") {
-                        Facebook::where("id", $account->fb_id)->firstOrFail();
                         // store in db
                         $data = [
                             "user_id" => $user->id,
@@ -1101,7 +1100,6 @@ class  ScheduleController extends Controller
                         PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                     }
                     if ($account->type == "pinterest") {
-                        $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
                         // store in db
                         $data = [
                             "user_id" => $user->id,
@@ -1136,8 +1134,6 @@ class  ScheduleController extends Controller
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                     }
                     if ($account->type == "tiktok") {
-                        $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
-
                         $localImage = $image ? saveImageFromUrl($image, 'uploads') : null;
                         if (empty($content) || empty($localImage)) {
                             return array(

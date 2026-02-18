@@ -42,8 +42,6 @@ class PublishTikTokPost implements ShouldQueue
             $tiktokService->photo($this->id, $this->data, $this->access_token);
         } elseif ($this->type == "video") {
             $tiktokService->video($this->id, $this->data, $this->access_token);
-        } elseif ($this->type == "link") {
-            $tiktokService->link($this->id, $this->data, $this->access_token);
         }
     }
 

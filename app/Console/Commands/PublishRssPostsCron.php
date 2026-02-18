@@ -11,6 +11,8 @@ use App\Jobs\PublishFacebookPost;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
 use App\Services\PinterestService;
+use App\Jobs\PublishTikTokPost;
+use App\Services\TikTokService;
 use Carbon\Carbon;
 
 class PublishRssPostsCron extends Command
@@ -80,7 +82,7 @@ class PublishRssPostsCron extends Command
         $twoHoursAgo = $now->copy()->subHours(2);
 
         // Get all pending RSS posts that are due (publish_date is before now but not older than 2 hours)
-        $posts = Post::with("user", "page.facebook", "board.pinterest")
+        $posts = Post::with("user", "page.facebook", "board.pinterest", "tiktok")
             ->where('source', 'rss')
             ->where('status', 0) // Pending
             ->where('publish_date', '<=', $now)
@@ -124,6 +126,11 @@ class PublishRssPostsCron extends Command
         // Handle Pinterest posts
         if ($post->social_type === 'pinterest') {
             $this->processPinterestPost($post, $pinterestService);
+        }
+
+        // Handle TikTok posts
+        if ($post->social_type === 'tiktok') {
+            $this->processTikTokPost($post);
         }
     }
 
@@ -262,5 +269,59 @@ class PublishRssPostsCron extends Command
         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
 
         info("RSS Publish: Dispatched Pinterest post ID {$post->id} to board '{$board->name}'.");
+    }
+
+    /**
+     * Process TikTok RSS post
+     */
+    private function processTikTokPost(Post $post)
+    {
+        $tiktok = $post->tiktok;
+        $social_type = $post->social_type;
+        $account_image = $post->account_profile;
+
+        // Check if TikTok account exists
+        if (!$tiktok) {
+            $errorMessage = "Error: TikTok account not found. The account may have been disconnected.";
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage
+            ]);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish TikTok RSS post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            return;
+        }
+
+        // Validate and refresh access token if needed
+        $tokenResponse = TikTokService::validateToken($tiktok);
+
+        if (!$tokenResponse['success']) {
+            $errorMessage = $tokenResponse['message'] ?? "Error: Failed to validate TikTok access token.";
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage
+            ]);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish TikTok RSS post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            return;
+        }
+
+        $access_token = $tokenResponse['access_token'];
+
+        // Prepare post data
+        try {
+            $postData = PostService::postTypeBody($post);
+        } catch (Exception $e) {
+            $errorMessage = "Error preparing post data: " . $e->getMessage();
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage
+            ]);
+            $this->errorNotification($post->user_id, "RSS Post Publishing Failed", "Failed to publish TikTok RSS post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            return;
+        }
+
+        // Dispatch the publish job
+        PublishTikTokPost::dispatch($post->id, $postData, $access_token, $post->type);
+
+        info("RSS Publish: Dispatched TikTok post ID {$post->id} to account '{$tiktok->display_name}'.");
     }
 }

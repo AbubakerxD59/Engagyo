@@ -30,23 +30,23 @@ class Kernel extends ConsoleKernel
      * @var array<int, class-string>
      */
     protected $commands = [
-        FeedCron::class,
-        ResetMonthlyUsage::class,
-        CheckFeatureLimits::class,
-        SyncUserUsage::class,
-        PublishRssPostsCron::class,
-        PinterestPublishCron::class,
-        FacebookPublishCron::class,
-        TikTokPublishCron::class,
-        PublishSchedulePostCron::class,
-        DownloadPhotoCron::class,
-        RunFacebookTests::class,
-        CleanupTestPosts::class,
-        RunPinterestTests::class,
-        CleanupPinterestTestPosts::class,
-        RunTikTokTests::class,
-        CleanupTikTokTestPosts::class,
-        ShuffleRssPosts::class,
+        FeedCron::class, //rss:feed
+        ResetMonthlyUsage::class, //usage:reset-monthly
+        CheckFeatureLimits::class, //features:check-limits
+        SyncUserUsage::class, //usage:sync
+        PublishRssPostsCron::class, //rss:publish
+        PinterestPublishCron::class, //pinterest:publish
+        FacebookPublishCron::class, //facebook:publish
+        TikTokPublishCron::class, //tiktok:publish
+        PublishSchedulePostCron::class, //schedule:publish
+        DownloadPhotoCron::class, //download:photo
+        RunFacebookTests::class, //facebook:run-tests
+        CleanupTestPosts::class, //facebook:cleanup-tests
+        RunPinterestTests::class, //pinterest:run-tests
+        CleanupPinterestTestPosts::class, //pinterest:cleanup-tests
+        RunTikTokTests::class, //tiktok:run-tests
+        CleanupTikTokTestPosts::class, //tiktok:cleanup-tests
+        ShuffleRssPosts::class, //app:shuffle-rss-posts
     ];
     /**
      * Define the application's command schedule.

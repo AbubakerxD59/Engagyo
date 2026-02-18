@@ -28,7 +28,7 @@ class TikTokPublishCron extends Command
     /**
      * Execute the console command.
      */
-    public function handle(Post $post, TikTokService $tiktokService)
+    public function handle(Post $post)
     {
         $now = date("Y-m-d H:i");
 
@@ -61,7 +61,6 @@ class TikTokPublishCron extends Command
                 $access_token = $tokenResponse['access_token'];
                 $postData = PostService::postTypeBody($post);
                 PublishTikTokPost::dispatch($post->id, $postData, $access_token, $post->type);
-
             } catch (Exception $e) {
                 $post->update([
                     "status" => -1,
@@ -72,4 +71,3 @@ class TikTokPublishCron extends Command
         }
     }
 }
-

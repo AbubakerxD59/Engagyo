@@ -5,6 +5,8 @@
         var current_file = 0;
         var is_link = 0;
         var is_video = 0;
+        var currentShortUrl = null;
+        var originalUrlInContent = null;
         // TikTok Modal Functions
         var currentTikTokFile = null;
         var currentTikTokAccounts = [];
@@ -122,10 +124,15 @@
                     // With file in dropzone, treat any pasted link as text and post as photo/video
                     is_link = 0;
                     $('#article-container').empty();
+                    toggleContentShortenerVisibility();
                 });
                 // file sending (with file = always photo/video post, not link)
                 this.on("sending", function(file, xhr, data) {
                     var content = $("#content").val();
+                    if ($('#use_short_link_content').is(':checked') &&
+                        originalUrlInContent && currentShortUrl) {
+                        content = content.replace(originalUrlInContent, currentShortUrl);
+                    }
                     var comment = $("#comment").val();
                     var schedule_date = $("#schedule_date").val();
                     var schedule_time = $("#schedule_time").val();
@@ -243,6 +250,10 @@
                     }
                 } else {
                     if (isValid) {
+                        if ($('#use_short_link_content').is(':checked') && !currentShortUrl) {
+                            toastr.error('Please wait for the link to shorten.');
+                            return;
+                        }
                         var filesCopy = [...dropZone.files];
                         processQueueWithDelay(filesCopy);
                     } else {
@@ -277,8 +288,15 @@
         }
         // process content only
         var processContentOnly = function() {
+            if ($('#use_short_link_content').is(':checked') && !currentShortUrl) {
+                toastr.error('Please wait for the link to shorten.');
+                return;
+            }
             disableActionButton();
             var content = $('#content').val();
+            if ($('#use_short_link_content').is(':checked') && originalUrlInContent && currentShortUrl) {
+                content = content.replace(originalUrlInContent, currentShortUrl);
+            }
             var comment = $('#comment').val();
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",
@@ -307,7 +325,13 @@
             var comment = $('#comment').val();
             var image = $('#link_image').attr('src');
             var title = $('#content').val();
-            var url = $('.link_url').text();
+            var originalUrl = $('.link_url').text().trim();
+            var useShortForLink = $('#use_short_link').length && $('#use_short_link').is(':checked');
+            if (useShortForLink && !currentShortUrl) {
+                toastr.error('Please wait for the link to shorten.');
+                return;
+            }
+            var url = (useShortForLink && currentShortUrl) ? currentShortUrl : originalUrl;
             var schedule_date = $("#schedule_date").val();
             var schedule_time = $("#schedule_time").val();
 
@@ -361,12 +385,38 @@
             current_file = 0;
             is_link = 0;
             is_video = 0;
+            currentShortUrl = null;
+            originalUrlInContent = null;
             $('#content').val('');
             $('#comment').val('');
             $('#characterCount').text('');
             $('#article-container').empty();
             reloadPosts();
             enableActionButton();
+        }
+        // Extract first URL from text (for shortening when link is in content but post is photo/content)
+        function extractUrlFromContent(text) {
+            if (!text || !text.trim()) return null;
+            var m = text.trim().match(/https?:\/\/[^\s"'<>]+/);
+            return m ? m[0].replace(/[.,;:!?)]+$/, '') : null;
+        }
+        // Show/hide content URL shortener (when link is in textarea but post type is photo/content)
+        function toggleContentShortenerVisibility() {
+            var value = $("#content").val();
+            var urlInContent = extractUrlFromContent(value);
+            var isPhotoOrContentPost = !is_link;
+            if (isPhotoOrContentPost && urlInContent) {
+                $('#content-url-shortener-wrap').show();
+            } else {
+                $('#content-url-shortener-wrap').hide();
+                if (!is_link) {
+                    $('#use_short_link_content').prop('checked', false);
+                    $('#short-link-result-content').hide();
+                    $('#short_link_url_display_content').val('');
+                    currentShortUrl = null;
+                    originalUrlInContent = null;
+                }
+            }
         }
         // check link for content (only fetch when no file in dropzone; otherwise treat pasted URL as text)
         $('#content').on('input', function() {
@@ -375,10 +425,12 @@
             if (checkLink(value) && dropZone.getAcceptedFiles().length === 0) {
                 fetchFromLink(value);
             }
+            toggleContentShortenerVisibility();
         });
         // fetch from link
         var fetchFromLink = function(link) {
             if (link) {
+                $('#content-url-shortener-wrap').hide();
                 // render skeleton
                 renderSkeletonLoader();
                 disableActionButton();
@@ -623,6 +675,21 @@
                         <div class="content-col">
                             <h5 class="link_title" title="${data.title}">${data.title.substring(0, 60)}...</h5>
                             <p class="link_url">${data.link}</p>
+                            <div class="shortener-row mt-2">
+                                <label class="d-flex align-items-center mb-1">
+                                    <input type="checkbox" id="use_short_link" name="use_short_link" class="mr-2">
+                                    <span>Shorten link for this post</span>
+                                </label>
+                                <div id="short-link-result" class="mt-1" style="display:none;">
+                                    <label class="small text-muted mb-0">Shortened link:</label>
+                                    <div class="input-group input-group-sm mt-1">
+                                        <input type="text" id="short_link_url_display" class="form-control" readonly>
+                                        <div class="input-group-append">
+                                            <button type="button" class="btn btn-outline-secondary copy-short-link" title="Copy">Copy</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                         <!-- Right Column (Image/Sidebar) -->
                         <div class="image-col" style="margin-left: 1rem;">
@@ -635,12 +702,153 @@
                         </div>
                     </div>`;
             container.html(articleHTML);
+            currentShortUrl = null;
+            originalUrlInContent = null;
+            $('#content-url-shortener-wrap').hide();
             $('#real-article').animate({
                 opacity: 1
             }, 1000);
         }
         $(document).on('click', '.close-btn-placeholder', function() {
             resetPostArea();
+        });
+
+        // URL shortener: when checkbox is checked, shorten the link and display it
+        $(document).on('change', '#use_short_link', function() {
+            var $cb = $(this);
+            var $result = $('#short-link-result');
+            var $display = $('#short_link_url_display');
+            if (!$cb.is(':checked')) {
+                currentShortUrl = null;
+                $result.hide();
+                $display.val('');
+                return;
+            }
+            var originalUrl = $('.link_url').text().trim();
+            if (!originalUrl) {
+                toastr.warning('No link to shorten.');
+                $cb.prop('checked', false);
+                return;
+            }
+            $result.hide();
+            $display.val('Shortening...');
+            $result.show();
+            $.ajax({
+                url: "{{ route('general.shorten') }}",
+                type: "POST",
+                data: {
+                    "_token": "{{ csrf_token() }}",
+                    "original_url": originalUrl
+                },
+                success: function(res) {
+                    if (res.success && res.short_url) {
+                        currentShortUrl = res.short_url;
+                        $display.val(res.short_url);
+                    } else {
+                        currentShortUrl = null;
+                        $display.val('');
+                        $result.hide();
+                        toastr.error(res.message || 'Could not shorten link.');
+                        $cb.prop('checked', false);
+                    }
+                },
+                error: function(xhr) {
+                    currentShortUrl = null;
+                    $display.val('');
+                    $result.hide();
+                    toastr.error(xhr.responseJSON && xhr.responseJSON.message ? xhr
+                        .responseJSON.message : 'Could not shorten link.');
+                    $cb.prop('checked', false);
+                }
+            });
+        });
+
+        $(document).on('click', '.copy-short-link', function() {
+            var url = $('#short_link_url_display').val();
+            if (url && navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(function() {
+                    toastr.success('Short link copied to clipboard.');
+                }).catch(function() {
+                    fallbackCopyShortLink(url);
+                });
+            } else {
+                fallbackCopyShortLink(url);
+            }
+        });
+        $(document).on('click', '.copy-short-link-content', function() {
+            var url = $('#short_link_url_display_content').val();
+            if (url && navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(url).then(function() {
+                    toastr.success('Short link copied to clipboard.');
+                }).catch(function() {
+                    fallbackCopyShortLink(url);
+                });
+            } else {
+                fallbackCopyShortLink(url);
+            }
+        });
+
+        function fallbackCopyShortLink(text) {
+            var $input = $('<input>').val(text).appendTo('body').select();
+            try {
+                document.execCommand('copy');
+                toastr.success('Short link copied to clipboard.');
+            } catch (e) {
+                toastr.info('Short link: ' + text);
+            }
+            $input.remove();
+        }
+        // Content shortener (when link is in textarea but post is photo/content)
+        $(document).on('change', '#use_short_link_content', function() {
+            var $cb = $(this);
+            var $result = $('#short-link-result-content');
+            var $display = $('#short_link_url_display_content');
+            if (!$cb.is(':checked')) {
+                currentShortUrl = null;
+                originalUrlInContent = null;
+                $result.hide();
+                $display.val('');
+                return;
+            }
+            var originalUrl = extractUrlFromContent($("#content").val());
+            if (!originalUrl) {
+                toastr.warning('No link found in your post to shorten.');
+                $cb.prop('checked', false);
+                return;
+            }
+            originalUrlInContent = originalUrl;
+            $result.show();
+            $display.val('Shortening...');
+            $.ajax({
+                url: "{{ route('general.shorten') }}",
+                type: "POST",
+                data: {
+                    "_token": "{{ csrf_token() }}",
+                    "original_url": originalUrl
+                },
+                success: function(res) {
+                    if (res.success && res.short_url) {
+                        currentShortUrl = res.short_url;
+                        $display.val(res.short_url);
+                    } else {
+                        currentShortUrl = null;
+                        originalUrlInContent = null;
+                        $display.val('');
+                        $result.hide();
+                        toastr.error(res.message || 'Could not shorten link.');
+                        $cb.prop('checked', false);
+                    }
+                },
+                error: function(xhr) {
+                    currentShortUrl = null;
+                    originalUrlInContent = null;
+                    $display.val('');
+                    $result.hide();
+                    toastr.error(xhr.responseJSON && xhr.responseJSON.message ? xhr
+                        .responseJSON.message : 'Could not shorten link.');
+                    $cb.prop('checked', false);
+                }
+            });
         });
         // Posts Grid Variables
         var currentPage = 1;
@@ -967,8 +1175,7 @@
                         lastNotificationCount = currentCount;
                     }
                 },
-                error: function(xhr) {
-                }
+                error: function(xhr) {}
             });
         }
 
@@ -1357,15 +1564,15 @@
             if (yourBrand && !brandedContent) {
                 prompts.html(
                     '<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Promotional content\'</div>'
-                    );
+                );
             } else if (!yourBrand && brandedContent) {
                 prompts.html(
                     '<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Paid partnership\'</div>'
-                    );
+                );
             } else if (yourBrand && brandedContent) {
                 prompts.html(
                     '<div class="alert alert-info"><i class="fas fa-info-circle"></i> Your photo/video will be labeled as \'Paid partnership\'</div>'
-                    );
+                );
             }
         }
 
@@ -1379,16 +1586,16 @@
                 if (brandedContent) {
                     declaration.html(
                         '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Branded Content Policy and Music Usage Confirmation</strong>'
-                        );
+                    );
                 } else {
                     declaration.html(
                         '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Music Usage Confirmation</strong>'
-                        );
+                    );
                 }
             } else {
                 declaration.html(
                     '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s Music Usage Confirmation</strong>'
-                    );
+                );
             }
         }
 
@@ -1488,7 +1695,7 @@
                 formData.append('link', 1);
                 formData.append('url', currentTikTokLinkUrl);
                 formData.append('image',
-                currentTikTokLinkImage); // Fetched link image, not from dropzone
+                    currentTikTokLinkImage); // Fetched link image, not from dropzone
                 if (currentTikTokScheduleDate) {
                     formData.append('schedule_date', currentTikTokScheduleDate);
                 }

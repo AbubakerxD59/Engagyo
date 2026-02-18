@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Board;
+use App\Enums\LinkPostEnable;
 use Exception;
 use App\Models\Post;
 use App\Models\Notification;
@@ -75,6 +76,7 @@ class FeedService
     public function fetch()
     {
         $social_type = $this->data["social_type"];
+        $this->data["type"] = LinkPostEnable::isLinkPostEnabledFor($social_type) ? "link" : "photo";
         $account_image = null;
         $account_name = null;
         $account_username = null;
