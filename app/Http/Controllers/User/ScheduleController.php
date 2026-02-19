@@ -21,6 +21,7 @@ use App\Models\User;
 use App\Models\Tiktok;
 use App\Services\PostService;
 use App\Services\FeatureUsageService;
+use App\Services\UrlShortenerService;
 use App\Enums\DraftEnum;
 use App\Services\SocialMediaLogService;
 use Illuminate\Support\Facades\Auth;
@@ -31,16 +32,52 @@ class  ScheduleController extends Controller
     protected $pinterestService;
     protected $tiktokService;
     protected $featureUsageService;
+    protected $urlShortenerService;
     protected $source;
     protected $logService;
-    public function __construct(FeatureUsageService $featureUsageService)
+    public function __construct(FeatureUsageService $featureUsageService, UrlShortenerService $urlShortenerService)
     {
         $this->facebookService = new FacebookService();
         $this->pinterestService = new PinterestService();
         $this->tiktokService = new TikTokService();
         $this->featureUsageService = $featureUsageService;
+        $this->urlShortenerService = $urlShortenerService;
         $this->source = "schedule";
         $this->logService = new SocialMediaLogService();
+    }
+
+    /**
+     * Prepare content, comment and URL for an account - shorten links if url_shortener_enabled for the account.
+     *
+     * @param User $user
+     * @param object $account (Page, Board, or Tiktok with url_shortener_enabled)
+     * @param string|null $content
+     * @param string|null $comment
+     * @param string|null $url
+     * @return array{content: string|null, comment: string|null, url: string|null}
+     */
+    private function prepareContentAndUrlForAccount(User $user, $account, ?string $content, ?string $comment, ?string $url): array
+    {
+        $enabled = (bool) ($account->url_shortener_enabled ?? false);
+
+        $newContent = $content;
+        $newComment = $comment;
+        $newUrl = $url;
+
+        if ($enabled) {
+            if (!empty($url)) {
+                $result = $this->urlShortenerService->shortenForUser($user, $url);
+                $newUrl = $result['success'] ? $result['short_url'] : $url;
+            }
+            if (!empty($content)) {
+                $newContent = $this->urlShortenerService->shortenUrlsInText($user, $content, true);
+            }
+            if (!empty($comment)) {
+                $newComment = $this->urlShortenerService->shortenUrlsInText($user, $comment, true);
+            }
+        }
+
+        return ['content' => $newContent, 'comment' => $newComment, 'url' => $newUrl];
     }
 
     /**
@@ -291,6 +328,7 @@ class  ScheduleController extends Controller
             }
 
             foreach ($accounts as $account) {
+                $prepared = $this->prepareContentAndUrlForAccount($user, $account, $content, $comment, null);
                 if ($account->type == "facebook") {
 
                     Facebook::where("id", $account->fb_id)->firstOrFail();
@@ -306,8 +344,8 @@ class  ScheduleController extends Controller
                         "social_type" => "facebook",
                         "type" => $type,
                         "source" => $this->source,
-                        "title" => $content,
-                        "comment" => $comment,
+                        "title" => $prepared['content'],
+                        "comment" => $prepared['comment'],
                         "image" => $image,
                         "video" => $video,
                         "status" => 0,
@@ -350,8 +388,8 @@ class  ScheduleController extends Controller
                             "social_type" => "pinterest",
                             "type" => $type,
                             "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
+                            "title" => $prepared['content'],
+                            "comment" => $prepared['comment'],
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
@@ -391,8 +429,8 @@ class  ScheduleController extends Controller
                             "social_type" => "tiktok",
                             "type" => $type,
                             "source" => $this->source,
-                            "title" => $request->get("content") ?: $content,
-                            "comment" => $comment,
+                            "title" => $request->get("content") ?: $prepared['content'],
+                            "comment" => $prepared['comment'],
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
@@ -439,8 +477,8 @@ class  ScheduleController extends Controller
                             "social_type" => "tiktok",
                             "type" => $type,
                             "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
+                            "title" => $prepared['content'],
+                            "comment" => $prepared['comment'],
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
@@ -534,6 +572,7 @@ class  ScheduleController extends Controller
             }
 
             foreach ($draftAccounts as $account) {
+                $prepared = $this->prepareContentAndUrlForAccount($user, $account, $content, $comment, null);
                 // Handle TikTok draft posts
                 if ($account->type == "tiktok" && DraftEnum::isDraftActiveFor("tiktok")) {
                     if ($file) {
@@ -547,8 +586,8 @@ class  ScheduleController extends Controller
                             "social_type" => "tiktok",
                             "type" => $type,
                             "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
+                            "title" => $prepared['content'],
+                            "comment" => $prepared['comment'],
                             "image" => $image,
                             "video" => $video,
                             "url" => $image, // For photo posts
@@ -657,6 +696,7 @@ class  ScheduleController extends Controller
             }
 
             foreach ($draftAccounts as $account) {
+                $prepared = $this->prepareContentAndUrlForAccount($user, $account, $content, $comment, $link);
                 // Handle TikTok draft link posts
                 if ($account->type == "tiktok" && DraftEnum::isDraftActiveFor("tiktok")) {
                     if ($file && $image) {
@@ -676,11 +716,11 @@ class  ScheduleController extends Controller
                             "social_type" => "tiktok",
                             "type" => "photo", // Changed from "link" to "photo"
                             "source" => $this->source,
-                            "title" => !empty($linkInfo['title']) ? $linkInfo['title'] : $content,
-                            "comment" => $comment,
+                            "title" => !empty($linkInfo['title']) ? $linkInfo['title'] : $prepared['content'],
+                            "comment" => $prepared['comment'],
                             "url" => $linkInfo['image'], // Store thumbnail image URL
                             "image" => $linkInfo['image'], // Store thumbnail image URL
-                            "link" => $link, // Keep original link for reference
+                            "link" => $prepared['url'], // Use shortened link when url_shortener enabled
                             "status" => 0, // Draft status
                             "publish_date" => date("Y-m-d H:i"),
                         ];
@@ -785,6 +825,7 @@ class  ScheduleController extends Controller
             }
 
             foreach ($accounts as $account) {
+                $prepared = $this->prepareContentAndUrlForAccount($user, $account, $content, $comment, null);
                 if (count($account->timeslots) > 0) {
                     if ($account->type == "facebook") {
                         Facebook::where("id", $account->fb_id)->firstOrFail();
@@ -801,8 +842,8 @@ class  ScheduleController extends Controller
                             "social_type" => "facebook",
                             "type" => $type,
                             "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
+                            "title" => $prepared['content'],
+                            "comment" => $prepared['comment'],
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
@@ -828,8 +869,8 @@ class  ScheduleController extends Controller
                                 "social_type" => "pinterest",
                                 "type" => $type,
                                 "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
+                                "title" => $prepared['content'],
+                                "comment" => $prepared['comment'],
                                 "image" => $image,
                                 "video" => $video,
                                 "status" => 0,
@@ -856,8 +897,8 @@ class  ScheduleController extends Controller
                                 "social_type" => "tiktok",
                                 "type" => $type,
                                 "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
+                                "title" => $prepared['content'],
+                                "comment" => $prepared['comment'],
                                 "image" => $image,
                                 "video" => $video,
                                 "status" => 0,
@@ -939,6 +980,7 @@ class  ScheduleController extends Controller
             }
 
             foreach ($accounts as $account) {
+                $prepared = $this->prepareContentAndUrlForAccount($user, $account, $content, $comment, null);
                 $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
                 if ($account->type == "facebook") {
                     Facebook::where("id", $account->fb_id)->firstOrFail();
@@ -954,8 +996,8 @@ class  ScheduleController extends Controller
                         "social_type" => "facebook",
                         "type" => $type,
                         "source" => $this->source,
-                        "title" => $content,
-                        "comment" => $comment,
+                        "title" => $prepared['content'],
+                        "comment" => $prepared['comment'],
                         "image" => $image,
                         "video" => $video,
                         "status" => 0,
@@ -981,8 +1023,8 @@ class  ScheduleController extends Controller
                             "social_type" => "pinterest",
                             "type" => $type,
                             "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
+                            "title" => $prepared['content'],
+                            "comment" => $prepared['comment'],
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
@@ -1009,8 +1051,8 @@ class  ScheduleController extends Controller
                             "social_type" => "tiktok",
                             "type" => $type,
                             "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
+                            "title" => $prepared['content'],
+                            "comment" => $prepared['comment'],
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
@@ -1065,6 +1107,7 @@ class  ScheduleController extends Controller
                 }
 
                 foreach ($accounts as $account) {
+                    $prepared = $this->prepareContentAndUrlForAccount($user, $account, $content, $comment, $url);
                     if ($account->type == "facebook") {
                         // store in db
                         $data = [
@@ -1073,9 +1116,9 @@ class  ScheduleController extends Controller
                             "social_type" => "facebook",
                             "type" => "link",
                             "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "url" => $url,
+                            "title" => $prepared['content'],
+                            "comment" => $prepared['comment'],
+                            "url" => $prepared['url'],
                             "image" => $image,
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
@@ -1097,7 +1140,7 @@ class  ScheduleController extends Controller
                         }
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
-                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $prepared['comment']);
                     }
                     if ($account->type == "pinterest") {
                         // store in db
@@ -1107,9 +1150,9 @@ class  ScheduleController extends Controller
                             "social_type" => "pinterest",
                             "type" => "link",
                             "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "url" => $url,
+                            "title" => $prepared['content'],
+                            "comment" => $prepared['comment'],
+                            "url" => $prepared['url'],
                             "image" => $image,
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
@@ -1149,9 +1192,9 @@ class  ScheduleController extends Controller
                             "social_type" => "tiktok",
                             "type" => "photo", // Changed from "link" to "photo"
                             "source" => $this->source,
-                            "title" => $url, // Use content from modal textarea (title)
-                            "comment" => $comment,
-                            "url" => $url,
+                            "title" => $prepared['url'], // Use content from modal textarea (title)
+                            "comment" => $prepared['comment'],
+                            "url" => $prepared['url'],
                             "image" => $localImage, // Store thumbnail image URL
                             "status" => 0,
                             "publish_date" => date("Y-m-d H:i"),
@@ -1228,6 +1271,7 @@ class  ScheduleController extends Controller
                 }
 
                 foreach ($accounts as $account) {
+                    $prepared = $this->prepareContentAndUrlForAccount($user, $account, $content, $comment, $url);
                     if (count($account->timeslots) > 0) {
                         if ($account->type == "facebook") {
                             Facebook::where("id", $account->fb_id)->firstOrFail();
@@ -1239,9 +1283,9 @@ class  ScheduleController extends Controller
                                 "social_type" => "facebook",
                                 "type" => "link",
                                 "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "url" => $url,
+                                "title" => $prepared['content'],
+                                "comment" => $prepared['comment'],
+                                "url" => $prepared['url'],
                                 "image" => $image,
                                 "status" => 0,
                                 "publish_date" => $nextTime
@@ -1263,7 +1307,7 @@ class  ScheduleController extends Controller
                             }
                             $access_token = $tokenResponse['access_token'];
                             $postData = PostService::postTypeBody($post);
-                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
+                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $prepared['comment']);
                         }
                         if ($account->type == "pinterest") {
                             $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
@@ -1276,9 +1320,9 @@ class  ScheduleController extends Controller
                                     "social_type" => "pinterest",
                                     "type" => "link",
                                     "source" => $this->source,
-                                    "title" => $content,
-                                    "comment" => $comment,
-                                    "url" => $url,
+                                    "title" => $prepared['content'],
+                                    "comment" => $prepared['comment'],
+                                    "url" => $prepared['url'],
                                     "image" => $image,
                                     "status" => 0,
                                     "publish_date" => $nextTime,
@@ -1325,9 +1369,9 @@ class  ScheduleController extends Controller
                                     "social_type" => "tiktok",
                                     "type" => "photo", // Changed from "link" to "photo"
                                     "source" => $this->source,
-                                    "title" => $url, // Use content from modal textarea (title)
-                                    "comment" => $comment,
-                                    "url" => $url,
+                                    "title" => $prepared['url'], // Use content from modal textarea (title)
+                                    "comment" => $prepared['comment'],
+                                    "url" => $prepared['url'],
                                     "image" => $localImage,
                                     "status" => 0,
                                     "publish_date" => $nextTime,
@@ -1361,7 +1405,7 @@ class  ScheduleController extends Controller
                 }
                 $response = array(
                     "success" => true,
-                    "message" => "Your posts are being Published!"
+                    "message" => "Your posts are queued for Later!"
                 );
             } else {
                 $response = array(
@@ -1406,6 +1450,7 @@ class  ScheduleController extends Controller
                 }
 
                 foreach ($accounts as $account) {
+                    $prepared = $this->prepareContentAndUrlForAccount($user, $account, $content, $comment, $url);
                     $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
                     if ($account->type == "facebook") {
                         Facebook::where("id", $account->fb_id)->firstOrFail();
@@ -1416,9 +1461,9 @@ class  ScheduleController extends Controller
                             "social_type" => "facebook",
                             "type" => "link",
                             "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "url" => $url,
+                            "title" => $prepared['content'],
+                            "comment" => $prepared['comment'],
+                            "url" => $prepared['url'],
                             "image" => $image,
                             "status" => 0,
                             "publish_date" => $scheduleDateTime,
@@ -1440,7 +1485,7 @@ class  ScheduleController extends Controller
                         }
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
-                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $prepared['comment']);
                     }
                     if ($account->type == "pinterest") {
                         $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
@@ -1452,9 +1497,9 @@ class  ScheduleController extends Controller
                                 "social_type" => "pinterest",
                                 "type" => "link",
                                 "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "url" => $url,
+                                "title" => $prepared['content'],
+                                "comment" => $prepared['comment'],
+                                "url" => $prepared['url'],
                                 "image" => $image,
                                 "status" => 0,
                                 "publish_date" => $scheduleDateTime,
@@ -1498,9 +1543,9 @@ class  ScheduleController extends Controller
                                 "social_type" => "tiktok",
                                 "type" => "photo", // Changed from "link" to "photo"
                                 "source" => $this->source,
-                                "title" => $url, // Use content from modal textarea (title)
-                                "comment" => $comment,
-                                "url" => $url,
+                                "title" => $prepared['url'], // Use content from modal textarea (title)
+                                "comment" => $prepared['comment'],
+                                "url" => $prepared['url'],
                                 "image" => $localImage,
                                 "status" => 0,
                                 "publish_date" => $scheduleDateTime,
@@ -1528,7 +1573,7 @@ class  ScheduleController extends Controller
                 }
                 $response = array(
                     "success" => true,
-                    "message" => "Your posts are being Published!"
+                    "message" => "Your posts are scheduled for Later!"
                 );
             } else {
                 $response = array(

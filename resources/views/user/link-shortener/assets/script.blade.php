@@ -1,6 +1,101 @@
 <script>
     $(document).ready(function() {
         const storeUrl = "{{ route('panel.link-shortener.store') }}";
+        const urlShortenerStatusUrl = "{{ route('panel.link-shortener.account.urlShortenerStatus') }}";
+        const urlShortenerStatusBulkUrl = "{{ route('panel.link-shortener.account.urlShortenerStatusBulk') }}";
+
+        // Account URL shortener toggle (link-shortener page only)
+        $(document).on('click', '.link-shortener-accounts .account-card', function() {
+            var $card = $(this);
+            var type = $card.data('type');
+            var id = $card.data('id');
+            var isActive = $card.hasClass('active');
+            var status = isActive ? 0 : 1;
+
+            $.ajax({
+                url: urlShortenerStatusUrl,
+                type: 'GET',
+                data: { type: type, id: id, status: status },
+                success: function(response) {
+                    if (response.success) {
+                        $card.toggleClass('active');
+                        updateSelectAllCheckbox();
+                        toastr.success(response.message);
+                    } else {
+                        toastr.error(response.message || 'Something went wrong');
+                    }
+                },
+                error: function() {
+                    toastr.error('Something went wrong');
+                }
+            });
+        });
+
+        // Select All for URL shortener accounts - single bulk API call
+        $('#urlShortenerSelectAll').on('change', function() {
+            var checked = $(this).is(':checked');
+            var $cards = $('.link-shortener-accounts .account-card');
+            var accountsToUpdate = [];
+            $cards.each(function() {
+                var $card = $(this);
+                var isActive = $card.hasClass('active');
+                if (checked !== isActive) {
+                    accountsToUpdate.push({
+                        type: $card.data('type'),
+                        id: $card.data('id')
+                    });
+                }
+            });
+            if (accountsToUpdate.length > 0) {
+                $.ajax({
+                    url: urlShortenerStatusBulkUrl,
+                    type: 'POST',
+                    data: {
+                        accounts: accountsToUpdate,
+                        status: checked ? 1 : 0,
+                        _token: $('meta[name="csrf-token"]').attr('content')
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            $cards.each(function() {
+                                var $card = $(this);
+                                if (checked) {
+                                    $card.addClass('active');
+                                } else {
+                                    $card.removeClass('active');
+                                }
+                            });
+                            updateSelectAllCheckbox();
+                            toastr.success(response.message);
+                        } else {
+                            toastr.error(response.message || 'Something went wrong');
+                        }
+                    },
+                    error: function(xhr) {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Something went wrong';
+                        toastr.error(msg);
+                    }
+                });
+            } else {
+                updateSelectAllCheckbox();
+            }
+        });
+
+        function updateSelectAllCheckbox() {
+            var $selectAll = $('#urlShortenerSelectAll');
+            if (!$selectAll.length) return;
+            var $cards = $('.link-shortener-accounts .account-card');
+            var activeCount = $cards.filter('.active').length;
+            var total = $cards.length;
+            $selectAll.prop('checked', total > 0 && activeCount === total);
+            $selectAll.prop('indeterminate', activeCount > 0 && activeCount < total);
+        }
+
+        // Initialize select all state on page load
+        if ($('.link-shortener-accounts').length) {
+            updateSelectAllCheckbox();
+        }
         const updateUrlBase = "{{ route('panel.link-shortener.update', ['id' => 0]) }}";
         const destroyUrlBase = "{{ route('panel.link-shortener.destroy', ['id' => 0]) }}";
 

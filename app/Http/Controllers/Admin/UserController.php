@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Package;
+use App\Services\UsernameService;
 use App\Models\UserPackage;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -61,6 +62,7 @@ class UserController extends Controller
         $userData = [
             'first_name' => $request->first_name,
             'last_name' => $request->last_name,
+            'username' => UsernameService::generate($request->email),
             'email' => $request->email,
             'password' => $request->password,
         ];

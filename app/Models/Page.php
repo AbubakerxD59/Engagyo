@@ -20,6 +20,8 @@ class Page extends Model
         "status",
         "last_fetch",
         "shuffle",
+        "schedule_status",
+        "url_shortener_enabled",
         "rss_paused",
         "access_token",
         "expires_in",

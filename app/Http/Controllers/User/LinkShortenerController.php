@@ -3,8 +3,12 @@
 namespace App\Http\Controllers\User;
 
 use Exception;
+use App\Models\Page;
+use App\Models\Board;
+use App\Models\Tiktok;
 use App\Models\ShortLink;
 use App\Models\Feature;
+use App\Models\User;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -24,12 +28,107 @@ class LinkShortenerController extends Controller
      */
     public function index()
     {
-        $user = Auth::guard('user')->user();
+        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok')->find(Auth::guard('user')->id());
+        $accounts = $user->getAccounts();
         $shortLinks = ShortLink::where('user_id', $user->id)
             ->orderByDesc('created_at')
             ->get();
 
-        return view('user.link-shortener.index', compact('shortLinks'));
+        return view('user.link-shortener.index', compact('shortLinks', 'accounts'));
+    }
+
+    /**
+     * Toggle URL shortener enabled status for an account.
+     */
+    public function accountUrlShortenerStatus(Request $request)
+    {
+        $type = $request->type;
+        $id = $request->id;
+        $status = $request->status; // 1 = enabled, 0 = disabled
+
+        if ($type === 'facebook') {
+            $page = Page::where('id', $id)->where('user_id', Auth::guard('user')->id())->first();
+            if ($page) {
+                $page->url_shortener_enabled = (bool) $status;
+                $page->save();
+                return response()->json(['success' => true, 'message' => 'Status changed successfully!']);
+            }
+        }
+
+        if ($type === 'pinterest') {
+            $board = Board::where('id', $id)->where('user_id', Auth::guard('user')->id())->first();
+            if ($board) {
+                $board->url_shortener_enabled = (bool) $status;
+                $board->save();
+                return response()->json(['success' => true, 'message' => 'Status changed successfully!']);
+            }
+        }
+
+        if ($type === 'tiktok') {
+            $tiktok = Tiktok::where('id', $id)->where('user_id', Auth::guard('user')->id())->first();
+            if ($tiktok) {
+                $tiktok->url_shortener_enabled = (bool) $status;
+                $tiktok->save();
+                return response()->json(['success' => true, 'message' => 'Status changed successfully!']);
+            }
+        }
+
+        return response()->json(['success' => false, 'message' => 'Account not found.']);
+    }
+
+    /**
+     * Bulk update URL shortener status for multiple accounts in a single request.
+     * Expects: accounts = [{type: 'facebook', id: 1}, {type: 'pinterest', id: 2}, ...], status = 0 or 1
+     */
+    public function accountUrlShortenerStatusBulk(Request $request)
+    {
+        $request->validate([
+            'accounts' => 'required|array',
+            'accounts.*.type' => 'required|in:facebook,pinterest,tiktok',
+            'accounts.*.id' => 'required|integer',
+            'status' => 'required|in:0,1',
+        ]);
+
+        $accounts = $request->accounts;
+        $status = (bool) $request->status;
+        $userId = Auth::guard('user')->id();
+        $updated = 0;
+
+        foreach ($accounts as $item) {
+            $type = $item['type'];
+            $id = (int) $item['id'];
+
+            if ($type === 'facebook') {
+                $page = Page::where('id', $id)->where('user_id', $userId)->first();
+                if ($page) {
+                    $page->url_shortener_enabled = $status;
+                    $page->save();
+                    $updated++;
+                }
+            } elseif ($type === 'pinterest') {
+                $board = Board::where('id', $id)->where('user_id', $userId)->first();
+                if ($board) {
+                    $board->url_shortener_enabled = $status;
+                    $board->save();
+                    $updated++;
+                }
+            } elseif ($type === 'tiktok') {
+                $tiktok = Tiktok::where('id', $id)->where('user_id', $userId)->first();
+                if ($tiktok) {
+                    $tiktok->url_shortener_enabled = $status;
+                    $tiktok->save();
+                    $updated++;
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $status
+                ? 'URL shortener enabled for all selected accounts.'
+                : 'URL shortener disabled for all selected accounts.',
+            'updated' => $updated,
+        ]);
     }
 
     /**

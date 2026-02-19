@@ -7,7 +7,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Package;
 use App\Models\TeamMember;
-use Illuminate\Support\Str;
+use App\Services\UsernameService;
 use Illuminate\Http\Request;
 use App\Services\TeamMemberService;
 use App\Http\Controllers\Controller;
@@ -100,8 +100,11 @@ class AuthController extends Controller
     {
         try {
             $request->validated();
+            $username = UsernameService::generate($request->email);
             $user = $this->user->create([
-                "username" => Str::random(6),
+                "first_name" => $request->first_name,
+                "last_name" => $request->last_name,
+                "username" => $username,
                 "email" => $request->email,
                 "password" => $request->password,
                 "agreement" => $request->agreement,

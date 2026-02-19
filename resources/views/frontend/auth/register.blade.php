@@ -32,6 +32,16 @@
                                 <input type="hidden" name="invitation_token" value="{{ $invitationToken }}">
                             @endif
                             <div class="field">
+                                <label for="first_name">First Name</label>
+                                <input type="text" class="signup__input" id="first_name" name="first_name"
+                                    value="{{ old('first_name', optional($teamMember ?? null)->first_name ?? '') }}" placeholder="Enter your first name" required>
+                            </div>
+                            <div class="field">
+                                <label for="last_name">Last Name</label>
+                                <input type="text" class="signup__input" id="last_name" name="last_name"
+                                    value="{{ old('last_name', optional($teamMember ?? null)->last_name ?? '') }}" placeholder="Enter your last name" required>
+                            </div>
+                            <div class="field">
                                 <label for="email">Email</label>
                                 <input type="email" class="signup__input" id="email" name="email"
                                     value="{{ old('email', $invitationEmail ?? '') }}" placeholder="Enter your email address" autocomplete="off"

@@ -44,12 +44,12 @@
                     $profilePic =
                         !empty($rawProfilePic) && file_exists(public_path($rawProfilePic))
                             ? asset($rawProfilePic)
-                            : default_user_avatar($user->id, $user->full_name);
+                            : default_user_avatar($user->id, $user->username);
                 @endphp
                 <img src="{{ $profilePic }}" alt="User Image" class="user-nav-image rounded-circle" width="32px"
                     height="32px"
-                    onerror="this.onerror=null; this.src='{{ default_user_avatar($user->id, $user->full_name) }}';">
-                <span class="user-nav-name text-muted">{{ auth()->user()->full_name }}</span>
+                    onerror="this.onerror=null; this.src='{{ default_user_avatar($user->id, $user->username) }}';">
+                <span class="user-nav-name text-muted">{{ auth()->user()->username }}</span>
                 <i class="fas fa-chevron-down user-nav-arrow text-muted"></i>
             </a>
             <div class="dropdown-menu dropdown-menu-right user-dropdown-menu" aria-labelledby="userDropdown">
@@ -80,25 +80,25 @@
         z-index: 1060 !important;
         position: relative;
     } */
-    
+
     /* Ensure dropdown parent items have proper positioning context */
     .main-header .nav-item.dropdown {
         position: relative;
         z-index: 1061;
     }
-    
+
     /* Ensure notification dropdown appears above feature-limit-alert */
     .notifications-dropdown .dropdown-menu.notifications-menu,
     .notifications-dropdown .dropdown-menu {
         z-index: 1062 !important;
     }
-    
+
     /* Ensure user profile dropdown appears above feature-limit-alert */
     .user-dropdown-menu,
     .nav-item.dropdown .user-dropdown-menu {
         z-index: 1062 !important;
     }
-    
+
     /* Ensure all dropdown menus in navbar appear above feature-limit-alert */
     .main-header .dropdown-menu {
         z-index: 1062 !important;

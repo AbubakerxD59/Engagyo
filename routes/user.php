@@ -103,6 +103,8 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
     Route::controller(LinkShortenerController::class)->middleware(['feature:' . Feature::$features_list[7]])->group(function () {
         Route::get("link-shortener", "index")->name("link-shortener");
         Route::name("link-shortener.")->prefix("link-shortener/")->group(function () {
+            Route::get("account/url-shortener-status", "accountUrlShortenerStatus")->name("account.urlShortenerStatus");
+            Route::post("account/url-shortener-status-bulk", "accountUrlShortenerStatusBulk")->name("account.urlShortenerStatusBulk");
             Route::post("store", "store")->name("store");
             Route::post("update/{id}", "update")->name("update");
             Route::delete("destroy/{id}", "destroy")->name("destroy");

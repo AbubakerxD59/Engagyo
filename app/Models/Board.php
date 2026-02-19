@@ -20,7 +20,8 @@ class Board extends Model
         "last_fetch",
         "shuffle",
         "rss_paused",
-        "schedule_status"
+        "schedule_status",
+        "url_shortener_enabled",
     ];
 
     protected $casts = [

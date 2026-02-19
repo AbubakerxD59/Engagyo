@@ -24,6 +24,7 @@ class Tiktok extends Model
         "refresh_token",
         "refresh_token_expires_in",
         "schedule_status",
+        "url_shortener_enabled",
         "last_fetch",
         "shuffle",
         "rss_paused",
