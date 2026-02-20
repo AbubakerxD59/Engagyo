@@ -174,25 +174,25 @@ class FacebookService
             'persistent_data_handler' => new LaravelSessionPersistentDataHandler()
         ]);
         $this->helper = $this->facebook->getRedirectLoginHelper();
-        // $this->scopes = [
-        //     "business_management",
-        //     "email",
-        //     "pages_manage_engagement",
-        //     "pages_manage_metadata",
-        //     "pages_manage_posts",
-        //     "pages_read_engagement",
-        //     "pages_read_user_content",
-        //     "pages_show_list",
-        //     "public_profile",
-        //     "read_insights",
-        // ];
         $this->scopes = [
-            'pages_manage_posts',
-            'pages_show_list', 
-            'pages_read_engagement', 
-            'public_profile', 
-            'email'
+            "business_management",
+            "email",
+            "pages_manage_engagement",
+            "pages_manage_metadata",
+            "pages_manage_posts",
+            "pages_read_engagement",
+            "pages_read_user_content",
+            "pages_show_list",
+            "public_profile",
+            "read_insights",
         ];
+        // $this->scopes = [
+        //     'pages_manage_posts',
+        //     'pages_show_list', 
+        //     'pages_read_engagement', 
+        //     'public_profile', 
+        //     'email'
+        // ];
         $this->post = new Post();
         $this->logService = new SocialMediaLogService();
     }
