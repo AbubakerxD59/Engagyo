@@ -175,7 +175,7 @@ class FacebookService
         ]);
         $this->helper = $this->facebook->getRedirectLoginHelper();
         $this->scopes = [
-            "business_management",
+            // "business_management",
             "email",
             "pages_manage_engagement",
             "pages_manage_metadata",
