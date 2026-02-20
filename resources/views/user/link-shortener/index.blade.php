@@ -19,87 +19,27 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted mb-3">
-                            Enable URL shortener for accounts below. When enabled, links in your posts will be automatically
-                            shortened.
-                        </p>
-                        @if (count($accounts) > 0)
-                            <div class="mb-2">
-                                <label class="d-flex align-items-center mb-0">
-                                    <input type="checkbox" id="urlShortenerSelectAll" class="mr-2">
-                                    <span class="font-weight-medium">Select \All</span>
-                                </label>
-                            </div>
-                            <div class="accounts-container link-shortener-accounts">
-                                <div class="accounts-grid">
-                                    @foreach ($accounts as $account)
-                                        @if ($account->type == 'facebook')
-                                            <div class="account-card has-tooltip @if ($account->url_shortener_enabled ?? false) active @endif"
-                                                data-type="{{ $account->type }}" data-id="{{ $account->id }}"
-                                                data-tooltip="{{ $account->facebook?->username }}">
-                                                <div class="account-card-inner">
-                                                    <div class="account-avatar">
-                                                        <img src="{{ $account->profile_image }}"
-                                                            onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
-                                                        <span class="platform-badge facebook">
-                                                            <i class="fab fa-facebook-f"></i>
-                                                        </span>
-                                                    </div>
-                                                    <div class="account-details">
-                                                        <span
-                                                            class="account-name">{{ Str::limit($account->name, 18) }}</span>
-                                                        <span
-                                                            class="account-username">{{ Str::limit($account->facebook?->username ?? '', 15) }}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @elseif($account->type == 'pinterest')
-                                            <div class="account-card has-tooltip @if ($account->url_shortener_enabled ?? false) active @endif"
-                                                data-type="{{ $account->type }}" data-id="{{ $account->id }}"
-                                                data-tooltip="{{ $account->pinterest?->username ?? '' }}">
-                                                <div class="account-card-inner">
-                                                    <div class="account-avatar">
-                                                        <img src="{{ $account->pinterest?->profile_image ?? social_logo('pinterest') }}"
-                                                            onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
-                                                        <span class="platform-badge pinterest">
-                                                            <i class="fab fa-pinterest-p"></i>
-                                                        </span>
-                                                    </div>
-                                                    <div class="account-details">
-                                                        <span
-                                                            class="account-name">{{ Str::limit($account->name, 18) }}</span>
-                                                        <span
-                                                            class="account-username">{{ Str::limit($account->pinterest?->username ?? '', 15) }}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @elseif($account->type == 'tiktok')
-                                            <div class="account-card has-tooltip @if ($account->url_shortener_enabled ?? false) active @endif"
-                                                data-type="{{ $account->type }}" data-id="{{ $account->id }}"
-                                                data-tooltip="{{ $account->username ?? '' }}">
-                                                <div class="account-card-inner">
-                                                    <div class="account-avatar">
-                                                        <img src="{{ $account->profile_image }}"
-                                                            onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';">
-                                                        <span class="platform-badge tiktok">
-                                                            <i class="fab fa-tiktok"></i>
-                                                        </span>
-                                                    </div>
-                                                    <div class="account-details">
-                                                        <span
-                                                            class="account-name">{{ Str::limit($account->name, 18) }}</span>
-                                                        <span
-                                                            class="account-username">{{ Str::limit($account->username ?? '', 15) }}</span>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        @endif
-                                    @endforeach
-                                </div>
-                            </div>
-                        @else
-                            <p class="text-muted mb-0">No connected accounts. Connect accounts from the <a
-                                    href="{{ route('panel.accounts') }}">Accounts</a> page to enable auto-shortening.</p>
+                        <div class="form-group">
+                            <label for="urlShortenerPlatforms">Platforms</label>
+                            <select id="urlShortenerPlatforms" class="form-control select2" multiple
+                                data-placeholder="Select platforms (Facebook, Pinterest, TikTok)">
+                                <option value="facebook"
+                                    {{ in_array('facebook', $enabledPlatforms ?? []) ? 'selected' : '' }}>Facebook</option>
+                                <option value="pinterest"
+                                    {{ in_array('pinterest', $enabledPlatforms ?? []) ? 'selected' : '' }}>Pinterest
+                                </option>
+                                <option value="tiktok" {{ in_array('tiktok', $enabledPlatforms ?? []) ? 'selected' : '' }}>
+                                    TikTok</option>
+                            </select>
+                            <small class="form-text text-muted">
+                                All accounts connected to the selected platforms will have URL shortener enabled.
+                            </small>
+                        </div>
+                        @if (count($accounts) == 0)
+                            <p class="text-muted mb-0">
+                                <i class="fas fa-info-circle"></i> No connected accounts yet. Connect accounts from the
+                                <a href="{{ route('panel.accounts') }}">Accounts</a> page to use auto-shortening.
+                            </p>
                         @endif
                     </div>
                 </div>
@@ -121,10 +61,6 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <p class="text-muted mb-3">
-                            Create short links that redirect to your original URLs. Share the short link anywhere; when
-                            someone clicks it, they will be redirected to the original URL.
-                        </p>
                         @if ($shortLinks->count() > 0)
                             <div class="table-responsive">
                                 <table id="shortLinksTable" class="table table-hover">
@@ -150,8 +86,7 @@
                                                         <input type="text" class="form-control short-url-input"
                                                             value="{{ url('/s/' . $link->short_code) }}" readonly>
                                                         <div class="input-group-append">
-                                                            <button type="button"
-                                                                class="btn btn-outline-primary copy-btn"
+                                                            <button type="button" class="btn btn-outline-primary copy-btn"
                                                                 data-url="{{ url('/s/' . $link->short_code) }}"
                                                                 title="Copy short link">
                                                                 <i class="fas fa-copy"></i>

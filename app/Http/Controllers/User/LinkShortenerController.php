@@ -34,7 +34,52 @@ class LinkShortenerController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        return view('user.link-shortener.index', compact('shortLinks', 'accounts'));
+        // Platforms enabled for URL shortener: platform is selected if ALL its accounts have url_shortener_enabled
+        $enabledPlatforms = [];
+        if ($user->pages->isNotEmpty() && $user->pages->every(fn($p) => (bool) ($p->url_shortener_enabled ?? false))) {
+            $enabledPlatforms[] = 'facebook';
+        }
+        if ($user->boards->isNotEmpty() && $user->boards->every(fn($b) => (bool) ($b->url_shortener_enabled ?? false))) {
+            $enabledPlatforms[] = 'pinterest';
+        }
+        if ($user->tiktok->isNotEmpty() && $user->tiktok->every(fn($t) => (bool) ($t->url_shortener_enabled ?? false))) {
+            $enabledPlatforms[] = 'tiktok';
+        }
+
+        return view('user.link-shortener.index', compact('shortLinks', 'accounts', 'enabledPlatforms'));
+    }
+
+    /**
+     * Update URL shortener status by platform. Selected platforms have all their accounts enabled.
+     */
+    public function platformUrlShortenerStatus(Request $request)
+    {
+        $request->validate([
+            'platforms' => 'required|array',
+            'platforms.*' => 'in:facebook,pinterest,tiktok',
+        ]);
+
+        $platforms = $request->platforms;
+        $userId = Auth::guard('user')->id();
+        $updated = 0;
+
+        // Facebook pages
+        $count = Page::where('user_id', $userId)->update(['url_shortener_enabled' => in_array('facebook', $platforms)]);
+        $updated += $count;
+
+        // Pinterest boards
+        $count = Board::where('user_id', $userId)->update(['url_shortener_enabled' => in_array('pinterest', $platforms)]);
+        $updated += $count;
+
+        // TikTok accounts
+        $count = Tiktok::where('user_id', $userId)->update(['url_shortener_enabled' => in_array('tiktok', $platforms)]);
+        $updated += $count;
+
+        return response()->json([
+            'success' => true,
+            'message' => 'URL shortener settings updated for selected platforms.',
+            'updated' => $updated,
+        ]);
     }
 
     /**
