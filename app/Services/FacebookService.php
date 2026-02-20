@@ -203,7 +203,7 @@ class FacebookService
     public function getLoginUrl()
     {
         $config_id = ['config_id' => env("FACEBOOK_CONFIG_ID")];
-        $url = $this->helper->getLoginUrl(route("facebook.callback"), $this->scopes, $config_id);
+        $url = $this->helper->getLoginUrl(route("facebook.callback"), $this->scopes);
         return $url;
     }
 
