@@ -187,11 +187,14 @@ class FacebookService
         //     "read_insights",
         // ];
         $this->scopes = [
+            'email',
+            'public_profile',
+            'pages_manage_engagement',
+            'pages_manage_metadata',
             'pages_manage_posts',
-            'pages_show_list', 
-            'pages_read_engagement', 
-            'public_profile', 
-            'email'
+            'pages_read_engagement',
+            'pages_read_user_content',
+            'pages_show_list',
         ];
         $this->post = new Post();
         $this->logService = new SocialMediaLogService();
