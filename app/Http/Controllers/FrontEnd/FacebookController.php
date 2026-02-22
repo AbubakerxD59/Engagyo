@@ -33,7 +33,6 @@ class FacebookController extends Controller
 
     public function facebookCallback(Request $request)
     {
-        dd($request->all());
         $code = $request->code;
         if (!empty($code)) {
             $user = User::with("facebook")->findOrFail(Auth::guard('user')->id());
@@ -74,6 +73,7 @@ class FacebookController extends Controller
                 $this->logService->logAccountConnection('facebook', $facebookAccount->id, $me["name"], 'connected');
 
                 $pages = $this->facebookService->pages($access_token);
+                dd($pages, $access_token);
                 if ($pages["success"]) {
                     $items = $pages["data"];
                     $pages = [];
