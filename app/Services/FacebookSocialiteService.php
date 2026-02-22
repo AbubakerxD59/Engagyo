@@ -12,17 +12,15 @@ class FacebookSocialiteService
      * (public_profile, email, pages_show_list have no deps; others follow Facebook's dependency chain)
      */
     protected array $scopes = [
-        'public_profile',
-        'email',
-        'pages_show_list',
-        'pages_read_engagement',
-        'pages_read_user_content',
-        'pages_manage_metadata',
-        'read_insights',
         'pages_manage_posts',
         'pages_manage_engagement',
+        'pages_read_engagement',
+        'read_insights',
         'business_management',
     ];
+    // 'pages_show_list',
+    // 'pages_read_user_content',
+    // 'pages_manage_metadata',
 
     /**
      * Redirect the user to Facebook for authentication.
@@ -37,10 +35,8 @@ class FacebookSocialiteService
     public function redirect()
     {
         return Socialite::driver('facebook')
-            ->with([
-                'config_id' => config('services.facebook.config_id'),
-                'auth_type' => 'rerequest'
-            ])
+            ->scopes($this->scopes)
+            ->with(['auth_type' => 'rerequest'])
             ->redirectUrl(route('facebook.callback'))
             ->redirect();
     }
