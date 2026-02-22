@@ -37,8 +37,10 @@ class FacebookSocialiteService
     public function redirect()
     {
         return Socialite::driver('facebook')
-            ->scopes($this->scopes)
-            ->with(['auth_type' => 'rerequest'])
+            ->with([
+                'config_id' => config('services.facebook.config_id'),
+                'auth_type' => 'rerequest'
+            ])
             ->redirectUrl(route('facebook.callback'))
             ->redirect();
     }
