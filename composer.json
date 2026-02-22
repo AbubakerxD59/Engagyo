@@ -17,6 +17,7 @@
         "jstolpe/tiktok-api-php-sdk": "^1.0",
         "laravel/framework": "^10.0",
         "laravel/sanctum": "^3.2",
+        "laravel/socialite": "*",
         "laravel/tinker": "^2.8",
         "laravel/ui": "^4.5",
         "league/flysystem-aws-s3-v3": "^3.30",
