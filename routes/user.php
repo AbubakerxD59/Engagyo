@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Feature;
+use App\Services\FacebookSocialiteService;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\User\ApiKeysController;
@@ -46,6 +47,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
             Route::delete('board-delete/{id?}', 'boardDelete')->name("board.delete");
             // Facebook
             Route::get("facebook/{id?}", "facebook")->name("facebook");
+            Route::get("facebook-socialite", fn (FacebookSocialiteService $fb) => $fb->redirect())->name("facebook.socialite");
             Route::post("add-page", "addPage")->name("addPage");
             Route::delete('facebook-delete/{id?}', 'facebookDelete')->name('facebook.delete');
             Route::delete('page-delete/{id?}', 'pageDelete')->name("page.delete");
