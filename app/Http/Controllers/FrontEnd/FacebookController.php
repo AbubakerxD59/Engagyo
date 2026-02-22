@@ -33,6 +33,7 @@ class FacebookController extends Controller
 
     public function facebookCallback(Request $request)
     {
+        dd($request->all());
         $code = $request->code;
         if (!empty($code)) {
             $user = User::with("facebook")->findOrFail(Auth::guard('user')->id());
