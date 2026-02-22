@@ -55,7 +55,7 @@ class AccountsController extends Controller
     public function index()
     {
         $user = User::with("facebook", "pinterest", "tiktok")->findOrFail(Auth::guard('user')->id());
-        $facebookUrl = $this->facebookService->getLoginUrl();
+        $facebookUrl = route('panel.accounts.facebook.socialite');
         $pinterestUrl = $this->pinterestService->getLoginUrl();
         $tiktokUrl = $this->tiktokService->getLoginUrl();
         return view("user.accounts.index", compact("user", "facebookUrl", "pinterestUrl", "tiktokUrl"));
@@ -288,7 +288,7 @@ class AccountsController extends Controller
     public function facebook($id = null)
     {
         if (!empty($id)) {
-            $facebookUrl = $this->facebookService->getLoginUrl();
+            $facebookUrl = route('panel.accounts.facebook.socialite');
             $facebook = $this->facebook->search($id)->first();
             if ($facebook) {
                 return view('user.accounts.facebook', compact('facebookUrl', 'facebook'));
