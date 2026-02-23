@@ -701,7 +701,7 @@ class FacebookService
         // try {
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
-
+            dd($graphEdge);
             $totals = [
                 'page_fans' => null,
                 'page_impressions_unique' => 0,
