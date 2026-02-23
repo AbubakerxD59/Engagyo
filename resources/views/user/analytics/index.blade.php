@@ -95,48 +95,43 @@
                                                 </div>
                                             </div>
                                             <div class="row">
-                                                <div class="col-6 col-md-4 col-lg-2 mb-3">
-                                                    <div class="page-insight-card">
-                                                        <span
-                                                            class="page-insight-value">{{ is_numeric($pageInsights['followers'] ?? null) ? number_format($pageInsights['followers']) : 'N/A' }}</span>
-                                                        <span class="page-insight-label">Followers</span>
+                                                @php
+                                                    $metrics = [
+                                                        'followers' => ['label' => 'Followers', 'format' => 'number'],
+                                                        'reach' => ['label' => 'Reach', 'format' => 'number'],
+                                                        'video_views' => ['label' => 'Video Views', 'format' => 'number'],
+                                                        'engagements' => ['label' => 'Engagements (reactions, comments, shares)', 'format' => 'number'],
+                                                        'link_clicks' => ['label' => 'Link Clicks', 'format' => 'number'],
+                                                        'click_through_rate' => ['label' => 'Click Through Rate', 'format' => 'percent'],
+                                                    ];
+                                                @endphp
+                                                @foreach ($metrics as $key => $meta)
+                                                    @php
+                                                        $val = $pageInsights[$key] ?? null;
+                                                        $comp = $pageInsights['comparison'][$key] ?? null;
+                                                        $displayVal = $meta['format'] === 'percent'
+                                                            ? (is_numeric($val) ? $val . '%' : 'N/A')
+                                                            : (is_numeric($val) ? number_format($val) : 'N/A');
+                                                    @endphp
+                                                    <div class="col-6 col-md-4 col-lg-2 mb-3">
+                                                        <div class="page-insight-card">
+                                                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-1">
+                                                                <span class="page-insight-value">{{ $displayVal }}</span>
+                                                                @if ($comp && $comp['change'] !== null)
+                                                                    <span class="insight-comparison insight-comparison-{{ $comp['direction'] ?? 'neutral' }}">
+                                                                        @if (($comp['direction'] ?? null) === 'up')
+                                                                            <i class="fas fa-arrow-up"></i>
+                                                                        @elseif (($comp['direction'] ?? null) === 'down')
+                                                                            <i class="fas fa-arrow-down"></i>
+                                                                        @endif
+                                                                        {{ abs($comp['change']) }}%
+                                                                    </span>
+                                                                @endif
+                                                            </div>
+                                                            <span class="page-insight-label">{{ $meta['label'] }}</span>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <div class="col-6 col-md-4 col-lg-2 mb-3">
-                                                    <div class="page-insight-card">
-                                                        <span
-                                                            class="page-insight-value">{{ is_numeric($pageInsights['reach'] ?? null) ? number_format($pageInsights['reach']) : 'N/A' }}</span>
-                                                        <span class="page-insight-label">Reach</span>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6 col-md-4 col-lg-2 mb-3">
-                                                    <div class="page-insight-card">
-                                                        <span
-                                                            class="page-insight-value">{{ is_numeric($pageInsights['video_views'] ?? null) ? number_format($pageInsights['video_views']) : 'N/A' }}</span>
-                                                        <span class="page-insight-label">Video Views</span>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6 col-md-4 col-lg-2 mb-3">
-                                                    <div class="page-insight-card">
-                                                        <span
-                                                            class="page-insight-value">{{ is_numeric($pageInsights['engagements'] ?? null) ? number_format($pageInsights['engagements']) : 'N/A' }}</span>
-                                                        <span class="page-insight-label">Engagements (reactions, comments, shares)</span>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6 col-md-4 col-lg-2 mb-3">
-                                                    <div class="page-insight-card">
-                                                        <span
-                                                            class="page-insight-value">{{ is_numeric($pageInsights['link_clicks'] ?? null) ? number_format($pageInsights['link_clicks']) : 'N/A' }}</span>
-                                                        <span class="page-insight-label">Link Clicks</span>
-                                                    </div>
-                                                </div>
-                                                <div class="col-6 col-md-4 col-lg-2 mb-3">
-                                                    <div class="page-insight-card">
-                                                        <span
-                                                            class="page-insight-value">{{ is_numeric($pageInsights['click_through_rate'] ?? null) ? $pageInsights['click_through_rate'] . '%' : 'N/A' }}</span>
-                                                        <span class="page-insight-label">Click Through Rate</span>
-                                                    </div>
-                                                </div>
+                                                @endforeach
                                             </div>
                                         </div>
                                     @endif

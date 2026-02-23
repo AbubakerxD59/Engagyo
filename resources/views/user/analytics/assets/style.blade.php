@@ -95,6 +95,29 @@
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
     }
 
+    /* Insight comparison badges (increase/decrease) */
+    .insight-comparison {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 2px 6px;
+        border-radius: 4px;
+        white-space: nowrap;
+    }
+    .insight-comparison-up {
+        color: #28a745;
+        background: rgba(40, 167, 69, 0.12);
+    }
+    .insight-comparison-down {
+        color: #dc3545;
+        background: rgba(220, 53, 69, 0.12);
+    }
+    .insight-comparison-neutral {
+        color: #6c757d;
+    }
+    .page-insight-card .d-flex {
+        min-height: 1.5em;
+    }
+
     .analytics-page-card.active {
         border-color: #28a745;
         background: linear-gradient(135deg, #f0fff4 0%, #fff 100%);

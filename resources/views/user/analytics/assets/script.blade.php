@@ -34,34 +34,44 @@
                     '</div></div></div>';
             }
 
+            function renderComparisonBadge(comp) {
+                if (!comp || comp.change === null) return '';
+                var dir = comp.direction || 'neutral';
+                var arrow = dir === 'up' ? '<i class="fas fa-arrow-up"></i>' : (dir === 'down' ? '<i class="fas fa-arrow-down"></i>' : '');
+                return '<span class="insight-comparison insight-comparison-' + dir + '">' + arrow + ' ' + Math.abs(comp.change) + '%</span>';
+            }
+
+            function renderInsightCard(value, label, comp, isPercent) {
+                var displayVal = isPercent ? (value != null ? value + '%' : 'N/A') : formatMetric(value);
+                var badge = renderComparisonBadge(comp);
+                return '<div class="page-insight-card">' +
+                    '<div class="d-flex align-items-center justify-content-between flex-wrap gap-1">' +
+                    '<span class="page-insight-value">' + displayVal + '</span>' + badge + '</div>' +
+                    '<span class="page-insight-label">' + label + '</span></div>';
+            }
+
             function renderPageInsights(insights, pageName, duration, since, until) {
                 if (!insights) return '';
                 duration = duration || 'last_28';
                 since = since || '';
                 until = until || '';
-                return '<div class="analytics-page-insights mb-4">' +
-                    renderDurationDropdown(duration, since, until) +
-                    '<div class="row">' +
-                    '<div class="col-6 col-md-4 col-lg-2 mb-3"><div class="page-insight-card">' +
-                    '<span class="page-insight-value">' + formatMetric(insights.followers) + '</span>' +
-                    '<span class="page-insight-label">Followers</span></div></div>' +
-                    '<div class="col-6 col-md-4 col-lg-2 mb-3"><div class="page-insight-card">' +
-                    '<span class="page-insight-value">' + formatMetric(insights.reach) + '</span>' +
-                    '<span class="page-insight-label">Reach</span></div></div>' +
-                    '<div class="col-6 col-md-4 col-lg-2 mb-3"><div class="page-insight-card">' +
-                    '<span class="page-insight-value">' + formatMetric(insights.video_views) + '</span>' +
-                    '<span class="page-insight-label">Video Views</span></div></div>' +
-                    '<div class="col-6 col-md-4 col-lg-2 mb-3"><div class="page-insight-card">' +
-                    '<span class="page-insight-value">' + formatMetric(insights.engagements) + '</span>' +
-                    '<span class="page-insight-label">Engagements (reactions, comments, shares)</span></div></div>' +
-                    '<div class="col-6 col-md-4 col-lg-2 mb-3"><div class="page-insight-card">' +
-                    '<span class="page-insight-value">' + formatMetric(insights.link_clicks) + '</span>' +
-                    '<span class="page-insight-label">Link Clicks</span></div></div>' +
-                    '<div class="col-6 col-md-4 col-lg-2 mb-3"><div class="page-insight-card">' +
-                    '<span class="page-insight-value">' + (insights.click_through_rate != null ? insights
-                        .click_through_rate + '%' : 'N/A') + '</span>' +
-                    '<span class="page-insight-label">Click Through Rate</span></div></div>' +
-                    '</div></div>';
+                var comp = insights.comparison || {};
+                var cards = [
+                    ['followers', 'Followers', false],
+                    ['reach', 'Reach', false],
+                    ['video_views', 'Video Views', false],
+                    ['engagements', 'Engagements (reactions, comments, shares)', false],
+                    ['link_clicks', 'Link Clicks', false],
+                    ['click_through_rate', 'Click Through Rate', true]
+                ];
+                var html = '<div class="analytics-page-insights mb-4">' +
+                    renderDurationDropdown(duration, since, until) + '<div class="row">';
+                cards.forEach(function(c) {
+                    html += '<div class="col-6 col-md-4 col-lg-2 mb-3">' +
+                        renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]) + '</div>';
+                });
+                html += '</div></div>';
+                return html;
             }
 
             function renderEmptyState(hasPageSelected) {

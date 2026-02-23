@@ -123,7 +123,7 @@ class AnalyticsController extends Controller
         }
 
         $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
-        return $this->facebookService->getPageInsights($page->page_id, $accessToken, $since, $until);
+        return $this->facebookService->getPageInsightsWithComparison($page->page_id, $accessToken, $since, $until);
     }
 
 }

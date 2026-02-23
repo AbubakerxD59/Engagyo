@@ -758,6 +758,65 @@ class FacebookService
         return $result;
     }
 
+    /**
+     * Get page insights with comparison to previous period.
+     * Returns current metrics plus comparison data (percent change, direction) for each metric.
+     *
+     * @return array Current insights with 'comparison' key: { metric => { change: float, direction: 'up'|'down'|null } }
+     */
+    public function getPageInsightsWithComparison($pageId, $accessToken, ?string $since = null, ?string $until = null): array
+    {
+        $current = $this->getPageInsights($pageId, $accessToken, $since, $until);
+
+        $until = $until ?: date('Y-m-d');
+        $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
+
+        $sinceDt = \Carbon\Carbon::parse($since);
+        $untilDt = \Carbon\Carbon::parse($until);
+        $periodDays = $sinceDt->diffInDays($untilDt) + 1;
+
+        $prevUntilDt = $sinceDt->copy()->subDay();
+        $prevSinceDt = $prevUntilDt->copy()->subDays($periodDays - 1);
+        $prevSince = $prevSinceDt->format('Y-m-d');
+        $prevUntil = $prevUntilDt->format('Y-m-d');
+
+        $previous = $this->getPageInsights($pageId, $accessToken, $prevSince, $prevUntil);
+
+        $comparison = [];
+        $metrics = ['followers', 'reach', 'video_views', 'engagements', 'link_clicks', 'click_through_rate'];
+
+        foreach ($metrics as $metric) {
+            $curr = $current[$metric] ?? null;
+            $prev = $previous[$metric] ?? null;
+
+            $comparison[$metric] = ['change' => null, 'direction' => null];
+
+            if ($curr === null || $prev === null || !is_numeric($curr) || !is_numeric($prev)) {
+                continue;
+            }
+
+            $curr = (float) $curr;
+            $prev = (float) $prev;
+
+            if ($prev == 0) {
+                $comparison[$metric] = [
+                    'change' => $curr > 0 ? 100 : 0,
+                    'direction' => $curr > 0 ? 'up' : null,
+                ];
+                continue;
+            }
+
+            $change = round((($curr - $prev) / $prev) * 100, 1);
+            $comparison[$metric] = [
+                'change' => $change,
+                'direction' => $change > 0 ? 'up' : ($change < 0 ? 'down' : null),
+            ];
+        }
+
+        $current['comparison'] = $comparison;
+        return $current;
+    }
+
     public static function validateToken($account)
     {
         try {
