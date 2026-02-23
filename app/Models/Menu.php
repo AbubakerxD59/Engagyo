@@ -13,6 +13,7 @@ class Menu extends Model
     protected $fillable = [
         "name",
         "icon",
+        "route",
         "display_order"
     ];
     public function features(){

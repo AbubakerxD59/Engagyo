@@ -716,6 +716,38 @@ class Post extends Model
         return $message;
     }
 
+    /**
+     * Get the Facebook post permalink URL for viewing the post on Facebook.
+     * Post ID from API is typically {page_id}_{post_id}. Permalink format:
+     * https://www.facebook.com/permalink.php?story_fbid={post_id}&id={page_id}
+     *
+     * @return string|null
+     */
+    public function getFacebookPostUrlAttribute()
+    {
+        if ($this->social_type !== 'facebook' || empty($this->post_id)) {
+            return null;
+        }
+
+        $page = $this->page;
+        if (!$page || empty($page->page_id)) {
+            return null;
+        }
+
+        $postId = $this->post_id;
+        $pageId = $page->page_id;
+
+        if (str_contains($postId, '_')) {
+            $parts = explode('_', $postId);
+            $storyFbid = $parts[1] ?? $parts[0];
+            $pageId = $parts[0] ?? $pageId;
+        } else {
+            $storyFbid = $postId;
+        }
+
+        return 'https://www.facebook.com/permalink.php?story_fbid=' . urlencode($storyFbid) . '&id=' . urlencode($pageId);
+    }
+
     public function getAccountNameAttribute()
     {
         $social_type = $this->social_type;

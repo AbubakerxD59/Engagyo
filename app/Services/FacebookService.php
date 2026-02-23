@@ -602,6 +602,154 @@ class FacebookService
         return $response;
     }
 
+    /**
+     * Get post insights (impressions, reach, engaged users) from Facebook Graph API.
+     *
+     * @param string $postId Facebook post ID (e.g. {page_id}_{post_id})
+     * @param string $accessToken Page access token with read_insights permission
+     * @param array $metrics Metrics to fetch (default: post_impressions, post_impressions_unique, post_engaged_users)
+     * @return array Parsed metrics or empty array on error. Keys: impressions, reach, engaged_users
+     */
+    public function getPostInsights($postId, $accessToken, $metrics = ['post_impressions', 'post_impressions_unique', 'post_engaged_users'])
+    {
+        $result = [
+            'impressions' => 0,
+            'reach' => 0,
+            'engaged_users' => 0,
+        ];
+
+        if (empty($postId) || empty($accessToken)) {
+            return $result;
+        }
+
+        $metricParam = implode(',', $metrics);
+        $endpoint = '/' . $postId . '/insights?metric=' . urlencode($metricParam) . '&period=lifetime';
+
+        try {
+            $response = $this->facebook->get($endpoint, $accessToken);
+            $graphEdge = $response->getGraphEdge();
+
+            foreach ($graphEdge as $insightNode) {
+                $name = $insightNode->getField('name');
+                $values = $insightNode->getField('values');
+                $value = 0;
+                if (!empty($values) && is_array($values)) {
+                    $first = reset($values);
+                    $value = is_array($first) && isset($first['value']) ? (int) $first['value'] : 0;
+                } elseif ($values instanceof \Facebook\GraphNodes\GraphNode) {
+                    $value = (int) $values->getField('value') ?? 0;
+                }
+
+                if ($name === 'post_impressions') {
+                    $result['impressions'] = $value;
+                } elseif ($name === 'post_impressions_unique') {
+                    $result['reach'] = $value;
+                } elseif ($name === 'post_engaged_users') {
+                    $result['engaged_users'] = $value;
+                }
+            }
+        } catch (FacebookResponseException $e) {
+            // Insights may be unavailable for pages with < 100 likes, or token lacks read_insights
+            return $result;
+        } catch (FacebookSDKException $e) {
+            return $result;
+        }
+
+        return $result;
+    }
+
+    /**
+     * Get page-level insights (followers, reach, video views, engagements, link clicks, CTR).
+     * Some metrics may be deprecated by Meta - returns null for unavailable.
+     *
+     * @param string $pageId Facebook page ID (graph ID, not DB id)
+     * @param string $accessToken Page access token with read_insights permission
+     * @param string|null $since Start date Y-m-d (default: 28 days ago)
+     * @param string|null $until End date Y-m-d (default: today)
+     * @return array Keys: followers, reach, video_views, engagements, link_clicks, click_through_rate
+     */
+    public function getPageInsights($pageId, $accessToken, ?string $since = null, ?string $until = null)
+    {
+        $result = [
+            'followers' => null,
+            'reach' => null,
+            'video_views' => null,
+            'engagements' => null,
+            'link_clicks' => null,
+            'click_through_rate' => null,
+        ];
+
+        if (empty($pageId) || empty($accessToken)) {
+            return $result;
+        }
+
+        $until = $until ?: date('Y-m-d');
+        $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
+
+        $metrics = [
+            'page_fans',
+            'page_impressions_unique',
+            'page_video_views',
+            'page_engaged_users',
+            'page_cta_clicks_logged_in_total',
+        ];
+
+        $metricParam = implode(',', $metrics);
+        $endpoint = '/' . $pageId . '/insights?metric=' . urlencode($metricParam)
+            . '&period=day&since=' . $since . '&until=' . $until;
+
+        try {
+            $response = $this->facebook->get($endpoint, $accessToken);
+            $graphEdge = $response->getGraphEdge();
+
+            $totals = [
+                'page_fans' => null,
+                'page_impressions_unique' => 0,
+                'page_video_views' => 0,
+                'page_engaged_users' => 0,
+                'page_cta_clicks_logged_in_total' => 0,
+            ];
+
+            foreach ($graphEdge as $insightNode) {
+                $name = $insightNode->getField('name');
+                if (!array_key_exists($name, $totals)) {
+                    continue;
+                }
+
+                $values = $insightNode->getField('values');
+                if (empty($values)) {
+                    continue;
+                }
+
+                if ($name === 'page_fans') {
+                    $last = end($values);
+                    $totals['page_fans'] = is_array($last) && isset($last['value']) ? (int) $last['value'] : null;
+                } else {
+                    foreach ($values as $item) {
+                        $val = is_array($item) && isset($item['value']) ? (int) $item['value'] : 0;
+                        $totals[$name] += $val;
+                    }
+                }
+            }
+
+            $result['followers'] = $totals['page_fans'];
+            $result['reach'] = $totals['page_impressions_unique'] ?: null;
+            $result['video_views'] = $totals['page_video_views'] ?: null;
+            $result['engagements'] = $totals['page_engaged_users'] ?: null;
+            $result['link_clicks'] = $totals['page_cta_clicks_logged_in_total'] ?: null;
+
+            if ($result['reach'] !== null && $result['reach'] > 0 && $result['link_clicks'] !== null) {
+                $result['click_through_rate'] = round(($result['link_clicks'] / $result['reach']) * 100, 2);
+            }
+        } catch (FacebookResponseException $e) {
+            return $result;
+        } catch (FacebookSDKException $e) {
+            return $result;
+        }
+
+        return $result;
+    }
+
     public static function validateToken($account)
     {
         try {
