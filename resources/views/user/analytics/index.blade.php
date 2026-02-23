@@ -120,7 +120,7 @@
                                                     <div class="page-insight-card">
                                                         <span
                                                             class="page-insight-value">{{ is_numeric($pageInsights['engagements'] ?? null) ? number_format($pageInsights['engagements']) : 'N/A' }}</span>
-                                                        <span class="page-insight-label">Engagements</span>
+                                                        <span class="page-insight-label">Engagements (reactions, comments, shares)</span>
                                                     </div>
                                                 </div>
                                                 <div class="col-6 col-md-4 col-lg-2 mb-3">

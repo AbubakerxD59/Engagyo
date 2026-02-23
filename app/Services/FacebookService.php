@@ -686,12 +686,15 @@ class FacebookService
         $until = $until ?: date('Y-m-d');
         $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
+        // Non-deprecated metrics per https://developers.facebook.com/docs/platforminsights/page/deprecated-metrics
+        // page_follows (replaces page_fans), page_total_media_view_unique (replaces page_impressions_unique),
+        // page_post_engagements (reactions, comments, shares), page_total_actions (replaces page_cta_clicks)
         $metrics = [
-            'page_follows',  //alternate to page_fans
-            'page_impressions_unique',
+            'page_follows',
+            'page_total_media_view_unique',
             'page_video_views',
-            // 'page_engaged_users',
-            // 'page_cta_clicks_logged_in_total',
+            'page_post_engagements',
+            'page_total_actions',
         ];
 
         $metricParam = implode(',', $metrics);
@@ -704,10 +707,10 @@ class FacebookService
 
             $totals = [
                 'page_follows' => null,
-                'page_impressions_unique' => 0,
+                'page_total_media_view_unique' => 0,
                 'page_video_views' => 0,
-                // 'page_engaged_users' => 0,
-                // 'page_cta_clicks_logged_in_total' => 0,
+                'page_post_engagements' => 0,
+                'page_total_actions' => 0,
             ];
 
             foreach ($graphEdge as $insightNode) {
@@ -723,27 +726,27 @@ class FacebookService
 
                 if ($name === 'page_follows') {
                     $last = end($values);
-                    if (count($last) > 0) {
-                        $last = $last[0];
-                        $value = $last->getField('value');
-                        $totals['page_follows'] = $value ?? null;
+                    $val = is_array($last) && isset($last['value']) ? (int) $last['value'] : null;
+                    if ($val === null && is_object($last) && method_exists($last, 'getField')) {
+                        $val = $last->getField('value');
                     }
+                    $totals['page_follows'] = $val;
                 } else {
                     foreach ($values as $item) {
-                        $value = $item->getField('value');
-                        $val = $value ?? null;
+                        $val = is_array($item) && isset($item['value']) ? (int) $item['value'] : 0;
+                        if (!is_numeric($val) && is_object($item) && method_exists($item, 'getField')) {
+                            $val = (int) ($item->getField('value') ?? 0);
+                        }
                         $totals[$name] += $val;
                     }
                 }
             }
 
             $result['followers'] = $totals['page_follows'];
-            $result['reach'] = $totals['page_impressions_unique'] ?: null;
+            $result['reach'] = $totals['page_total_media_view_unique'] ?: null;
             $result['video_views'] = $totals['page_video_views'] ?: null;
-            $result['engagements'] =  null;
-            $result['link_clicks'] =  null;
-            // $result['engagements'] = $totals['page_engaged_users'] ?: null;
-            // $result['link_clicks'] = $totals['page_cta_clicks_logged_in_total'] ?: null;
+            $result['engagements'] = $totals['page_post_engagements'] ?: null;
+            $result['link_clicks'] = $totals['page_total_actions'] ?: null;
 
             if ($result['reach'] !== null && $result['reach'] > 0 && $result['link_clicks'] !== null) {
                 $result['click_through_rate'] = round(($result['link_clicks'] / $result['reach']) * 100, 2);

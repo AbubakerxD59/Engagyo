@@ -53,7 +53,7 @@
                     '<span class="page-insight-label">Video Views</span></div></div>' +
                     '<div class="col-6 col-md-4 col-lg-2 mb-3"><div class="page-insight-card">' +
                     '<span class="page-insight-value">' + formatMetric(insights.engagements) + '</span>' +
-                    '<span class="page-insight-label">Engagements</span></div></div>' +
+                    '<span class="page-insight-label">Engagements (reactions, comments, shares)</span></div></div>' +
                     '<div class="col-6 col-md-4 col-lg-2 mb-3"><div class="page-insight-card">' +
                     '<span class="page-insight-value">' + formatMetric(insights.link_clicks) + '</span>' +
                     '<span class="page-insight-label">Link Clicks</span></div></div>' +
