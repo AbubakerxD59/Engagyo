@@ -730,7 +730,7 @@ class FacebookService
                     }
                 } else {
                     foreach ($values as $item) {
-                        dd($items);
+                        dd($item);
                         $val = is_array($item) && isset($item['value']) ? (int) $item['value'] : 0;
                         $totals[$name] += $val;
                     }
