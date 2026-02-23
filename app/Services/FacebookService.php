@@ -697,7 +697,6 @@ class FacebookService
         $metricParam = implode(',', $metrics);
         $endpoint = '/' . $pageId . '/insights?metric=' . urlencode($metricParam)
             . '&period=day&since=' . $since . '&until=' . $until;
-        dd($endpoint);
 
         // try {
             $response = $this->facebook->get($endpoint, $accessToken);
