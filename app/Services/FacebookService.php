@@ -703,7 +703,7 @@ class FacebookService
             $graphEdge = $response->getGraphEdge();
 
             $totals = [
-                'page_fans' => null,
+                'page_follows' => null,
                 'page_impressions_unique' => 0,
                 'page_video_views' => 0,
                 // 'page_engaged_users' => 0,
@@ -712,7 +712,6 @@ class FacebookService
 
             foreach ($graphEdge as $insightNode) {
                 $name = $insightNode->getField('name');
-                dd($insightNode, $name);
                 if (!array_key_exists($name, $totals)) {
                     continue;
                 }
@@ -722,9 +721,9 @@ class FacebookService
                     continue;
                 }
 
-                if ($name === 'page_fans') {
+                if ($name === 'page_follows') {
                     $last = end($values);
-                    $totals['page_fans'] = is_array($last) && isset($last['value']) ? (int) $last['value'] : null;
+                    $totals['page_follows'] = is_array($last) && isset($last['value']) ? (int) $last['value'] : null;
                 } else {
                     foreach ($values as $item) {
                         $val = is_array($item) && isset($item['value']) ? (int) $item['value'] : 0;
@@ -732,8 +731,9 @@ class FacebookService
                     }
                 }
             }
+            dd($totals);
 
-            $result['followers'] = $totals['page_fans'];
+            $result['followers'] = $totals['page_follows'];
             $result['reach'] = $totals['page_impressions_unique'] ?: null;
             $result['video_views'] = $totals['page_video_views'] ?: null;
             $result['engagements'] =  null;
