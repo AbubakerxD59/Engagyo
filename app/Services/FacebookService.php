@@ -725,11 +725,12 @@ class FacebookService
                     $last = end($values);
                     if(count($last) > 0){
                         $last = $last[0];
-                        dd($last, $last->getField('value'));
-                        $totals['page_follows'] = isset($last['value']) ? (int) $last['value'] : null;
+                        $value = $last->getField('value');
+                        $totals['page_follows'] = $value ?? null;
                     }
                 } else {
                     foreach ($values as $item) {
+                        dd($items);
                         $val = is_array($item) && isset($item['value']) ? (int) $item['value'] : 0;
                         $totals[$name] += $val;
                     }
