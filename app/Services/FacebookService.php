@@ -688,10 +688,10 @@ class FacebookService
 
         $metrics = [
             'page_follows',  //alternate to page_fans
-            // 'page_impressions_unique',
-            // 'page_video_views',
-            // 'page_engaged_users',
-            // 'page_cta_clicks_logged_in_total',
+            'page_impressions_unique',
+            'page_video_views',
+            'page_engaged_users',
+            'page_cta_clicks_logged_in_total',
         ];
 
         $metricParam = implode(',', $metrics);
@@ -701,7 +701,6 @@ class FacebookService
         // try {
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
-            dd($graphEdge);
 
             $totals = [
                 'page_fans' => null,
