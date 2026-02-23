@@ -698,7 +698,7 @@ class FacebookService
         $endpoint = '/' . $pageId . '/insights?metric=' . urlencode($metricParam)
             . '&period=day&since=' . $since . '&until=' . $until;
 
-        try {
+        // try {
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
             dd($graphEdge);
@@ -742,11 +742,11 @@ class FacebookService
             if ($result['reach'] !== null && $result['reach'] > 0 && $result['link_clicks'] !== null) {
                 $result['click_through_rate'] = round(($result['link_clicks'] / $result['reach']) * 100, 2);
             }
-        } catch (FacebookResponseException $e) {
-            return $result;
-        } catch (FacebookSDKException $e) {
-            return $result;
-        }
+        // } catch (FacebookResponseException $e) {
+        //     return $result;
+        // } catch (FacebookSDKException $e) {
+        //     return $result;
+        // }
 
         return $result;
     }
