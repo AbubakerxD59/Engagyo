@@ -715,7 +715,6 @@ class FacebookService
 
             foreach ($graphEdge as $insightNode) {
                 $name = $insightNode->getField('name');
-                dd($name, $insightNode);
                 if (!array_key_exists($name, $totals)) {
                     continue;
                 }
@@ -727,17 +726,15 @@ class FacebookService
 
                 if ($name === 'page_follows') {
                     $last = end($values);
-                    $val = is_array($last) && isset($last['value']) ? (int) $last['value'] : null;
-                    if ($val === null && is_object($last) && method_exists($last, 'getField')) {
-                        $val = $last->getField('value');
+                    if (count($last) > 0) {
+                        $last = $last[0];
+                        $value = $last->getField('value');
+                        $totals['page_follows'] = $value ?? null;
                     }
-                    $totals['page_follows'] = $val;
                 } else {
                     foreach ($values as $item) {
-                        $val = is_array($item) && isset($item['value']) ? (int) $item['value'] : 0;
-                        if (!is_numeric($val) && is_object($item) && method_exists($item, 'getField')) {
-                            $val = (int) ($item->getField('value') ?? 0);
-                        }
+                        $value = $item->getField('value');
+                        $val = $value ?? null;
                         $totals[$name] += $val;
                     }
                 }
