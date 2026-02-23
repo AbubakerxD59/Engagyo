@@ -706,8 +706,8 @@ class FacebookService
                 'page_fans' => null,
                 'page_impressions_unique' => 0,
                 'page_video_views' => 0,
-                'page_engaged_users' => 0,
-                'page_cta_clicks_logged_in_total' => 0,
+                // 'page_engaged_users' => 0,
+                // 'page_cta_clicks_logged_in_total' => 0,
             ];
 
             foreach ($graphEdge as $insightNode) {
@@ -735,8 +735,10 @@ class FacebookService
             $result['followers'] = $totals['page_fans'];
             $result['reach'] = $totals['page_impressions_unique'] ?: null;
             $result['video_views'] = $totals['page_video_views'] ?: null;
-            $result['engagements'] = $totals['page_engaged_users'] ?: null;
-            $result['link_clicks'] = $totals['page_cta_clicks_logged_in_total'] ?: null;
+            $result['engagements'] =  null;
+            $result['link_clicks'] =  null;
+            // $result['engagements'] = $totals['page_engaged_users'] ?: null;
+            // $result['link_clicks'] = $totals['page_cta_clicks_logged_in_total'] ?: null;
 
             if ($result['reach'] !== null && $result['reach'] > 0 && $result['link_clicks'] !== null) {
                 $result['click_through_rate'] = round(($result['link_clicks'] / $result['reach']) * 100, 2);
