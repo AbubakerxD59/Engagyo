@@ -724,7 +724,7 @@ class FacebookService
                 if ($name === 'page_follows') {
                     $last = end($values);
                     // test
-                    dd($last, $last->items);
+                    dd($last);
                     // test
                     $totals['page_follows'] = is_array($last) && isset($last['value']) ? (int) $last['value'] : null;
                 } else {
