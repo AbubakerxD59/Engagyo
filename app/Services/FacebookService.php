@@ -687,7 +687,7 @@ class FacebookService
         $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
         $metrics = [
-            'page_fans',
+            'page_follows',  //alternate to page_fans
             // 'page_impressions_unique',
             // 'page_video_views',
             // 'page_engaged_users',
