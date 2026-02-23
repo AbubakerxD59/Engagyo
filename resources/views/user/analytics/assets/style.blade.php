@@ -104,6 +104,52 @@
         white-space: nowrap;
         cursor: help;
     }
+    .insight-comparison.has-tooltip {
+        position: relative;
+        overflow: visible;
+    }
+    .insight-comparison.has-tooltip::after {
+        content: attr(data-tooltip);
+        position: absolute;
+        bottom: calc(100% + 8px);
+        left: 50%;
+        transform: translateX(-50%) translateY(-5px);
+        padding: 6px 10px;
+        background: #333;
+        color: #fff;
+        font-size: 11px;
+        font-weight: 500;
+        white-space: nowrap;
+        border-radius: 6px;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+        z-index: 10000;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        visibility: hidden;
+        min-width: max-content;
+    }
+    .insight-comparison.has-tooltip::before {
+        content: '';
+        position: absolute;
+        bottom: calc(100% + 2px);
+        left: 50%;
+        transform: translateX(-50%);
+        border-width: 5px;
+        border-style: solid;
+        border-color: #333 transparent transparent transparent;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.3s ease, visibility 0.3s ease;
+        z-index: 10001;
+        visibility: hidden;
+    }
+    .insight-comparison.has-tooltip:hover::after,
+    .insight-comparison.has-tooltip:hover::before {
+        opacity: 1;
+        visibility: visible;
+        transform: translateX(-50%) translateY(0);
+    }
     .insight-comparison-up {
         color: #28a745;
         background: rgba(40, 167, 69, 0.12);

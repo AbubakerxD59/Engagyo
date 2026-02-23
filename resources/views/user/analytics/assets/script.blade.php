@@ -51,8 +51,8 @@
                 var diffFormatted = isPercent ? diff.toFixed(1) + '%' : diff.toLocaleString();
                 var tooltip = dir === 'up' ? 'Increased by ' + diffFormatted : (dir === 'down' ? 'Decreased by ' +
                     diffFormatted : '');
-                var titleAttr = tooltip ? ' title="' + tooltip.replace(/"/g, '&quot;') + '"' : '';
-                return '<span class="insight-comparison insight-comparison-' + dir + '"' + titleAttr + '>' + arrow +
+                var dataAttr = tooltip ? ' data-tooltip="' + tooltip.replace(/"/g, '&quot;') + '"' : '';
+                return '<span class="insight-comparison insight-comparison-' + dir + ' has-tooltip"' + dataAttr + '>' + arrow +
                     ' ' + Math.abs(comp.change) + '%</span>';
             }
 

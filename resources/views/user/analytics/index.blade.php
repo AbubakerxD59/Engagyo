@@ -174,8 +174,8 @@
                                                                                     : '');
                                                                     @endphp
                                                                     <span
-                                                                        class="insight-comparison insight-comparison-{{ $dir }}"
-                                                                        title="{{ $tooltip }}">
+                                                                        class="insight-comparison insight-comparison-{{ $dir }} has-tooltip"
+                                                                        data-tooltip="{{ $tooltip }}">
                                                                         @if ($dir === 'up')
                                                                             <i class="fas fa-arrow-up"></i>
                                                                         @elseif ($dir === 'down')
