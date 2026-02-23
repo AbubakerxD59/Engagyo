@@ -701,7 +701,7 @@ class FacebookService
         // try {
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
-            dd($graphEdge);
+
             $totals = [
                 'page_fans' => null,
                 'page_impressions_unique' => 0,
@@ -712,6 +712,7 @@ class FacebookService
 
             foreach ($graphEdge as $insightNode) {
                 $name = $insightNode->getField('name');
+                dd($insightNode, $name);
                 if (!array_key_exists($name, $totals)) {
                     continue;
                 }
