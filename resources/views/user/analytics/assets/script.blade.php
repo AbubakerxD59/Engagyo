@@ -5,9 +5,9 @@
             var analyticsUrl = $content.data('analytics-url');
             var hasPages = {{ $facebookPages->count() > 0 ? 'true' : 'false' }};
             var currentPageId = $('.analytics-page-card.active').data('page-id') || '';
-            var currentDuration = '{{ $duration ?? "last_28" }}';
-            var currentSince = '{{ $since ?? "" }}';
-            var currentUntil = '{{ $until ?? "" }}';
+            var currentDuration = '{{ $duration ?? 'last_28' }}';
+            var currentSince = '{{ $since ?? '' }}';
+            var currentUntil = '{{ $until ?? '' }}';
 
             function formatMetric(val) {
                 return (val !== null && val !== undefined && !isNaN(val)) ? parseInt(val).toLocaleString() : 'N/A';
@@ -19,17 +19,25 @@
                     '<h6 class="text-muted mb-0"><i class="fas fa-chart-pie mr-1"></i>Page Insights</h6>' +
                     '<div class="analytics-duration-controls d-flex align-items-center gap-2 flex-wrap">' +
                     '<select id="analyticsDuration" class="form-control form-control-sm" style="width: auto; min-width: 140px;">' +
-                    '<option value="last_7"' + (duration === 'last_7' ? ' selected' : '') + '>Last 7 days</option>' +
-                    '<option value="last_28"' + (duration === 'last_28' ? ' selected' : '') + '>Last 28 days</option>' +
-                    '<option value="last_90"' + (duration === 'last_90' ? ' selected' : '') + '>Last 90 days</option>' +
-                    '<option value="this_month"' + (duration === 'this_month' ? ' selected' : '') + '>This month</option>' +
-                    '<option value="this_year"' + (duration === 'this_year' ? ' selected' : '') + '>This year</option>' +
-                    '<option value="custom"' + (duration === 'custom' ? ' selected' : '') + '>Custom Range</option>' +
+                    '<option value="last_7"' + (duration === 'last_7' ? ' selected' : '') +
+                    '>Last 7 days</option>' +
+                    '<option value="last_28"' + (duration === 'last_28' ? ' selected' : '') +
+                    '>Last 28 days</option>' +
+                    '<option value="last_90"' + (duration === 'last_90' ? ' selected' : '') +
+                    '>Last 90 days</option>' +
+                    '<option value="this_month"' + (duration === 'this_month' ? ' selected' : '') +
+                    '>This month</option>' +
+                    '<option value="this_year"' + (duration === 'this_year' ? ' selected' : '') +
+                    '>This year</option>' +
+                    '<option value="custom"' + (duration === 'custom' ? ' selected' : '') +
+                    '>Custom Range</option>' +
                     '</select>' +
                     '<div id="analyticsCustomRange" class="d-flex align-items-center gap-2"' + customStyle + '>' +
-                    '<input type="date" id="analyticsSince" class="form-control form-control-sm" value="' + (since || '') + '" style="width: auto;">' +
+                    '<input type="date" id="analyticsSince" class="form-control form-control-sm" value="' + (
+                        since || '') + '" style="width: auto;">' +
                     '<span class="text-muted">to</span>' +
-                    '<input type="date" id="analyticsUntil" class="form-control form-control-sm" value="' + (until || '') + '" style="width: auto;">' +
+                    '<input type="date" id="analyticsUntil" class="form-control form-control-sm" value="' + (
+                        until || '') + '" style="width: auto;">' +
                     '<button type="button" id="analyticsApplyCustom" class="btn btn-sm btn-primary">Apply</button>' +
                     '</div></div></div>';
             }
@@ -37,12 +45,15 @@
             function renderComparisonBadge(comp, isPercent) {
                 if (!comp || comp.change === null) return '';
                 var dir = comp.direction || 'neutral';
-                var arrow = dir === 'up' ? '<i class="fas fa-arrow-up"></i>' : (dir === 'down' ? '<i class="fas fa-arrow-down"></i>' : '');
+                var arrow = dir === 'up' ? '<i class="fas fa-arrow-up"></i>' : (dir === 'down' ?
+                    '<i class="fas fa-arrow-down"></i>' : '');
                 var diff = comp.diff != null ? Math.abs(comp.diff) : 0;
                 var diffFormatted = isPercent ? diff.toFixed(1) + '%' : diff.toLocaleString();
-                var tooltip = dir === 'up' ? 'Increased by ' + diffFormatted : (dir === 'down' ? 'Decreased by ' + diffFormatted : '');
+                var tooltip = dir === 'up' ? 'Increased by ' + diffFormatted : (dir === 'down' ? 'Decreased by ' +
+                    diffFormatted : '');
                 var titleAttr = tooltip ? ' title="' + tooltip.replace(/"/g, '&quot;') + '"' : '';
-                return '<span class="insight-comparison insight-comparison-' + dir + '"' + titleAttr + '>' + arrow + ' ' + Math.abs(comp.change) + '%</span>';
+                return '<span class="insight-comparison insight-comparison-' + dir + '"' + titleAttr + '>' + arrow +
+                    ' ' + Math.abs(comp.change) + '%</span>';
             }
 
             function renderInsightCard(value, label, comp, isPercent) {
@@ -64,7 +75,7 @@
                     ['followers', 'Followers', false],
                     ['reach', 'Reach', false],
                     ['video_views', 'Video Views', false],
-                    ['engagements', 'Engagements (reactions, comments, shares)', false],
+                    ['engagements', 'Engagements', false],
                     ['link_clicks', 'Link Clicks', false],
                     ['click_through_rate', 'Click Through Rate', true]
                 ];
@@ -98,7 +109,9 @@
                 $content.html(
                     '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="mt-2 text-muted">Loading analytics...</p></div>'
                 );
-                var params = { page_id: currentPageId || '' };
+                var params = {
+                    page_id: currentPageId || ''
+                };
                 if (currentDuration) params.duration = currentDuration;
                 if (currentDuration === 'custom' && currentSince) {
                     params.duration = 'custom';
@@ -115,19 +128,25 @@
                         if (res.pageInsights && res.selectedPage) {
                             if (res.since) currentSince = res.since;
                             if (res.until) currentUntil = res.until;
-                            html += renderPageInsights(res.pageInsights, res.selectedPage.name, currentDuration, currentSince, currentUntil);
+                            html += renderPageInsights(res.pageInsights, res.selectedPage.name, currentDuration,
+                                currentSince, currentUntil);
                         } else {
                             html += renderEmptyState(!!currentPageId);
                         }
                         $content.html(html);
                         bindDurationHandlers();
                         if (typeof history !== 'undefined' && history.pushState) {
-                            var url = '{{ route('panel.analytics') }}' + (currentPageId ? '?page_id=' + currentPageId : '');
-                            if (currentDuration && currentDuration !== 'last_28') url += (url.indexOf('?') >= 0 ? '&' : '?') + 'duration=' + currentDuration;
+                            var url = '{{ route('panel.analytics') }}' + (currentPageId ? '?page_id=' +
+                                currentPageId : '');
+                            if (currentDuration && currentDuration !== 'last_28') url += (url.indexOf('?') >=
+                                0 ? '&' : '?') + 'duration=' + currentDuration;
                             if (currentDuration === 'custom' && currentSince) {
-                                url += (url.indexOf('?') >= 0 ? '&' : '?') + 'since=' + currentSince + '&until=' + (currentUntil || new Date().toISOString().split('T')[0]);
+                                url += (url.indexOf('?') >= 0 ? '&' : '?') + 'since=' + currentSince +
+                                    '&until=' + (currentUntil || new Date().toISOString().split('T')[0]);
                             }
-                            history.pushState({ pageId: currentPageId }, '', url);
+                            history.pushState({
+                                pageId: currentPageId
+                            }, '', url);
                         }
                     })
                     .fail(function() {
@@ -145,7 +164,8 @@
                     if (val === 'custom') {
                         $custom.show();
                         var today = new Date().toISOString().split('T')[0];
-                        $('#analyticsSince').val(currentSince || new Date(Date.now() - 28*24*60*60*1000).toISOString().split('T')[0]);
+                        $('#analyticsSince').val(currentSince || new Date(Date.now() - 28 * 24 * 60 * 60 *
+                            1000).toISOString().split('T')[0]);
                         $('#analyticsUntil').val(currentUntil || today);
                     } else {
                         $custom.hide();
