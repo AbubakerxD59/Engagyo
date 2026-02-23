@@ -102,6 +102,7 @@
         padding: 2px 6px;
         border-radius: 4px;
         white-space: nowrap;
+        cursor: help;
     }
     .insight-comparison-up {
         color: #28a745;

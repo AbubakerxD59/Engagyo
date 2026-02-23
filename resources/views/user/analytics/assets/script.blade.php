@@ -34,16 +34,20 @@
                     '</div></div></div>';
             }
 
-            function renderComparisonBadge(comp) {
+            function renderComparisonBadge(comp, isPercent) {
                 if (!comp || comp.change === null) return '';
                 var dir = comp.direction || 'neutral';
                 var arrow = dir === 'up' ? '<i class="fas fa-arrow-up"></i>' : (dir === 'down' ? '<i class="fas fa-arrow-down"></i>' : '');
-                return '<span class="insight-comparison insight-comparison-' + dir + '">' + arrow + ' ' + Math.abs(comp.change) + '%</span>';
+                var diff = comp.diff != null ? Math.abs(comp.diff) : 0;
+                var diffFormatted = isPercent ? diff.toFixed(1) + '%' : diff.toLocaleString();
+                var tooltip = dir === 'up' ? 'Increased by ' + diffFormatted : (dir === 'down' ? 'Decreased by ' + diffFormatted : '');
+                var titleAttr = tooltip ? ' title="' + tooltip.replace(/"/g, '&quot;') + '"' : '';
+                return '<span class="insight-comparison insight-comparison-' + dir + '"' + titleAttr + '>' + arrow + ' ' + Math.abs(comp.change) + '%</span>';
             }
 
             function renderInsightCard(value, label, comp, isPercent) {
                 var displayVal = isPercent ? (value != null ? value + '%' : 'N/A') : formatMetric(value);
-                var badge = renderComparisonBadge(comp);
+                var badge = renderComparisonBadge(comp, isPercent);
                 return '<div class="page-insight-card">' +
                     '<div class="d-flex align-items-center justify-content-between flex-wrap gap-1">' +
                     '<span class="page-insight-value">' + displayVal + '</span>' + badge + '</div>' +

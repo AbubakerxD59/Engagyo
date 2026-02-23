@@ -64,8 +64,7 @@
                                 </div>
                             </div>
                             <div class="card-body">
-                                <div id="analyticsContent"
-                                    data-analytics-url="{{ route('panel.analytics.data') }}">
+                                <div id="analyticsContent" data-analytics-url="{{ route('panel.analytics.data') }}">
                                     {{-- Page-level insights (when a page is selected) --}}
                                     @if ($pageInsights && $selectedPage)
                                         <div class="analytics-page-insights mb-4">
@@ -74,23 +73,45 @@
                                                     <i class="fas fa-chart-pie mr-1"></i>
                                                     Page Insights
                                                     @if (isset($selectedPage->name))
-                                                        <span class="font-weight-normal text-dark">— {{ $selectedPage->name }}</span>
+                                                        <span class="font-weight-normal text-dark">—
+                                                            {{ $selectedPage->name }}</span>
                                                     @endif
                                                 </h6>
-                                                <div class="analytics-duration-controls d-flex align-items-center gap-2 flex-wrap">
-                                                    <select id="analyticsDuration" class="form-control form-control-sm" style="width: auto; min-width: 140px;">
-                                                        <option value="last_7" {{ ($duration ?? 'last_28') == 'last_7' ? 'selected' : '' }}>Last 7 days</option>
-                                                        <option value="last_28" {{ ($duration ?? 'last_28') == 'last_28' ? 'selected' : '' }}>Last 28 days</option>
-                                                        <option value="last_90" {{ ($duration ?? '') == 'last_90' ? 'selected' : '' }}>Last 90 days</option>
-                                                        <option value="this_month" {{ ($duration ?? '') == 'this_month' ? 'selected' : '' }}>This month</option>
-                                                        <option value="this_year" {{ ($duration ?? '') == 'this_year' ? 'selected' : '' }}>This year</option>
-                                                        <option value="custom" {{ ($duration ?? '') == 'custom' ? 'selected' : '' }}>Custom Range</option>
+                                                <div
+                                                    class="analytics-duration-controls d-flex align-items-center gap-2 flex-wrap">
+                                                    <select id="analyticsDuration" class="form-control form-control-sm"
+                                                        style="width: auto; min-width: 140px;">
+                                                        <option value="last_7"
+                                                            {{ ($duration ?? 'last_28') == 'last_7' ? 'selected' : '' }}>
+                                                            Last 7 days</option>
+                                                        <option value="last_28"
+                                                            {{ ($duration ?? 'last_28') == 'last_28' ? 'selected' : '' }}>
+                                                            Last 28 days</option>
+                                                        <option value="last_90"
+                                                            {{ ($duration ?? '') == 'last_90' ? 'selected' : '' }}>Last 90
+                                                            days</option>
+                                                        <option value="this_month"
+                                                            {{ ($duration ?? '') == 'this_month' ? 'selected' : '' }}>This
+                                                            month</option>
+                                                        <option value="this_year"
+                                                            {{ ($duration ?? '') == 'this_year' ? 'selected' : '' }}>This
+                                                            year</option>
+                                                        <option value="custom"
+                                                            {{ ($duration ?? '') == 'custom' ? 'selected' : '' }}>Custom
+                                                            Range</option>
                                                     </select>
-                                                    <div id="analyticsCustomRange" class="d-flex align-items-center gap-2" @if(($duration ?? '') !== 'custom') style="display: none !important;" @endif>
-                                                        <input type="date" id="analyticsSince" class="form-control form-control-sm" value="{{ $since ?? '' }}" style="width: auto;">
+                                                    <div id="analyticsCustomRange" class="d-flex align-items-center gap-2"
+                                                        @if (($duration ?? '') !== 'custom') style="display: none !important;" @endif>
+                                                        <input type="date" id="analyticsSince"
+                                                            class="form-control form-control-sm"
+                                                            value="{{ $since ?? '' }}" style="width: auto;">
                                                         <span class="text-muted">to</span>
-                                                        <input type="date" id="analyticsUntil" class="form-control form-control-sm" value="{{ $until ?? now()->format('Y-m-d') }}" placeholder="Today" style="width: auto;">
-                                                        <button type="button" id="analyticsApplyCustom" class="btn btn-sm btn-primary">Apply</button>
+                                                        <input type="date" id="analyticsUntil"
+                                                            class="form-control form-control-sm"
+                                                            value="{{ $until ?? now()->format('Y-m-d') }}"
+                                                            placeholder="Today" style="width: auto;">
+                                                        <button type="button" id="analyticsApplyCustom"
+                                                            class="btn btn-sm btn-primary">Apply</button>
                                                     </div>
                                                 </div>
                                             </div>
@@ -99,29 +120,65 @@
                                                     $metrics = [
                                                         'followers' => ['label' => 'Followers', 'format' => 'number'],
                                                         'reach' => ['label' => 'Reach', 'format' => 'number'],
-                                                        'video_views' => ['label' => 'Video Views', 'format' => 'number'],
-                                                        'engagements' => ['label' => 'Engagements (reactions, comments, shares)', 'format' => 'number'],
-                                                        'link_clicks' => ['label' => 'Link Clicks', 'format' => 'number'],
-                                                        'click_through_rate' => ['label' => 'Click Through Rate', 'format' => 'percent'],
+                                                        'video_views' => [
+                                                            'label' => 'Video Views',
+                                                            'format' => 'number',
+                                                        ],
+                                                        'engagements' => [
+                                                            'label' => 'Engagements',
+                                                            'format' => 'number',
+                                                        ],
+                                                        'link_clicks' => [
+                                                            'label' => 'Link Clicks',
+                                                            'format' => 'number',
+                                                        ],
+                                                        'click_through_rate' => [
+                                                            'label' => 'Click Through Rate',
+                                                            'format' => 'percent',
+                                                        ],
                                                     ];
                                                 @endphp
                                                 @foreach ($metrics as $key => $meta)
                                                     @php
                                                         $val = $pageInsights[$key] ?? null;
                                                         $comp = $pageInsights['comparison'][$key] ?? null;
-                                                        $displayVal = $meta['format'] === 'percent'
-                                                            ? (is_numeric($val) ? $val . '%' : 'N/A')
-                                                            : (is_numeric($val) ? number_format($val) : 'N/A');
+                                                        $displayVal =
+                                                            $meta['format'] === 'percent'
+                                                                ? (is_numeric($val)
+                                                                    ? $val . '%'
+                                                                    : 'N/A')
+                                                                : (is_numeric($val)
+                                                                    ? number_format($val)
+                                                                    : 'N/A');
                                                     @endphp
                                                     <div class="col-6 col-md-4 col-lg-2 mb-3">
                                                         <div class="page-insight-card">
-                                                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-1">
+                                                            <div
+                                                                class="d-flex align-items-center justify-content-between flex-wrap gap-1">
                                                                 <span class="page-insight-value">{{ $displayVal }}</span>
                                                                 @if ($comp && $comp['change'] !== null)
-                                                                    <span class="insight-comparison insight-comparison-{{ $comp['direction'] ?? 'neutral' }}">
-                                                                        @if (($comp['direction'] ?? null) === 'up')
+                                                                    @php
+                                                                        $diff =
+                                                                            $comp['diff'] ??
+                                                                            ($pageInsights[$key] ?? 0) - 0;
+                                                                        $dir = $comp['direction'] ?? 'neutral';
+                                                                        $diffFormatted =
+                                                                            $meta['format'] === 'percent'
+                                                                                ? number_format(abs($diff), 1) . '%'
+                                                                                : number_format(abs($diff));
+                                                                        $tooltip =
+                                                                            $dir === 'up'
+                                                                                ? 'Increased by ' . $diffFormatted
+                                                                                : ($dir === 'down'
+                                                                                    ? 'Decreased by ' . $diffFormatted
+                                                                                    : '');
+                                                                    @endphp
+                                                                    <span
+                                                                        class="insight-comparison insight-comparison-{{ $dir }}"
+                                                                        title="{{ $tooltip }}">
+                                                                        @if ($dir === 'up')
                                                                             <i class="fas fa-arrow-up"></i>
-                                                                        @elseif (($comp['direction'] ?? null) === 'down')
+                                                                        @elseif ($dir === 'down')
                                                                             <i class="fas fa-arrow-down"></i>
                                                                         @endif
                                                                         {{ abs($comp['change']) }}%
@@ -141,7 +198,8 @@
                                             <div class="empty-state-icon mb-3">
                                                 <i class="fas fa-chart-pie fa-4x text-muted"></i>
                                             </div>
-                                            <h4>{{ $facebookPages->count() > 0 ? 'Select a Page' : 'No Facebook Pages Connected' }}</h4>
+                                            <h4>{{ $facebookPages->count() > 0 ? 'Select a Page' : 'No Facebook Pages Connected' }}
+                                            </h4>
                                             <p class="text-muted">
                                                 @if ($facebookPages->count() > 0)
                                                     Select a Facebook page from the sidebar to view page insights.

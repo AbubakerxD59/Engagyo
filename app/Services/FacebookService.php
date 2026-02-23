@@ -798,10 +798,13 @@ class FacebookService
             $curr = (float) $curr;
             $prev = (float) $prev;
 
+            $diff = $curr - $prev;
+
             if ($prev == 0) {
                 $comparison[$metric] = [
                     'change' => $curr > 0 ? 100 : 0,
                     'direction' => $curr > 0 ? 'up' : null,
+                    'diff' => $curr > 0 ? $diff : 0,
                 ];
                 continue;
             }
@@ -810,6 +813,7 @@ class FacebookService
             $comparison[$metric] = [
                 'change' => $change,
                 'direction' => $change > 0 ? 'up' : ($change < 0 ? 'down' : null),
+                'diff' => $diff,
             ];
         }
 
