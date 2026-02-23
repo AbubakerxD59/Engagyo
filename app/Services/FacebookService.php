@@ -704,7 +704,7 @@ class FacebookService
         try {
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
-dd($graphEdge);
+
             $totals = [
                 'page_follows' => null,
                 'page_total_media_view_unique' => 0,
@@ -715,6 +715,7 @@ dd($graphEdge);
 
             foreach ($graphEdge as $insightNode) {
                 $name = $insightNode->getField('name');
+                dd($name, $insightNode);
                 if (!array_key_exists($name, $totals)) {
                     continue;
                 }
