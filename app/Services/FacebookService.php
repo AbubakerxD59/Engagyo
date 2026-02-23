@@ -730,8 +730,8 @@ class FacebookService
                     }
                 } else {
                     foreach ($values as $item) {
-                        dd($item);
-                        $val = is_array($item) && isset($item['value']) ? (int) $item['value'] : 0;
+                        $value = $item->getField('value');
+                        $val = $value ?? null;
                         $totals[$name] += $val;
                     }
                 }
