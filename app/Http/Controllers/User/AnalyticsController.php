@@ -65,11 +65,12 @@ class AnalyticsController extends Controller
         $pageId = $request->query('page_id');
         $selectedPage = null;
         $pageInsights = null;
+        $refresh = (bool) $request->query('refresh', false);
 
         if ($pageId && $facebookPages->contains('id', (int) $pageId)) {
             $selectedPage = Page::find($pageId);
             if ($selectedPage) {
-                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until);
+                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until, $refresh);
             }
         }
 
@@ -86,6 +87,7 @@ class AnalyticsController extends Controller
         $facebookPages = $accounts->where('type', 'facebook')->values();
 
         [$since, $until] = $this->resolveDateRange($request);
+        $refresh = (bool) $request->query('refresh', false);
 
         $pageId = $request->query('page_id');
         $selectedPage = null;
@@ -94,7 +96,7 @@ class AnalyticsController extends Controller
         if ($pageId && $facebookPages->contains('id', (int) $pageId)) {
             $selectedPage = Page::find($pageId);
             if ($selectedPage) {
-                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until);
+                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until, $refresh);
             }
         }
 
@@ -110,11 +112,25 @@ class AnalyticsController extends Controller
 
     /**
      * Fetch page-level insights (followers, reach, video views, engagements, link clicks, CTR).
+     * Caches in session for 1 day unless $refresh is true.
      */
-    private function fetchPageInsights(?Page $page, ?string $since = null, ?string $until = null): ?array
+    private function fetchPageInsights(?Page $page, ?string $since = null, ?string $until = null, bool $refresh = false): ?array
     {
         if (!$page || empty($page->page_id) || empty($page->access_token)) {
             return null;
+        }
+
+        $duration = request()->query('duration', 'last_28');
+        $cacheKey = 'analytics_insights_' . $page->id . '_' . $duration . '_' . ($since ?? '') . '_' . ($until ?? '');
+
+        if (!$refresh) {
+            $cached = session($cacheKey);
+            if ($cached && is_array($cached)) {
+                $cachedAt = $cached['cached_at'] ?? 0;
+                if ($cachedAt && (time() - $cachedAt) < 86400) { // 1 day
+                    return $cached['insights'] ?? null;
+                }
+            }
         }
 
         $tokenCheck = FacebookService::validateToken($page);
@@ -123,7 +139,16 @@ class AnalyticsController extends Controller
         }
 
         $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
-        return $this->facebookService->getPageInsightsWithComparison($page->page_id, $accessToken, $since, $until);
+        $insights = $this->facebookService->getPageInsightsWithComparison($page->page_id, $accessToken, $since, $until);
+
+        session([$cacheKey => [
+            'insights' => $insights,
+            'since' => $since,
+            'until' => $until,
+            'cached_at' => time(),
+        ]]);
+
+        return $insights;
     }
 
 }

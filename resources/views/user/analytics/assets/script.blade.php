@@ -39,7 +39,9 @@
                     '<input type="date" id="analyticsUntil" class="form-control form-control-sm" value="' + (
                         until || '') + '" style="width: auto;">' +
                     '<button type="button" id="analyticsApplyCustom" class="btn btn-sm btn-primary">Apply</button>' +
-                    '</div></div></div>';
+                    '</div>' +
+                    '<button type="button" id="analyticsRefresh" class="btn btn-sm btn-outline-secondary" title="Refresh insights"><i class="fas fa-sync-alt"></i></button>' +
+                    '</div></div>';
             }
 
             function renderComparisonBadge(comp, isPercent) {
@@ -100,7 +102,7 @@
                     '<a href="{{ route('panel.accounts') }}" class="btn btn-primary mt-2"><i class="fas fa-user-circle mr-2"></i> Go to Accounts</a></div>';
             }
 
-            function loadAnalytics(pageId, duration, since, until) {
+            function loadAnalytics(pageId, duration, since, until, refresh) {
                 currentPageId = pageId || currentPageId;
                 currentDuration = duration || currentDuration;
                 currentSince = since || currentSince;
@@ -118,6 +120,7 @@
                     params.since = currentSince;
                     params.until = currentUntil || new Date().toISOString().split('T')[0];
                 }
+                if (refresh) params.refresh = 1;
                 $.get(analyticsUrl, params)
                     .done(function(res) {
                         if (!res.success) {
@@ -180,6 +183,9 @@
                         return;
                     }
                     loadAnalytics(currentPageId, 'custom', since, until);
+                });
+                $(document).on('click', '#analyticsRefresh', function() {
+                    loadAnalytics(currentPageId, currentDuration, currentSince, currentUntil, true);
                 });
             }
 

@@ -113,6 +113,10 @@
                                                         <button type="button" id="analyticsApplyCustom"
                                                             class="btn btn-sm btn-primary">Apply</button>
                                                     </div>
+                                                    <button type="button" id="analyticsRefresh" class="btn btn-sm btn-outline-secondary"
+                                                        title="Refresh insights">
+                                                        <i class="fas fa-sync-alt"></i>
+                                                    </button>
                                                 </div>
                                             </div>
                                             <div class="row">
