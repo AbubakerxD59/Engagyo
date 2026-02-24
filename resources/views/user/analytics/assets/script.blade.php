@@ -8,6 +8,7 @@
             var currentDuration = '{{ $duration ?? 'last_28' }}';
             var currentSince = '{{ $since ?? '' }}';
             var currentUntil = '{{ $until ?? '' }}';
+            var isLoadingAnalytics = false;
 
             function formatMetric(val) {
                 return (val !== null && val !== undefined && !isNaN(val)) ? parseInt(val).toLocaleString() : 'N/A';
@@ -122,6 +123,9 @@
                 }
                 if (refresh) params.refresh = 1;
                 $.get(analyticsUrl, params)
+                    .always(function() {
+                        isLoadingAnalytics = false;
+                    })
                     .done(function(res) {
                         if (!res.success) {
                             $content.html(renderEmptyState(!!currentPageId));
@@ -161,6 +165,7 @@
             function bindDurationHandlers() {
                 $(document).off('change', '#analyticsDuration');
                 $(document).off('click', '#analyticsApplyCustom');
+                $(document).off('click', '#analyticsRefresh');
                 $(document).on('change', '#analyticsDuration', function() {
                     var val = $(this).val();
                     var $custom = $('#analyticsCustomRange');
