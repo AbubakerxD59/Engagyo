@@ -666,7 +666,7 @@ class FacebookService
      * @param string $accessToken Page access token with read_insights permission
      * @param string|null $since Start date Y-m-d (default: 28 days ago)
      * @param string|null $until End date Y-m-d (default: today)
-     * @return array Keys: followers, reach, video_views, engagements, link_clicks (page_total_actions), click_through_rate
+     * @return array Keys: followers, reach, video_views, engagements, link_clicks (post_clicks_by_type), click_through_rate
      */
     public function getPageInsights($pageId, $accessToken, ?string $since = null, ?string $until = null)
     {
@@ -692,7 +692,7 @@ class FacebookService
             'page_total_media_view_unique',
             'page_video_views',
             'page_post_engagements',
-            'page_total_actions',
+            'post_clicks_by_type',
         ];
 
         $metricParam = implode(',', $metrics);
@@ -708,7 +708,7 @@ class FacebookService
                 'page_total_media_view_unique' => 0,
                 'page_video_views' => 0,
                 'page_post_engagements' => 0,
-                'page_total_actions' => 0,
+                'post_clicks_by_type' => 0,
             ];
 
             foreach ($graphEdge as $insightNode) {
@@ -729,6 +729,12 @@ class FacebookService
                         $value = $last->getField('value');
                         $totals['page_follows'] = $value ?? null;
                     }
+                } elseif ($name === 'post_clicks_by_type') {
+                    foreach ($values as $item) {
+                        dd($values, $item);
+                        $value = $item->getField('value');
+                        $totals['post_clicks_by_type'] += $this->sumClicksByType($value);
+                    }
                 } else {
                     foreach ($values as $item) {
                         $value = $item->getField('value');
@@ -742,7 +748,7 @@ class FacebookService
             $result['reach'] = $totals['page_total_media_view_unique'] ?: null;
             $result['video_views'] = $totals['page_video_views'] ?: null;
             $result['engagements'] = $totals['page_post_engagements'] ?: null;
-            $result['link_clicks'] = $totals['page_total_actions'] ?: null;
+            $result['link_clicks'] = $totals['post_clicks_by_type'] ?: null;
 
             if ($result['reach'] !== null && $result['reach'] > 0 && $result['link_clicks'] !== null) {
                 $result['click_through_rate'] = round(($result['link_clicks'] / $result['reach']) * 100, 2);
@@ -754,6 +760,35 @@ class FacebookService
         }
 
         return $result;
+    }
+
+    /**
+     * Sum numeric values from post_clicks_by_type response.
+     * Value can be a number or an object with breakdown by consumption type.
+     */
+    private function sumClicksByType(mixed $value): int
+    {
+        if ($value === null) {
+            return 0;
+        }
+        if (is_numeric($value)) {
+            return (int) $value;
+        }
+        if (is_array($value)) {
+            $sum = 0;
+            foreach ($value as $v) {
+                $sum += is_numeric($v) ? (int) $v : 0;
+            }
+            return $sum;
+        }
+        if (is_object($value)) {
+            $sum = 0;
+            foreach ((array) $value as $v) {
+                $sum += is_numeric($v) ? (int) $v : 0;
+            }
+            return $sum;
+        }
+        return 0;
     }
 
     /**
