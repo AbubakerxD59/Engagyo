@@ -148,4 +148,39 @@ class AnalyticsController extends Controller
         return $insights;
     }
 
+    /**
+     * Test page insights - displays formatted data and raw API response.
+     * Route: GET panel/analytics/test?page_id={id}
+     */
+    public function testPageInsights(Request $request)
+    {
+        $accounts = auth()->user()->getAccounts();
+        $facebookPages = $accounts->where('type', 'facebook')->values();
+
+        [$since, $until] = $this->resolveDateRange($request);
+        $refresh = (bool) $request->query('refresh', false);
+        $pageId = $request->query('page_id');
+
+        $selectedPage = null;
+        $pageInsights = null;
+        $apiResponse = null;
+
+        if ($pageId && $facebookPages->contains('id', (int) $pageId)) {
+            $selectedPage = Page::find($pageId);
+            if ($selectedPage) {
+                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until, $refresh);
+                $apiResponse = [
+                    'success' => true,
+                    'pageInsights' => $pageInsights,
+                    'selectedPage' => $selectedPage ? ['id' => $selectedPage->id, 'name' => $selectedPage->name] : null,
+                    'since' => $since,
+                    'until' => $until,
+                ];
+            }
+        } elseif ($pageId) {
+            $apiResponse = ['success' => false, 'error' => 'Page not found or not owned by user.'];
+        }
+
+        return view('user.analytics.test', compact('facebookPages', 'pageId', 'selectedPage', 'pageInsights', 'apiResponse', 'since', 'until'));
+    }
 }

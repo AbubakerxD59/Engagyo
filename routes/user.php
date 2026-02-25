@@ -39,6 +39,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
     // Analytics Routes - requires social_accounts feature
     Route::get("analytics", [AnalyticsController::class, "index"])->name("analytics")->middleware(['feature:' . Feature::$features_list[0]]);
     Route::get("analytics/data", [AnalyticsController::class, "data"])->name("analytics.data")->middleware(['feature:' . Feature::$features_list[0]]);
+    Route::get("analytics/test", [AnalyticsController::class, "testPageInsights"])->name("analytics.test")->middleware(['feature:' . Feature::$features_list[0]]);
 
     // Accounts Routes - Protected by feature middleware
     Route::controller(AccountsController::class)->middleware(['feature:' . Feature::$features_list[0]])->group(function () {

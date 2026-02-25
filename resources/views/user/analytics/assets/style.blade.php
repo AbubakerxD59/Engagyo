@@ -7,7 +7,7 @@
     }
 
     .analytics-sidebar {
-        width: 280px;
+        width: 250px;
         flex-shrink: 0;
     }
 
@@ -16,7 +16,7 @@
         border: 1px solid #dee2e6;
         border-radius: 8px;
         overflow: hidden;
-        height: 420px;
+        height: 520px;
         display: flex;
         flex-direction: column;
     }
@@ -104,10 +104,12 @@
         white-space: nowrap;
         cursor: help;
     }
+
     .insight-comparison.has-tooltip {
         position: relative;
         overflow: visible;
     }
+
     .insight-comparison.has-tooltip::after {
         content: attr(data-tooltip);
         position: absolute;
@@ -129,6 +131,7 @@
         visibility: hidden;
         min-width: max-content;
     }
+
     .insight-comparison.has-tooltip::before {
         content: '';
         position: absolute;
@@ -144,23 +147,28 @@
         z-index: 10001;
         visibility: hidden;
     }
+
     .insight-comparison.has-tooltip:hover::after,
     .insight-comparison.has-tooltip:hover::before {
         opacity: 1;
         visibility: visible;
         transform: translateX(-50%) translateY(0);
     }
+
     .insight-comparison-up {
         color: #28a745;
         background: rgba(40, 167, 69, 0.12);
     }
+
     .insight-comparison-down {
         color: #dc3545;
         background: rgba(220, 53, 69, 0.12);
     }
+
     .insight-comparison-neutral {
         color: #6c757d;
     }
+
     .page-insight-card .d-flex {
         min-height: 1.5em;
     }
