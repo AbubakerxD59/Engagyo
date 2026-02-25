@@ -687,12 +687,12 @@ class FacebookService
         $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
         // Metrics per https://developers.facebook.com/docs/graph-api/reference/v25.0/insights
+        // post_clicks_by_type requires period=lifetime, fetched separately
         $metrics = [
             'page_follows',
             'page_total_media_view_unique',
             'page_video_views',
             'page_post_engagements',
-            'post_clicks_by_type',
         ];
 
         $metricParam = implode(',', $metrics);
@@ -702,13 +702,12 @@ class FacebookService
         try {
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
-            dd($graphEdge);
+
             $totals = [
                 'page_follows' => null,
                 'page_total_media_view_unique' => 0,
                 'page_video_views' => 0,
                 'page_post_engagements' => 0,
-                'post_clicks_by_type' => 0,
             ];
 
             foreach ($graphEdge as $insightNode) {
@@ -729,11 +728,6 @@ class FacebookService
                         $value = $last->getField('value');
                         $totals['page_follows'] = $value ?? null;
                     }
-                } elseif ($name === 'post_clicks_by_type') {
-                    foreach ($values as $item) {
-                        $value = $item->getField('value');
-                        $totals['post_clicks_by_type'] += $this->sumClicksByType($value);
-                    }
                 } else {
                     foreach ($values as $item) {
                         $value = $item->getField('value');
@@ -743,11 +737,14 @@ class FacebookService
                 }
             }
 
+            // post_clicks_by_type requires period=lifetime - fetch in separate request
+            $postClicks = $this->fetchPostClicksByType($pageId, $accessToken, $since, $until);
+
             $result['followers'] = $totals['page_follows'];
             $result['reach'] = $totals['page_total_media_view_unique'] ?: null;
             $result['video_views'] = $totals['page_video_views'] ?: null;
             $result['engagements'] = $totals['page_post_engagements'] ?: null;
-            $result['link_clicks'] = $totals['post_clicks_by_type'] ?: null;
+            $result['link_clicks'] = $postClicks;
 
             if ($result['reach'] !== null && $result['reach'] > 0 && $result['link_clicks'] !== null) {
                 $result['click_through_rate'] = round(($result['link_clicks'] / $result['reach']) * 100, 2);
@@ -759,6 +756,39 @@ class FacebookService
         }
 
         return $result;
+    }
+
+    /**
+     * Fetch post_clicks_by_type with period=lifetime (required by Meta API).
+     */
+    private function fetchPostClicksByType(string $pageId, string $accessToken, string $since, string $until): ?int
+    {
+        try {
+            $endpoint = '/' . $pageId . '/insights?metric=post_clicks_by_type'
+                . '&period=lifetime&since=' . $since . '&until=' . $until;
+            $response = $this->facebook->get($endpoint, $accessToken);
+            $graphEdge = $response->getGraphEdge();
+
+            $total = 0;
+            foreach ($graphEdge as $insightNode) {
+                if ($insightNode->getField('name') !== 'post_clicks_by_type') {
+                    continue;
+                }
+                $values = $insightNode->getField('values');
+                if (empty($values)) {
+                    continue;
+                }
+                foreach ($values as $item) {
+                    $value = $item->getField('value');
+                    $total += $this->sumClicksByType($value);
+                }
+            }
+            return $total > 0 ? $total : null;
+        } catch (FacebookResponseException $e) {
+            return null;
+        } catch (FacebookSDKException $e) {
+            return null;
+        }
     }
 
     /**
