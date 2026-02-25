@@ -71,6 +71,8 @@
 
             function hasMeaningfulInsights(insights) {
                 if (!insights) return false;
+                var followers = insights.followers;
+                if (followers == null || isNaN(followers) || followers < 0) return false;
                 var keys = ['followers', 'reach', 'video_views', 'engagements', 'link_clicks', 'click_through_rate'];
                 for (var i = 0; i < keys.length; i++) {
                     var v = insights[keys[i]];
@@ -79,17 +81,10 @@
                 return false;
             }
 
-            function renderPageInsights(insights, pageName, duration, since, until, pageFollowerCount) {
+            function renderPageInsights(insights, pageName, duration, since, until) {
                 duration = duration || 'last_28';
                 since = since || '';
                 until = until || '';
-                var showInsightsSection = pageFollowerCount == null || pageFollowerCount >= 100;
-                if (!showInsightsSection) {
-                    return '<div class="alert alert-warning mb-0" role="alert">' +
-                        '<i class="fas fa-exclamation-triangle mr-2"></i>' +
-                        "Insights can't be fetched for this page. Page Insights data is only available on Pages with 100 or more likes." +
-                        '</div>';
-                }
                 var html = '<div class="analytics-page-insights mb-4">' + renderDurationDropdown(duration, since, until);
                 if (!hasMeaningfulInsights(insights)) {
                     html += '<div class="alert alert-warning mb-0" role="alert">' +
@@ -162,7 +157,7 @@
                             if (res.since) currentSince = res.since;
                             if (res.until) currentUntil = res.until;
                             html += renderPageInsights(res.pageInsights, res.selectedPage.name, currentDuration,
-                                currentSince, currentUntil, res.pageFollowerCount);
+                                currentSince, currentUntil);
                         } else {
                             html += renderEmptyState(!!currentPageId);
                         }
@@ -222,6 +217,7 @@
 
             $('.analytics-page-card').on('click', function() {
                 var pageId = $(this).data('page-id');
+                if (String(pageId) === String(currentPageId)) return;
                 $('.analytics-page-card').removeClass('active');
                 $(this).addClass('active');
                 loadAnalytics(pageId, currentDuration, currentSince, currentUntil);

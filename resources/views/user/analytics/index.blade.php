@@ -68,8 +68,9 @@
                                     {{-- Page-level insights (when a page is selected) --}}
                                     @if ($selectedPage)
                                         @php
-                                            $showInsightsSection = ($pageFollowerCount ?? 100) >= 100;
-                                            $hasInsights = $pageInsights && (
+                                            $followers = $pageInsights['followers'] ?? null;
+                                            $followersValid = $followers !== null && is_numeric($followers) && $followers >= 0;
+                                            $hasInsights = $pageInsights && $followersValid && (
                                                 is_numeric($pageInsights['followers'] ?? null) ||
                                                 is_numeric($pageInsights['reach'] ?? null) ||
                                                 is_numeric($pageInsights['video_views'] ?? null) ||
@@ -78,12 +79,6 @@
                                                 is_numeric($pageInsights['click_through_rate'] ?? null)
                                             );
                                         @endphp
-                                        @if (!$showInsightsSection)
-                                            <div class="alert alert-warning mb-0" role="alert">
-                                                <i class="fas fa-exclamation-triangle mr-2"></i>
-                                                Insights can't be fetched for this page. Page Insights data is only available on Pages with 100 or more likes.
-                                            </div>
-                                        @else
                                         <div class="analytics-page-insights mb-4">
                                             <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
                                                 <h6 class="text-muted mb-0">
@@ -198,7 +193,6 @@
                                                 </div>
                                             @endif
                                         </div>
-                                        @endif
                                     @endif
 
                                     @if (!$selectedPage)
