@@ -23,8 +23,7 @@
                                 </div>
                                 <div class="analytics-sidebar-cards">
                                     @foreach ($facebookPages as $page)
-                                        <div class="analytics-page-card"
-                                            data-page-id="{{ $page->id }}"
+                                        <div class="analytics-page-card" data-page-id="{{ $page->id }}"
                                             data-search="{{ strtolower($page->name . ' ' . ($page->facebook?->username ?? '')) }}"
                                             role="button" tabindex="0">
                                             <div class="analytics-page-card-inner">
@@ -69,15 +68,17 @@
                                     @if (false)
                                         @php
                                             $followers = $pageInsights['followers'] ?? null;
-                                            $followersValid = $followers !== null && is_numeric($followers) && $followers >= 100;
-                                            $hasInsights = $pageInsights && $followersValid && (
-                                                is_numeric($pageInsights['followers'] ?? null) ||
-                                                is_numeric($pageInsights['reach'] ?? null) ||
-                                                is_numeric($pageInsights['video_views'] ?? null) ||
-                                                is_numeric($pageInsights['engagements'] ?? null) ||
-                                                is_numeric($pageInsights['link_clicks'] ?? null) ||
-                                                is_numeric($pageInsights['click_through_rate'] ?? null)
-                                            );
+                                            $followersValid =
+                                                $followers !== null && is_numeric($followers) && $followers >= 100;
+                                            $hasInsights =
+                                                $pageInsights &&
+                                                $followersValid &&
+                                                (is_numeric($pageInsights['followers'] ?? null) ||
+                                                    is_numeric($pageInsights['reach'] ?? null) ||
+                                                    is_numeric($pageInsights['video_views'] ?? null) ||
+                                                    is_numeric($pageInsights['engagements'] ?? null) ||
+                                                    is_numeric($pageInsights['link_clicks'] ?? null) ||
+                                                    is_numeric($pageInsights['click_through_rate'] ?? null));
                                         @endphp
                                         <div class="analytics-page-insights mb-4">
                                             <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
@@ -125,8 +126,8 @@
                                                         <button type="button" id="analyticsApplyCustom"
                                                             class="btn btn-sm btn-primary">Apply</button>
                                                     </div>
-                                                    <button type="button" id="analyticsRefresh" class="btn btn-sm btn-outline-secondary"
-                                                        title="Refresh insights">
+                                                    <button type="button" id="analyticsRefresh"
+                                                        class="btn btn-sm btn-outline-secondary" title="Refresh insights">
                                                         <i class="fas fa-sync-alt"></i>
                                                     </button>
                                                 </div>
@@ -139,12 +140,27 @@
                                                 <div class="row">
                                                     @php
                                                         $metrics = [
-                                                            'followers' => ['label' => 'Followers', 'format' => 'number'],
+                                                            'followers' => [
+                                                                'label' => 'Followers',
+                                                                'format' => 'number',
+                                                            ],
                                                             'reach' => ['label' => 'Reach', 'format' => 'number'],
-                                                            'video_views' => ['label' => 'Video Views', 'format' => 'number'],
-                                                            'engagements' => ['label' => 'Engagements', 'format' => 'number'],
-                                                            'link_clicks' => ['label' => 'Link Clicks', 'format' => 'number'],
-                                                            'click_through_rate' => ['label' => 'Click Through Rate', 'format' => 'percent'],
+                                                            'video_views' => [
+                                                                'label' => 'Video Views',
+                                                                'format' => 'number',
+                                                            ],
+                                                            'engagements' => [
+                                                                'label' => 'Engagements',
+                                                                'format' => 'number',
+                                                            ],
+                                                            'link_clicks' => [
+                                                                'label' => 'Link Clicks',
+                                                                'format' => 'number',
+                                                            ],
+                                                            'click_through_rate' => [
+                                                                'label' => 'Click Through Rate',
+                                                                'format' => 'percent',
+                                                            ],
                                                         ];
                                                     @endphp
                                                     @foreach ($metrics as $key => $meta)
@@ -153,25 +169,40 @@
                                                             $comp = $pageInsights['comparison'][$key] ?? null;
                                                             $displayVal =
                                                                 $meta['format'] === 'percent'
-                                                                    ? (is_numeric($val) ? $val . '%' : 'N/A')
-                                                                    : (is_numeric($val) ? number_format($val) : 'N/A');
+                                                                    ? (is_numeric($val)
+                                                                        ? $val . '%'
+                                                                        : 'N/A')
+                                                                    : (is_numeric($val)
+                                                                        ? number_format($val)
+                                                                        : 'N/A');
                                                         @endphp
                                                         <div class="col-6 col-md-4 col-lg-2 mb-3">
                                                             <div class="page-insight-card">
-                                                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-1">
-                                                                    <span class="page-insight-value">{{ $displayVal }}</span>
+                                                                <div
+                                                                    class="d-flex align-items-center justify-content-between flex-wrap gap-1">
+                                                                    <span
+                                                                        class="page-insight-value">{{ $displayVal }}</span>
                                                                     @if ($comp && $comp['change'] !== null)
                                                                         @php
-                                                                            $diff = $comp['diff'] ?? ($pageInsights[$key] ?? 0) - 0;
+                                                                            $diff =
+                                                                                $comp['diff'] ??
+                                                                                ($pageInsights[$key] ?? 0) - 0;
                                                                             $dir = $comp['direction'] ?? 'neutral';
-                                                                            $diffFormatted = $meta['format'] === 'percent'
-                                                                                ? number_format(abs($diff), 1) . '%'
-                                                                                : number_format(abs($diff));
-                                                                            $tooltip = $dir === 'up'
-                                                                                ? 'Increased by ' . $diffFormatted
-                                                                                : ($dir === 'down' ? 'Decreased by ' . $diffFormatted : '');
+                                                                            $diffFormatted =
+                                                                                $meta['format'] === 'percent'
+                                                                                    ? number_format(abs($diff), 1) . '%'
+                                                                                    : number_format(abs($diff));
+                                                                            $tooltip =
+                                                                                $dir === 'up'
+                                                                                    ? 'Increased by ' . $diffFormatted
+                                                                                    : ($dir === 'down'
+                                                                                        ? 'Decreased by ' .
+                                                                                            $diffFormatted
+                                                                                        : '');
                                                                         @endphp
-                                                                        <span class="insight-comparison insight-comparison-{{ $dir }} has-tooltip" data-tooltip="{{ $tooltip }}">
+                                                                        <span
+                                                                            class="insight-comparison insight-comparison-{{ $dir }} has-tooltip"
+                                                                            data-tooltip="{{ $tooltip }}">
                                                                             @if ($dir === 'up')
                                                                                 <i class="fas fa-arrow-up"></i>
                                                                             @elseif ($dir === 'down')
@@ -181,7 +212,8 @@
                                                                         </span>
                                                                     @endif
                                                                 </div>
-                                                                <span class="page-insight-label">{{ $meta['label'] }}</span>
+                                                                <span
+                                                                    class="page-insight-label">{{ $meta['label'] }}</span>
                                                             </div>
                                                         </div>
                                                     @endforeach
@@ -189,7 +221,8 @@
                                             @else
                                                 <div class="alert alert-warning mb-0" role="alert">
                                                     <i class="fas fa-exclamation-triangle mr-2"></i>
-                                                    Insights can't be fetched for this page. Page Insights data is only available on Pages with 100 or more likes.
+                                                    Insights can't be fetched for this page. Page Insights data is only
+                                                    available on Pages with 100 or more likes.
                                                 </div>
                                             @endif
                                         </div>
@@ -209,9 +242,6 @@
                                                     Connect your Facebook account to see page insights here.
                                                 @endif
                                             </p>
-                                            <a href="{{ route('panel.accounts') }}" class="btn btn-primary mt-2">
-                                                <i class="fas fa-user-circle mr-2"></i> Go to Accounts
-                                            </a>
                                         </div>
                                     @endif
                                 </div>
