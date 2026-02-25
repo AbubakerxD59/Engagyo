@@ -73,8 +73,8 @@ class Facebook extends Model
         return $expires_in > $now ? true : false;
     }
 
-    protected static function booted()
-    {
-        static::addGlobalScope(new TeamScope);
-    }
+    // protected static function booted()
+    // {
+    //     static::addGlobalScope(new TeamScope);
+    // }
 }
