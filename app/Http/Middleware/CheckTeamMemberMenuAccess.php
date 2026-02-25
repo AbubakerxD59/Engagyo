@@ -24,8 +24,8 @@ class CheckTeamMemberMenuAccess
             return redirect()->route('frontend.showLogin');
         }
 
-        // If user is not a team member, allow access (team leads have full access)
-        if ($user->isTeamLead()) {
+        // If user has no team membership, they are the account owner (team leader) — allow full access
+        if (!$user->isTeamMember()) {
             return $next($request);
         }
 
@@ -37,13 +37,8 @@ class CheckTeamMemberMenuAccess
             return $next($request);
         }
 
-        // Get team member's active membership
+        // Get team member's active membership (already confirmed above)
         $teamMember = $user->activeTeamMembership();
-
-        if (!$teamMember) {
-            // If no active membership, deny access
-            abort(403, 'You do not have an active team membership.');
-        }
 
         // Load team member menus
         $teamMember->load('menus');
