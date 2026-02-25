@@ -702,7 +702,7 @@ class FacebookService
         try {
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
-
+            dd($graphEdge);
             $totals = [
                 'page_follows' => null,
                 'page_total_media_view_unique' => 0,
@@ -731,7 +731,6 @@ class FacebookService
                     }
                 } elseif ($name === 'post_clicks_by_type') {
                     foreach ($values as $item) {
-                        dd($values, $item);
                         $value = $item->getField('value');
                         $totals['post_clicks_by_type'] += $this->sumClicksByType($value);
                     }
