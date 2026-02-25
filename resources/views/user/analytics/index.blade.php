@@ -23,7 +23,7 @@
                                 </div>
                                 <div class="analytics-sidebar-cards">
                                     @foreach ($facebookPages as $page)
-                                        <div class="analytics-page-card {{ isset($pageId) && $pageId == $page->id ? 'active' : '' }}"
+                                        <div class="analytics-page-card"
                                             data-page-id="{{ $page->id }}"
                                             data-search="{{ strtolower($page->name . ' ' . ($page->facebook?->username ?? '')) }}"
                                             role="button" tabindex="0">
@@ -65,8 +65,8 @@
                             </div>
                             <div class="card-body">
                                 <div id="analyticsContent" data-analytics-url="{{ route('panel.analytics.data') }}">
-                                    {{-- Page-level insights (when a page is selected) --}}
-                                    @if ($selectedPage)
+                                    {{-- Page-level insights (loaded via AJAX when a page is selected) --}}
+                                    @if (false)
                                         @php
                                             $followers = $pageInsights['followers'] ?? null;
                                             $followersValid = $followers !== null && is_numeric($followers) && $followers >= 100;

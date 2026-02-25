@@ -53,30 +53,20 @@ class AnalyticsController extends Controller
 
     /**
      * Display page-level analytics (insights).
-     * Optional ?page_id=X filters by that Facebook page.
-     * When a page is selected, fetches page-level insights (followers, reach, etc.).
+     * Analytics data is loaded via AJAX when a page is selected.
      */
     public function index(Request $request)
     {
         $accounts = auth()->user()->getAccounts();
         $facebookPages = $accounts->where('type', 'facebook')->values();
 
-        [$since, $until] = $this->resolveDateRange($request);
+        $today = Carbon::today();
+        $since = $today->copy()->subDays(28)->format('Y-m-d');
+        $until = $today->format('Y-m-d');
+        $duration = 'last_28';
 
-        $pageId = $request->query('page_id');
         $selectedPage = null;
-        $pageInsights = null;
-        $refresh = (bool) $request->query('refresh', false);
-
-        if ($pageId && $facebookPages->contains('id', (int) $pageId)) {
-            $selectedPage = Page::find($pageId);
-            if ($selectedPage) {
-                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until, $refresh);
-            }
-        }
-
-        $duration = $request->query('duration', 'last_28');
-        return view('user.analytics.index', compact('facebookPages', 'pageId', 'pageInsights', 'selectedPage', 'since', 'until', 'duration'));
+        return view('user.analytics.index', compact('facebookPages', 'selectedPage', 'since', 'until', 'duration'));
     }
 
     /**

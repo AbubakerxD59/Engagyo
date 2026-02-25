@@ -166,19 +166,6 @@
                         }
                         $content.html(html);
                         bindDurationHandlers();
-                        if (typeof history !== 'undefined' && history.pushState) {
-                            var url = '{{ route('panel.analytics') }}' + (currentPageId ? '?page_id=' +
-                                currentPageId : '');
-                            if (currentDuration && currentDuration !== 'last_28') url += (url.indexOf('?') >=
-                                0 ? '&' : '?') + 'duration=' + currentDuration;
-                            if (currentDuration === 'custom' && currentSince) {
-                                url += (url.indexOf('?') >= 0 ? '&' : '?') + 'since=' + currentSince +
-                                    '&until=' + (currentUntil || new Date().toISOString().split('T')[0]);
-                            }
-                            history.pushState({
-                                pageId: currentPageId
-                            }, '', url);
-                        }
                     })
                     .fail(function() {
                         $content.html(renderEmptyState(!!currentPageId));
