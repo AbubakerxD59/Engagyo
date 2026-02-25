@@ -79,16 +79,22 @@
                 return false;
             }
 
-            function renderPageInsights(insights, pageName, duration, since, until) {
+            function renderPageInsights(insights, pageName, duration, since, until, pageFollowerCount) {
                 duration = duration || 'last_28';
                 since = since || '';
                 until = until || '';
+                var showInsightsSection = pageFollowerCount == null || pageFollowerCount >= 100;
+                if (!showInsightsSection) {
+                    return '<div class="alert alert-warning mb-0" role="alert">' +
+                        '<i class="fas fa-exclamation-triangle mr-2"></i>' +
+                        "Insights can't be fetched for this page. Page Insights data is only available on Pages with 100 or more likes." +
+                        '</div>';
+                }
                 var html = '<div class="analytics-page-insights mb-4">' + renderDurationDropdown(duration, since, until);
                 if (!hasMeaningfulInsights(insights)) {
                     html += '<div class="alert alert-warning mb-0" role="alert">' +
                         '<i class="fas fa-exclamation-triangle mr-2"></i>' +
-                        "Insights can't be fetched for this page. Page Insights data is only available on Pages with 100 or more likes. " +
-                        '<a href="https://developers.facebook.com/docs/graph-api/reference/v25.0/insights" target="_blank" rel="noopener noreferrer" class="alert-link">Meta API</a>' +
+                        "Insights can't be fetched for this page. Page Insights data is only available on Pages with 100 or more likes." +
                         '</div></div>';
                     return html;
                 }
@@ -102,8 +108,7 @@
                     ['click_through_rate', 'Click Through Rate', true]
                 ];
                 var note = '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>' +
-                    'Page Insights data is only available on Pages with 100 or more likes. ' +
-                    '<a href="https://developers.facebook.com/docs/graph-api/reference/v25.0/insights" target="_blank" rel="noopener noreferrer" style="color: #856404; text-decoration: underline;">Meta API</a></p>';
+                    'Page Insights data is only available on Pages with 100 or more likes.</p>';
                 html += note + '<div class="row">';
                 cards.forEach(function(c) {
                     html += '<div class="col-6 col-md-4 col-lg-2 mb-3">' +
@@ -157,7 +162,7 @@
                             if (res.since) currentSince = res.since;
                             if (res.until) currentUntil = res.until;
                             html += renderPageInsights(res.pageInsights, res.selectedPage.name, currentDuration,
-                                currentSince, currentUntil);
+                                currentSince, currentUntil, res.pageFollowerCount);
                         } else {
                             html += renderEmptyState(!!currentPageId);
                         }

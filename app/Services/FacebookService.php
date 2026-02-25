@@ -659,6 +659,31 @@ class FacebookService
     }
 
     /**
+     * Get page fan count (likes) from Graph API.
+     * Used to determine if Page Insights are available (requires 100+ likes).
+     *
+     * @param string $pageId Facebook page ID (graph ID, not DB id)
+     * @param string $accessToken Page access token
+     * @return int|null Fan count or null if unavailable
+     */
+    public function getPageFollowerCount(string $pageId, string $accessToken): ?int
+    {
+        if (empty($pageId) || empty($accessToken)) {
+            return null;
+        }
+        try {
+            $response = $this->facebook->get('/' . $pageId . '?fields=fan_count', $accessToken);
+            $graphNode = $response->getGraphNode();
+            $fanCount = $graphNode->getField('fan_count');
+            return $fanCount !== null ? (int) $fanCount : null;
+        } catch (FacebookResponseException $e) {
+            return null;
+        } catch (FacebookSDKException $e) {
+            return null;
+        }
+    }
+
+    /**
      * Get page-level insights (followers, reach, video views, engagements, link clicks, CTR).
      * Some metrics may be deprecated by Meta - returns null for unavailable.
      *

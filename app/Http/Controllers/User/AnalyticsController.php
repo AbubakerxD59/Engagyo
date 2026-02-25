@@ -68,15 +68,17 @@ class AnalyticsController extends Controller
         $pageInsights = null;
         $refresh = (bool) $request->query('refresh', false);
 
+        $pageFollowerCount = null;
         if ($pageId && $facebookPages->contains('id', (int) $pageId)) {
             $selectedPage = Page::find($pageId);
             if ($selectedPage) {
+                $pageFollowerCount = $this->getPageFollowerCount($selectedPage);
                 $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until, $refresh);
             }
         }
 
         $duration = $request->query('duration', 'last_28');
-        return view('user.analytics.index', compact('facebookPages', 'pageId', 'pageInsights', 'selectedPage', 'since', 'until', 'duration'));
+        return view('user.analytics.index', compact('facebookPages', 'pageId', 'pageInsights', 'pageFollowerCount', 'selectedPage', 'since', 'until', 'duration'));
     }
 
     /**
@@ -93,10 +95,12 @@ class AnalyticsController extends Controller
         $pageId = $request->query('page_id');
         $selectedPage = null;
         $pageInsights = null;
+        $pageFollowerCount = null;
 
         if ($pageId && $facebookPages->contains('id', (int) $pageId)) {
             $selectedPage = Page::find($pageId);
             if ($selectedPage) {
+                $pageFollowerCount = $this->getPageFollowerCount($selectedPage);
                 $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until, $refresh);
             }
         }
@@ -104,6 +108,7 @@ class AnalyticsController extends Controller
         return response()->json([
             'success' => true,
             'pageInsights' => $pageInsights,
+            'pageFollowerCount' => $pageFollowerCount,
             'selectedPage' => $selectedPage ? ['id' => $selectedPage->id, 'name' => $selectedPage->name] : null,
             'hasPages' => $facebookPages->count() > 0,
             'since' => $since,
@@ -156,6 +161,22 @@ class AnalyticsController extends Controller
         );
 
         return $insights;
+    }
+
+    /**
+     * Get page fan count (likes). Returns null if unavailable.
+     */
+    private function getPageFollowerCount(?Page $page): ?int
+    {
+        if (!$page || empty($page->page_id) || empty($page->access_token)) {
+            return null;
+        }
+        $tokenCheck = FacebookService::validateToken($page);
+        if (!$tokenCheck['success']) {
+            return null;
+        }
+        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
+        return $this->facebookService->getPageFollowerCount($page->page_id, $accessToken);
     }
 
 }
