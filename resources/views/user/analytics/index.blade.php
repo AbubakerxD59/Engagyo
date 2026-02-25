@@ -154,7 +154,7 @@
                                                                 'format' => 'number',
                                                             ],
                                                             'link_clicks' => [
-                                                                'label' => 'Link Clicks',
+                                                                'label' => 'Page Clicks',
                                                                 'format' => 'number',
                                                             ],
                                                             'click_through_rate' => [

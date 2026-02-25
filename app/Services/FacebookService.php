@@ -666,7 +666,7 @@ class FacebookService
      * @param string $accessToken Page access token with read_insights permission
      * @param string|null $since Start date Y-m-d (default: 28 days ago)
      * @param string|null $until End date Y-m-d (default: today)
-     * @return array Keys: followers, reach, video_views, engagements, link_clicks, click_through_rate
+     * @return array Keys: followers, reach, video_views, engagements, link_clicks (page_total_actions), click_through_rate
      */
     public function getPageInsights($pageId, $accessToken, ?string $since = null, ?string $until = null)
     {
@@ -686,9 +686,7 @@ class FacebookService
         $until = $until ?: date('Y-m-d');
         $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
-        // Non-deprecated metrics per https://developers.facebook.com/docs/platforminsights/page/deprecated-metrics
-        // page_follows (replaces page_fans), page_total_media_view_unique (replaces page_impressions_unique),
-        // page_post_engagements (reactions, comments, shares), page_total_actions (replaces page_cta_clicks)
+        // Metrics per https://developers.facebook.com/docs/graph-api/reference/v25.0/insights
         $metrics = [
             'page_follows',
             'page_total_media_view_unique',

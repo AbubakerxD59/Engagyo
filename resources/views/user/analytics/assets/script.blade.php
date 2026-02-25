@@ -104,7 +104,7 @@
                     ['reach', 'Reach', false],
                     ['video_views', 'Video Views', false],
                     ['engagements', 'Engagements', false],
-                    ['link_clicks', 'Link Clicks', false],
+                    ['link_clicks', 'Page Clicks', false],
                     ['click_through_rate', 'Click Through Rate', true]
                 ];
                 var note = '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>' +
