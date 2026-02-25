@@ -69,7 +69,7 @@
                                     @if ($selectedPage)
                                         @php
                                             $followers = $pageInsights['followers'] ?? null;
-                                            $followersValid = $followers !== null && is_numeric($followers) && $followers >= 0;
+                                            $followersValid = $followers !== null && is_numeric($followers) && $followers >= 100;
                                             $hasInsights = $pageInsights && $followersValid && (
                                                 is_numeric($pageInsights['followers'] ?? null) ||
                                                 is_numeric($pageInsights['reach'] ?? null) ||

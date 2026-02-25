@@ -72,8 +72,10 @@
             function hasMeaningfulInsights(insights) {
                 if (!insights) return false;
                 var followers = insights.followers;
-                if (followers == null || isNaN(followers) || followers < 0) return false;
-                var keys = ['followers', 'reach', 'video_views', 'engagements', 'link_clicks', 'click_through_rate'];
+                if (followers == null || isNaN(followers) || followers < 100) return false;
+                var keys = ['followers', 'reach', 'video_views', 'engagements', 'link_clicks',
+                    'click_through_rate'
+                ];
                 for (var i = 0; i < keys.length; i++) {
                     var v = insights[keys[i]];
                     if (v != null && !isNaN(v)) return true;
@@ -85,7 +87,8 @@
                 duration = duration || 'last_28';
                 since = since || '';
                 until = until || '';
-                var html = '<div class="analytics-page-insights mb-4">' + renderDurationDropdown(duration, since, until);
+                var html = '<div class="analytics-page-insights mb-4">' + renderDurationDropdown(duration, since,
+                    until);
                 if (!hasMeaningfulInsights(insights)) {
                     html += '<div class="alert alert-warning mb-0" role="alert">' +
                         '<i class="fas fa-exclamation-triangle mr-2"></i>' +
