@@ -55,7 +55,8 @@
                 var tooltip = dir === 'up' ? 'Increased by ' + diffFormatted : (dir === 'down' ? 'Decreased by ' +
                     diffFormatted : '');
                 var dataAttr = tooltip ? ' data-tooltip="' + tooltip.replace(/"/g, '&quot;') + '"' : '';
-                return '<span class="insight-comparison insight-comparison-' + dir + ' has-tooltip"' + dataAttr + '>' + arrow +
+                return '<span class="insight-comparison insight-comparison-' + dir + ' has-tooltip"' + dataAttr +
+                    '>' + arrow +
                     ' ' + Math.abs(comp.change) + '%</span>';
             }
 
@@ -68,11 +69,29 @@
                     '<span class="page-insight-label">' + label + '</span></div>';
             }
 
+            function hasMeaningfulInsights(insights) {
+                if (!insights) return false;
+                var keys = ['followers', 'reach', 'video_views', 'engagements', 'link_clicks', 'click_through_rate'];
+                for (var i = 0; i < keys.length; i++) {
+                    var v = insights[keys[i]];
+                    if (v != null && !isNaN(v)) return true;
+                }
+                return false;
+            }
+
             function renderPageInsights(insights, pageName, duration, since, until) {
-                if (!insights) return '';
                 duration = duration || 'last_28';
                 since = since || '';
                 until = until || '';
+                var html = '<div class="analytics-page-insights mb-4">' + renderDurationDropdown(duration, since, until);
+                if (!hasMeaningfulInsights(insights)) {
+                    html += '<div class="alert alert-warning mb-0" role="alert">' +
+                        '<i class="fas fa-exclamation-triangle mr-2"></i>' +
+                        "Insights can't be fetched for this page. Page Insights data is only available on Pages with 100 or more likes. " +
+                        '<a href="https://developers.facebook.com/docs/graph-api/reference/v25.0/insights" target="_blank" rel="noopener noreferrer" class="alert-link">Meta API</a>' +
+                        '</div></div>';
+                    return html;
+                }
                 var comp = insights.comparison || {};
                 var cards = [
                     ['followers', 'Followers', false],
@@ -82,8 +101,10 @@
                     ['link_clicks', 'Link Clicks', false],
                     ['click_through_rate', 'Click Through Rate', true]
                 ];
-                var html = '<div class="analytics-page-insights mb-4">' +
-                    renderDurationDropdown(duration, since, until) + '<div class="row">';
+                var note = '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>' +
+                    'Page Insights data is only available on Pages with 100 or more likes. ' +
+                    '<a href="https://developers.facebook.com/docs/graph-api/reference/v25.0/insights" target="_blank" rel="noopener noreferrer" style="color: #856404; text-decoration: underline;">Meta API</a></p>';
+                html += note + '<div class="row">';
                 cards.forEach(function(c) {
                     html += '<div class="col-6 col-md-4 col-lg-2 mb-3">' +
                         renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]) + '</div>';
@@ -132,7 +153,7 @@
                             return;
                         }
                         var html = '';
-                        if (res.pageInsights && res.selectedPage) {
+                        if (res.selectedPage) {
                             if (res.since) currentSince = res.since;
                             if (res.until) currentUntil = res.until;
                             html += renderPageInsights(res.pageInsights, res.selectedPage.name, currentDuration,

@@ -49,6 +49,11 @@ class Page extends Model
         return $this->hasMany(Post::class, 'account_id', 'id');
     }
 
+    public function pageInsights()
+    {
+        return $this->hasMany(PageInsight::class);
+    }
+
     public function domains()
     {
         return $this->hasMany(Domain::class, 'account_id', 'id');

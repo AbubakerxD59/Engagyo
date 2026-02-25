@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Page;
+use App\Models\PageInsight;
 use App\Services\FacebookService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -112,7 +113,7 @@ class AnalyticsController extends Controller
 
     /**
      * Fetch page-level insights (followers, reach, video views, engagements, link clicks, CTR).
-     * Caches in session for 1 day unless $refresh is true.
+     * Returns from DB if stored; fetches from Graph API only when refresh or no stored data.
      */
     private function fetchPageInsights(?Page $page, ?string $since = null, ?string $until = null, bool $refresh = false): ?array
     {
@@ -121,15 +122,15 @@ class AnalyticsController extends Controller
         }
 
         $duration = request()->query('duration', 'last_28');
-        $cacheKey = 'analytics_insights_' . $page->id . '_' . $duration . '_' . ($since ?? '') . '_' . ($until ?? '');
 
         if (!$refresh) {
-            $cached = session($cacheKey);
-            if ($cached && is_array($cached)) {
-                $cachedAt = $cached['cached_at'] ?? 0;
-                if ($cachedAt && (time() - $cachedAt) < 86400) { // 1 day
-                    return $cached['insights'] ?? null;
-                }
+            $stored = PageInsight::where('page_id', $page->id)
+                ->where('since', $since)
+                ->where('until', $until)
+                ->first();
+
+            if ($stored && $stored->insights) {
+                return $stored->insights;
             }
         }
 
@@ -141,12 +142,18 @@ class AnalyticsController extends Controller
         $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
         $insights = $this->facebookService->getPageInsightsWithComparison($page->page_id, $accessToken, $since, $until);
 
-        session([$cacheKey => [
-            'insights' => $insights,
-            'since' => $since,
-            'until' => $until,
-            'cached_at' => time(),
-        ]]);
+        PageInsight::updateOrCreate(
+            [
+                'page_id' => $page->id,
+                'since' => $since,
+                'until' => $until,
+            ],
+            [
+                'duration' => $duration,
+                'insights' => $insights,
+                'synced_at' => now(),
+            ]
+        );
 
         return $insights;
     }
