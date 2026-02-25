@@ -90,10 +90,12 @@
                 var html = '<div class="analytics-page-insights mb-4">' + renderDurationDropdown(duration, since,
                     until);
                 if (!hasMeaningfulInsights(insights)) {
-                    html += '<div class="alert alert-warning mb-0" role="alert">' +
-                        '<i class="fas fa-exclamation-triangle mr-2"></i>' +
-                        "Insights can't be fetched for this page. Page Insights data is only available on Pages with 100 or more likes." +
-                        '</div></div>';
+                    html += '<div class="alert alert-info mb-0" role="alert">' +
+                        '<strong><i class="fas fa-info-circle mr-2"></i>Insights can\'t be fetched for this page.</strong>' +
+                        '<ol class="mb-0 mt-2 pl-3">' +
+                        '<li>Page Insights data is only available on Pages with 100 or more likes.</li>' +
+                        '<li>The connected account may not have the required permissions. <a href="{{ route('panel.accounts') }}" class="alert-link font-weight-bold">Reconnect your account</a> to grant access.</li>' +
+                        '</ol></div></div>';
                     return html;
                 }
                 var comp = insights.comparison || {};

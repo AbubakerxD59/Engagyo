@@ -40,6 +40,25 @@ function get_menus()
     return $menus;
 }
 
+/**
+ * Map Menu route to team member menu_id (string used in team_member_menus).
+ * Returns null if menu is not in team member system (team members have no access).
+ */
+function get_team_member_menu_id($menu): ?string
+{
+    $map = [
+        'panel.schedule' => 'schedule',
+        'panel.automation' => 'automation',
+        'panel.api-posts' => 'api-posts',
+        'panel.accounts' => 'accounts',
+        'panel.team-members.index' => 'team',
+        'panel.url-tracking' => 'url-tracking',
+        'panel.link-shortener' => 'link-shortener',
+        'panel.analytics' => 'analytics',
+    ];
+    return $map[$menu->route ?? ''] ?? null;
+}
+
 function default_user_avatar($userId = null, $userName = null)
 {
     // If user ID is provided, use it to consistently select an avatar

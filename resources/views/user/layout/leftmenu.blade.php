@@ -14,6 +14,11 @@
             <ul class="nav nav-pills nav-sidebar flex-column py-2" data-widget="treeview" role="menu"
                 data-accordion="false">
                 @foreach ($menus as $menu)
+                    @php
+                        $teamMemberMenuId = get_team_member_menu_id($menu);
+                        $showMenu = !$user->isTeamMember() || ($teamMemberMenuId && $user->hasMenuAccess($teamMemberMenuId));
+                    @endphp
+                    @if ($showMenu)
                     <li class="nav-item">
                         @canAccessMenu($menu->id)
                         <a href="{{ route($menu->route) }}"
@@ -32,6 +37,7 @@
                         </a>
                         @endcanAccessMenu
                     </li>
+                    @endif
                 @endforeach
                 {{-- Schedule --}}
                 {{-- @php

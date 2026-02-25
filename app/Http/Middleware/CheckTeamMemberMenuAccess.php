@@ -6,6 +6,7 @@ use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\TeamMember;
+use App\Models\User;
 use Symfony\Component\HttpFoundation\Response;
 
 class CheckTeamMemberMenuAccess
@@ -17,14 +18,14 @@ class CheckTeamMemberMenuAccess
      */
     public function handle(Request $request, Closure $next): Response
     {
-        $user = Auth::guard('user')->user();
+        $user = User::where('id', Auth::guard('user')->user()->id)->first();
 
         if (!$user) {
             return redirect()->route('frontend.showLogin');
         }
 
         // If user is not a team member, allow access (team leads have full access)
-        if (!$user->isTeamMember()) {
+        if ($user->isTeamLead()) {
             return $next($request);
         }
 
@@ -89,7 +90,7 @@ class CheckTeamMemberMenuAccess
     }
 
     /**
-     * Get menu items array (same as in TeamMemberController)
+     * Get menu items array with current user panel routes.
      */
     private function getMenuItems(): array
     {
@@ -99,37 +100,131 @@ class CheckTeamMemberMenuAccess
                 'name' => 'Schedule',
                 'icon' => 'fas fa-calendar',
                 'route' => 'panel.schedule',
-                'route_names' => ['panel.schedule', 'panel.schedule.account.status', 'panel.schedule.process.post', 'panel.schedule.get.setting', 'panel.schedule.timeslot.setting', 'panel.schedule.posts.listing', 'panel.schedule.post.delete', 'panel.schedule.post.edit', 'panel.schedule.post.update', 'panel.schedule.post.publish.now']
+                'route_names' => [
+                    'panel.schedule',
+                    'panel.schedule.account.status',
+                    'panel.schedule.process.post',
+                    'panel.schedule.get.setting',
+                    'panel.schedule.timeslot.setting',
+                    'panel.schedule.timeslot.setting.save',
+                    'panel.schedule.posts.listing',
+                    'panel.schedule.post.delete',
+                    'panel.schedule.post.edit',
+                    'panel.schedule.post.update',
+                    'panel.schedule.post.publish.now',
+                ],
             ],
             [
                 'id' => 'automation',
                 'name' => 'Automation',
                 'icon' => 'fas fa-rss',
                 'route' => 'panel.automation',
-                'route_names' => ['panel.automation', 'panel.automation.feedUrl', 'panel.automation.getDomain', 'panel.automation.saveFilters', 'panel.automation.deleteDomain', 'panel.automation.posts.dataTable', 'panel.automation.posts.destroy', 'panel.automation.posts.update', 'panel.automation.posts.publish', 'panel.automation.posts.shuffle', 'panel.automation.posts.deleteAll', 'panel.automation.posts.fix']
+                'route_names' => [
+                    'panel.automation',
+                    'panel.automation.feedUrl',
+                    'panel.automation.getDomain',
+                    'panel.automation.saveFilters',
+                    'panel.automation.deleteDomain',
+                    'panel.automation.posts.dataTable',
+                    'panel.automation.posts.destroy',
+                    'panel.automation.posts.update',
+                    'panel.automation.posts.publish',
+                    'panel.automation.posts.shuffle',
+                    'panel.automation.posts.deleteAll',
+                    'panel.automation.posts.fix',
+                    'panel.automation.posts.saveChanges',
+                ],
             ],
             [
                 'id' => 'api-posts',
                 'name' => 'API Posts',
                 'icon' => 'fas fa-code',
                 'route' => 'panel.api-posts',
-                'route_names' => ['panel.api-posts', 'panel.api-posts.posts.listing', 'panel.api-posts.post.delete', 'panel.api-posts.post.edit', 'panel.api-posts.post.update', 'panel.api-posts.post.publish.now']
+                'route_names' => [
+                    'panel.api-posts',
+                    'panel.api-posts.posts.listing',
+                    'panel.api-posts.post.delete',
+                    'panel.api-posts.post.edit',
+                    'panel.api-posts.post.update',
+                    'panel.api-posts.post.publish.now',
+                ],
             ],
             [
                 'id' => 'accounts',
                 'name' => 'Accounts',
                 'icon' => 'fas fa-user-circle',
                 'route' => 'panel.accounts',
-                'route_names' => ['panel.accounts', 'panel.accounts.pinterest', 'panel.accounts.facebook', 'panel.accounts.tiktok', 'panel.accounts.addBoard', 'panel.accounts.pinterest.delete', 'panel.accounts.board.delete', 'panel.accounts.addPage', 'panel.accounts.facebook.delete', 'panel.accounts.page.delete', 'panel.accounts.tiktok.delete', 'panel.accounts.toggleRssPause']
+                'route_names' => [
+                    'panel.accounts',
+                    'panel.accounts.pinterest',
+                    'panel.accounts.addBoard',
+                    'panel.accounts.pinterest.delete',
+                    'panel.accounts.board.delete',
+                    'panel.accounts.facebook',
+                    'panel.accounts.facebook.socialite',
+                    'panel.accounts.addPage',
+                    'panel.accounts.facebook.delete',
+                    'panel.accounts.page.delete',
+                    'panel.accounts.tiktok',
+                    'panel.accounts.tiktok.delete',
+                    'panel.accounts.toggleRssPause',
+                ],
             ],
             [
                 'id' => 'team',
                 'name' => 'Team',
                 'icon' => 'fas fa-users',
                 'route' => 'panel.team-members.index',
-                'route_names' => ['panel.team-members.index', 'panel.team-members.create', 'panel.team-members.edit', 'panel.team-members.update', 'panel.team-members.destroy', 'panel.team-members.store']
+                'route_names' => [
+                    'panel.team-members.index',
+                    'panel.team-members.create',
+                    'panel.team-members.store',
+                    'panel.team-members.edit',
+                    'panel.team-members.update',
+                    'panel.team-members.destroy',
+                ],
+            ],
+            [
+                'id' => 'url-tracking',
+                'name' => 'URL Tracking',
+                'icon' => 'fas fa-link',
+                'route' => 'panel.url-tracking',
+                'route_names' => [
+                    'panel.url-tracking',
+                    'panel.url-tracking.store',
+                    'panel.url-tracking.show',
+                    'panel.url-tracking.update',
+                    'panel.url-tracking.destroy',
+                    'panel.url-tracking.deleteAllDomain',
+                    'panel.url-tracking.getByDomain',
+                ],
+            ],
+            [
+                'id' => 'link-shortener',
+                'name' => 'Link Shortener',
+                'icon' => 'fas fa-compress-alt',
+                'route' => 'panel.link-shortener',
+                'route_names' => [
+                    'panel.link-shortener',
+                    'panel.link-shortener.account.urlShortenerStatus',
+                    'panel.link-shortener.account.urlShortenerStatusBulk',
+                    'panel.link-shortener.platform.urlShortenerStatus',
+                    'panel.link-shortener.store',
+                    'panel.link-shortener.update',
+                    'panel.link-shortener.destroy',
+                ],
+            ],
+            [
+                'id' => 'analytics',
+                'name' => 'Analytics',
+                'icon' => 'fas fa-chart-line',
+                'route' => 'panel.analytics',
+                'route_names' => [
+                    'panel.analytics',
+                    'panel.analytics.data',
+                    'panel.analytics.test',
+                ],
             ],
         ];
     }
 }
-
