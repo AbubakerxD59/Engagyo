@@ -55,9 +55,6 @@
                                     </div>
                                     <div class="col-md-6">
                                         <h6><i class="fas fa-shield-alt mr-1"></i> Authentication</h6>
-                                        <p class="text-muted mb-0">
-                                            Include your API key in the <code>Authorization</code> header:
-                                        </p>
                                         <code class="d-block bg-light p-2 rounded mt-2">
                                             Authorization: Bearer your_api_key_here
                                         </code>

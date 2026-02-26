@@ -52,6 +52,7 @@ function get_team_member_menu_id($menu): ?string
         'panel.api-posts' => 'api-posts',
         'panel.accounts' => 'accounts',
         'panel.team-members.index' => 'team',
+        'panel.api-keys' => 'api',
         'panel.url-tracking' => 'url-tracking',
         'panel.link-shortener' => 'link-shortener',
         'panel.analytics' => 'analytics',

@@ -16,7 +16,25 @@ class Menu extends Model
         "route",
         "display_order"
     ];
-    public function features(){
+
+    /**
+     * Additional menus not displayed in sidebar (e.g. navbar-only items like API Keys).
+     * These are used for team member access control.
+     */
+    public static function additionalMenus(): array
+    {
+        return [
+            [
+                'id' => 'api',
+                'name' => 'API Access',
+                'icon' => 'fas fa-key',
+                'route' => 'panel.api-keys',
+            ],
+        ];
+    }
+
+    public function features()
+    {
         return $this->hasMany(Feature::class, 'parent_id', 'id');
     }
 }

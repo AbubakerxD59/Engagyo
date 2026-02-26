@@ -59,9 +59,11 @@
                 <a class="dropdown-item" href="{{ route('panel.plan.billing') }}">
                     <i class="fas fa-file-invoice-dollar mr-2"></i> Plan & Billing
                 </a>
+                @if (!$user->isTeamMember() || $user->hasMenuAccess('api'))
                 <a class="dropdown-item" href="{{ route('panel.api-keys') }}">
                     <i class="fas fa-key mr-2"></i> API Keys
                 </a>
+                @endif
                 <div class="dropdown-divider"></div>
                 <a class="dropdown-item text-danger logout-btn" href="#">
                     <i class="fas fa-sign-out-alt mr-2"></i> Logout

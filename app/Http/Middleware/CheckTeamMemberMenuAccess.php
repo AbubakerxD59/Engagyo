@@ -180,6 +180,19 @@ class CheckTeamMemberMenuAccess
                 ],
             ],
             [
+                'id' => 'api',
+                'name' => 'API Access',
+                'icon' => 'fas fa-key',
+                'route' => 'panel.api-keys',
+                'route_names' => [
+                    'panel.api-keys',
+                    'panel.api-keys.store',
+                    'panel.api-keys.refresh',
+                    'panel.api-keys.toggle',
+                    'panel.api-keys.destroy',
+                ],
+            ],
+            [
                 'id' => 'url-tracking',
                 'name' => 'URL Tracking',
                 'icon' => 'fas fa-link',

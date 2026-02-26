@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\BaseController;
+use App\Models\Menu;
 use App\Services\TeamMemberService;
 use App\Models\TeamMember;
 use Illuminate\Http\Request;
@@ -18,47 +19,28 @@ class TeamMemberController extends BaseController
     }
 
     /**
-     * Get menu items array
+     * Get menu items for team member access: database menus (sidebar) + additional menus (navbar-only).
      */
-    private function getMenuItems()
+    private function getMenuItems(): array
     {
-        return [
-            [
-                'id' => 'schedule',
-                'name' => 'Schedule',
-                'icon' => 'fas fa-calendar',
-                'route' => 'panel.schedule',
-                'route_names' => ['panel.schedule']
-            ],
-            [
-                'id' => 'automation',
-                'name' => 'Automation',
-                'icon' => 'fas fa-rss',
-                'route' => 'panel.automation',
-                'route_names' => ['panel.automation']
-            ],
-            [
-                'id' => 'api-posts',
-                'name' => 'API Posts',
-                'icon' => 'fas fa-code',
-                'route' => 'panel.api-posts',
-                'route_names' => ['panel.api-posts']
-            ],
-            [
-                'id' => 'accounts',
-                'name' => 'Accounts',
-                'icon' => 'fas fa-user-circle',
-                'route' => 'panel.accounts',
-                'route_names' => ['panel.accounts', 'panel.accounts.pinterest', 'panel.accounts.facebook', 'panel.accounts.tiktok']
-            ],
-            [
-                'id' => 'team',
-                'name' => 'Team',
-                'icon' => 'fas fa-users',
-                'route' => 'panel.team-members.index',
-                'route_names' => ['panel.team-members.index', 'panel.team-members.create', 'panel.team-members.edit']
-            ],
-        ];
+        $dbMenus = Menu::orderBy('display_order')->get()
+            ->map(function ($menu) {
+                $menuId = get_team_member_menu_id($menu);
+                if (!$menuId) {
+                    return null;
+                }
+                return [
+                    'id' => $menuId,
+                    'name' => $menu->name,
+                    'icon' => $menu->icon,
+                    'route' => $menu->route,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->toArray();
+
+        return array_merge($dbMenus, Menu::additionalMenus());
     }
 
     public function index()
@@ -76,43 +58,7 @@ class TeamMemberController extends BaseController
         $user = Auth::guard('user')->user();
         
         // Define menu items from sidebar
-        $menuItems = [
-            [
-                'id' => 'schedule',
-                'name' => 'Schedule',
-                'icon' => 'fas fa-calendar',
-                'route' => 'panel.schedule',
-                'route_names' => ['panel.schedule']
-            ],
-            [
-                'id' => 'automation',
-                'name' => 'Automation',
-                'icon' => 'fas fa-rss',
-                'route' => 'panel.automation',
-                'route_names' => ['panel.automation']
-            ],
-            [
-                'id' => 'api-posts',
-                'name' => 'API Posts',
-                'icon' => 'fas fa-code',
-                'route' => 'panel.api-posts',
-                'route_names' => ['panel.api-posts']
-            ],
-            [
-                'id' => 'accounts',
-                'name' => 'Accounts',
-                'icon' => 'fas fa-user-circle',
-                'route' => 'panel.accounts',
-                'route_names' => ['panel.accounts', 'panel.accounts.pinterest', 'panel.accounts.facebook', 'panel.accounts.tiktok']
-            ],
-            [
-                'id' => 'team',
-                'name' => 'Team',
-                'icon' => 'fas fa-users',
-                'route' => 'panel.team-members.index',
-                'route_names' => ['panel.team-members.index', 'panel.team-members.create', 'panel.team-members.edit']
-            ],
-        ];
+        $menuItems = $this->getMenuItems();
         
         // Get available features from team lead's package
         $activePackage = $user->activeUserPackage;
