@@ -29,7 +29,8 @@
                                                 <div class="account-card-inner">
                                                     <div class="account-avatar">
                                                         <img src="{{ $account->profile_image }}"
-                                                            onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';" loading="lazy">
+                                                            onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';"
+                                                            loading="lazy">
                                                         <span class="platform-badge facebook">
                                                             <i class="fab fa-facebook-f"></i>
                                                         </span>
@@ -49,7 +50,8 @@
                                                 <div class="account-card-inner">
                                                     <div class="account-avatar">
                                                         <img src="{{ $account->pinterest?->profile_image }}"
-                                                            onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';" loading="lazy">
+                                                            onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';"
+                                                            loading="lazy">
                                                         <span class="platform-badge pinterest">
                                                             <i class="fab fa-pinterest-p"></i>
                                                         </span>
@@ -69,7 +71,8 @@
                                                 <div class="account-card-inner">
                                                     <div class="account-avatar">
                                                         <img src="{{ $account->profile_image }}"
-                                                            onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';" loading="lazy">
+                                                            onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';"
+                                                            loading="lazy">
                                                         <span class="platform-badge tiktok">
                                                             <i class="fab fa-tiktok"></i>
                                                         </span>
@@ -92,28 +95,6 @@
                                 <textarea name="content" id="content" class="form-control col-md-12 check_count" placeholder="Paste your link here!"
                                     rows="3" data-max="100"></textarea>
                                 <span id="characterCount" class="text-muted"></span>
-                            </div>
-                            {{-- URL shortener when link is in content text but post is photo/content (no link preview) --}}
-                            <div id="content-url-shortener-wrap" class="row mt-2" style="display: none;">
-                                <div class="col-12">
-                                    <label class="d-flex align-items-center mb-1">
-                                        <input type="checkbox" id="use_short_link_content" name="use_short_link_content"
-                                            class="mr-2">
-                                        <span>Shorten link for this post</span>
-                                    </label>
-                                    <div id="short-link-result-content" class="mt-1" style="display:none;">
-                                        <label class="small text-muted mb-0">Shortened link:</label>
-                                        <div class="input-group input-group-sm mt-1">
-                                            <input type="text" id="short_link_url_display_content" class="form-control"
-                                                readonly>
-                                            <div class="input-group-append">
-                                                <button type="button"
-                                                    class="btn btn-outline-secondary copy-short-link-content"
-                                                    title="Copy">Copy</button>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
                             </div>
                             <div id="article-container" class="card-container"></div>
                             <div class="row">

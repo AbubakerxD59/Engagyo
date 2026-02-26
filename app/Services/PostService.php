@@ -4,47 +4,21 @@ namespace App\Services;
 
 use Exception;
 use App\Models\Post;
+use App\Models\Page;
+use App\Models\Board;
+use App\Models\Tiktok;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishPinterestPost;
 use App\Services\UtmService;
+use App\Services\UrlShortenerService;
 use Illuminate\Support\Facades\Auth;
 
 class PostService
 {
     public static function create($data)
     {
-        // enable url tracking (utm codes) for rss only start (no post context)
-        if (isset($data["source"]) && $data["source"] === "rss" && !empty($data["url"]) && !empty($data["user_id"])) {
-            $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"], null);
-        }
-        // enable url tracking (utm codes) for rss only end
-
-        // enable url tracking (utm codes) for schedule posts start (pass social_type + account_id for social_type/social_profile resolution)
-        if (isset($data["source"]) && $data["source"] === "schedule" && !empty($data["user_id"])) {
-            $utmContext = null;
-            if (isset($data["type"]) || (!empty($data["social_type"]) && !empty($data["account_id"]))) {
-                $utmContext = [
-                    'social_type' => $data["social_type"] ?? null,
-                    'account_id' => $data["account_id"] ?? null,
-                    'type' => $data["type"] ?? null,
-                ];
-            }
-            // Track URL in url field
-            if (!empty($data["url"])) {
-                $data["url"] = UtmService::appendUtmCodes($data["url"], $data["user_id"], $utmContext);
-            }
-            
-            // Track URLs in title field
-            if (!empty($data["title"])) {
-                $data["title"] = self::trackUrlsInText($data["title"], $data["user_id"], $utmContext);
-            }
-            
-            // Track URLs in comment field
-            if (!empty($data["comment"])) {
-                $data["comment"] = self::trackUrlsInText($data["comment"], $data["user_id"], $utmContext);
-            }
-        }
-        // enable url tracking (utm codes) for schedule posts end
+        self::applyUtmCodesToData($data);
+        self::applyLinkShorteningToData($data);
 
         $post = Post::create([
             "user_id" => $data["user_id"],
@@ -81,11 +55,6 @@ class PostService
                     $service = new PinterestService();
                     $service->delete($post);
                 }
-                // TikTok delete API is disabled for now
-                // if ($social_type == "tiktok") {
-                //     $service = new TikTokService();
-                //     $service->delete($post);
-                // }
             }
         }
         return true;
@@ -95,7 +64,7 @@ class PostService
         try {
             $user = Auth::user();
             $post = Post::with("page.facebook", "board.pinterest")->where("status", "!=", 1)->where("id", $id)->firstOrFail();
-            if ($post->social_type == "facebook") { // Facebook
+            if ($post->social_type == "facebook") {
                 $page = $post->page;
                 $response = FacebookService::validateToken($page);
                 if ($response['success']) {
@@ -105,7 +74,7 @@ class PostService
                     return $response;
                 }
             }
-            if ($post->social_type == "pinterest") { // Pinterest
+            if ($post->social_type == "pinterest") {
                 $postData = self::postTypeBody($post);
                 PublishPinterestPost::dispatch($post->id, $postData, $post->board->pinterest->access_token, $post->type);
             }
@@ -121,9 +90,71 @@ class PostService
         }
         return $response;
     }
+
+    private static function applyUtmCodesToData(array &$data): void
+    {
+        if (empty($data['user_id'])) {
+            return;
+        }
+
+        $utmContext = null;
+        if (!empty($data['social_type']) && !empty($data['account_id'])) {
+            $utmContext = [
+                'social_type' => $data['social_type'] ?? null,
+                'account_id' => $data['account_id'] ?? null,
+                'type' => $data['type'] ?? null,
+            ];
+        }
+
+        if (!empty($data['url'])) {
+            $data['url'] = UtmService::appendUtmCodes($data['url'], $data['user_id'], $utmContext);
+        }
+        if (!empty($data['title'])) {
+            $data['title'] = self::trackUrlsInText($data['title'], $data['user_id'], $utmContext);
+        }
+        if (!empty($data['comment'])) {
+            $data['comment'] = self::trackUrlsInText($data['comment'], $data['user_id'], $utmContext);
+        }
+    }
+
+    private static function applyLinkShorteningToData(array &$data): void
+    {
+        if (empty($data['user_id']) || empty($data['account_id']) || empty($data['social_type'])) {
+            return;
+        }
+
+        $account = match ($data['social_type']) {
+            'facebook' => Page::find($data['account_id']),
+            'pinterest' => Board::find($data['account_id']),
+            'tiktok' => Tiktok::find($data['account_id']),
+            default => null,
+        };
+
+        if (!$account || !($account->url_shortener_enabled ?? false)) {
+            return;
+        }
+
+        $user = \App\Models\User::find($data['user_id']);
+        if (!$user) {
+            return;
+        }
+
+        $urlShortener = app(UrlShortenerService::class);
+
+        if (!empty($data['url'])) {
+            $result = $urlShortener->shortenForUser($user, $data['url']);
+            $data['url'] = $result['success'] ? $result['short_url'] : $data['url'];
+        }
+        if (!empty($data['title'])) {
+            $data['title'] = $urlShortener->shortenUrlsInText($user, $data['title'], true);
+        }
+        if (!empty($data['comment'])) {
+            $data['comment'] = $urlShortener->shortenUrlsInText($user, $data['comment'], true);
+        }
+    }
+
     public static function postTypeBody($post)
     {
-        // Keep for backward compatibility - delegates to platform-specific methods
         switch ($post->social_type) {
             case 'facebook':
                 return self::facebookPostTypeBody($post);
@@ -139,34 +170,31 @@ class PostService
     public static function facebookPostTypeBody($post)
     {
         $postData = [];
-        if ($post->type == "content_only") { // Content Only
+        if ($post->type == "content_only") {
             $postData = array(
-                'message' => $post->title ?: ' ' // Facebook requires a message for content_only posts, use space if empty
+                'message' => $post->title ?: ' '
             );
         }
-        if ($post->type == "photo") { // Photo
+        if ($post->type == "photo") {
             $postData = array(
                 "url" => $post->image
             );
-            // Only include message if title is not empty (Facebook prefers 'message' over 'caption')
             if (!empty($post->title)) {
                 $postData["message"] = $post->title;
             }
         }
-        if ($post->type == "video") { // Video
+        if ($post->type == "video") {
             $postData = array(
                 "file_url" => $post->video_key
             );
-            // Only include description if title is not empty
             if (!empty($post->title)) {
                 $postData["description"] = $post->title;
             }
         }
-        if ($post->type == "link") { // Link
+        if ($post->type == "link") {
             $postData = array(
                 'link' => $post->url
             );
-            // Only include message if title is not empty (Facebook rejects empty messages)
             if (!empty($post->title)) {
                 $postData['message'] = $post->title;
             }
@@ -179,7 +207,7 @@ class PostService
         $postData = [];
         $board = $post->board;
         $board_id = $board ? $board->board_id : null;
-        if ($post->type == "photo") { // Photo
+        if ($post->type == "photo") {
             $encoded_image = file_get_contents($post->image);
             $encoded_image = base64_encode($encoded_image);
             $postData = array(
@@ -192,14 +220,14 @@ class PostService
                 )
             );
         }
-        if ($post->type == "video") { // Video
+        if ($post->type == "video") {
             $postData = array(
                 "title" => $post->title,
                 "board_id" => (string) $board_id,
                 'video_key' => $post->video
             );
         }
-        if ($post->type == "link") { // Link
+        if ($post->type == "link") {
             $postData = [
                 "title" => $post->title,
                 "link" => $post->url,
@@ -216,20 +244,18 @@ class PostService
     public static function tiktokPostTypeBody($post)
     {
         $postData = [];
-        if ($post->type == "photo") { // Photo
+        if ($post->type == "photo") {
             $postData = [
                 "title" => $post->title,
                 "url" => $post->image
             ];
         }
-        if ($post->type == "video") { // Video
+        if ($post->type == "video") {
             $postData = [
                 "title" => $post->title,
                 "file_url" => $post->video_key ?: $post->video
             ];
         }
-
-        // Merge TikTok-specific metadata from response field if available
         if (!empty($post->response)) {
             $metadata = json_decode($post->response, true);
             if (is_array($metadata)) {
@@ -240,39 +266,21 @@ class PostService
         return $postData;
     }
 
-    /**
-     * Extract URLs from text and append UTM codes if tracking is enabled for the domain
-     *
-     * @param string $text The text containing URLs
-     * @param int $userId The user ID
-     * @param array|null $utmContext Optional context for resolving social_type/social_profile (e.g. ['social_type' => ..., 'account_id' => ...])
-     * @return string The text with URLs replaced with UTM-tracked versions
-     */
     private static function trackUrlsInText($text, $userId, $utmContext = null)
     {
         if (empty($text) || empty($userId)) {
             return $text;
         }
 
-        // Regex pattern to match URLs (http://, https://, or www.)
-        // This pattern matches URLs and stops at whitespace or common punctuation
         $urlPattern = '/(?:https?:\/\/|www\.)[^\s<>"{}|\\^`\[\]]+/i';
-        
+
         return preg_replace_callback($urlPattern, function ($matches) use ($userId, $utmContext) {
             $matchedUrl = $matches[0];
             $urlToTrack = $matchedUrl;
-            
-            // Add http:// if URL starts with www. (and doesn't already have a scheme)
             if (stripos($matchedUrl, 'www.') === 0 && stripos($matchedUrl, 'http://') === false && stripos($matchedUrl, 'https://') === false) {
                 $urlToTrack = 'http://' . $matchedUrl;
             }
-            
-            // Append UTM codes (will return original URL if no tracking configured for domain)
-            $trackedUrl = UtmService::appendUtmCodes($urlToTrack, $userId, $utmContext);
-            
-            // If we added http:// prefix, preserve it in the tracked URL
-            // Otherwise, if tracking modified the URL, use the tracked version
-            return $trackedUrl;
+            return UtmService::appendUtmCodes($urlToTrack, $userId, $utmContext);
         }, $text);
     }
 }

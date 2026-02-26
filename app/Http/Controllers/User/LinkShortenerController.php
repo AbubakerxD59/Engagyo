@@ -55,11 +55,11 @@ class LinkShortenerController extends Controller
     public function platformUrlShortenerStatus(Request $request)
     {
         $request->validate([
-            'platforms' => 'required|array',
+            'platforms' => 'nullable|array',
             'platforms.*' => 'in:facebook,pinterest,tiktok',
         ]);
 
-        $platforms = $request->platforms;
+        $platforms = $request->platforms ?? [];
         $userId = Auth::guard('user')->id();
         $updated = 0;
 

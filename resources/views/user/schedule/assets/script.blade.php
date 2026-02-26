@@ -326,12 +326,7 @@
             var image = $('#link_image').attr('src');
             var title = $('#content').val();
             var originalUrl = $('.link_url').text().trim();
-            var useShortForLink = $('#use_short_link').length && $('#use_short_link').is(':checked');
-            if (useShortForLink && !currentShortUrl) {
-                toastr.error('Please wait for the link to shorten.');
-                return;
-            }
-            var url = (useShortForLink && currentShortUrl) ? currentShortUrl : originalUrl;
+            var url = originalUrl;
             var schedule_date = $("#schedule_date").val();
             var schedule_time = $("#schedule_time").val();
 
@@ -675,21 +670,6 @@
                         <div class="content-col">
                             <h5 class="link_title" title="${data.title}">${data.title.substring(0, 60)}...</h5>
                             <p class="link_url">${data.link}</p>
-                            <div class="shortener-row mt-2">
-                                <label class="d-flex align-items-center mb-1">
-                                    <input type="checkbox" id="use_short_link" name="use_short_link" class="mr-2">
-                                    <span>Shorten link for this post</span>
-                                </label>
-                                <div id="short-link-result" class="mt-1" style="display:none;">
-                                    <label class="small text-muted mb-0">Shortened link:</label>
-                                    <div class="input-group input-group-sm mt-1">
-                                        <input type="text" id="short_link_url_display" class="form-control" readonly>
-                                        <div class="input-group-append">
-                                            <button type="button" class="btn btn-outline-secondary copy-short-link" title="Copy">Copy</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         </div>
                         <!-- Right Column (Image/Sidebar) -->
                         <div class="image-col" style="margin-left: 1rem;">
@@ -702,7 +682,6 @@
                         </div>
                     </div>`;
             container.html(articleHTML);
-            currentShortUrl = null;
             originalUrlInContent = null;
             $('#content-url-shortener-wrap').hide();
             $('#real-article').animate({
@@ -713,68 +692,6 @@
             resetPostArea();
         });
 
-        // URL shortener: when checkbox is checked, shorten the link and display it
-        $(document).on('change', '#use_short_link', function() {
-            var $cb = $(this);
-            var $result = $('#short-link-result');
-            var $display = $('#short_link_url_display');
-            if (!$cb.is(':checked')) {
-                currentShortUrl = null;
-                $result.hide();
-                $display.val('');
-                return;
-            }
-            var originalUrl = $('.link_url').text().trim();
-            if (!originalUrl) {
-                toastr.warning('No link to shorten.');
-                $cb.prop('checked', false);
-                return;
-            }
-            $result.hide();
-            $display.val('Shortening...');
-            $result.show();
-            $.ajax({
-                url: "{{ route('general.shorten') }}",
-                type: "POST",
-                data: {
-                    "_token": "{{ csrf_token() }}",
-                    "original_url": originalUrl
-                },
-                success: function(res) {
-                    if (res.success && res.short_url) {
-                        currentShortUrl = res.short_url;
-                        $display.val(res.short_url);
-                    } else {
-                        currentShortUrl = null;
-                        $display.val('');
-                        $result.hide();
-                        toastr.error(res.message || 'Could not shorten link.');
-                        $cb.prop('checked', false);
-                    }
-                },
-                error: function(xhr) {
-                    currentShortUrl = null;
-                    $display.val('');
-                    $result.hide();
-                    toastr.error(xhr.responseJSON && xhr.responseJSON.message ? xhr
-                        .responseJSON.message : 'Could not shorten link.');
-                    $cb.prop('checked', false);
-                }
-            });
-        });
-
-        $(document).on('click', '.copy-short-link', function() {
-            var url = $('#short_link_url_display').val();
-            if (url && navigator.clipboard && navigator.clipboard.writeText) {
-                navigator.clipboard.writeText(url).then(function() {
-                    toastr.success('Short link copied to clipboard.');
-                }).catch(function() {
-                    fallbackCopyShortLink(url);
-                });
-            } else {
-                fallbackCopyShortLink(url);
-            }
-        });
         $(document).on('click', '.copy-short-link-content', function() {
             var url = $('#short_link_url_display_content').val();
             if (url && navigator.clipboard && navigator.clipboard.writeText) {
