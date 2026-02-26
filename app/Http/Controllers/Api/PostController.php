@@ -39,8 +39,8 @@ class PostController extends BaseController
             'platform' => ['required', Rule::in($supportedPlatforms)],
             'account_id' => 'required|string',
             'image_url' => 'required|url',
-            'title' => 'required|string|max:500',
-            'description' => 'nullable|string|max:2000',
+            'title' => 'required|string',
+            'description' => 'nullable|string',
             'link' => 'nullable|url',
             'scheduled_at' => 'nullable|date|after:now',
         ]);
@@ -434,8 +434,8 @@ class PostController extends BaseController
             'platform' => ['required', Rule::in($supportedPlatforms)],
             'account_id' => 'required|string',
             'video_url' => 'required|url',
-            'title' => 'required|string|max:500',
-            'description' => 'nullable|string|max:2000',
+            'title' => 'required|string',
+            'description' => 'nullable|string',
             'link' => 'nullable|url',
             'scheduled_at' => 'nullable|date|after:now',
         ]);
