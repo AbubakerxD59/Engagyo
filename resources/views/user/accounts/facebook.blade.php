@@ -9,7 +9,7 @@
                 <div class="card">
                     <div class="card-header with-border clearfix">
                         <div class="card-title">
-                            <img src="{{ social_logo('facebook') }}">
+                            <img src="{{ social_logo('facebook') }}" loading="lazy">
                             <span>{{ $facebook->username }}</span>
                         </div>
                         <a href="{{ $facebookUrl }}" class="btn btn-outline-primary btn-sm mx-2">Reauthorize</a>

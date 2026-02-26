@@ -228,7 +228,7 @@
             <button class="lightbox-close" id="lightboxClose">
                 <i class="fas fa-times"></i>
             </button>
-            <img src="" alt="Full size image" id="lightboxImage">
+            <img src="" alt="Full size image" id="lightboxImage" loading="lazy">
             <div class="lightbox-caption" id="lightboxCaption"></div>
         </div>
     </div>

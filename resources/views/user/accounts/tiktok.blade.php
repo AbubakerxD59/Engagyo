@@ -9,7 +9,7 @@
                 <div class="card">
                     <div class="card-header with-border clearfix">
                         <div class="card-title">
-                            <img src="{{ social_logo('tiktok') }}">
+                            <img src="{{ social_logo('tiktok') }}" loading="lazy">
                             <span>{{ $tiktok->username }}</span>
                         </div>
                         <a href="{{ $tiktokUrl }}" class="btn btn-outline-primary btn-sm mx-2">Reauthorize</a>

@@ -102,7 +102,7 @@
                             .account_username) : '';
                         accountBlockHtml = `
                             <div class="notification-account-info">
-                                ${imageUrl ? `<img src="${imageUrl}" alt="${notification.social_type || ''}" class="notification-account-image" onerror="this.style.display='none';">` : ''}
+                                ${imageUrl ? `<img src="${imageUrl}" alt="${notification.social_type || ''}" class="notification-account-image" onerror="this.style.display='none';" loading="lazy">` : ''}
                                 <div class="notification-account-details">
                                     ${accountName ? `<span class="notification-account-name">${accountName}</span>` : ''}
                                     ${accountUsername ? `<span class="notification-account-username">${accountUsername}</span>` : ''}

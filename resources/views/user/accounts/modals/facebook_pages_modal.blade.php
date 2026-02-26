@@ -26,7 +26,7 @@
                             <div class="account-item-content">
                                 <div class="account-avatar-section">
                                     @if (!empty($item['profile_image']))
-                                        <img src="{{ asset('images/' . $item['profile_image']) }}"
+                                        <img src="{{ asset('images/' . $item['profile_image']) }}" loading="lazy"
                                             alt="{{ $item['name'] }}" class="account-item-avatar"
                                             onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
                                     @else

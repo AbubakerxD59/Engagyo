@@ -132,7 +132,7 @@ class TeamMemberController extends BaseController
                 'id' => $page->id,
                 'type' => 'page',
                 'name' => $page->name,
-                'username' => $page->name,
+                'username' => $page->facebook?->username ?? $page->name,
                 'profile_image' => $page->profile_image ?? ($page->facebook->profile_image ?? social_logo('facebook')),
                 'account_id' => $page->page_id ?? $page->id,
             ];
@@ -144,7 +144,7 @@ class TeamMemberController extends BaseController
                 'id' => $board->id,
                 'type' => 'board',
                 'name' => $board->name,
-                'username' => $board->name,
+                'username' => $board->pinterest?->username ?? $board->name,
                 'profile_image' => $board->pinterest->profile_image ?? social_logo('pinterest'),
                 'account_id' => $board->board_id ?? $board->id,
             ];
@@ -255,7 +255,7 @@ class TeamMemberController extends BaseController
                 'id' => $page->id,
                 'type' => 'page',
                 'name' => $page->name,
-                'username' => $page->name,
+                'username' => $page->facebook?->username ?? $page->name,
                 'profile_image' => $page->profile_image ?? ($page->facebook->profile_image ?? social_logo('facebook')),
                 'account_id' => $page->page_id ?? $page->id,
             ];
@@ -267,7 +267,7 @@ class TeamMemberController extends BaseController
                 'id' => $board->id,
                 'type' => 'board',
                 'name' => $board->name,
-                'username' => $board->name,
+                'username' => $board->pinterest?->username ?? $board->name,
                 'profile_image' => $board->pinterest->profile_image ?? social_logo('pinterest'),
                 'account_id' => $board->board_id ?? $board->id,
             ];

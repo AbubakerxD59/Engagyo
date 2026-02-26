@@ -48,7 +48,7 @@
                 @endphp
                 <img src="{{ $profilePic }}" alt="User Image" class="user-nav-image rounded-circle" width="32px"
                     height="32px"
-                    onerror="this.onerror=null; this.src='{{ default_user_avatar($user->id, $user->username) }}';">
+                    onerror="this.onerror=null; this.src='{{ default_user_avatar($user->id, $user->username) }}';" loading="lazy">
                 <span class="user-nav-name text-muted">{{ auth()->user()->username }}</span>
                 <i class="fas fa-chevron-down user-nav-arrow text-muted"></i>
             </a>

@@ -693,7 +693,7 @@
                         </div>
                         <!-- Right Column (Image/Sidebar) -->
                         <div class="image-col" style="margin-left: 1rem;">
-                            <img id="link_image" src="${data.image}" alt="Feature Icon">
+                            <img id="link_image" src="${data.image}" alt="Feature Icon" loading="lazy">
                             <!-- Close Button (Functional) -->
                             <button class="close-btn-placeholder"
                                 style="background-color: black; color: white; cursor: pointer;">

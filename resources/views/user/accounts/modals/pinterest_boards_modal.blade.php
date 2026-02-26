@@ -26,7 +26,7 @@
                             <div class="account-item-content">
                                 <div class="account-avatar-section">
                                     @if (!empty($item['image_cover_url']) || !empty($item['cover_image_url']))
-                                        <img src="{{ $item['image_cover_url'] ?? $item['cover_image_url'] }}"
+                                        <img src="{{ $item['image_cover_url'] ?? $item['cover_image_url'] }}" loading="lazy"
                                             alt="{{ $item['name'] }}" class="account-item-avatar"
                                             onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
                                     @else

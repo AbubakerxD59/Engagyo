@@ -118,7 +118,7 @@
                                             @if ($facebookAccounts->count() > 0)
                                                 <div class="mb-4">
                                                     <h6 class="mb-3">
-                                                        <img src="{{ social_logo('facebook') }}"
+                                                        <img src="{{ social_logo('facebook') }}" loading="lazy"
                                                             style="width: 24px; height: 24px; margin-right: 8px;">
                                                         Facebook Pages
                                                     </h6>
@@ -126,23 +126,27 @@
                                                         <div class="accounts-grid" data-platform="facebook">
                                                             @foreach ($facebookAccounts as $account)
                                                                 <article
-                                                                    class="account-card facebook-card account-select-card"
+                                                                    class="account-card facebook-card account-select-card has-tooltip"
                                                                     data-account-id="{{ $account['id'] }}"
-                                                                    data-account-type="{{ $account['type'] }}">
+                                                                    data-account-type="{{ $account['type'] }}"
+                                                                    data-tooltip="{{ $account['username'] }}">
                                                                     <div class="account-card-accent"></div>
                                                                     <div class="account-card-content">
                                                                         <div class="account-avatar-wrapper">
                                                                             <img src="{{ $account['profile_image'] }}"
                                                                                 class="account-avatar"
-                                                                                onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
+                                                                                onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';" loading="lazy">
                                                                             <span
                                                                                 class="platform-indicator facebook-indicator">
                                                                                 <i class="fab fa-facebook-f"></i>
                                                                             </span>
                                                                         </div>
                                                                         <div class="account-info">
+                                                                            <div class="account-name">
+                                                                                {{ Str::limit($account['name'], 18) }}
+                                                                            </div>
                                                                             <div class="account-username">
-                                                                                {{ Str::limit($account['username'], 20) }}
+                                                                                {{ Str::limit($account['username'], 15) }}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -166,7 +170,7 @@
                                             @if ($pinterestAccounts->count() > 0)
                                                 <div class="mb-4">
                                                     <h6 class="mb-3">
-                                                        <img src="{{ social_logo('pinterest') }}"
+                                                        <img src="{{ social_logo('pinterest') }}" loading="lazy"
                                                             style="width: 24px; height: 24px; margin-right: 8px;">
                                                         Pinterest Boards
                                                     </h6>
@@ -174,23 +178,27 @@
                                                         <div class="accounts-grid" data-platform="pinterest">
                                                             @foreach ($pinterestAccounts as $account)
                                                                 <article
-                                                                    class="account-card pinterest-card account-select-card"
+                                                                    class="account-card pinterest-card account-select-card has-tooltip"
                                                                     data-account-id="{{ $account['id'] }}"
-                                                                    data-account-type="{{ $account['type'] }}">
+                                                                    data-account-type="{{ $account['type'] }}"
+                                                                    data-tooltip="{{ $account['username'] }}">
                                                                     <div class="account-card-accent"></div>
                                                                     <div class="account-card-content">
                                                                         <div class="account-avatar-wrapper">
                                                                             <img src="{{ $account['profile_image'] }}"
                                                                                 class="account-avatar"
-                                                                                onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
+                                                                                onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';" loading="lazy">
                                                                             <span
                                                                                 class="platform-indicator pinterest-indicator">
                                                                                 <i class="fab fa-pinterest-p"></i>
                                                                             </span>
                                                                         </div>
                                                                         <div class="account-info">
+                                                                            <div class="account-name">
+                                                                                {{ Str::limit($account['name'], 18) }}
+                                                                            </div>
                                                                             <div class="account-username">
-                                                                                {{ Str::limit($account['username'], 20) }}
+                                                                                {{ Str::limit($account['username'], 15) }}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -214,7 +222,7 @@
                                             @if ($tiktokAccounts->count() > 0)
                                                 <div class="mb-4">
                                                     <h6 class="mb-3">
-                                                        <img src="{{ social_logo('tiktok') }}"
+                                                        <img src="{{ social_logo('tiktok') }}" loading="lazy"
                                                             style="width: 24px; height: 24px; margin-right: 8px;">
                                                         TikTok Accounts
                                                     </h6>
@@ -222,23 +230,27 @@
                                                         <div class="accounts-grid" data-platform="tiktok">
                                                             @foreach ($tiktokAccounts as $account)
                                                                 <article
-                                                                    class="account-card tiktok-card account-select-card"
+                                                                    class="account-card tiktok-card account-select-card has-tooltip"
                                                                     data-account-id="{{ $account['id'] }}"
-                                                                    data-account-type="{{ $account['type'] }}">
+                                                                    data-account-type="{{ $account['type'] }}"
+                                                                    data-tooltip="{{ $account['username'] }}">
                                                                     <div class="account-card-accent"></div>
                                                                     <div class="account-card-content">
                                                                         <div class="account-avatar-wrapper">
                                                                             <img src="{{ $account['profile_image'] }}"
                                                                                 class="account-avatar"
-                                                                                onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';">
+                                                                                onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';" loading="lazy">
                                                                             <span
                                                                                 class="platform-indicator tiktok-indicator">
                                                                                 <i class="fab fa-tiktok"></i>
                                                                             </span>
                                                                         </div>
                                                                         <div class="account-info">
+                                                                            <div class="account-name">
+                                                                                {{ Str::limit($account['name'], 18) }}
+                                                                            </div>
                                                                             <div class="account-username">
-                                                                                {{ Str::limit($account['username'], 20) }}
+                                                                                {{ Str::limit($account['username'], 15) }}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -280,6 +292,57 @@
         /* Account Cards Styling - Matching accounts/index */
         .accounts-grid-wrapper {
             position: relative;
+        }
+
+        /* Tooltip Styling for Account Cards - same as schedule/index */
+        .account-card.has-tooltip {
+            position: relative;
+            overflow: visible;
+        }
+
+        .account-card.has-tooltip::after {
+            content: attr(data-tooltip);
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 50%;
+            transform: translateX(-50%) translateY(-5px);
+            padding: 8px 12px;
+            background: #333;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 500;
+            white-space: nowrap;
+            border-radius: 6px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, transform 0.3s ease, visibility 0.3s ease;
+            z-index: 10000;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            visibility: hidden;
+            min-width: max-content;
+        }
+
+        .account-card.has-tooltip::before {
+            content: '';
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 50%;
+            transform: translateX(-50%);
+            border-width: 6px;
+            border-style: solid;
+            border-color: #333 transparent transparent transparent;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            z-index: 10001;
+            visibility: hidden;
+        }
+
+        .account-card.has-tooltip:hover::after,
+        .account-card.has-tooltip:hover::before {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(-50%) translateY(0);
         }
 
         .accounts-grid {
@@ -408,7 +471,7 @@
             min-width: 0;
         }
 
-        .account-username {
+        .account-name {
             font-weight: 600;
             font-size: 14px;
             color: #1a1a1a;
@@ -416,6 +479,15 @@
             overflow: hidden;
             text-overflow: ellipsis;
             margin-bottom: 2px;
+            line-height: 1.3;
+        }
+
+        .account-username {
+            font-size: 12px;
+            color: #6c757d;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             line-height: 1.3;
         }
 

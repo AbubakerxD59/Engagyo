@@ -11,7 +11,7 @@
                     <div class="card-header with-border clearfix">
                         <div class="card-title">
                             <input type="hidden" id="facebookAcc" value="{{ session_check('facebook_auth') ? 1 : 0 }}">
-                            <img src="{{ social_logo('facebook') }}">
+                            <img src="{{ social_logo('facebook') }}" loading="lazy">
                             <span>Facebook</span>
                         </div>
                         <a href="{{ $facebookUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
@@ -32,7 +32,7 @@
                                             class="account-card-link">
                                             <div class="account-card-content">
                                                 <div class="account-avatar-wrapper">
-                                                    <img src="{{ $fb->profile_image }}" class="account-avatar"
+                                                    <img src="{{ $fb->profile_image }}" class="account-avatar" loading="lazy"
                                                         onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
                                                     <span class="platform-indicator facebook-indicator">
                                                         <i class="fab fa-facebook-f"></i>
@@ -87,7 +87,7 @@
                     <div class="card-header with-border clearfix">
                         <div class="card-title">
                             <input type="hidden" id="pinterestAcc" value="{{ session_check('pinterest_auth') ? 1 : 0 }}">
-                            <img src="{{ social_logo('pinterest') }}">
+                            <img src="{{ social_logo('pinterest') }}" loading="lazy">
                             <span>Pinterest</span>
                         </div>
                         <a href="{{ $pinterestUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
@@ -108,7 +108,7 @@
                                             class="account-card-link">
                                             <div class="account-card-content">
                                                 <div class="account-avatar-wrapper">
-                                                    <img src="{{ $pin->profile_image }}" class="account-avatar"
+                                                    <img src="{{ $pin->profile_image }}" class="account-avatar" loading="lazy"
                                                         onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
                                                     <span class="platform-indicator pinterest-indicator">
                                                         <i class="fab fa-pinterest-p"></i>
@@ -163,7 +163,7 @@
                     <div class="card-header with-border clearfix">
                         <div class="card-title">
                             <input type="hidden" id="tiktokAcc" value="{{ session_check('tiktok_auth') ? 1 : 0 }}">
-                            <img src="{{ social_logo('tiktok') }}">
+                            <img src="{{ social_logo('tiktok') }}" loading="lazy">
                             <span>TikTok</span>
                         </div>
                         <a href="{{ $tiktokUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
@@ -184,7 +184,7 @@
                                             class="account-card-link">
                                             <div class="account-card-content">
                                                 <div class="account-avatar-wrapper">
-                                                    <img src="{{ $tiktok->profile_image }}" class="account-avatar"
+                                                    <img src="{{ $tiktok->profile_image }}" class="account-avatar" loading="lazy"
                                                         onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';">
                                                     <span class="platform-indicator tiktok-indicator">
                                                         <i class="fab fa-tiktok"></i>

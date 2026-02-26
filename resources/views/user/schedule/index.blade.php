@@ -29,7 +29,7 @@
                                                 <div class="account-card-inner">
                                                     <div class="account-avatar">
                                                         <img src="{{ $account->profile_image }}"
-                                                            onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
+                                                            onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';" loading="lazy">
                                                         <span class="platform-badge facebook">
                                                             <i class="fab fa-facebook-f"></i>
                                                         </span>
@@ -49,7 +49,7 @@
                                                 <div class="account-card-inner">
                                                     <div class="account-avatar">
                                                         <img src="{{ $account->pinterest?->profile_image }}"
-                                                            onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
+                                                            onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';" loading="lazy">
                                                         <span class="platform-badge pinterest">
                                                             <i class="fab fa-pinterest-p"></i>
                                                         </span>
@@ -69,7 +69,7 @@
                                                 <div class="account-card-inner">
                                                     <div class="account-avatar">
                                                         <img src="{{ $account->profile_image }}"
-                                                            onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';">
+                                                            onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';" loading="lazy">
                                                         <span class="platform-badge tiktok">
                                                             <i class="fab fa-tiktok"></i>
                                                         </span>
@@ -222,7 +222,7 @@
             <button class="lightbox-close" id="lightboxClose">
                 <i class="fas fa-times"></i>
             </button>
-            <img src="" alt="Full size image" id="lightboxImage">
+            <img src="" alt="Full size image" id="lightboxImage" loading="lazy">
             <div class="lightbox-caption" id="lightboxCaption"></div>
         </div>
     </div>

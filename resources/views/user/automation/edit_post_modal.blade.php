@@ -52,7 +52,7 @@
                             </div>
                             <div class="col-md-9">
                                 <input type="file" name="post_image" id="post_image" class="form-control">
-                                <img id="post_image_preview" class="rounded" width="100px">
+                                <img id="post_image_preview" class="rounded" width="100px" loading="lazy">
                             </div>
                         </div>
                     </div>

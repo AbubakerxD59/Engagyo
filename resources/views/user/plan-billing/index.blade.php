@@ -52,7 +52,7 @@
                                                         <div class="mb-3">
                                                             @if ($package->icon)
                                                                 <img src="{{ $package->icon }}" alt="{{ $package->name }}"
-                                                                    class="img-fluid" style="max-height: 80px;">
+                                                                    class="img-fluid" style="max-height: 80px;" loading="lazy">
                                                             @else
                                                                 <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle"
                                                                     style="width: 80px; height: 80px;">
@@ -226,7 +226,7 @@
                                                     <div class="text-center mb-4">
                                                         @if ($pkg->icon)
                                                             <img src="{{ $pkg->icon }}" alt="{{ $pkg->name }}"
-                                                                class="mb-3" style="height: 64px; object-fit: contain;">
+                                                                class="mb-3" style="height: 64px; object-fit: contain;" loading="lazy">
                                                         @else
                                                             <div class="d-inline-flex align-items-center justify-content-center bg-light rounded-circle mb-3"
                                                                 style="width: 64px; height: 64px;">

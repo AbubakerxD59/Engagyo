@@ -26,7 +26,7 @@
             <input type="file" name="edit_post_publish_image" id="edit_post_publish_image" style="display: none;"
                 accept="image/*">
             <br>
-            <img src="{{ $post->image }}" alt="Post image" class="rounded mt-2" id="edit_post_image_preview"
+            <img src="{{ $post->image }}" alt="Post image" class="rounded mt-2" id="edit_post_image_preview" loading="lazy"
                 onerror="this.onerror=null; this.src='{{ no_image() }}';" width="100%">
         </div>
     @else

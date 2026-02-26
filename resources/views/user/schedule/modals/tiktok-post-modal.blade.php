@@ -24,7 +24,7 @@
                     <label class="font-weight-bold">Content Preview:</label>
                     <div class="preview-container border rounded p-2">
                         <div id="preview-image" class="text-center mb-2" style="display: none;">
-                            <img src="" alt="Preview" class="img-fluid" style="max-height: 200px;">
+                            <img src="" alt="Preview" class="img-fluid" style="max-height: 200px;" loading="lazy">
                         </div>
                         <div id="preview-video" class="text-center mb-2" style="display: none;">
                             <video src="" controls class="img-fluid" style="max-height: 200px;"></video>

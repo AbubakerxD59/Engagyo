@@ -16,7 +16,7 @@
         @else
             <!-- Regular Image -->
             <img src="{{ $post->image }}" alt="Product post image" class="post-image"
-                onerror="this.onerror=null; this.src='{{ asset('assets/img/downloading_sample.png') }}';">
+                onerror="this.onerror=null; this.src='{{ asset('assets/img/downloading_sample.png') }}';" loading="lazy">
         @endif
     </div>
     <!-- CONTENT SECTION -->
@@ -24,7 +24,7 @@
         <div class="mb-2">
             <img src="{{ $post->account_profile }}" class="rounded-circle me-2 social_profile"
                 style="object-fit: cover;"
-                onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';">
+                onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';" loading="lazy">
             <span>
                 <strong>
                     {{ $post->account_name ?? ucfirst($post->social_type) }}

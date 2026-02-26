@@ -13,10 +13,10 @@
                                 <div class="profile-pic-wrapper mb-3">
                                     <div class="profile-pic-container">
                                         @if ($user->profile_pic)
-                                            <img src="{{ asset($user->profile_pic) }}" alt="Profile Picture"
+                                            <img src="{{ asset($user->profile_pic) }}" alt="Profile Picture" loading="lazy"
                                                 class="profile-pic" id="profilePicPreview">
                                         @else
-                                            <img src="{{ asset('assets/img/noimage.png') }}" alt="Profile Picture"
+                                            <img src="{{ asset('assets/img/noimage.png') }}" alt="Profile Picture" loading="lazy"
                                                 class="profile-pic" id="profilePicPreview">
                                         @endif
                                         <div class="profile-pic-overlay" id="profilePicOverlay">

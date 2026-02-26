@@ -13,24 +13,24 @@
                         @if ($account->type == 'facebook')
                             <img style="width:35px;height:35px;" src="{{ $account->profile_image }}"
                                 class="rounded-circle" alt="{{ social_logo('facebook') }}"
-                                onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
+                                onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';" loading="lazy">
 
                             <img src="{{ social_logo('facebook') }}" alt=""
-                                style="width: 15px; position:relative;">
+                                style="width: 15px; position:relative;" loading="lazy">
                         @elseif($account->type == 'pinterest')
                             <img style="width:35px;height:35px;" src="{{ $account->pinterest?->profile_image }}"
                                 class="rounded-circle" alt="{{ social_logo('pinterest') }}"
-                                onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';">
+                                onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';" loading="lazy">
 
                             <img src="{{ social_logo('pinterest') }}" alt=""
-                                style="width: 15px; position:relative;">
+                                style="width: 15px; position:relative;" loading="lazy">
                         @elseif($account->type == 'tiktok')
                             <img style="width:35px;height:35px;" src="{{ $account->profile_image }}"
                                 class="rounded-circle" alt="{{ social_logo('tiktok') }}"
-                                onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';">
+                                onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';" loading="lazy">
 
                             <img src="{{ social_logo('tiktok') }}" alt=""
-                                style="width: 15px; position:relative;">
+                                style="width: 15px; position:relative;" loading="lazy">
                         @endif
                         <b>{{ $account->name }}</b>
                     </div>

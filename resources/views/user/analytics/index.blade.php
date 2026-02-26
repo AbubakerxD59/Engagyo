@@ -28,7 +28,7 @@
                                             role="button" tabindex="0">
                                             <div class="analytics-page-card-inner">
                                                 <div class="analytics-page-avatar">
-                                                    <img src="{{ $page->profile_image ?? social_logo('facebook') }}"
+                                                    <img src="{{ $page->profile_image ?? social_logo('facebook') }}" loading="lazy"
                                                         onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
                                                     <span class="platform-badge facebook">
                                                         <i class="fab fa-facebook-f"></i>

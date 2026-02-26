@@ -4,7 +4,7 @@
         <div class="d-flex">
             <!-- Profile Picture -->
             <img src="{{ $post->account_profile }}" class="rounded-circle social_profile me-2" style="object-fit: cover;"
-                onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';">
+                onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';" loading="lazy">
             <div class="post-header-text ml-2">
                 <div class="post-author">
                     {{ $post->account_name ?? ucfirst($post->social_type) }}
@@ -30,7 +30,7 @@
                     <div class="pronunciation-image-container">
                         <!-- Placeholder for Pizza Image -->
                         <img src="{{ $post->image }}" alt="Pizza"
-                            onerror="this.onerror=null; this.src='{{ no_image() }}';">
+                            onerror="this.onerror=null; this.src='{{ no_image() }}';" loading="lazy">
                     </div>
                 </div>
             </div>
@@ -64,7 +64,7 @@
         <div class="d-flex align-items-center mt-2">
             <img src="{{ $post->account_profile }}" class="rounded-circle social_profile me-2" alt="Comment Profile"
                 style="object-fit: cover;"
-                onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';">
+                onerror="this.onerror=null; this.src='{{ social_logo($post->social_type) }}';" loading="lazy">
             <div class="flex-grow-1 p-2 rounded-pill bg-light text-muted" style="font-size: 12px;">
                 @if (!empty($post->comment))
                     {{ $post->comment }}

@@ -729,11 +729,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Get board IDs from team_member_accounts for the current user
-     * 
-     * @return array Array of board IDs that the user has access to through team membership
+     * Get account IDs from team_member_accounts for the current user (all types)
+     *
+     * @return array Array of account IDs that the user has access to through team membership
      */
-    public function getTeamMemberBoardIds(): array
+    public function getTeamMemberAccountIds(): array
     {
         if (!$this->isTeamMember()) {
             return [];
@@ -743,9 +743,32 @@ class User extends Authenticatable
         if (!$teamMember) {
             return [];
         }
-        $social_types = ['pinterest', 'page', 'tiktok'];
+        $social_types = ['page', 'board', 'tiktok'];
         return TeamMemberAccount::where('team_member_id', $teamMember->id)
             ->whereIn('account_type', $social_types)
+            ->pluck('account_id')
+            ->toArray();
+    }
+
+    /**
+     * Get account IDs for a specific type from team_member_accounts for the current user
+     *
+     * @param string $accountType One of: 'page', 'board', 'tiktok'
+     * @return array Array of account IDs that the user has access to for the given type
+     */
+    public function getTeamMemberAccountIdsByType(string $accountType): array
+    {
+        if (!$this->isTeamMember()) {
+            return [];
+        }
+
+        $teamMember = $this->activeTeamMembership();
+        if (!$teamMember) {
+            return [];
+        }
+
+        return TeamMemberAccount::where('team_member_id', $teamMember->id)
+            ->where('account_type', $accountType)
             ->pluck('account_id')
             ->toArray();
     }

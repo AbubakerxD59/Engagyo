@@ -622,7 +622,7 @@
                     ${isFeatured ? '<span class="featured-badge">Popular</span>' : ''}
                     ${package.icon ? `
                         <div class="package-icon-wrapper">
-                            <img src="${package.icon}" alt="${package.name}">
+                            <img src="${package.icon}" alt="${package.name}" loading="lazy">
                         </div>
                     ` : ''}
                     <h3 class="package-name">${package.name}</h3>
