@@ -248,7 +248,7 @@
                         '<div class="analytics-post-thumb-wrap">' + img + '</div>' +
                         '<div class="analytics-post-content">' +
                         '<p class="analytics-post-date text-muted mb-2"><i class="far fa-clock mr-1"></i>' + created + '</p>' +
-                        '<p class="analytics-post-message mb-3">' + (msg || '<em class="text-muted">No message</em>') + '</p>' +
+                        '<p class="analytics-post-message mb-3">' + (msg || '<em class="text-muted"></em>') + '</p>' +
                         '<div class="analytics-post-insights-wrap mb-3">' + insightHtml + '</div>' +
                         link + '</div></div></div></div>';
                 });

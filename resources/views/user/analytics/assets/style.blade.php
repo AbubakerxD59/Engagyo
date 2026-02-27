@@ -428,7 +428,7 @@
         font-size: 0.95rem;
         line-height: 1.5;
         color: #333;
-        white-space: pre-wrap;
+        /* white-space: pre-wrap; */
         word-break: break-word;
     }
 
