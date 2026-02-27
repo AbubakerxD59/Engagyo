@@ -68,44 +68,72 @@
                     '<span class="page-insight-label">' + label + '</span></div>';
             }
 
-            var chartMetricOptions = [
-                { key: 'followers', label: 'Followers', byDayKey: 'followers_by_day' },
-                { key: 'reach', label: 'Reach', byDayKey: 'reach_by_day' },
-                { key: 'video_views', label: 'Video Views', byDayKey: 'video_views_by_day' },
-                { key: 'engagements', label: 'Engagements', byDayKey: 'engagements_by_day' }
+            var chartMetricOptions = [{
+                    key: 'followers',
+                    label: 'Followers',
+                    byDayKey: 'followers_by_day'
+                },
+                {
+                    key: 'reach',
+                    label: 'Reach',
+                    byDayKey: 'reach_by_day'
+                },
+                {
+                    key: 'video_views',
+                    label: 'Video Views',
+                    byDayKey: 'video_views_by_day'
+                },
+                {
+                    key: 'engagements',
+                    label: 'Engagements',
+                    byDayKey: 'engagements_by_day'
+                }
             ];
 
             function renderEngagementsChart(insights, comp, selectedMetricKey) {
                 selectedMetricKey = selectedMetricKey || 'engagements';
-                var opt = chartMetricOptions.find(function(o) { return o.key === selectedMetricKey; }) || chartMetricOptions[3];
+                var opt = chartMetricOptions.find(function(o) {
+                    return o.key === selectedMetricKey;
+                }) || chartMetricOptions[3];
                 var byDay = insights[opt.byDayKey] || {};
                 var dates = Object.keys(byDay).sort();
                 var total = 0;
-                dates.forEach(function(d) { total += byDay[d] || 0; });
+                dates.forEach(function(d) {
+                    total += byDay[d] || 0;
+                });
                 var dailyAvg = dates.length > 0 ? Math.round(total / dates.length) : 0;
                 var metricComp = comp[opt.key] || {};
                 var pctChange = metricComp.change != null ? metricComp.change : null;
                 var pctStr = (pctChange != null ? ' ' + pctChange + '%' : '');
-                var chartHtml = dates.length > 0
-                    ? '<div class="chart-container" style="position: relative; height: 280px;"><canvas id="engagementsChartCanvas"></canvas></div>'
-                    : '<div class="alert alert-light border text-muted mb-0"><i class="fas fa-info-circle mr-2"></i>No daily ' + opt.label.toLowerCase() + ' data available for this period.</div>';
+                var chartHtml = dates.length > 0 ?
+                    '<div class="chart-container" style="position: relative; height: 280px;"><canvas id="engagementsChartCanvas"></canvas></div>' :
+                    '<div class="alert alert-light border text-muted mb-0"><i class="fas fa-info-circle mr-2"></i>No daily ' +
+                    opt.label.toLowerCase() + ' data available for this period.</div>';
                 var dropdownItems = chartMetricOptions.map(function(o) {
                     var isSelected = o.key === selectedMetricKey;
-                    return '<a class="chart-metric-option' + (isSelected ? ' active' : '') + '" href="#" data-metric="' + o.key + '"><span class="chart-metric-option-circle' + (isSelected ? ' selected' : '') + '"></span><span>' + o.label + '</span></a>';
+                    return '<a class="chart-metric-option' + (isSelected ? ' active' : '') +
+                        '" href="#" data-metric="' + o.key + '"><span class="chart-metric-option-circle' + (
+                            isSelected ? ' selected' : '') + '"></span><span>' + o.label + '</span></a>';
                 }).join('');
-                return '<div class="mt-4 pt-4 border-top chart-metric-section" data-selected-metric="' + selectedMetricKey + '">' +
+                return '<div class="mt-4 pt-4 border-top chart-metric-section" data-selected-metric="' +
+                    selectedMetricKey + '">' +
                     '<div class="d-flex align-items-center flex-wrap gap-2 mb-3">' +
                     '<h6 class="text-muted mb-0"><i class="fas fa-chart-bar mr-1"></i>Average <div class="dropdown chart-metric-dropdown-wrap">' +
                     '<button type="button" class="chart-metric-trigger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">' +
-                    '<span class="chart-metric-trigger-label">' + opt.label + '</span><i class="fas fa-chevron-down chart-metric-trigger-chevron"></i></button>' +
-                    '<div class="dropdown-menu chart-metric-dropdown">' + dropdownItems + '</div></div></h6></div>' +
-                    '<p class="small text-muted mb-2">(daily average: ' + dailyAvg.toLocaleString() + pctStr + ')</p>' +
+                    '<span class="chart-metric-trigger-label">' + opt.label +
+                    '</span><i class="fas fa-chevron-down chart-metric-trigger-chevron"></i></button>' +
+                    '<div class="dropdown-menu chart-metric-dropdown">' + dropdownItems +
+                    '</div></div></h6></div>' +
+                    '<p class="small text-muted mb-2">(daily average: ' + dailyAvg.toLocaleString() + pctStr +
+                    ')</p>' +
                     chartHtml + '</div>';
             }
 
             function initEngagementsChart(insights, metricKey) {
                 metricKey = metricKey || 'engagements';
-                var opt = chartMetricOptions.find(function(o) { return o.key === metricKey; }) || chartMetricOptions[3];
+                var opt = chartMetricOptions.find(function(o) {
+                    return o.key === metricKey;
+                }) || chartMetricOptions[3];
                 var byDay = insights[opt.byDayKey] || {};
                 var dates = Object.keys(byDay).sort();
                 if (dates.length === 0 || typeof Chart === 'undefined') return;
@@ -115,9 +143,14 @@
                 }
                 var labels = dates.map(function(d) {
                     var dt = new Date(d + 'T12:00:00');
-                    return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                    return dt.toLocaleDateString('en-GB', {
+                        day: 'numeric',
+                        month: 'short'
+                    });
                 });
-                var data = dates.map(function(d) { return byDay[d] || 0; });
+                var data = dates.map(function(d) {
+                    return byDay[d] || 0;
+                });
                 var ctx = document.getElementById('engagementsChartCanvas');
                 if (!ctx) return;
                 window.engagementsChartInstance = new Chart(ctx.getContext('2d'), {
@@ -142,7 +175,10 @@
                                         var idx = items[0] && items[0].dataIndex;
                                         if (idx != null && dates[idx]) {
                                             var dt = new Date(dates[idx] + 'T12:00:00');
-                                            return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+                                            return dt.toLocaleDateString('en-GB', {
+                                                day: 'numeric',
+                                                month: 'long'
+                                            });
                                         }
                                         return '';
                                     },
@@ -151,11 +187,19 @@
                                     }
                                 }
                             },
-                            legend: { display: false }
+                            legend: {
+                                display: false
+                            }
                         },
                         scales: {
-                            y: { beginAtZero: true },
-                            x: { grid: { display: false } }
+                            y: {
+                                beginAtZero: true
+                            },
+                            x: {
+                                grid: {
+                                    display: false
+                                }
+                            }
                         }
                     }
                 });
@@ -182,21 +226,26 @@
             function formatPostDate(createdTime) {
                 if (!createdTime) return '';
                 var d = new Date(createdTime);
-                var datePart = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
-                var timePart = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase().replace(/\s/g, '');
+                var datePart = d.toLocaleDateString('en-US', {
+                    month: 'long',
+                    day: 'numeric',
+                    year: 'numeric'
+                });
+                var timePart = d.toLocaleTimeString('en-US', {
+                    hour: 'numeric',
+                    minute: '2-digit',
+                    hour12: true
+                }).toLowerCase().replace(/\s/g, '');
                 return datePart + ' ' + timePart;
             }
 
             var postInsightLabels = {
                 post_clicks: 'Clicks',
-                post_reactions: 'Reactions',
-                post_impressions: 'Impressions',
-                post_impressions_unique: 'Reach',
-                post_comments: 'Comments',
+                post_reach: 'Reach',
                 post_engagement_rate: 'Engagement Rate'
             };
 
-            var postInsightDisplayOrder = ['post_clicks', 'post_reactions', 'post_impressions', 'post_impressions_unique', 'post_comments', 'post_engagement_rate'];
+            var postInsightDisplayOrder = ['post_clicks', 'post_reach', 'post_engagement_rate'];
 
             function renderPostsList(posts, since, until, searchQuery) {
                 searchQuery = (searchQuery || '').trim().toLowerCase();
@@ -218,22 +267,27 @@
                         return msg.indexOf(searchQuery) !== -1 || story.indexOf(searchQuery) !== -1;
                     });
                 }
-                var searchBar = '<div class="analytics-posts-search-wrap" style="min-width: 220px; max-width: 320px;">' +
+                var searchBar =
+                    '<div class="analytics-posts-search-wrap" style="min-width: 220px; max-width: 320px;">' +
                     '<div class="input-group input-group-sm">' +
                     '<div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-search text-muted"></i></span></div>' +
-                    '<input type="search" id="analyticsPostsSearch" class="form-control" placeholder="Search posts by message..." aria-label="Search posts" value="' + escapeHtml(searchQuery) + '">' +
+                    '<input type="search" id="analyticsPostsSearch" class="form-control" placeholder="Search posts by message..." aria-label="Search posts" value="' +
+                    escapeHtml(searchQuery) + '">' +
                     '</div></div>';
                 var html = '<div class="analytics-posts-tab-content">' +
                     '<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">' +
-                    '<h6 class="text-muted mb-0"><i class="fas fa-newspaper mr-1"></i>Posts (' + filtered.length + (searchQuery ? ' of ' + posts.length + ')' : ')') + '</h6>' +
+                    '<h6 class="text-muted mb-0"><i class="fas fa-newspaper mr-1"></i>Posts (' + filtered.length + (
+                        searchQuery ? ' of ' + posts.length + ')' : ')') + '</h6>' +
                     searchBar + '</div>' +
                     '<div class="analytics-posts-list">';
                 filtered.forEach(function(post) {
                     var rawMsg = post.message || post.story || '';
                     var msg = escapeHtml(rawMsg.substring(0, 200));
                     if (rawMsg.length > 200) msg += '...';
-                    var created = formatPostDate(post.created_time);
-                    var img = post.full_picture ? '<img src="' + escapeHtml(post.full_picture) + '" alt="" class="analytics-post-thumb" loading="lazy">' :
+                    var post_created = post.created_time;
+                    var created = formatPostDate(post_created.date);
+                    var img = post.full_picture ? '<img src="' + escapeHtml(post.full_picture) +
+                        '" alt="" class="analytics-post-thumb" loading="lazy">' :
                         '<div class="analytics-post-thumb-placeholder"><i class="fas fa-image text-muted"></i></div>';
                     var insights = post.insights || {};
                     var insightItems = [];
@@ -242,32 +296,47 @@
                         var key = order[k];
                         if (key in insights) {
                             var val = insights[key];
-                            var displayVal = (key === 'post_engagement_rate') ? (val || 0) + '%' : (val || 0).toLocaleString();
-                            insightItems.push('<div class="analytics-post-insight-item"><span class="analytics-post-insight-value">' + displayVal + '</span><span class="analytics-post-insight-label">' + (postInsightLabels[key] || key) + '</span></div>');
+                            var displayVal = (key === 'post_engagement_rate') ? (val || 0) + '%' : (val ||
+                                0).toLocaleString();
+                            insightItems.push(
+                                '<div class="analytics-post-insight-item"><span class="analytics-post-insight-value">' +
+                                displayVal + '</span><span class="analytics-post-insight-label">' + (
+                                    postInsightLabels[key] || key) + '</span></div>');
                         }
                     }
                     for (var key in insights) {
                         if (insights.hasOwnProperty(key) && order.indexOf(key) === -1) {
                             var val = insights[key];
-                            var displayVal = (key === 'post_engagement_rate') ? (val || 0) + '%' : (val || 0).toLocaleString();
-                            insightItems.push('<div class="analytics-post-insight-item"><span class="analytics-post-insight-value">' + displayVal + '</span><span class="analytics-post-insight-label">' + (postInsightLabels[key] || key) + '</span></div>');
+                            var displayVal = (key === 'post_engagement_rate') ? (val || 0) + '%' : (val ||
+                                0).toLocaleString();
+                            insightItems.push(
+                                '<div class="analytics-post-insight-item"><span class="analytics-post-insight-value">' +
+                                displayVal + '</span><span class="analytics-post-insight-label">' + (
+                                    postInsightLabels[key] || key) + '</span></div>');
                         }
                     }
-                    var insightHtml = insightItems.length > 0 ? '<div class="analytics-post-insights-grid">' + insightItems.join('') + '</div>' : '<p class="text-muted small mb-0">No insights available</p>';
-                    var link = post.permalink_url ? '<a href="' + escapeHtml(post.permalink_url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary"><i class="fas fa-external-link-alt mr-1"></i>View on Facebook</a>' : '';
+                    var insightHtml = insightItems.length > 0 ?
+                        '<div class="analytics-post-insights-grid">' + insightItems.join('') + '</div>' :
+                        '<p class="text-muted small mb-0">No insights available</p>';
+                    var link = post.permalink_url ? '<a href="' + escapeHtml(post.permalink_url) +
+                        '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary"><i class="fas fa-external-link-alt mr-1"></i>View on Facebook</a>' :
+                        '';
                     html += '<div class="analytics-post-card card mb-3">' +
                         '<div class="card-body">' +
                         '<div class="analytics-post-card-inner">' +
                         '<div class="analytics-post-thumb-wrap">' + img + '</div>' +
                         '<div class="analytics-post-content">' +
-                        '<p class="analytics-post-date text-muted mb-2"><i class="far fa-clock mr-1"></i>' + created + '</p>' +
-                        '<p class="analytics-post-message mb-3">' + (msg || '<em class="text-muted"></em>') + '</p>' +
+                        '<p class="analytics-post-date text-muted mb-2"><i class="far fa-clock mr-1"></i>' +
+                        created + '</p>' +
+                        '<p class="analytics-post-message mb-3">' + (msg ||
+                        '<em class="text-muted"></em>') + '</p>' +
                         '<div class="analytics-post-insights-wrap mb-3">' + insightHtml + '</div>' +
-                        link +                     '</div></div></div></div>';
+                        link + '</div></div></div></div>';
                 });
                 html += '</div></div>';
                 if (filtered.length === 0 && searchQuery) {
-                    html += '<p class="text-muted text-center py-3 mb-0"><i class="fas fa-search mr-1"></i>No posts match your search.</p>';
+                    html +=
+                        '<p class="text-muted text-center py-3 mb-0"><i class="fas fa-search mr-1"></i>No posts match your search.</p>';
                 }
                 return html;
             }
@@ -276,7 +345,8 @@
                 duration = duration || 'last_28';
                 since = since || '';
                 until = until || '';
-                var overviewContent = '<div class="analytics-page-insights mb-4">' + renderDurationDropdown(duration, since,
+                var overviewContent = '<div class="analytics-page-insights mb-4">' + renderDurationDropdown(
+                    duration, since,
                     until);
                 if (!hasMeaningfulInsights(insights)) {
                     overviewContent += '<div class="alert alert-info mb-0" role="alert">' +
@@ -293,7 +363,8 @@
                         ['video_views', 'Video Views', false],
                         ['engagements', 'Engagements', false]
                     ];
-                    var note = '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>' +
+                    var note =
+                        '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>' +
                         'Page Insights data is only available on Pages with 100 or more likes.</p>';
                     overviewContent += note + '<div class="analytics-insight-cards">';
                     cards.forEach(function(c) {
@@ -309,7 +380,8 @@
                     '<li class="nav-item"><a class="nav-link" data-toggle="tab" href="#analyticsPostsTab" role="tab">Posts</a></li>' +
                     '</ul>' +
                     '<div class="tab-content">' +
-                    '<div class="tab-pane fade show active" id="analyticsOverviewTab" role="tabpanel">' + overviewContent + '</div>' +
+                    '<div class="tab-pane fade show active" id="analyticsOverviewTab" role="tabpanel">' +
+                    overviewContent + '</div>' +
                     '<div class="tab-pane fade" id="analyticsPostsTab" role="tabpanel">' + postsContent + '</div>' +
                     '</div>';
             }
@@ -367,9 +439,12 @@
                         bindDurationHandlers();
                         bindChartMetricHandlers();
                         bindPostsSearchHandler();
-                        var selectedMetric = $('.chart-metric-section').data('selected-metric') || 'engagements';
+                        var selectedMetric = $('.chart-metric-section').data('selected-metric') ||
+                        'engagements';
                         if (res.selectedPage && res.pageInsights) {
-                            var byDayKey = chartMetricOptions.find(function(o) { return o.key === selectedMetric; });
+                            var byDayKey = chartMetricOptions.find(function(o) {
+                                return o.key === selectedMetric;
+                            });
                             byDayKey = byDayKey ? byDayKey.byDayKey : 'engagements_by_day';
                             var byDay = (res.pageInsights[byDayKey] || {});
                             if (Object.keys(byDay).length > 0) {
@@ -394,7 +469,9 @@
                     var comp = insights.comparison || {};
                     var newHtml = renderEngagementsChart(insights, comp, metric);
                     $section.replaceWith(newHtml);
-                    var opt = chartMetricOptions.find(function(o) { return o.key === metric; });
+                    var opt = chartMetricOptions.find(function(o) {
+                        return o.key === metric;
+                    });
                     var byDay = opt ? (insights[opt.byDayKey] || {}) : {};
                     if (Object.keys(byDay).length > 0 && typeof Chart !== 'undefined') {
                         initEngagementsChart(insights, metric);
