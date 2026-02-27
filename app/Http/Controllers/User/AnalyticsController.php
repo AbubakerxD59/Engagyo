@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\Page;
 use App\Models\PageInsight;
+use App\Models\PagePost;
 use App\Services\FacebookService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -84,6 +85,8 @@ class AnalyticsController extends Controller
         $selectedPage = null;
         $pageInsights = null;
 
+        $pagePosts = null;
+
         if ($pageId === 'all' || empty($pageId)) {
             $pageInsights = $this->fetchAggregatedInsights($facebookPages, $since, $until, $refresh);
             $selectedPage = $facebookPages->count() > 0 ? ['id' => 'all', 'name' => 'All Accounts'] : null;
@@ -91,6 +94,7 @@ class AnalyticsController extends Controller
             $selectedPage = Page::find($pageId);
             if ($selectedPage) {
                 $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until, $refresh);
+                $pagePosts = $this->fetchPagePosts($selectedPage, $since, $until, $refresh);
                 $selectedPage = ['id' => $selectedPage->id, 'name' => $selectedPage->name];
             }
         }
@@ -98,6 +102,7 @@ class AnalyticsController extends Controller
         return response()->json([
             'success' => true,
             'pageInsights' => $pageInsights,
+            'pagePosts' => $pagePosts,
             'selectedPage' => $selectedPage,
             'hasPages' => $facebookPages->count() > 0,
             'since' => $since,
@@ -150,6 +155,53 @@ class AnalyticsController extends Controller
         );
 
         return $insights;
+    }
+
+    /**
+     * Fetch page posts with insights. Returns from DB if stored; fetches from Graph API when refresh or no stored data.
+     * Returns null for "All Accounts" (posts not aggregated across pages).
+     */
+    private function fetchPagePosts(?Page $page, ?string $since = null, ?string $until = null, bool $refresh = false): ?array
+    {
+        if (!$page || empty($page->page_id) || empty($page->access_token)) {
+            return null;
+        }
+
+        $duration = request()->query('duration', 'last_28');
+
+        if (!$refresh) {
+            $stored = PagePost::where('page_id', $page->id)
+                ->where('since', $since)
+                ->where('until', $until)
+                ->first();
+
+            if ($stored && $stored->posts !== null) {
+                return $stored->posts;
+            }
+        }
+
+        $tokenCheck = FacebookService::validateToken($page);
+        if (!$tokenCheck['success']) {
+            return null;
+        }
+
+        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
+        $posts = $this->facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until);
+
+        PagePost::updateOrCreate(
+            [
+                'page_id' => $page->id,
+                'since' => $since,
+                'until' => $until,
+            ],
+            [
+                'duration' => $duration,
+                'posts' => $posts,
+                'synced_at' => now(),
+            ]
+        );
+
+        return $posts;
     }
 
     /**

@@ -844,6 +844,142 @@ class FacebookService
         return $current;
     }
 
+    /**
+     * Get page feed (posts) from Facebook Graph API.
+     * Fetches all posts by the page in the given date range.
+     *
+     * @param string $pageId Facebook page ID (graph ID)
+     * @param string $accessToken Page access token
+     * @param string|null $since Start date Y-m-d
+     * @param string|null $until End date Y-m-d
+     * @param int $limit Max posts per request (default 100)
+     * @return array List of post objects with id, message, created_time, full_picture, permalink_url, type
+     */
+    public function getPageFeed(string $pageId, string $accessToken, ?string $since = null, ?string $until = null, int $limit = 100): array
+    {
+        $posts = [];
+        if (empty($pageId) || empty($accessToken)) {
+            return $posts;
+        }
+
+        $until = $until ?: date('Y-m-d');
+        $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
+
+        $sinceIso = $since . 'T00:00:00+0000';
+        $untilIso = $until . 'T23:59:59+0000';
+
+        $fields = 'id,message,created_time,full_picture,permalink_url,story,type';
+        $endpoint = '/' . $pageId . '/feed?fields=' . urlencode($fields)
+            . '&since=' . urlencode($sinceIso)
+            . '&until=' . urlencode($untilIso)
+            . '&limit=' . min($limit, 100);
+
+        try {
+            $response = $this->facebook->get($endpoint, $accessToken);
+            $graphEdge = $response->getGraphEdge();
+
+            foreach ($graphEdge as $node) {
+                $post = [
+                    'id' => $node->getField('id'),
+                    'message' => $node->getField('message'),
+                    'created_time' => $node->getField('created_time'),
+                    'full_picture' => $node->getField('full_picture'),
+                    'permalink_url' => $node->getField('permalink_url'),
+                    'story' => $node->getField('story'),
+                    'type' => $node->getField('type'),
+                    'insights' => [],
+                ];
+                $posts[] = $post;
+            }
+        } catch (FacebookResponseException $e) {
+            return [];
+        } catch (FacebookSDKException $e) {
+            return [];
+        }
+
+        return $posts;
+    }
+
+    /**
+     * Get page posts with insights. Fetches feed then enriches each post with insights.
+     * Uses batch API for post insights when possible (up to 50 per batch).
+     *
+     * @param string $pageId Facebook page ID
+     * @param string $accessToken Page access token
+     * @param string|null $since Start date Y-m-d
+     * @param string|null $until End date Y-m-d
+     * @return array Posts with insights merged
+     */
+    public function getPagePostsWithInsights(string $pageId, string $accessToken, ?string $since = null, ?string $until = null): array
+    {
+        $posts = $this->getPageFeed($pageId, $accessToken, $since, $until);
+        if (empty($posts)) {
+            return [];
+        }
+
+        $metrics = 'post_impressions,post_impressions_unique,post_engaged_users,post_clicks';
+        $batchSize = 50;
+        $offset = 0;
+
+        foreach (array_chunk($posts, $batchSize) as $chunk) {
+            $batch = [];
+            foreach ($chunk as $post) {
+                $batch[] = [
+                    'method' => 'GET',
+                    'relative_url' => $post['id'] . '/insights?metric=' . $metrics . '&period=lifetime',
+                ];
+            }
+
+            try {
+                $params = ['batch' => json_encode($batch)];
+                $response = $this->facebook->post('/', $params, $accessToken);
+                $responses = $response->getDecodedBody();
+
+                if (!is_array($responses)) {
+                    $offset += count($chunk);
+                    continue;
+                }
+
+                foreach ($responses as $i => $batchResponse) {
+                    $postIndex = $offset + $i;
+                    if (!isset($posts[$postIndex])) {
+                        continue;
+                    }
+                    $code = $batchResponse['code'] ?? 0;
+                    $respBody = $batchResponse['body'] ?? '{}';
+                    $data = is_string($respBody) ? json_decode($respBody, true) : $respBody;
+                    $insights = [];
+
+                    if ($code === 200 && isset($data['data'])) {
+                        foreach ($data['data'] as $metricNode) {
+                            $name = $metricNode['name'] ?? null;
+                            $values = $metricNode['values'] ?? [];
+                            if ($name && !empty($values)) {
+                                $first = reset($values);
+                                $val = $first['value'] ?? 0;
+                                $insights[$name] = (int) $val;
+                            }
+                        }
+                    }
+
+                    $posts[$postIndex]['insights'] = $insights;
+                }
+            } catch (FacebookResponseException $e) {
+                for ($i = 0; $i < count($chunk); $i++) {
+                    $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
+                }
+            } catch (FacebookSDKException $e) {
+                for ($i = 0; $i < count($chunk); $i++) {
+                    $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
+                }
+            }
+
+            $offset += count($chunk);
+        }
+
+        return $posts;
+    }
+
     public static function validateToken($account)
     {
         try {

@@ -370,6 +370,38 @@
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1) !important;
     }
 
+    .analytics-post-thumb-wrap {
+        width: 120px;
+        flex-shrink: 0;
+    }
+
+    .analytics-post-thumb {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border-radius: 8px;
+        background: #f8f9fa;
+    }
+
+    .analytics-post-thumb-placeholder {
+        width: 120px;
+        height: 120px;
+        border-radius: 8px;
+        background: #f8f9fa;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+    }
+
+    .analytics-post-metrics span {
+        font-size: 0.9rem;
+    }
+
+    .analytics-posts-placeholder {
+        min-height: 200px;
+    }
+
     .analytics-post-thumbnail {
         max-height: 120px;
         overflow: hidden;

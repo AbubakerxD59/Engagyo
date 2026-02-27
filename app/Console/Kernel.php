@@ -83,8 +83,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('tiktok:cleanup-tests')->hourly();
         // Command to shuffle rss posts
         $schedule->command('app:shuffle-rss-posts')->dailyAt('01:00');
-        // Command to sync page insights for all pages and durations (runs daily at 04:00)
-        $schedule->command('insights:sync-page')->dailyAt('04:00');
+        // Command to sync page insights for all pages and durations (runs twice daily at 12:00 AM and 12:00 PM)
+        $schedule->command('insights:sync-page')->dailyAt('00:00');
+        $schedule->command('insights:sync-page')->dailyAt('12:00');
     }
 
     /**
