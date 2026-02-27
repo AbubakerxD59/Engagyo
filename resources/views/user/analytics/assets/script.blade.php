@@ -218,7 +218,8 @@
                     var rawMsg = post.message || post.story || '';
                     var msg = escapeHtml(rawMsg.substring(0, 200));
                     if (rawMsg.length > 200) msg += '...';
-                    var created = formatPostDate(post.created_time);
+                    var post_created = post.created_time;
+                    var created = formatPostDate(post_created.date);
                     var img = post.full_picture ? '<img src="' + escapeHtml(post.full_picture) + '" alt="" class="analytics-post-thumb" loading="lazy">' :
                         '<div class="analytics-post-thumb-placeholder"><i class="fas fa-image text-muted"></i></div>';
                     var insights = post.insights || {};
