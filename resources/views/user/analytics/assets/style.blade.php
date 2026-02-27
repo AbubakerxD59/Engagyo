@@ -269,6 +269,29 @@
         text-overflow: ellipsis;
     }
 
+    .analytics-insight-tabs {
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .analytics-insight-tabs .nav-link {
+        color: #6c757d;
+        border: none;
+        border-bottom: 2px solid transparent;
+        padding: 0.5rem 1rem;
+        font-weight: 500;
+    }
+
+    .analytics-insight-tabs .nav-link:hover {
+        color: #1877F2;
+        border-color: transparent;
+    }
+
+    .analytics-insight-tabs .nav-link.active {
+        color: #1877F2;
+        background: transparent;
+        border-bottom-color: #1877F2;
+    }
+
     .analytics-page-insights {
         padding: 1.25rem;
         background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);

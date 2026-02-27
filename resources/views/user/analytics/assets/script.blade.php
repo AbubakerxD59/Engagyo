@@ -72,18 +72,19 @@
             function renderEngagementsChart(insights, comp) {
                 var byDay = insights.engagements_by_day || {};
                 var dates = Object.keys(byDay).sort();
-                if (dates.length === 0) return '';
                 var total = 0;
                 dates.forEach(function(d) { total += byDay[d] || 0; });
-                var dailyAvg = Math.round(total / dates.length);
+                var dailyAvg = dates.length > 0 ? Math.round(total / dates.length) : 0;
                 var engComp = comp.engagements || {};
                 var pctChange = engComp.change != null ? engComp.change : null;
                 var pctStr = (pctChange != null ? ' ' + pctChange + '%' : '');
+                var chartHtml = dates.length > 0
+                    ? '<div class="chart-container" style="position: relative; height: 280px;"><canvas id="engagementsChartCanvas"></canvas></div>'
+                    : '<div class="alert alert-light border text-muted mb-0"><i class="fas fa-info-circle mr-2"></i>No daily engagement data available for this period.</div>';
                 return '<div class="mt-4 pt-4 border-top">' +
                     '<h6 class="text-muted mb-3"><i class="fas fa-chart-bar mr-1"></i>Average engagements</h6>' +
                     '<p class="small text-muted mb-2">(daily average: ' + dailyAvg.toLocaleString() + pctStr + ')</p>' +
-                    '<div class="chart-container" style="position: relative; height: 280px;">' +
-                    '<canvas id="engagementsChartCanvas"></canvas></div></div>';
+                    chartHtml + '</div>';
             }
 
             function initEngagementsChart(insights) {
@@ -157,34 +158,44 @@
                 duration = duration || 'last_28';
                 since = since || '';
                 until = until || '';
-                var html = '<div class="analytics-page-insights mb-4">' + renderDurationDropdown(duration, since,
+                var overviewContent = '<div class="analytics-page-insights mb-4">' + renderDurationDropdown(duration, since,
                     until);
                 if (!hasMeaningfulInsights(insights)) {
-                    html += '<div class="alert alert-info mb-0" role="alert">' +
+                    overviewContent += '<div class="alert alert-info mb-0" role="alert">' +
                         '<strong><i class="fas fa-info-circle mr-2"></i>Insights can\'t be fetched for this page.</strong>' +
                         '<ol class="mb-0 mt-2 pl-3">' +
                         '<li>Page Insights data is only available on Pages with 100 or more likes.</li>' +
                         '<li>The connected account may not have the required permissions. <a href="{{ route('panel.accounts') }}" class="alert-link font-weight-bold">Reconnect your account</a> to grant access.</li>' +
                         '</ol></div></div>';
-                    return html;
+                } else {
+                    var comp = insights.comparison || {};
+                    var cards = [
+                        ['followers', 'Followers', false],
+                        ['reach', 'Reach', false],
+                        ['video_views', 'Video Views', false],
+                        ['engagements', 'Engagements', false]
+                    ];
+                    var note = '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>' +
+                        'Page Insights data is only available on Pages with 100 or more likes.</p>';
+                    overviewContent += note + '<div class="analytics-insight-cards">';
+                    cards.forEach(function(c) {
+                        overviewContent += renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]);
+                    });
+                    overviewContent += '</div>';
+                    overviewContent += renderEngagementsChart(insights, comp);
+                    overviewContent += '</div>';
                 }
-                var comp = insights.comparison || {};
-                var cards = [
-                    ['followers', 'Followers', false],
-                    ['reach', 'Reach', false],
-                    ['video_views', 'Video Views', false],
-                    ['engagements', 'Engagements', false]
-                ];
-                var note = '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>' +
-                    'Page Insights data is only available on Pages with 100 or more likes.</p>';
-                html += note + '<div class="analytics-insight-cards">';
-                cards.forEach(function(c) {
-                    html += renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]);
-                });
-                html += '</div>';
-                html += renderEngagementsChart(insights, comp);
-                html += '</div>';
-                return html;
+                var postsPlaceholder = '<div class="analytics-posts-placeholder text-center py-5">' +
+                    '<i class="fas fa-newspaper fa-4x text-muted mb-3"></i>' +
+                    '<p class="text-muted mb-0">Posts insights coming soon.</p></div>';
+                return '<ul class="nav nav-tabs analytics-insight-tabs mb-3" role="tablist">' +
+                    '<li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#analyticsOverviewTab" role="tab">Overview</a></li>' +
+                    '<li class="nav-item"><a class="nav-link" data-toggle="tab" href="#analyticsPostsTab" role="tab">Posts</a></li>' +
+                    '</ul>' +
+                    '<div class="tab-content">' +
+                    '<div class="tab-pane fade show active" id="analyticsOverviewTab" role="tabpanel">' + overviewContent + '</div>' +
+                    '<div class="tab-pane fade" id="analyticsPostsTab" role="tabpanel">' + postsPlaceholder + '</div>' +
+                    '</div>';
             }
 
             function renderEmptyState(hasPageSelected) {
