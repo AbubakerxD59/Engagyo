@@ -951,10 +951,11 @@ class FacebookService
                 ];
             }
 
-            try {
+            // try {
                 $params = ['batch' => json_encode($batch)];
                 $response = $this->facebook->post('/', $params, $accessToken);
                 $responses = $response->getDecodedBody();
+                dd($responses);
 
                 if (!is_array($responses)) {
                     $offset += count($chunk);
@@ -985,19 +986,19 @@ class FacebookService
 
                     $posts[$postIndex]['insights'] = $insights;
                 }
-            } catch (FacebookResponseException $e) {
-                for ($i = 0; $i < count($chunk); $i++) {
-                    if (isset($posts[$offset + $i])) {
-                        $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
-                    }
-                }
-            } catch (FacebookSDKException $e) {
-                for ($i = 0; $i < count($chunk); $i++) {
-                    if (isset($posts[$offset + $i])) {
-                        $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
-                    }
-                }
-            }
+            // } catch (FacebookResponseException $e) {
+            //     for ($i = 0; $i < count($chunk); $i++) {
+            //         if (isset($posts[$offset + $i])) {
+            //             $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
+            //         }
+            //     }
+            // } catch (FacebookSDKException $e) {
+            //     for ($i = 0; $i < count($chunk); $i++) {
+            //         if (isset($posts[$offset + $i])) {
+            //             $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
+            //         }
+            //     }
+            // }
 
             $offset += count($chunk);
         }
