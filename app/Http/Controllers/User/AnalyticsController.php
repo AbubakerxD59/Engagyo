@@ -84,17 +84,21 @@ class AnalyticsController extends Controller
         $selectedPage = null;
         $pageInsights = null;
 
-        if ($pageId && $facebookPages->contains('id', (int) $pageId)) {
+        if ($pageId === 'all' || empty($pageId)) {
+            $pageInsights = $this->fetchAggregatedInsights($facebookPages, $since, $until, $refresh);
+            $selectedPage = $facebookPages->count() > 0 ? ['id' => 'all', 'name' => 'All Accounts'] : null;
+        } elseif ($facebookPages->contains('id', (int) $pageId)) {
             $selectedPage = Page::find($pageId);
             if ($selectedPage) {
                 $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until, $refresh);
+                $selectedPage = ['id' => $selectedPage->id, 'name' => $selectedPage->name];
             }
         }
 
         return response()->json([
             'success' => true,
             'pageInsights' => $pageInsights,
-            'selectedPage' => $selectedPage ? ['id' => $selectedPage->id, 'name' => $selectedPage->name] : null,
+            'selectedPage' => $selectedPage,
             'hasPages' => $facebookPages->count() > 0,
             'since' => $since,
             'until' => $until,
@@ -146,6 +150,123 @@ class AnalyticsController extends Controller
         );
 
         return $insights;
+    }
+
+    /**
+     * Fetch aggregated insights for all Facebook pages.
+     * Sums followers, reach, video_views, engagements and merges engagements_by_day per date.
+     */
+    private function fetchAggregatedInsights($facebookPages, ?string $since, ?string $until, bool $refresh): ?array
+    {
+        if ($facebookPages->isEmpty()) {
+            return null;
+        }
+
+        $aggregated = [
+            'followers' => 0,
+            'reach' => 0,
+            'video_views' => 0,
+            'engagements' => 0,
+            'engagements_by_day' => [],
+            'comparison' => [],
+        ];
+
+        $hasAnyData = false;
+        foreach ($facebookPages as $page) {
+            $insights = $this->fetchPageInsights($page, $since, $until, $refresh);
+            if (!$insights) {
+                continue;
+            }
+            if (is_numeric($insights['followers'] ?? null)) {
+                $aggregated['followers'] += (int) $insights['followers'];
+                $hasAnyData = true;
+            }
+            if (is_numeric($insights['reach'] ?? null)) {
+                $aggregated['reach'] += (int) $insights['reach'];
+                $hasAnyData = true;
+            }
+            if (is_numeric($insights['video_views'] ?? null)) {
+                $aggregated['video_views'] += (int) $insights['video_views'];
+                $hasAnyData = true;
+            }
+            if (is_numeric($insights['engagements'] ?? null)) {
+                $aggregated['engagements'] += (int) $insights['engagements'];
+                $hasAnyData = true;
+            }
+            foreach ($insights['engagements_by_day'] ?? [] as $date => $val) {
+                $aggregated['engagements_by_day'][$date] = ($aggregated['engagements_by_day'][$date] ?? 0) + (int) $val;
+            }
+        }
+
+        ksort($aggregated['engagements_by_day']);
+
+        $until = $until ?: now()->format('Y-m-d');
+        $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
+        $sinceDt = Carbon::parse($since);
+        $untilDt = Carbon::parse($until);
+        $periodDays = $sinceDt->diffInDays($untilDt) + 1;
+        $prevUntilDt = $sinceDt->copy()->subDay();
+        $prevSinceDt = $prevUntilDt->copy()->subDays($periodDays - 1);
+        $prevSince = $prevSinceDt->format('Y-m-d');
+        $prevUntil = $prevUntilDt->format('Y-m-d');
+
+        $prevAggregated = [
+            'followers' => 0,
+            'reach' => 0,
+            'video_views' => 0,
+            'engagements' => 0,
+        ];
+        foreach ($facebookPages as $page) {
+            $insights = $this->fetchPageInsights($page, $prevSince, $prevUntil, $refresh);
+            if (!$insights) {
+                continue;
+            }
+            if (is_numeric($insights['followers'] ?? null)) {
+                $prevAggregated['followers'] += (int) $insights['followers'];
+            }
+            if (is_numeric($insights['reach'] ?? null)) {
+                $prevAggregated['reach'] += (int) $insights['reach'];
+            }
+            if (is_numeric($insights['video_views'] ?? null)) {
+                $prevAggregated['video_views'] += (int) $insights['video_views'];
+            }
+            if (is_numeric($insights['engagements'] ?? null)) {
+                $prevAggregated['engagements'] += (int) $insights['engagements'];
+            }
+        }
+
+        $metrics = ['followers', 'reach', 'video_views', 'engagements'];
+        foreach ($metrics as $metric) {
+            $curr = $aggregated[$metric] ?? 0;
+            $prev = $prevAggregated[$metric] ?? 0;
+            $aggregated['comparison'][$metric] = ['change' => null, 'direction' => null, 'diff' => null];
+            if (!is_numeric($curr) || !is_numeric($prev)) {
+                continue;
+            }
+            $curr = (float) $curr;
+            $prev = (float) $prev;
+            $diff = $curr - $prev;
+            if ($prev == 0) {
+                $aggregated['comparison'][$metric] = [
+                    'change' => $curr > 0 ? 100 : 0,
+                    'direction' => $curr > 0 ? 'up' : null,
+                    'diff' => $curr > 0 ? $diff : 0,
+                ];
+            } else {
+                $change = round((($curr - $prev) / $prev) * 100, 1);
+                $aggregated['comparison'][$metric] = [
+                    'change' => $change,
+                    'direction' => $change > 0 ? 'up' : ($change < 0 ? 'down' : null),
+                    'diff' => $diff,
+                ];
+            }
+        }
+
+        if (!$hasAnyData && empty($aggregated['engagements_by_day'])) {
+            return null;
+        }
+
+        return $aggregated;
     }
 
     /**

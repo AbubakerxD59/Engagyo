@@ -22,6 +22,18 @@
                                     </div>
                                 </div>
                                 <div class="analytics-sidebar-cards">
+                                    <div class="analytics-page-card analytics-page-card-all active" data-page-id="all"
+                                        data-search="all accounts" role="button" tabindex="0">
+                                        <div class="analytics-page-card-inner">
+                                            <div class="analytics-page-avatar analytics-page-avatar-all">
+                                                <i class="fas fa-th-large text-primary"></i>
+                                            </div>
+                                            <div class="analytics-page-details">
+                                                <span class="analytics-page-name">All Accounts</span>
+                                                <span class="analytics-page-username">Combined insights</span>
+                                            </div>
+                                        </div>
+                                    </div>
                                     @foreach ($facebookPages as $page)
                                         <div class="analytics-page-card" data-page-id="{{ $page->id }}"
                                             data-search="{{ strtolower($page->name . ' ' . ($page->facebook?->username ?? '')) }}"

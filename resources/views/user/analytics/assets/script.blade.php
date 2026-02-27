@@ -4,7 +4,7 @@
             var $content = $('#analyticsContent');
             var analyticsUrl = $content.data('analytics-url');
             var hasPages = {{ $facebookPages->count() > 0 ? 'true' : 'false' }};
-            var currentPageId = $('.analytics-page-card.active').data('page-id') || '';
+            var currentPageId = $('.analytics-page-card.active').data('page-id') || 'all';
             var currentDuration = '{{ $duration ?? 'last_28' }}';
             var currentSince = '{{ $since ?? '' }}';
             var currentUntil = '{{ $until ?? '' }}';
@@ -144,13 +144,12 @@
 
             function hasMeaningfulInsights(insights) {
                 if (!insights) return false;
-                var followers = insights.followers;
-                if (followers == null || isNaN(followers) || followers < 100) return false;
                 var keys = ['followers', 'reach', 'video_views', 'engagements'];
                 for (var i = 0; i < keys.length; i++) {
                     var v = insights[keys[i]];
                     if (v != null && !isNaN(v)) return true;
                 }
+                if (insights.engagements_by_day && Object.keys(insights.engagements_by_day).length > 0) return true;
                 return false;
             }
 
@@ -286,7 +285,7 @@
                 if (String(pageId) === String(currentPageId)) return;
                 $('.analytics-page-card').removeClass('active');
                 $(this).addClass('active');
-                loadAnalytics(pageId, currentDuration, currentSince, currentUntil);
+                loadAnalytics(pageId || 'all', currentDuration, currentSince, currentUntil);
             }).on('keydown', function(e) {
                 if (e.which === 13 || e.which === 32) {
                     e.preventDefault();
@@ -296,10 +295,14 @@
 
             bindDurationHandlers();
 
+            if (hasPages && currentPageId) {
+                loadAnalytics(currentPageId, currentDuration, currentSince, currentUntil);
+            }
+
             $('#analyticsPageSearch').on('input', function() {
                 var query = $(this).val().toLowerCase().trim();
                 $('.analytics-page-card').each(function() {
-                    var text = $(this).data('search') || '';
+                    var text = ($(this).data('search') || '').toLowerCase();
                     $(this).toggle(query === '' || text.indexOf(query) !== -1);
                 });
             });

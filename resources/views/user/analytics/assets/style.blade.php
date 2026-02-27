@@ -208,6 +208,17 @@
         flex-shrink: 0;
     }
 
+    .analytics-page-avatar-all {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(24, 119, 242, 0.12);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
     .analytics-page-avatar img {
         width: 40px;
         height: 40px;
