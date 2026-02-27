@@ -853,7 +853,7 @@ class FacebookService
      * @param string|null $since Start date Y-m-d
      * @param string|null $until End date Y-m-d
      * @param int $limit Max posts per request (default 100)
-     * @return array List of post objects with id, message, created_time, full_picture, permalink_url, type
+     * @return array List of post objects with id, message, created_time, full_picture, icon, is_popular, permalink_url, shares, status_type, story, type, insights
      */
     public function getPageFeed(string $pageId, string $accessToken, ?string $since = null, ?string $until = null, int $limit = 100): array
     {
@@ -868,32 +868,43 @@ class FacebookService
         $sinceIso = $since . 'T00:00:00+0000';
         $untilIso = $until . 'T23:59:59+0000';
 
-        $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story';
-        $endpoint = '/' . $pageId . '/feed?fields=' . $fields;
+        $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story,type';
+        $endpoint = '/' . $pageId . '/feed?fields=' . urlencode($fields)
+            . '&since=' . urlencode($sinceIso)
+            . '&until=' . urlencode($untilIso)
+            . '&limit=' . min($limit, 100);
 
-        // try {
+        try {
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
-            dd($graphEdge);
 
             foreach ($graphEdge as $node) {
+                $sharesRaw = $node->getField('shares');
+                $shares = is_object($sharesRaw) && method_exists($sharesRaw, 'getField')
+                    ? (int) ($sharesRaw->getField('count') ?? 0)
+                    : (is_array($sharesRaw) ? (int) ($sharesRaw['count'] ?? 0) : (int) ($sharesRaw ?? 0));
+
                 $post = [
                     'id' => $node->getField('id'),
                     'message' => $node->getField('message'),
                     'created_time' => $node->getField('created_time'),
                     'full_picture' => $node->getField('full_picture'),
+                    'icon' => $node->getField('icon'),
+                    'is_popular' => $node->getField('is_popular'),
                     'permalink_url' => $node->getField('permalink_url'),
+                    'shares' => $shares,
+                    'status_type' => $node->getField('status_type'),
                     'story' => $node->getField('story'),
                     'type' => $node->getField('type'),
                     'insights' => [],
                 ];
                 $posts[] = $post;
             }
-        // } catch (FacebookResponseException $e) {
-        //     return [];
-        // } catch (FacebookSDKException $e) {
-        //     return [];
-        // }
+        } catch (FacebookResponseException $e) {
+            return [];
+        } catch (FacebookSDKException $e) {
+            return [];
+        }
 
         return $posts;
     }
