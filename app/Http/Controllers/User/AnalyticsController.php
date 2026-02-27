@@ -79,22 +79,20 @@ class AnalyticsController extends Controller
         $facebookPages = $accounts->where('type', 'facebook')->values();
 
         [$since, $until] = $this->resolveDateRange($request);
-        $refresh = (bool) $request->query('refresh', false);
 
         $pageId = $request->query('page_id');
         $selectedPage = null;
         $pageInsights = null;
-
         $pagePosts = null;
 
         if ($pageId === 'all' || empty($pageId)) {
-            $pageInsights = $this->fetchAggregatedInsights($facebookPages, $since, $until, $refresh);
+            $pageInsights = $this->fetchAggregatedInsights($facebookPages, $since, $until);
             $selectedPage = $facebookPages->count() > 0 ? ['id' => 'all', 'name' => 'All Accounts'] : null;
         } elseif ($facebookPages->contains('id', (int) $pageId)) {
             $selectedPage = Page::find($pageId);
             if ($selectedPage) {
-                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until, $refresh);
-                $pagePosts = $this->fetchPagePosts($selectedPage, $since, $until, $refresh);
+                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until);
+                $pagePosts = $this->fetchPagePosts($selectedPage, $since, $until);
                 $selectedPage = ['id' => $selectedPage->id, 'name' => $selectedPage->name];
             }
         }
@@ -112,9 +110,10 @@ class AnalyticsController extends Controller
 
     /**
      * Fetch page-level insights (followers, reach, video views, engagements).
-     * Returns from DB if stored; fetches from Graph API only when refresh or no stored data.
+     * Returns from DB if stored; fetches from Graph API only when no stored data.
+     * Data is refreshed automatically by cronjobs.
      */
-    private function fetchPageInsights(?Page $page, ?string $since = null, ?string $until = null, bool $refresh = false): ?array
+    private function fetchPageInsights(?Page $page, ?string $since = null, ?string $until = null): ?array
     {
         if (!$page || empty($page->page_id) || empty($page->access_token)) {
             return null;
@@ -122,15 +121,13 @@ class AnalyticsController extends Controller
 
         $duration = request()->query('duration', 'last_28');
 
-        if (!$refresh) {
-            $stored = PageInsight::where('page_id', $page->id)
-                ->where('since', $since)
-                ->where('until', $until)
-                ->first();
+        $stored = PageInsight::where('page_id', $page->id)
+            ->where('since', $since)
+            ->where('until', $until)
+            ->first();
 
-            if ($stored && $stored->insights) {
-                return $stored->insights;
-            }
+        if ($stored && $stored->insights) {
+            return $stored->insights;
         }
 
         $tokenCheck = FacebookService::validateToken($page);
@@ -158,10 +155,11 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Fetch page posts with insights. Returns from DB if stored; fetches from Graph API when refresh or no stored data.
+     * Fetch page posts with insights. Returns from DB if stored; fetches from Graph API only when no stored data.
      * Returns null for "All Accounts" (posts not aggregated across pages).
+     * Data is refreshed automatically by cronjobs.
      */
-    private function fetchPagePosts(?Page $page, ?string $since = null, ?string $until = null, bool $refresh = false): ?array
+    private function fetchPagePosts(?Page $page, ?string $since = null, ?string $until = null): ?array
     {
         if (!$page || empty($page->page_id) || empty($page->access_token)) {
             return null;
@@ -169,15 +167,13 @@ class AnalyticsController extends Controller
 
         $duration = request()->query('duration', 'last_28');
 
-        if (!$refresh) {
-            $stored = PagePost::where('page_id', $page->id)
-                ->where('since', $since)
-                ->where('until', $until)
-                ->first();
+        $stored = PagePost::where('page_id', $page->id)
+            ->where('since', $since)
+            ->where('until', $until)
+            ->first();
 
-            if ($stored && $stored->posts !== null) {
-                return $stored->posts;
-            }
+        if ($stored && $stored->posts !== null) {
+            return $stored->posts;
         }
 
         $tokenCheck = FacebookService::validateToken($page);
@@ -208,7 +204,7 @@ class AnalyticsController extends Controller
      * Fetch aggregated insights for all Facebook pages.
      * Sums followers, reach, video_views, engagements and merges engagements_by_day per date.
      */
-    private function fetchAggregatedInsights($facebookPages, ?string $since, ?string $until, bool $refresh): ?array
+    private function fetchAggregatedInsights($facebookPages, ?string $since, ?string $until): ?array
     {
         if ($facebookPages->isEmpty()) {
             return null;
@@ -228,7 +224,7 @@ class AnalyticsController extends Controller
 
         $hasAnyData = false;
         foreach ($facebookPages as $page) {
-            $insights = $this->fetchPageInsights($page, $since, $until, $refresh);
+            $insights = $this->fetchPageInsights($page, $since, $until);
             if (!$insights) {
                 continue;
             }
@@ -284,7 +280,7 @@ class AnalyticsController extends Controller
             'engagements' => 0,
         ];
         foreach ($facebookPages as $page) {
-            $insights = $this->fetchPageInsights($page, $prevSince, $prevUntil, $refresh);
+            $insights = $this->fetchPageInsights($page, $prevSince, $prevUntil);
             if (!$insights) {
                 continue;
             }
@@ -346,7 +342,6 @@ class AnalyticsController extends Controller
         $facebookPages = $accounts->where('type', 'facebook')->values();
 
         [$since, $until] = $this->resolveDateRange($request);
-        $refresh = (bool) $request->query('refresh', false);
         $pageId = $request->query('page_id');
 
         $selectedPage = null;
@@ -356,7 +351,7 @@ class AnalyticsController extends Controller
         if ($pageId && $facebookPages->contains('id', (int) $pageId)) {
             $selectedPage = Page::find($pageId);
             if ($selectedPage) {
-                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until, $refresh);
+                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until);
                 $apiResponse = [
                     'success' => true,
                     'pageInsights' => $pageInsights,

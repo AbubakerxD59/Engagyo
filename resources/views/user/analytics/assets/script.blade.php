@@ -41,7 +41,6 @@
                         until || '') + '" style="width: auto;">' +
                     '<button type="button" id="analyticsApplyCustom" class="btn btn-sm btn-primary">Apply</button>' +
                     '</div>' +
-                    '<button type="button" id="analyticsRefresh" class="btn btn-sm btn-outline-secondary" title="Refresh insights"><i class="fas fa-sync-alt"></i></button>' +
                     '</div></div>';
             }
 
@@ -276,7 +275,7 @@
                     '<a href="{{ route('panel.accounts') }}" class="btn btn-primary mt-2"><i class="fas fa-user-circle mr-2"></i> Go to Accounts</a></div>';
             }
 
-            function loadAnalytics(pageId, duration, since, until, refresh) {
+            function loadAnalytics(pageId, duration, since, until) {
                 currentPageId = pageId || currentPageId;
                 currentDuration = duration || currentDuration;
                 currentSince = since || currentSince;
@@ -294,7 +293,6 @@
                     params.since = currentSince;
                     params.until = currentUntil || new Date().toISOString().split('T')[0];
                 }
-                if (refresh) params.refresh = 1;
                 $.get(analyticsUrl, params)
                     .always(function() {
                         isLoadingAnalytics = false;
@@ -355,7 +353,6 @@
             function bindDurationHandlers() {
                 $(document).off('change', '#analyticsDuration');
                 $(document).off('click', '#analyticsApplyCustom');
-                $(document).off('click', '#analyticsRefresh');
                 $(document).on('change', '#analyticsDuration', function() {
                     var val = $(this).val();
                     var $custom = $('#analyticsCustomRange');
@@ -378,9 +375,6 @@
                         return;
                     }
                     loadAnalytics(currentPageId, 'custom', since, until);
-                });
-                $(document).on('click', '#analyticsRefresh', function() {
-                    loadAnalytics(currentPageId, currentDuration, currentSince, currentUntil, true);
                 });
             }
 

@@ -34,13 +34,6 @@
                                     </select>
                                 </div>
                                 <div class="col-md-2">
-                                    <label>&nbsp;</label>
-                                    <div class="form-check">
-                                        <input type="checkbox" name="refresh" value="1" id="refresh" class="form-check-input" {{ request('refresh') ? 'checked' : '' }}>
-                                        <label for="refresh" class="form-check-label">Force refresh</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-2">
                                     <button type="submit" class="btn btn-primary">
                                         <i class="fas fa-search mr-1"></i> Fetch
                                     </button>
