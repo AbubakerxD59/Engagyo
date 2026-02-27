@@ -66,8 +66,6 @@
                                                         'reach' => ['label' => 'Reach', 'format' => 'number'],
                                                         'video_views' => ['label' => 'Video Views', 'format' => 'number'],
                                                         'engagements' => ['label' => 'Engagements', 'format' => 'number'],
-                                                        'link_clicks' => ['label' => 'Page Clicks', 'format' => 'number'],
-                                                        'click_through_rate' => ['label' => 'Click Through Rate', 'format' => 'percent'],
                                                     ];
                                                 @endphp
                                                 @foreach ($metrics as $key => $meta)

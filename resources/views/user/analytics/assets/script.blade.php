@@ -69,13 +69,84 @@
                     '<span class="page-insight-label">' + label + '</span></div>';
             }
 
+            function renderEngagementsChart(insights, comp) {
+                var byDay = insights.engagements_by_day || {};
+                var dates = Object.keys(byDay).sort();
+                if (dates.length === 0) return '';
+                var total = 0;
+                dates.forEach(function(d) { total += byDay[d] || 0; });
+                var dailyAvg = Math.round(total / dates.length);
+                var engComp = comp.engagements || {};
+                var pctChange = engComp.change != null ? engComp.change : null;
+                var pctStr = (pctChange != null ? ' ' + pctChange + '%' : '');
+                return '<div class="mt-4 pt-4 border-top">' +
+                    '<h6 class="text-muted mb-3"><i class="fas fa-chart-bar mr-1"></i>Average engagements</h6>' +
+                    '<p class="small text-muted mb-2">(daily average: ' + dailyAvg.toLocaleString() + pctStr + ')</p>' +
+                    '<div class="chart-container" style="position: relative; height: 280px;">' +
+                    '<canvas id="engagementsChartCanvas"></canvas></div></div>';
+            }
+
+            function initEngagementsChart(insights) {
+                var byDay = insights.engagements_by_day || {};
+                var dates = Object.keys(byDay).sort();
+                if (dates.length === 0 || typeof Chart === 'undefined') return;
+                if (window.engagementsChartInstance) {
+                    window.engagementsChartInstance.destroy();
+                    window.engagementsChartInstance = null;
+                }
+                var labels = dates.map(function(d) {
+                    var dt = new Date(d + 'T12:00:00');
+                    return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                });
+                var data = dates.map(function(d) { return byDay[d] || 0; });
+                var ctx = document.getElementById('engagementsChartCanvas');
+                if (!ctx) return;
+                window.engagementsChartInstance = new Chart(ctx.getContext('2d'), {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            label: 'Engagements',
+                            data: data,
+                            backgroundColor: 'rgba(24, 119, 242, 0.7)',
+                            borderColor: 'rgba(24, 119, 242, 1)',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            tooltip: {
+                                callbacks: {
+                                    title: function(items) {
+                                        var idx = items[0] && items[0].dataIndex;
+                                        if (idx != null && dates[idx]) {
+                                            var dt = new Date(dates[idx] + 'T12:00:00');
+                                            return dt.toLocaleDateString('en-GB', { day: 'numeric', month: 'long' });
+                                        }
+                                        return '';
+                                    },
+                                    label: function(ctx) {
+                                        return ctx.raw.toLocaleString() + ' total';
+                                    }
+                                }
+                            },
+                            legend: { display: false }
+                        },
+                        scales: {
+                            y: { beginAtZero: true },
+                            x: { grid: { display: false } }
+                        }
+                    }
+                });
+            }
+
             function hasMeaningfulInsights(insights) {
                 if (!insights) return false;
                 var followers = insights.followers;
                 if (followers == null || isNaN(followers) || followers < 100) return false;
-                var keys = ['followers', 'reach', 'video_views', 'engagements', 'link_clicks',
-                    'click_through_rate'
-                ];
+                var keys = ['followers', 'reach', 'video_views', 'engagements'];
                 for (var i = 0; i < keys.length; i++) {
                     var v = insights[keys[i]];
                     if (v != null && !isNaN(v)) return true;
@@ -103,9 +174,7 @@
                     ['followers', 'Followers', false],
                     ['reach', 'Reach', false],
                     ['video_views', 'Video Views', false],
-                    ['engagements', 'Engagements', false],
-                    ['link_clicks', 'Page Clicks', false],
-                    ['click_through_rate', 'Click Through Rate', true]
+                    ['engagements', 'Engagements', false]
                 ];
                 var note = '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>' +
                     'Page Insights data is only available on Pages with 100 or more likes.</p>';
@@ -114,7 +183,9 @@
                     html += '<div class="col-6 col-md-4 col-lg-2 mb-3">' +
                         renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]) + '</div>';
                 });
-                html += '</div></div>';
+                html += '</div>';
+                html += renderEngagementsChart(insights, comp);
+                html += '</div>';
                 return html;
             }
 
@@ -168,6 +239,10 @@
                         }
                         $content.html(html);
                         bindDurationHandlers();
+                        if (res.selectedPage && res.pageInsights && res.pageInsights.engagements_by_day &&
+                            Object.keys(res.pageInsights.engagements_by_day).length > 0) {
+                            initEngagementsChart(res.pageInsights);
+                        }
                     })
                     .fail(function() {
                         $content.html(renderEmptyState(!!currentPageId));

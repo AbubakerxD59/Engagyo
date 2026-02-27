@@ -659,14 +659,14 @@ class FacebookService
     }
 
     /**
-     * Get page-level insights (followers, reach, video views, engagements, link clicks, CTR).
+     * Get page-level insights (followers, reach, video views, engagements).
      * Some metrics may be deprecated by Meta - returns null for unavailable.
      *
      * @param string $pageId Facebook page ID (graph ID, not DB id)
      * @param string $accessToken Page access token with read_insights permission
      * @param string|null $since Start date Y-m-d (default: 28 days ago)
      * @param string|null $until End date Y-m-d (default: today)
-     * @return array Keys: followers, reach, video_views, engagements, link_clicks (post_clicks_by_type), click_through_rate
+     * @return array Keys: followers, reach, video_views, engagements
      */
     public function getPageInsights($pageId, $accessToken, ?string $since = null, ?string $until = null)
     {
@@ -675,8 +675,7 @@ class FacebookService
             'reach' => null,
             'video_views' => null,
             'engagements' => null,
-            'link_clicks' => null,
-            'click_through_rate' => null,
+            'engagements_by_day' => [],
         ];
 
         if (empty($pageId) || empty($accessToken)) {
@@ -733,22 +732,22 @@ class FacebookService
                         $value = $item->getField('value');
                         $val = $value ?? null;
                         $totals[$name] += $val;
+                        if ($name === 'page_post_engagements' && $val !== null) {
+                            $endTime = $item->getField('end_time');
+                            if ($endTime) {
+                                $dateStr = \Carbon\Carbon::parse($endTime)->format('Y-m-d');
+                                $result['engagements_by_day'][$dateStr] = ($result['engagements_by_day'][$dateStr] ?? 0) + (int) $val;
+                            }
+                        }
                     }
                 }
             }
-
-            // post_clicks_by_type requires period=lifetime - fetch in separate request
-            $postClicks = $this->fetchPostClicksByType($pageId, $accessToken, $since, $until);
 
             $result['followers'] = $totals['page_follows'];
             $result['reach'] = $totals['page_total_media_view_unique'] ?: null;
             $result['video_views'] = $totals['page_video_views'] ?: null;
             $result['engagements'] = $totals['page_post_engagements'] ?: null;
-            $result['link_clicks'] = $postClicks;
-
-            if ($result['reach'] !== null && $result['reach'] > 0 && $result['link_clicks'] !== null) {
-                $result['click_through_rate'] = round(($result['link_clicks'] / $result['reach']) * 100, 2);
-            }
+            ksort($result['engagements_by_day']);
         } catch (FacebookResponseException $e) {
             return $result;
         } catch (FacebookSDKException $e) {
@@ -756,68 +755,6 @@ class FacebookService
         }
 
         return $result;
-    }
-
-    /**
-     * Fetch post_clicks_by_type with period=lifetime (required by Meta API).
-     */
-    private function fetchPostClicksByType(string $pageId, string $accessToken, string $since, string $until): ?int
-    {
-        try {
-            $endpoint = '/' . $pageId . '/insights?metric=post_clicks_by_type'
-                . '&period=lifetime&since=' . $since . '&until=' . $until;
-            $response = $this->facebook->get($endpoint, $accessToken);
-            $graphEdge = $response->getGraphEdge();
-
-            $total = 0;
-            foreach ($graphEdge as $insightNode) {
-                if ($insightNode->getField('name') !== 'post_clicks_by_type') {
-                    continue;
-                }
-                $values = $insightNode->getField('values');
-                if (empty($values)) {
-                    continue;
-                }
-                foreach ($values as $item) {
-                    $value = $item->getField('value');
-                    $total += $this->sumClicksByType($value);
-                }
-            }
-            return $total > 0 ? $total : null;
-        } catch (FacebookResponseException $e) {
-            return null;
-        } catch (FacebookSDKException $e) {
-            return null;
-        }
-    }
-
-    /**
-     * Sum numeric values from post_clicks_by_type response.
-     * Value can be a number or an object with breakdown by consumption type.
-     */
-    private function sumClicksByType(mixed $value): int
-    {
-        if ($value === null) {
-            return 0;
-        }
-        if (is_numeric($value)) {
-            return (int) $value;
-        }
-        if (is_array($value)) {
-            $sum = 0;
-            foreach ($value as $v) {
-                $sum += is_numeric($v) ? (int) $v : 0;
-            }
-            return $sum;
-        }
-        if (is_object($value)) {
-            $sum = 0;
-            foreach ((array) $value as $v) {
-                $sum += is_numeric($v) ? (int) $v : 0;
-            }
-            return $sum;
-        }
-        return 0;
     }
 
     /**
@@ -845,7 +782,7 @@ class FacebookService
         $previous = $this->getPageInsights($pageId, $accessToken, $prevSince, $prevUntil);
 
         $comparison = [];
-        $metrics = ['followers', 'reach', 'video_views', 'engagements', 'link_clicks', 'click_through_rate'];
+        $metrics = ['followers', 'reach', 'video_views', 'engagements'];
 
         foreach ($metrics as $metric) {
             $curr = $current[$metric] ?? null;

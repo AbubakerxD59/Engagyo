@@ -76,9 +76,7 @@
                                                 (is_numeric($pageInsights['followers'] ?? null) ||
                                                     is_numeric($pageInsights['reach'] ?? null) ||
                                                     is_numeric($pageInsights['video_views'] ?? null) ||
-                                                    is_numeric($pageInsights['engagements'] ?? null) ||
-                                                    is_numeric($pageInsights['link_clicks'] ?? null) ||
-                                                    is_numeric($pageInsights['click_through_rate'] ?? null));
+                                                    is_numeric($pageInsights['engagements'] ?? null));
                                         @endphp
                                         <div class="analytics-page-insights mb-4">
                                             <div class="d-flex flex-wrap align-items-center justify-content-between mb-3">
@@ -152,14 +150,6 @@
                                                             'engagements' => [
                                                                 'label' => 'Engagements',
                                                                 'format' => 'number',
-                                                            ],
-                                                            'link_clicks' => [
-                                                                'label' => 'Page Clicks',
-                                                                'format' => 'number',
-                                                            ],
-                                                            'click_through_rate' => [
-                                                                'label' => 'Click Through Rate',
-                                                                'format' => 'percent',
                                                             ],
                                                         ];
                                                     @endphp

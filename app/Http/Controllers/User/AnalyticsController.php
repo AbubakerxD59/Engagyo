@@ -102,7 +102,7 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Fetch page-level insights (followers, reach, video views, engagements, link clicks, CTR).
+     * Fetch page-level insights (followers, reach, video views, engagements).
      * Returns from DB if stored; fetches from Graph API only when refresh or no stored data.
      */
     private function fetchPageInsights(?Page $page, ?string $since = null, ?string $until = null, bool $refresh = false): ?array
