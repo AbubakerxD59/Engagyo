@@ -100,7 +100,8 @@
                                                             <th>Date</th>
                                                             <th>Message</th>
                                                             <th>Impressions</th>
-                                                            <th>Engaged</th>
+                                                            <th>Impressions (Unique)</th>
+                                                            <th>Engaged Users</th>
                                                             <th>Clicks</th>
                                                             <th>Link</th>
                                                         </tr>
@@ -109,16 +110,18 @@
                                                         @foreach ($pagePosts as $post)
                                                             @php
                                                                 $insights = $post['insights'] ?? [];
-                                                                $impressions = $insights['post_impressions'] ?? $insights['post_impressions_unique'] ?? 0;
+                                                                $impressions = $insights['post_impressions'] ?? 0;
+                                                                $impressionsUnique = $insights['post_impressions_unique'] ?? 0;
                                                                 $engaged = $insights['post_engaged_users'] ?? 0;
                                                                 $clicks = $insights['post_clicks'] ?? 0;
                                                                 $msg = \Illuminate\Support\Str::limit($post['message'] ?? $post['story'] ?? '—', 80);
-                                                                $created = isset($post['created_time']) ? \Carbon\Carbon::parse($post['created_time'])->format('M j, Y H:i') : '—';
+                                                                $created = isset($post['created_time']) ? \Carbon\Carbon::parse($post['created_time'])->format('F j, Y g:ia') : '—';
                                                             @endphp
                                                             <tr>
                                                                 <td class="text-nowrap">{{ $created }}</td>
                                                                 <td>{{ $msg }}</td>
                                                                 <td>{{ number_format($impressions) }}</td>
+                                                                <td>{{ number_format($impressionsUnique) }}</td>
                                                                 <td>{{ number_format($engaged) }}</td>
                                                                 <td>{{ number_format($clicks) }}</td>
                                                                 <td>

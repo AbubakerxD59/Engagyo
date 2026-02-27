@@ -179,7 +179,22 @@
                 return div.innerHTML;
             }
 
-            function renderPostsList(posts, since, until) {
+            function formatPostDate(createdTime) {
+                if (!createdTime) return '';
+                var d = new Date(createdTime);
+                var datePart = d.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                var timePart = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase().replace(/\s/g, '');
+                return datePart + ' ' + timePart;
+            }
+
+            var postInsightLabels = {
+                post_impressions: 'Impressions',
+                post_impressions_unique: 'Impressions (Unique)',
+                post_engaged_users: 'Engaged Users',
+                post_clicks: 'Clicks'
+            };
+
+            function renderPostsList(posts, since, until, pageInsights) {
                 if (posts === null) {
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
                         '<i class="fas fa-th-large fa-4x text-muted mb-3"></i>' +
@@ -190,35 +205,52 @@
                         '<i class="fas fa-newspaper fa-4x text-muted mb-3"></i>' +
                         '<p class="text-muted mb-0">No posts in this period.</p></div>';
                 }
-                var html = '<div class="analytics-posts-list">';
+                var html = '<div class="analytics-posts-tab-content">';
+                if (pageInsights && (pageInsights.followers != null || pageInsights.reach != null || pageInsights.engagements != null)) {
+                    var comp = pageInsights.comparison || {};
+                    var pCards = [
+                        ['followers', 'Followers', comp.followers],
+                        ['reach', 'Reach', comp.reach],
+                        ['video_views', 'Video Views', comp.video_views],
+                        ['engagements', 'Engagements', comp.engagements]
+                    ];
+                    html += '<div class="analytics-posts-page-insights mb-4">' +
+                        '<h6 class="text-muted mb-3"><i class="fas fa-chart-pie mr-1"></i>Page Insights</h6>' +
+                        '<div class="analytics-insight-cards">';
+                    pCards.forEach(function(c) {
+                        html += renderInsightCard(pageInsights[c[0]], c[1], c[2], false);
+                    });
+                    html += '</div></div>';
+                }
+                html += '<h6 class="text-muted mb-3"><i class="fas fa-newspaper mr-1"></i>Posts (' + posts.length + ')</h6>' +
+                    '<div class="analytics-posts-list">';
                 posts.forEach(function(post) {
                     var rawMsg = post.message || post.story || '';
-                    var msg = escapeHtml(rawMsg.substring(0, 150));
-                    if (rawMsg.length > 150) msg += '...';
-                    var created = post.created_time ? new Date(post.created_time).toLocaleDateString('en-GB', {
-                        day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
-                    }) : '';
+                    var msg = escapeHtml(rawMsg.substring(0, 200));
+                    if (rawMsg.length > 200) msg += '...';
+                    var created = formatPostDate(post.created_time);
                     var img = post.full_picture ? '<img src="' + escapeHtml(post.full_picture) + '" alt="" class="analytics-post-thumb" loading="lazy">' :
                         '<div class="analytics-post-thumb-placeholder"><i class="fas fa-image text-muted"></i></div>';
                     var insights = post.insights || {};
-                    var impressions = insights.post_impressions || insights.post_impressions_unique || 0;
-                    var engaged = insights.post_engaged_users || 0;
-                    var clicks = insights.post_clicks || 0;
-                    var link = post.permalink_url ? '<a href="' + escapeHtml(post.permalink_url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary mt-2"><i class="fas fa-external-link-alt mr-1"></i>View on Facebook</a>' : '';
+                    var insightItems = [];
+                    for (var key in insights) {
+                        if (insights.hasOwnProperty(key)) {
+                                                        insightItems.push('<div class="analytics-post-insight-item"><span class="analytics-post-insight-value">' + (insights[key] || 0).toLocaleString() + '</span><span class="analytics-post-insight-label">' + (postInsightLabels[key] || key) + '</span></div>');
+                        }
+                    }
+                    var insightHtml = insightItems.length > 0 ? '<div class="analytics-post-insights-grid">' + insightItems.join('') + '</div>' : '<p class="text-muted small mb-0">No insights available</p>';
+                    var link = post.permalink_url ? '<a href="' + escapeHtml(post.permalink_url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary"><i class="fas fa-external-link-alt mr-1"></i>View on Facebook</a>' : '';
                     html += '<div class="analytics-post-card card mb-3">' +
                         '<div class="card-body">' +
-                        '<div class="d-flex gap-3">' +
-                        '<div class="analytics-post-thumb-wrap flex-shrink-0">' + img + '</div>' +
-                        '<div class="flex-grow-1 min-w-0">' +
-                        '<p class="mb-2 text-muted small">' + created + '</p>' +
-                        '<p class="mb-2">' + (msg || '<em class="text-muted">No message</em>') + '</p>' +
-                        '<div class="analytics-post-metrics d-flex flex-wrap gap-3 mb-2">' +
-                        '<span><strong>' + impressions.toLocaleString() + '</strong> <span class="text-muted small">Impressions</span></span>' +
-                        '<span><strong>' + engaged.toLocaleString() + '</strong> <span class="text-muted small">Engaged</span></span>' +
-                        '<span><strong>' + clicks.toLocaleString() + '</strong> <span class="text-muted small">Clicks</span></span>' +
-                        '</div>' + link + '</div></div></div></div>';
+                        '<div class="analytics-post-card-inner">' +
+                        '<div class="analytics-post-thumb-wrap">' + img + '</div>' +
+                        '<div class="analytics-post-content">' +
+                        '<p class="analytics-post-date text-muted mb-2"><i class="far fa-clock mr-1"></i>' + created + '</p>' +
+                        '<p class="analytics-post-message mb-3">' + (msg || '<em class="text-muted">No message</em>') + '</p>' +
+                        '<div class="analytics-post-insights-wrap mb-3">' + insightHtml + '</div>' +
+                        link + '</div></div></div></div>';
                 });
-                html += '</div>';
+                html += '</div></div>';
                 return html;
             }
 
@@ -253,7 +285,7 @@
                     overviewContent += renderEngagementsChart(insights, comp);
                     overviewContent += '</div>';
                 }
-                var postsContent = renderPostsList(pagePosts, since, until);
+                var postsContent = renderPostsList(pagePosts, since, until, insights);
                 return '<ul class="nav nav-tabs analytics-insight-tabs mb-3" role="tablist">' +
                     '<li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#analyticsOverviewTab" role="tab">Overview</a></li>' +
                     '<li class="nav-item"><a class="nav-link" data-toggle="tab" href="#analyticsPostsTab" role="tab">Posts</a></li>' +
