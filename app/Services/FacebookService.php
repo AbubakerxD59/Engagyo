@@ -868,7 +868,8 @@ class FacebookService
         $sinceIso = $since . 'T00:00:00+0000';
         $untilIso = $until . 'T23:59:59+0000';
 
-        $fields = 'id,message,created_time,full_picture,permalink_url,story,type';
+        // $fields = 'id,message,created_time,full_picture,permalink_url,story,type';
+        $fields = 'id';
         $endpoint = '/' . $pageId . '/feed?fields=' . urlencode($fields)
             . '&since=' . urlencode($sinceIso)
             . '&until=' . urlencode($untilIso)
