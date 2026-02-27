@@ -938,7 +938,12 @@ class FacebookService
             return [];
         }
 
-        $metrics = 'post_impressions,post_impressions_unique,post_engaged_users,post_clicks';
+        $metrics = 'post_clicks,post_reactions_by_type_total,post_impressions,post_impressions_unique';
+        // post_clicks are post clicks
+        // post_reactions_by_type_total will give you the total number of reactions for each type, sum them to show total reactions
+        // post_impressions will give you the total number of impressions
+        // post_impressions_unique will give you the unique number of impressions
+        // engagement rate will be calculated as (post_clicks + post_reactions_by_type_total) / post_impressions
         $batchSize = 50;
         $offset = 0;
 
