@@ -346,15 +346,18 @@ class AnalyticsController extends Controller
 
         $selectedPage = null;
         $pageInsights = null;
+        $pagePosts = null;
         $apiResponse = null;
 
         if ($pageId && $facebookPages->contains('id', (int) $pageId)) {
             $selectedPage = Page::find($pageId);
             if ($selectedPage) {
                 $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until);
+                $pagePosts = $this->fetchPagePosts($selectedPage, $since, $until);
                 $apiResponse = [
                     'success' => true,
                     'pageInsights' => $pageInsights,
+                    'pagePosts' => $pagePosts,
                     'selectedPage' => $selectedPage ? ['id' => $selectedPage->id, 'name' => $selectedPage->name] : null,
                     'since' => $since,
                     'until' => $until,
@@ -364,6 +367,6 @@ class AnalyticsController extends Controller
             $apiResponse = ['success' => false, 'error' => 'Page not found or not owned by user.'];
         }
 
-        return view('user.analytics.test', compact('facebookPages', 'pageId', 'selectedPage', 'pageInsights', 'apiResponse', 'since', 'until'));
+        return view('user.analytics.test', compact('facebookPages', 'pageId', 'selectedPage', 'pageInsights', 'pagePosts', 'apiResponse', 'since', 'until'));
     }
 }

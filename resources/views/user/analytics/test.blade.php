@@ -87,6 +87,57 @@
                                         </div>
                                     @endif
                                 </div>
+
+                                @if ($pagePosts !== null)
+                                    <div class="mb-4">
+                                        <h5><i class="fas fa-newspaper mr-1"></i> Page Posts ({{ count($pagePosts) }})</h5>
+                                        <p class="text-muted small">Date range: {{ $since }} to {{ $until }}</p>
+                                        @if (count($pagePosts) > 0)
+                                            <div class="table-responsive">
+                                                <table class="table table-sm table-bordered">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Date</th>
+                                                            <th>Message</th>
+                                                            <th>Impressions</th>
+                                                            <th>Engaged</th>
+                                                            <th>Clicks</th>
+                                                            <th>Link</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        @foreach ($pagePosts as $post)
+                                                            @php
+                                                                $insights = $post['insights'] ?? [];
+                                                                $impressions = $insights['post_impressions'] ?? $insights['post_impressions_unique'] ?? 0;
+                                                                $engaged = $insights['post_engaged_users'] ?? 0;
+                                                                $clicks = $insights['post_clicks'] ?? 0;
+                                                                $msg = \Illuminate\Support\Str::limit($post['message'] ?? $post['story'] ?? '—', 80);
+                                                                $created = isset($post['created_time']) ? \Carbon\Carbon::parse($post['created_time'])->format('M j, Y H:i') : '—';
+                                                            @endphp
+                                                            <tr>
+                                                                <td class="text-nowrap">{{ $created }}</td>
+                                                                <td>{{ $msg }}</td>
+                                                                <td>{{ number_format($impressions) }}</td>
+                                                                <td>{{ number_format($engaged) }}</td>
+                                                                <td>{{ number_format($clicks) }}</td>
+                                                                <td>
+                                                                    @if (!empty($post['permalink_url']))
+                                                                        <a href="{{ $post['permalink_url'] }}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i></a>
+                                                                    @else
+                                                                        —
+                                                                    @endif
+                                                                </td>
+                                                            </tr>
+                                                        @endforeach
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        @else
+                                            <p class="text-muted mb-0">No posts in this period.</p>
+                                        @endif
+                                    </div>
+                                @endif
                             @else
                                 <div class="alert alert-danger">
                                     <i class="fas fa-times-circle mr-2"></i>
