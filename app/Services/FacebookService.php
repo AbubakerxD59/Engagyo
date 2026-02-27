@@ -874,9 +874,10 @@ class FacebookService
             . '&until=' . urlencode($untilIso)
             . '&limit=' . min($limit, 100);
 
-        try {
+        // try {
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
+            dd($graphEdge);
 
             foreach ($graphEdge as $node) {
                 $sharesRaw = $node->getField('shares');
@@ -900,11 +901,11 @@ class FacebookService
                 ];
                 $posts[] = $post;
             }
-        } catch (FacebookResponseException $e) {
-            return [];
-        } catch (FacebookSDKException $e) {
-            return [];
-        }
+        // } catch (FacebookResponseException $e) {
+        //     return [];
+        // } catch (FacebookSDKException $e) {
+        //     return [];
+        // }
 
         return $posts;
     }
