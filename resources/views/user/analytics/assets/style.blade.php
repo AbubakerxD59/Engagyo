@@ -9,6 +9,9 @@
     .analytics-sidebar {
         width: 250px;
         flex-shrink: 0;
+        position: sticky;
+        top: 1rem;
+        align-self: flex-start;
     }
 
     .analytics-sidebar-inner {
