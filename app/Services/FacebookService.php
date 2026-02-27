@@ -869,8 +869,8 @@ class FacebookService
         $untilIso = $until . 'T23:59:59+0000';
 
         // $fields = 'id,message,created_time,full_picture,permalink_url,story,type';
-        $fields = 'id';
-        $endpoint = '/' . $pageId . '/feed?fields=' . urlencode($fields)
+        // $fields = 'id';
+        $endpoint = '/' . $pageId . '/feed'
             . '&since=' . urlencode($sinceIso)
             . '&until=' . urlencode($untilIso)
             . '&limit=' . min($limit, 100);
