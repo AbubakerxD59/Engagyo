@@ -870,10 +870,10 @@ class FacebookService
 
         // $fields = 'id,message,created_time,full_picture,permalink_url,story,type';
         // $fields = 'id';
-        $endpoint = '/' . $pageId . '/feed'
-            . '&since=' . urlencode($sinceIso)
-            . '&until=' . urlencode($untilIso)
-            . '&limit=' . min($limit, 100);
+        $endpoint = '/' . $pageId . '/feed';
+            // . '&since=' . urlencode($sinceIso)
+            // . '&until=' . urlencode($untilIso)
+            // . '&limit=' . min($limit, 100);
 
         // try {
             $response = $this->facebook->get($endpoint, $accessToken);
