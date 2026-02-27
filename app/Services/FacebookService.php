@@ -868,12 +868,12 @@ class FacebookService
         $sinceIso = $since . 'T00:00:00+0000';
         $untilIso = $until . 'T23:59:59+0000';
 
-        $endpoint = '/' . $pageId . '/feed';
+        $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story';
+        $endpoint = '/' . $pageId . '/feed?fields=' . $fields;
 
         // try {
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
-            dd($graphEdge);
 
             foreach ($graphEdge as $node) {
                 $post = [
