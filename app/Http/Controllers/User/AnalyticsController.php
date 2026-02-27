@@ -182,7 +182,6 @@ class AnalyticsController extends Controller
         }
 
         $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
-        dd('here');
         $posts = $this->facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until);
 
         PagePost::updateOrCreate(
