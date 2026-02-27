@@ -938,7 +938,7 @@ class FacebookService
             return [];
         }
 
-        $metrics = 'post_clicks,post_reactions_by_type_total,post_impressions,post_impressions_unique';
+        $metrics = 'post_clicks';
         // post_clicks are post clicks
         // post_reactions_by_type_total will give you the total number of reactions for each type, sum them to show total reactions
         // post_impressions will give you the total number of impressions
