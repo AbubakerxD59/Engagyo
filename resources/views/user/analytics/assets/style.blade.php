@@ -415,6 +415,110 @@
         opacity: 0.5;
     }
 
+    /* Chart metric selector - modern dropdown */
+    .chart-metric-dropdown-wrap {
+        display: inline-block;
+        margin-left: 0.25rem;
+    }
+
+    .chart-metric-trigger {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.35rem 0.75rem;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: #1877F2;
+        background: rgba(24, 119, 242, 0.08);
+        border: 1px solid rgba(24, 119, 242, 0.25);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    }
+
+    .chart-metric-trigger:hover {
+        background: rgba(24, 119, 242, 0.14);
+        border-color: rgba(24, 119, 242, 0.4);
+        box-shadow: 0 2px 6px rgba(24, 119, 242, 0.15);
+    }
+
+    .chart-metric-trigger:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(24, 119, 242, 0.2);
+    }
+
+    .chart-metric-trigger::after {
+        display: none;
+    }
+
+    .chart-metric-trigger-chevron {
+        font-size: 0.65rem;
+        opacity: 0.8;
+        transition: transform 0.2s ease;
+    }
+
+    .chart-metric-dropdown-wrap.show .chart-metric-trigger-chevron {
+        transform: rotate(180deg);
+    }
+
+    .chart-metric-dropdown {
+        min-width: 180px;
+        padding: 0.5rem;
+        margin-top: 0.5rem;
+        border: 1px solid rgba(0, 0, 0, 0.08);
+        border-radius: 10px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12), 0 2px 10px rgba(0, 0, 0, 0.06);
+        background: #fff;
+    }
+
+    .chart-metric-option {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.5rem 0.75rem;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #495057;
+        border-radius: 8px;
+        text-decoration: none;
+        transition: all 0.15s ease;
+    }
+
+    .chart-metric-option:hover {
+        background: rgba(24, 119, 242, 0.08);
+        color: #1877F2;
+    }
+
+    .chart-metric-option.active {
+        background: rgba(24, 119, 242, 0.12);
+        color: #1877F2;
+        font-weight: 600;
+    }
+
+    .chart-metric-option-circle {
+        display: inline-block;
+        width: 12px;
+        height: 12px;
+        border: 2px solid #adb5bd;
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition: all 0.15s ease;
+    }
+
+    .chart-metric-option:hover .chart-metric-option-circle {
+        border-color: #1877F2;
+    }
+
+    .chart-metric-option-circle.selected {
+        border-color: #1877F2;
+        background: #1877F2;
+    }
+
+    .chart-metric-option span:last-child {
+        flex: 1;
+    }
+
     @media (max-width: 768px) {
         .analytics-layout {
             flex-direction: column;

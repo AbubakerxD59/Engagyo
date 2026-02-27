@@ -167,6 +167,9 @@ class AnalyticsController extends Controller
             'reach' => 0,
             'video_views' => 0,
             'engagements' => 0,
+            'followers_by_day' => [],
+            'reach_by_day' => [],
+            'video_views_by_day' => [],
             'engagements_by_day' => [],
             'comparison' => [],
         ];
@@ -196,8 +199,20 @@ class AnalyticsController extends Controller
             foreach ($insights['engagements_by_day'] ?? [] as $date => $val) {
                 $aggregated['engagements_by_day'][$date] = ($aggregated['engagements_by_day'][$date] ?? 0) + (int) $val;
             }
+            foreach ($insights['followers_by_day'] ?? [] as $date => $val) {
+                $aggregated['followers_by_day'][$date] = ($aggregated['followers_by_day'][$date] ?? 0) + (int) $val;
+            }
+            foreach ($insights['reach_by_day'] ?? [] as $date => $val) {
+                $aggregated['reach_by_day'][$date] = ($aggregated['reach_by_day'][$date] ?? 0) + (int) $val;
+            }
+            foreach ($insights['video_views_by_day'] ?? [] as $date => $val) {
+                $aggregated['video_views_by_day'][$date] = ($aggregated['video_views_by_day'][$date] ?? 0) + (int) $val;
+            }
         }
 
+        ksort($aggregated['followers_by_day']);
+        ksort($aggregated['reach_by_day']);
+        ksort($aggregated['video_views_by_day']);
         ksort($aggregated['engagements_by_day']);
 
         $until = $until ?: now()->format('Y-m-d');

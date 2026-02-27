@@ -69,26 +69,45 @@
                     '<span class="page-insight-label">' + label + '</span></div>';
             }
 
-            function renderEngagementsChart(insights, comp) {
-                var byDay = insights.engagements_by_day || {};
+            var chartMetricOptions = [
+                { key: 'followers', label: 'Followers', byDayKey: 'followers_by_day' },
+                { key: 'reach', label: 'Reach', byDayKey: 'reach_by_day' },
+                { key: 'video_views', label: 'Video Views', byDayKey: 'video_views_by_day' },
+                { key: 'engagements', label: 'Engagements', byDayKey: 'engagements_by_day' }
+            ];
+
+            function renderEngagementsChart(insights, comp, selectedMetricKey) {
+                selectedMetricKey = selectedMetricKey || 'engagements';
+                var opt = chartMetricOptions.find(function(o) { return o.key === selectedMetricKey; }) || chartMetricOptions[3];
+                var byDay = insights[opt.byDayKey] || {};
                 var dates = Object.keys(byDay).sort();
                 var total = 0;
                 dates.forEach(function(d) { total += byDay[d] || 0; });
                 var dailyAvg = dates.length > 0 ? Math.round(total / dates.length) : 0;
-                var engComp = comp.engagements || {};
-                var pctChange = engComp.change != null ? engComp.change : null;
+                var metricComp = comp[opt.key] || {};
+                var pctChange = metricComp.change != null ? metricComp.change : null;
                 var pctStr = (pctChange != null ? ' ' + pctChange + '%' : '');
                 var chartHtml = dates.length > 0
                     ? '<div class="chart-container" style="position: relative; height: 280px;"><canvas id="engagementsChartCanvas"></canvas></div>'
-                    : '<div class="alert alert-light border text-muted mb-0"><i class="fas fa-info-circle mr-2"></i>No daily engagement data available for this period.</div>';
-                return '<div class="mt-4 pt-4 border-top">' +
-                    '<h6 class="text-muted mb-3"><i class="fas fa-chart-bar mr-1"></i>Average engagements</h6>' +
+                    : '<div class="alert alert-light border text-muted mb-0"><i class="fas fa-info-circle mr-2"></i>No daily ' + opt.label.toLowerCase() + ' data available for this period.</div>';
+                var dropdownItems = chartMetricOptions.map(function(o) {
+                    var isSelected = o.key === selectedMetricKey;
+                    return '<a class="chart-metric-option' + (isSelected ? ' active' : '') + '" href="#" data-metric="' + o.key + '"><span class="chart-metric-option-circle' + (isSelected ? ' selected' : '') + '"></span><span>' + o.label + '</span></a>';
+                }).join('');
+                return '<div class="mt-4 pt-4 border-top chart-metric-section" data-selected-metric="' + selectedMetricKey + '">' +
+                    '<div class="d-flex align-items-center flex-wrap gap-2 mb-3">' +
+                    '<h6 class="text-muted mb-0"><i class="fas fa-chart-bar mr-1"></i>Average <div class="dropdown chart-metric-dropdown-wrap">' +
+                    '<button type="button" class="chart-metric-trigger dropdown-toggle" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">' +
+                    '<span class="chart-metric-trigger-label">' + opt.label + '</span><i class="fas fa-chevron-down chart-metric-trigger-chevron"></i></button>' +
+                    '<div class="dropdown-menu chart-metric-dropdown">' + dropdownItems + '</div></div></h6></div>' +
                     '<p class="small text-muted mb-2">(daily average: ' + dailyAvg.toLocaleString() + pctStr + ')</p>' +
                     chartHtml + '</div>';
             }
 
-            function initEngagementsChart(insights) {
-                var byDay = insights.engagements_by_day || {};
+            function initEngagementsChart(insights, metricKey) {
+                metricKey = metricKey || 'engagements';
+                var opt = chartMetricOptions.find(function(o) { return o.key === metricKey; }) || chartMetricOptions[3];
+                var byDay = insights[opt.byDayKey] || {};
                 var dates = Object.keys(byDay).sort();
                 if (dates.length === 0 || typeof Chart === 'undefined') return;
                 if (window.engagementsChartInstance) {
@@ -107,7 +126,7 @@
                     data: {
                         labels: labels,
                         datasets: [{
-                            label: 'Engagements',
+                            label: opt.label,
                             data: data,
                             backgroundColor: 'rgba(24, 119, 242, 0.7)',
                             borderColor: 'rgba(24, 119, 242, 1)',
@@ -247,16 +266,42 @@
                             html += renderEmptyState(!!currentPageId);
                         }
                         $content.html(html);
+                        window.currentAnalyticsInsights = res.pageInsights || null;
                         bindDurationHandlers();
-                        if (res.selectedPage && res.pageInsights && res.pageInsights.engagements_by_day &&
-                            Object.keys(res.pageInsights.engagements_by_day).length > 0) {
-                            initEngagementsChart(res.pageInsights);
+                        bindChartMetricHandlers();
+                        var selectedMetric = $('.chart-metric-section').data('selected-metric') || 'engagements';
+                        if (res.selectedPage && res.pageInsights) {
+                            var byDayKey = chartMetricOptions.find(function(o) { return o.key === selectedMetric; });
+                            byDayKey = byDayKey ? byDayKey.byDayKey : 'engagements_by_day';
+                            var byDay = (res.pageInsights[byDayKey] || {});
+                            if (Object.keys(byDay).length > 0) {
+                                initEngagementsChart(res.pageInsights, selectedMetric);
+                            }
                         }
                     })
                     .fail(function() {
                         $content.html(renderEmptyState(!!currentPageId));
                         if (typeof toastr !== 'undefined') toastr.error('Failed to load analytics.');
                     });
+            }
+
+            function bindChartMetricHandlers() {
+                $(document).off('click', '.chart-metric-option');
+                $(document).on('click', '.chart-metric-option', function(e) {
+                    e.preventDefault();
+                    var metric = $(this).data('metric');
+                    var $section = $(this).closest('.chart-metric-section');
+                    var insights = window.currentAnalyticsInsights;
+                    if (!insights || !$section.length) return;
+                    var comp = insights.comparison || {};
+                    var newHtml = renderEngagementsChart(insights, comp, metric);
+                    $section.replaceWith(newHtml);
+                    var opt = chartMetricOptions.find(function(o) { return o.key === metric; });
+                    var byDay = opt ? (insights[opt.byDayKey] || {}) : {};
+                    if (Object.keys(byDay).length > 0 && typeof Chart !== 'undefined') {
+                        initEngagementsChart(insights, metric);
+                    }
+                });
             }
 
             function bindDurationHandlers() {

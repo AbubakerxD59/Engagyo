@@ -675,6 +675,9 @@ class FacebookService
             'reach' => null,
             'video_views' => null,
             'engagements' => null,
+            'followers_by_day' => [],
+            'reach_by_day' => [],
+            'video_views_by_day' => [],
             'engagements_by_day' => [],
         ];
 
@@ -720,6 +723,13 @@ class FacebookService
                     continue;
                 }
 
+                $byDayKey = match ($name) {
+                    'page_follows' => 'followers_by_day',
+                    'page_total_media_view_unique' => 'reach_by_day',
+                    'page_video_views' => 'video_views_by_day',
+                    'page_post_engagements' => 'engagements_by_day',
+                    default => null,
+                };
                 if ($name === 'page_follows') {
                     $last = end($values);
                     if (count($last) > 0) {
@@ -727,16 +737,27 @@ class FacebookService
                         $value = $last->getField('value');
                         $totals['page_follows'] = $value ?? null;
                     }
+                    foreach ($values as $item) {
+                        $value = $item->getField('value');
+                        $val = $value ?? null;
+                        if ($byDayKey !== null && $val !== null) {
+                            $endTime = $item->getField('end_time');
+                            if ($endTime) {
+                                $dateStr = \Carbon\Carbon::parse($endTime)->format('Y-m-d');
+                                $result['followers_by_day'][$dateStr] = ($result['followers_by_day'][$dateStr] ?? 0) + (int) $val;
+                            }
+                        }
+                    }
                 } else {
                     foreach ($values as $item) {
                         $value = $item->getField('value');
                         $val = $value ?? null;
                         $totals[$name] += $val;
-                        if ($name === 'page_post_engagements' && $val !== null) {
+                        if ($byDayKey !== null && $val !== null) {
                             $endTime = $item->getField('end_time');
                             if ($endTime) {
                                 $dateStr = \Carbon\Carbon::parse($endTime)->format('Y-m-d');
-                                $result['engagements_by_day'][$dateStr] = ($result['engagements_by_day'][$dateStr] ?? 0) + (int) $val;
+                                $result[$byDayKey][$dateStr] = ($result[$byDayKey][$dateStr] ?? 0) + (int) $val;
                             }
                         }
                     }
@@ -747,6 +768,9 @@ class FacebookService
             $result['reach'] = $totals['page_total_media_view_unique'] ?: null;
             $result['video_views'] = $totals['page_video_views'] ?: null;
             $result['engagements'] = $totals['page_post_engagements'] ?: null;
+            ksort($result['followers_by_day']);
+            ksort($result['reach_by_day']);
+            ksort($result['video_views_by_day']);
             ksort($result['engagements_by_day']);
         } catch (FacebookResponseException $e) {
             return $result;
