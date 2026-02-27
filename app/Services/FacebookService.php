@@ -941,7 +941,7 @@ class FacebookService
         $metrics = 'post_clicks,post_reactions_by_type_total,post_media_view,post_impressions_unique';
         // post_clicks are post clicks
         // post_reactions_by_type_total will give you the total number of reactions for each type, sum them to show total reactions
-        // post_impressions will give you the total number of impressions
+        // post_media_view will give you the total number of impressions
         // post_impressions_unique will give you the unique number of impressions
         // engagement rate will be calculated as (post_clicks + post_reactions_by_type_total) / post_impressions
         $batchSize = 50;
@@ -956,11 +956,10 @@ class FacebookService
                 ];
             }
 
-            // try {
+            try {
                 $params = ['batch' => json_encode($batch)];
                 $response = $this->facebook->post('/', $params, $accessToken);
                 $responses = $response->getDecodedBody();
-                dd($responses);
 
                 if (!is_array($responses)) {
                     $offset += count($chunk);
@@ -984,44 +983,51 @@ class FacebookService
                             if ($name && !empty($values)) {
                                 $first = reset($values);
                                 $val = $first['value'] ?? 0;
-                                $insights[$name] = (int) $val;
+                                if ($name === 'post_reactions_by_type_total' && is_array($val)) {
+                                    $insights[$name] = (int) array_sum($val);
+                                } else {
+                                    $insights[$name] = is_numeric($val) ? (int) $val : 0;
+                                }
                             }
                         }
                     }
 
                     $posts[$postIndex]['insights'] = $insights;
                 }
-            // } catch (FacebookResponseException $e) {
-            //     for ($i = 0; $i < count($chunk); $i++) {
-            //         if (isset($posts[$offset + $i])) {
-            //             $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
-            //         }
-            //     }
-            // } catch (FacebookSDKException $e) {
-            //     for ($i = 0; $i < count($chunk); $i++) {
-            //         if (isset($posts[$offset + $i])) {
-            //             $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
-            //         }
-            //     }
-            // }
+            } catch (FacebookResponseException $e) {
+                for ($i = 0; $i < count($chunk); $i++) {
+                    if (isset($posts[$offset + $i])) {
+                        $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
+                    }
+                }
+            } catch (FacebookSDKException $e) {
+                for ($i = 0; $i < count($chunk); $i++) {
+                    if (isset($posts[$offset + $i])) {
+                        $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
+                    }
+                }
+            }
 
             $offset += count($chunk);
         }
 
         foreach ($posts as &$post) {
             $insights = $post['insights'] ?? [];
-            $impressions = (int) ($insights['post_impressions'] ?? 0);
             $clicks = (int) ($insights['post_clicks'] ?? 0);
+            $reactions = (int) ($insights['post_reactions_by_type_total'] ?? 0);
+            $impressions = (int) ($insights['post_media_view'] ?? 0);
+            $reach = (int) ($insights['post_impressions_unique'] ?? 0);
             $comments = (int) ($post['comments'] ?? 0);
 
-            $insights['post_impressions'] = $impressions;
-            $insights['post_impressions_unique'] = (int) ($insights['post_impressions_unique'] ?? 0);
-            $insights['post_engaged_users'] = (int) ($insights['post_engaged_users'] ?? 0);
             $insights['post_clicks'] = $clicks;
+            $insights['post_reactions'] = $reactions;
+            $insights['post_impressions'] = $impressions;
+            $insights['post_impressions_unique'] = $reach;
             $insights['post_comments'] = $comments;
 
+            $engagementNumerator = $clicks + $reactions + $comments;
             $insights['post_engagement_rate'] = $impressions > 0
-                ? round((($clicks + $comments) / $impressions) * 100, 2)
+                ? round(($engagementNumerator / $impressions) * 100, 2)
                 : 0;
 
             $post['insights'] = $insights;

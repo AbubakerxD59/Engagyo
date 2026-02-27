@@ -189,14 +189,14 @@
 
             var postInsightLabels = {
                 post_clicks: 'Clicks',
+                post_reactions: 'Reactions',
                 post_impressions: 'Impressions',
                 post_impressions_unique: 'Reach',
-                post_engaged_users: 'Engaged Users',
                 post_comments: 'Comments',
                 post_engagement_rate: 'Engagement Rate'
             };
 
-            var postInsightDisplayOrder = ['post_clicks', 'post_impressions', 'post_impressions_unique', 'post_engaged_users', 'post_comments', 'post_engagement_rate'];
+            var postInsightDisplayOrder = ['post_clicks', 'post_reactions', 'post_impressions', 'post_impressions_unique', 'post_comments', 'post_engagement_rate'];
 
             function renderPostsList(posts, since, until, searchQuery) {
                 searchQuery = (searchQuery || '').trim().toLowerCase();
