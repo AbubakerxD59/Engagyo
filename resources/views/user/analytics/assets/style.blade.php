@@ -368,13 +368,6 @@
         border: 1px solid #e9ecef;
     }
 
-    .analytics-posts-page-insights {
-        padding: 1rem;
-        background: #f8f9fa;
-        border-radius: 8px;
-        border: 1px solid #e9ecef;
-    }
-
     .analytics-post-card {
         border: 1px solid #e9ecef;
         border-radius: 10px;

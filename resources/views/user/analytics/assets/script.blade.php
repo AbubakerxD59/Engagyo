@@ -188,13 +188,19 @@
             }
 
             var postInsightLabels = {
+                post_clicks: 'Clicks',
+                post_reactions: 'Reactions',
                 post_impressions: 'Impressions',
-                post_impressions_unique: 'Impressions (Unique)',
-                post_engaged_users: 'Engaged Users',
-                post_clicks: 'Clicks'
+                post_impressions_unique: 'Reach',
+                post_engagement_rate: 'Engagement Rate',
+                post_shares: 'Shares',
+                post_comments: 'Comments',
+                post_engaged_users: 'Engaged Users'
             };
 
-            function renderPostsList(posts, since, until, pageInsights) {
+            var postInsightDisplayOrder = ['post_clicks', 'post_reactions', 'post_impressions', 'post_impressions_unique', 'post_engagement_rate', 'post_shares', 'post_comments', 'post_engaged_users'];
+
+            function renderPostsList(posts, since, until) {
                 if (posts === null) {
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
                         '<i class="fas fa-th-large fa-4x text-muted mb-3"></i>' +
@@ -205,24 +211,8 @@
                         '<i class="fas fa-newspaper fa-4x text-muted mb-3"></i>' +
                         '<p class="text-muted mb-0">No posts in this period.</p></div>';
                 }
-                var html = '<div class="analytics-posts-tab-content">';
-                if (pageInsights && (pageInsights.followers != null || pageInsights.reach != null || pageInsights.engagements != null)) {
-                    var comp = pageInsights.comparison || {};
-                    var pCards = [
-                        ['followers', 'Followers', comp.followers],
-                        ['reach', 'Reach', comp.reach],
-                        ['video_views', 'Video Views', comp.video_views],
-                        ['engagements', 'Engagements', comp.engagements]
-                    ];
-                    html += '<div class="analytics-posts-page-insights mb-4">' +
-                        '<h6 class="text-muted mb-3"><i class="fas fa-chart-pie mr-1"></i>Page Insights</h6>' +
-                        '<div class="analytics-insight-cards">';
-                    pCards.forEach(function(c) {
-                        html += renderInsightCard(pageInsights[c[0]], c[1], c[2], false);
-                    });
-                    html += '</div></div>';
-                }
-                html += '<h6 class="text-muted mb-3"><i class="fas fa-newspaper mr-1"></i>Posts (' + posts.length + ')</h6>' +
+                var html = '<div class="analytics-posts-tab-content">' +
+                    '<h6 class="text-muted mb-3"><i class="fas fa-newspaper mr-1"></i>Posts (' + posts.length + ')</h6>' +
                     '<div class="analytics-posts-list">';
                 posts.forEach(function(post) {
                     var rawMsg = post.message || post.story || '';
@@ -233,9 +223,20 @@
                         '<div class="analytics-post-thumb-placeholder"><i class="fas fa-image text-muted"></i></div>';
                     var insights = post.insights || {};
                     var insightItems = [];
+                    var order = postInsightDisplayOrder;
+                    for (var k = 0; k < order.length; k++) {
+                        var key = order[k];
+                        if (key in insights) {
+                            var val = insights[key];
+                            var displayVal = (key === 'post_engagement_rate') ? (val || 0) + '%' : (val || 0).toLocaleString();
+                            insightItems.push('<div class="analytics-post-insight-item"><span class="analytics-post-insight-value">' + displayVal + '</span><span class="analytics-post-insight-label">' + (postInsightLabels[key] || key) + '</span></div>');
+                        }
+                    }
                     for (var key in insights) {
-                        if (insights.hasOwnProperty(key)) {
-                                                        insightItems.push('<div class="analytics-post-insight-item"><span class="analytics-post-insight-value">' + (insights[key] || 0).toLocaleString() + '</span><span class="analytics-post-insight-label">' + (postInsightLabels[key] || key) + '</span></div>');
+                        if (insights.hasOwnProperty(key) && order.indexOf(key) === -1) {
+                            var val = insights[key];
+                            var displayVal = (key === 'post_engagement_rate') ? (val || 0) + '%' : (val || 0).toLocaleString();
+                            insightItems.push('<div class="analytics-post-insight-item"><span class="analytics-post-insight-value">' + displayVal + '</span><span class="analytics-post-insight-label">' + (postInsightLabels[key] || key) + '</span></div>');
                         }
                     }
                     var insightHtml = insightItems.length > 0 ? '<div class="analytics-post-insights-grid">' + insightItems.join('') + '</div>' : '<p class="text-muted small mb-0">No insights available</p>';
@@ -285,7 +286,7 @@
                     overviewContent += renderEngagementsChart(insights, comp);
                     overviewContent += '</div>';
                 }
-                var postsContent = renderPostsList(pagePosts, since, until, insights);
+                var postsContent = renderPostsList(pagePosts, since, until);
                 return '<ul class="nav nav-tabs analytics-insight-tabs mb-3" role="tablist">' +
                     '<li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#analyticsOverviewTab" role="tab">Overview</a></li>' +
                     '<li class="nav-item"><a class="nav-link" data-toggle="tab" href="#analyticsPostsTab" role="tab">Posts</a></li>' +

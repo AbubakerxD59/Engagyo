@@ -868,8 +868,8 @@ class FacebookService
         $sinceIso = $since . 'T00:00:00+0000';
         $untilIso = $until . 'T23:59:59+0000';
 
-        $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story';
-        $endpoint = '/' . $pageId . '/feed?fields=' . $fields
+        $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story,comments.limit(0).summary(true),reactions.limit(0).summary(true)';
+        $endpoint = '/' . $pageId . '/feed?fields=' . urlencode($fields)
             . '&since=' . urlencode($sinceIso)
             . '&until=' . urlencode($untilIso)
             . '&limit=' . min($limit, 100);
@@ -884,6 +884,28 @@ class FacebookService
                     ? (int) ($sharesRaw->getField('count') ?? 0)
                     : (is_array($sharesRaw) ? (int) ($sharesRaw['count'] ?? 0) : (int) ($sharesRaw ?? 0));
 
+                $commentsRaw = $node->getField('comments');
+                $comments = 0;
+                if ($commentsRaw) {
+                    if (is_object($commentsRaw) && method_exists($commentsRaw, 'getField')) {
+                        $summary = $commentsRaw->getField('summary');
+                        $comments = is_object($summary) ? (int) ($summary->getField('total_count') ?? 0) : (is_array($summary) ? (int) ($summary['total_count'] ?? 0) : 0);
+                    } elseif (is_array($commentsRaw) && isset($commentsRaw['summary']['total_count'])) {
+                        $comments = (int) $commentsRaw['summary']['total_count'];
+                    }
+                }
+
+                $reactionsRaw = $node->getField('reactions');
+                $reactions = 0;
+                if ($reactionsRaw) {
+                    if (is_object($reactionsRaw) && method_exists($reactionsRaw, 'getField')) {
+                        $summary = $reactionsRaw->getField('summary');
+                        $reactions = is_object($summary) ? (int) ($summary->getField('total_count') ?? 0) : (is_array($summary) ? (int) ($summary['total_count'] ?? 0) : 0);
+                    } elseif (is_array($reactionsRaw) && isset($reactionsRaw['summary']['total_count'])) {
+                        $reactions = (int) $reactionsRaw['summary']['total_count'];
+                    }
+                }
+
                 $post = [
                     'id' => $node->getField('id'),
                     'message' => $node->getField('message'),
@@ -893,6 +915,8 @@ class FacebookService
                     'is_popular' => $node->getField('is_popular'),
                     'permalink_url' => $node->getField('permalink_url'),
                     'shares' => $shares,
+                    'comments' => $comments,
+                    'reactions' => $reactions,
                     'status_type' => $node->getField('status_type'),
                     'story' => $node->getField('story'),
                     'type' => $node->getField('type'),
@@ -985,6 +1009,30 @@ class FacebookService
 
             $offset += count($chunk);
         }
+
+        foreach ($posts as &$post) {
+            $insights = $post['insights'] ?? [];
+            $impressions = (int) ($insights['post_impressions'] ?? 0);
+            $clicks = (int) ($insights['post_clicks'] ?? 0);
+            $comments = (int) ($post['comments'] ?? 0);
+            $shares = (int) ($post['shares'] ?? 0);
+            $reactions = (int) ($post['reactions'] ?? 0);
+
+            $insights['post_clicks'] = $clicks;
+            $insights['post_reactions'] = $reactions;
+            $insights['post_impressions'] = $impressions;
+            $insights['post_impressions_unique'] = (int) ($insights['post_impressions_unique'] ?? 0);
+            $insights['post_shares'] = $shares;
+            $insights['post_comments'] = $comments;
+
+            $organicEngagement = $comments + $clicks + $shares + $reactions;
+            $insights['post_engagement_rate'] = $impressions > 0
+                ? round(($organicEngagement / $impressions) * 100, 2)
+                : 0;
+
+            $post['insights'] = $insights;
+        }
+        unset($post);
 
         return $posts;
     }

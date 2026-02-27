@@ -99,10 +99,12 @@
                                                         <tr>
                                                             <th>Date</th>
                                                             <th>Message</th>
-                                                            <th>Impressions</th>
-                                                            <th>Impressions (Unique)</th>
-                                                            <th>Engaged Users</th>
                                                             <th>Clicks</th>
+                                                            <th>Reactions</th>
+                                                            <th>Impressions</th>
+                                                            <th>Reach</th>
+                                                            <th>Eng. Rate</th>
+                                                            <th>Shares</th>
                                                             <th>Link</th>
                                                         </tr>
                                                     </thead>
@@ -110,20 +112,24 @@
                                                         @foreach ($pagePosts as $post)
                                                             @php
                                                                 $insights = $post['insights'] ?? [];
-                                                                $impressions = $insights['post_impressions'] ?? 0;
-                                                                $impressionsUnique = $insights['post_impressions_unique'] ?? 0;
-                                                                $engaged = $insights['post_engaged_users'] ?? 0;
                                                                 $clicks = $insights['post_clicks'] ?? 0;
+                                                                $reactions = $insights['post_reactions'] ?? 0;
+                                                                $impressions = $insights['post_impressions'] ?? 0;
+                                                                $reach = $insights['post_impressions_unique'] ?? 0;
+                                                                $engRate = $insights['post_engagement_rate'] ?? 0;
+                                                                $shares = $insights['post_shares'] ?? $post['shares'] ?? 0;
                                                                 $msg = \Illuminate\Support\Str::limit($post['message'] ?? $post['story'] ?? '—', 80);
                                                                 $created = isset($post['created_time']) ? \Carbon\Carbon::parse($post['created_time'])->format('F j, Y g:ia') : '—';
                                                             @endphp
                                                             <tr>
                                                                 <td class="text-nowrap">{{ $created }}</td>
                                                                 <td>{{ $msg }}</td>
-                                                                <td>{{ number_format($impressions) }}</td>
-                                                                <td>{{ number_format($impressionsUnique) }}</td>
-                                                                <td>{{ number_format($engaged) }}</td>
                                                                 <td>{{ number_format($clicks) }}</td>
+                                                                <td>{{ number_format($reactions) }}</td>
+                                                                <td>{{ number_format($impressions) }}</td>
+                                                                <td>{{ number_format($reach) }}</td>
+                                                                <td>{{ $engRate }}%</td>
+                                                                <td>{{ number_format($shares) }}</td>
                                                                 <td>
                                                                     @if (!empty($post['permalink_url']))
                                                                         <a href="{{ $post['permalink_url'] }}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i></a>
