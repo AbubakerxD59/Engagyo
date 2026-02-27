@@ -868,7 +868,7 @@ class FacebookService
         $sinceIso = $since . 'T00:00:00+0000';
         $untilIso = $until . 'T23:59:59+0000';
 
-        $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story,comments.limit(0).summary(true),reactions.limit(0).summary(true)';
+        $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story,comments.limit(0).summary(true)';
         $endpoint = '/' . $pageId . '/feed?fields=' . urlencode($fields)
             . '&since=' . urlencode($sinceIso)
             . '&until=' . urlencode($untilIso)
@@ -895,17 +895,6 @@ class FacebookService
                     }
                 }
 
-                $reactionsRaw = $node->getField('reactions');
-                $reactions = 0;
-                if ($reactionsRaw) {
-                    if (is_object($reactionsRaw) && method_exists($reactionsRaw, 'getField')) {
-                        $summary = $reactionsRaw->getField('summary');
-                        $reactions = is_object($summary) ? (int) ($summary->getField('total_count') ?? 0) : (is_array($summary) ? (int) ($summary['total_count'] ?? 0) : 0);
-                    } elseif (is_array($reactionsRaw) && isset($reactionsRaw['summary']['total_count'])) {
-                        $reactions = (int) $reactionsRaw['summary']['total_count'];
-                    }
-                }
-
                 $post = [
                     'id' => $node->getField('id'),
                     'message' => $node->getField('message'),
@@ -916,7 +905,6 @@ class FacebookService
                     'permalink_url' => $node->getField('permalink_url'),
                     'shares' => $shares,
                     'comments' => $comments,
-                    'reactions' => $reactions,
                     'status_type' => $node->getField('status_type'),
                     'story' => $node->getField('story'),
                     'type' => $node->getField('type'),
@@ -963,11 +951,10 @@ class FacebookService
                 ];
             }
 
-            // try {
+            try {
                 $params = ['batch' => json_encode($batch)];
                 $response = $this->facebook->post('/', $params, $accessToken);
                 $responses = $response->getDecodedBody();
-                dd($responses);
 
                 if (!is_array($responses)) {
                     $offset += count($chunk);
@@ -998,15 +985,19 @@ class FacebookService
 
                     $posts[$postIndex]['insights'] = $insights;
                 }
-            // } catch (FacebookResponseException $e) {
-            //     for ($i = 0; $i < count($chunk); $i++) {
-            //         $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
-            //     }
-            // } catch (FacebookSDKException $e) {
-            //     for ($i = 0; $i < count($chunk); $i++) {
-            //         $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
-            //     }
-            // }
+            } catch (FacebookResponseException $e) {
+                for ($i = 0; $i < count($chunk); $i++) {
+                    if (isset($posts[$offset + $i])) {
+                        $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
+                    }
+                }
+            } catch (FacebookSDKException $e) {
+                for ($i = 0; $i < count($chunk); $i++) {
+                    if (isset($posts[$offset + $i])) {
+                        $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
+                    }
+                }
+            }
 
             $offset += count($chunk);
         }
@@ -1016,19 +1007,15 @@ class FacebookService
             $impressions = (int) ($insights['post_impressions'] ?? 0);
             $clicks = (int) ($insights['post_clicks'] ?? 0);
             $comments = (int) ($post['comments'] ?? 0);
-            $shares = (int) ($post['shares'] ?? 0);
-            $reactions = (int) ($post['reactions'] ?? 0);
 
-            $insights['post_clicks'] = $clicks;
-            $insights['post_reactions'] = $reactions;
             $insights['post_impressions'] = $impressions;
             $insights['post_impressions_unique'] = (int) ($insights['post_impressions_unique'] ?? 0);
-            $insights['post_shares'] = $shares;
+            $insights['post_engaged_users'] = (int) ($insights['post_engaged_users'] ?? 0);
+            $insights['post_clicks'] = $clicks;
             $insights['post_comments'] = $comments;
 
-            $organicEngagement = $comments + $clicks + $shares + $reactions;
             $insights['post_engagement_rate'] = $impressions > 0
-                ? round(($organicEngagement / $impressions) * 100, 2)
+                ? round((($clicks + $comments) / $impressions) * 100, 2)
                 : 0;
 
             $post['insights'] = $insights;

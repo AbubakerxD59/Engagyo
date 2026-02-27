@@ -90,8 +90,20 @@
 
                                 @if ($pagePosts !== null)
                                     <div class="mb-4">
-                                        <h5><i class="fas fa-newspaper mr-1"></i> Page Posts ({{ count($pagePosts) }})</h5>
-                                        <p class="text-muted small">Date range: {{ $since }} to {{ $until }}</p>
+                                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                                            <div>
+                                                <h5 class="mb-1"><i class="fas fa-newspaper mr-1"></i> Page Posts ({{ count($pagePosts) }})</h5>
+                                                <p class="text-muted small mb-0">Date range: {{ $since }} to {{ $until }}</p>
+                                            </div>
+                                            @if (count($pagePosts) > 0)
+                                                <div class="input-group input-group-sm" style="min-width: 220px; max-width: 320px;">
+                                                    <div class="input-group-prepend">
+                                                        <span class="input-group-text"><i class="fas fa-search text-muted"></i></span>
+                                                    </div>
+                                                    <input type="search" id="testPagePostsSearch" class="form-control" placeholder="Search posts by message..." aria-label="Search posts">
+                                                </div>
+                                            @endif
+                                        </div>
                                         @if (count($pagePosts) > 0)
                                             <div class="table-responsive">
                                                 <table class="table table-sm table-bordered">
@@ -100,11 +112,11 @@
                                                             <th>Date</th>
                                                             <th>Message</th>
                                                             <th>Clicks</th>
-                                                            <th>Reactions</th>
                                                             <th>Impressions</th>
                                                             <th>Reach</th>
+                                                            <th>Engaged Users</th>
+                                                            <th>Comments</th>
                                                             <th>Eng. Rate</th>
-                                                            <th>Shares</th>
                                                             <th>Link</th>
                                                         </tr>
                                                     </thead>
@@ -113,23 +125,24 @@
                                                             @php
                                                                 $insights = $post['insights'] ?? [];
                                                                 $clicks = $insights['post_clicks'] ?? 0;
-                                                                $reactions = $insights['post_reactions'] ?? 0;
                                                                 $impressions = $insights['post_impressions'] ?? 0;
                                                                 $reach = $insights['post_impressions_unique'] ?? 0;
+                                                                $engagedUsers = $insights['post_engaged_users'] ?? 0;
+                                                                $comments = $insights['post_comments'] ?? $post['comments'] ?? 0;
                                                                 $engRate = $insights['post_engagement_rate'] ?? 0;
-                                                                $shares = $insights['post_shares'] ?? $post['shares'] ?? 0;
                                                                 $msg = \Illuminate\Support\Str::limit($post['message'] ?? $post['story'] ?? '—', 80);
+                                                                $msgFull = $post['message'] ?? $post['story'] ?? '';
                                                                 $created = isset($post['created_time']) ? \Carbon\Carbon::parse($post['created_time'])->format('F j, Y g:ia') : '—';
                                                             @endphp
-                                                            <tr>
+                                                            <tr class="analytics-test-post-row" data-search-text="{{ e(strtolower($msgFull ?? '')) }}">
                                                                 <td class="text-nowrap">{{ $created }}</td>
                                                                 <td>{{ $msg }}</td>
                                                                 <td>{{ number_format($clicks) }}</td>
-                                                                <td>{{ number_format($reactions) }}</td>
                                                                 <td>{{ number_format($impressions) }}</td>
                                                                 <td>{{ number_format($reach) }}</td>
+                                                                <td>{{ number_format($engagedUsers) }}</td>
+                                                                <td>{{ number_format($comments) }}</td>
                                                                 <td>{{ $engRate }}%</td>
-                                                                <td>{{ number_format($shares) }}</td>
                                                                 <td>
                                                                     @if (!empty($post['permalink_url']))
                                                                         <a href="{{ $post['permalink_url'] }}" target="_blank" rel="noopener"><i class="fas fa-external-link-alt"></i></a>
@@ -144,6 +157,9 @@
                                             </div>
                                         @else
                                             <p class="text-muted mb-0">No posts in this period.</p>
+                                        @endif
+                                        @if (count($pagePosts ?? []) > 0)
+                                            <p id="testPostsNoMatch" class="text-muted text-center py-3 mb-0" style="display: none;"><i class="fas fa-search mr-1"></i>No posts match your search.</p>
                                         @endif
                                     </div>
                                 @endif
@@ -169,4 +185,25 @@
             </div>
         </section>
     </div>
+    @if ($pageId && count($pagePosts ?? []) > 0)
+    <script>
+        (function() {
+            var $search = $('#testPagePostsSearch');
+            var $rows = $('.analytics-test-post-row');
+            var $noMatch = $('#testPostsNoMatch');
+            if (!$search.length) return;
+            $search.on('input', function() {
+                var q = $(this).val().toLowerCase().trim();
+                var visible = 0;
+                $rows.each(function() {
+                    var text = $(this).data('search-text') || '';
+                    var show = !q || text.indexOf(q) !== -1;
+                    $(this).toggle(show);
+                    if (show) visible++;
+                });
+                if ($noMatch.length) $noMatch.toggle(q !== '' && visible === 0);
+            });
+        })();
+    </script>
+    @endif
 @endsection

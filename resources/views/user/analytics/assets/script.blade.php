@@ -189,18 +189,17 @@
 
             var postInsightLabels = {
                 post_clicks: 'Clicks',
-                post_reactions: 'Reactions',
                 post_impressions: 'Impressions',
                 post_impressions_unique: 'Reach',
-                post_engagement_rate: 'Engagement Rate',
-                post_shares: 'Shares',
+                post_engaged_users: 'Engaged Users',
                 post_comments: 'Comments',
-                post_engaged_users: 'Engaged Users'
+                post_engagement_rate: 'Engagement Rate'
             };
 
-            var postInsightDisplayOrder = ['post_clicks', 'post_reactions', 'post_impressions', 'post_impressions_unique', 'post_engagement_rate', 'post_shares', 'post_comments', 'post_engaged_users'];
+            var postInsightDisplayOrder = ['post_clicks', 'post_impressions', 'post_impressions_unique', 'post_engaged_users', 'post_comments', 'post_engagement_rate'];
 
-            function renderPostsList(posts, since, until) {
+            function renderPostsList(posts, since, until, searchQuery) {
+                searchQuery = (searchQuery || '').trim().toLowerCase();
                 if (posts === null) {
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
                         '<i class="fas fa-th-large fa-4x text-muted mb-3"></i>' +
@@ -211,15 +210,29 @@
                         '<i class="fas fa-newspaper fa-4x text-muted mb-3"></i>' +
                         '<p class="text-muted mb-0">No posts in this period.</p></div>';
                 }
+                var filtered = posts;
+                if (searchQuery) {
+                    filtered = posts.filter(function(p) {
+                        var msg = (p.message || '').toLowerCase();
+                        var story = (p.story || '').toLowerCase();
+                        return msg.indexOf(searchQuery) !== -1 || story.indexOf(searchQuery) !== -1;
+                    });
+                }
+                var searchBar = '<div class="analytics-posts-search-wrap" style="min-width: 220px; max-width: 320px;">' +
+                    '<div class="input-group input-group-sm">' +
+                    '<div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-search text-muted"></i></span></div>' +
+                    '<input type="search" id="analyticsPostsSearch" class="form-control" placeholder="Search posts by message..." aria-label="Search posts" value="' + escapeHtml(searchQuery) + '">' +
+                    '</div></div>';
                 var html = '<div class="analytics-posts-tab-content">' +
-                    '<h6 class="text-muted mb-3"><i class="fas fa-newspaper mr-1"></i>Posts (' + posts.length + ')</h6>' +
+                    '<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">' +
+                    '<h6 class="text-muted mb-0"><i class="fas fa-newspaper mr-1"></i>Posts (' + filtered.length + (searchQuery ? ' of ' + posts.length + ')' : ')') + '</h6>' +
+                    searchBar + '</div>' +
                     '<div class="analytics-posts-list">';
-                posts.forEach(function(post) {
+                filtered.forEach(function(post) {
                     var rawMsg = post.message || post.story || '';
                     var msg = escapeHtml(rawMsg.substring(0, 200));
                     if (rawMsg.length > 200) msg += '...';
-                    var post_created = post.created_time;
-                    var created = formatPostDate(post_created.date);
+                    var created = formatPostDate(post.created_time);
                     var img = post.full_picture ? '<img src="' + escapeHtml(post.full_picture) + '" alt="" class="analytics-post-thumb" loading="lazy">' :
                         '<div class="analytics-post-thumb-placeholder"><i class="fas fa-image text-muted"></i></div>';
                     var insights = post.insights || {};
@@ -250,9 +263,12 @@
                         '<p class="analytics-post-date text-muted mb-2"><i class="far fa-clock mr-1"></i>' + created + '</p>' +
                         '<p class="analytics-post-message mb-3">' + (msg || '<em class="text-muted"></em>') + '</p>' +
                         '<div class="analytics-post-insights-wrap mb-3">' + insightHtml + '</div>' +
-                        link + '</div></div></div></div>';
+                        link +                     '</div></div></div></div>';
                 });
                 html += '</div></div>';
+                if (filtered.length === 0 && searchQuery) {
+                    html += '<p class="text-muted text-center py-3 mb-0"><i class="fas fa-search mr-1"></i>No posts match your search.</p>';
+                }
                 return html;
             }
 
@@ -347,8 +363,10 @@
                         }
                         $content.html(html);
                         window.currentAnalyticsInsights = res.pageInsights || null;
+                        window.currentPagePosts = res.pagePosts || null;
                         bindDurationHandlers();
                         bindChartMetricHandlers();
+                        bindPostsSearchHandler();
                         var selectedMetric = $('.chart-metric-section').data('selected-metric') || 'engagements';
                         if (res.selectedPage && res.pageInsights) {
                             var byDayKey = chartMetricOptions.find(function(o) { return o.key === selectedMetric; });
@@ -381,6 +399,17 @@
                     if (Object.keys(byDay).length > 0 && typeof Chart !== 'undefined') {
                         initEngagementsChart(insights, metric);
                     }
+                });
+            }
+
+            function bindPostsSearchHandler() {
+                $content.off('input', '#analyticsPostsSearch');
+                $content.on('input', '#analyticsPostsSearch', function() {
+                    var posts = window.currentPagePosts;
+                    if (posts === null || !Array.isArray(posts)) return;
+                    var query = $(this).val().trim();
+                    var postsContent = renderPostsList(posts, currentSince, currentUntil, query);
+                    $('#analyticsPostsTab').html(postsContent);
                 });
             }
 
