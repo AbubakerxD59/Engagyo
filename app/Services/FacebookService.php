@@ -877,7 +877,6 @@ class FacebookService
         try {
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
-            dd($graphEdge);
 
             foreach ($graphEdge as $node) {
                 $sharesRaw = $node->getField('shares');
