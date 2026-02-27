@@ -97,12 +97,13 @@
 
     /* Insight comparison badges (increase/decrease) */
     .insight-comparison {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         font-weight: 600;
-        padding: 2px 6px;
+        padding: 3px 6px;
         border-radius: 4px;
         white-space: nowrap;
         cursor: help;
+        flex-shrink: 0;
     }
 
     .insight-comparison.has-tooltip {
@@ -167,10 +168,6 @@
 
     .insight-comparison-neutral {
         color: #6c757d;
-    }
-
-    .page-insight-card .d-flex {
-        min-height: 1.5em;
     }
 
     .analytics-page-card.active {
@@ -262,32 +259,63 @@
     }
 
     .analytics-page-insights {
-        padding: 1rem;
+        padding: 1.25rem;
         background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
         border-radius: 8px;
         border: 1px solid #e9ecef;
     }
 
+    .analytics-insight-cards {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem;
+    }
+
+    @media (min-width: 576px) {
+        .analytics-insight-cards {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (min-width: 992px) {
+        .analytics-insight-cards {
+            grid-template-columns: repeat(4, 1fr);
+        }
+    }
+
     .page-insight-card {
         display: flex;
         flex-direction: column;
-        padding: 0.75rem;
+        align-items: stretch;
+        padding: 1rem;
         background: #fff;
         border-radius: 8px;
         border: 1px solid #e9ecef;
-        text-align: center;
-        transition: box-shadow 0.2s ease;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+        transition: box-shadow 0.2s ease, border-color 0.2s ease;
+        min-height: 90px;
     }
 
     .page-insight-card:hover {
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+        border-color: #dee2e6;
+    }
+
+    .page-insight-card .d-flex {
+        flex-wrap: nowrap;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.5rem;
+        min-height: 1.5em;
+        flex: 1;
     }
 
     .page-insight-value {
-        font-size: 1.25rem;
+        font-size: 1.35rem;
         font-weight: 700;
         color: #1877F2;
         line-height: 1.2;
+        overflow-wrap: break-word;
     }
 
     .page-insight-label {
@@ -295,7 +323,8 @@
         color: #6c757d;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-top: 0.25rem;
+        margin-top: 0.35rem;
+        line-height: 1.3;
     }
 
     .analytics-post-card {

@@ -178,10 +178,9 @@
                 ];
                 var note = '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>' +
                     'Page Insights data is only available on Pages with 100 or more likes.</p>';
-                html += note + '<div class="row">';
+                html += note + '<div class="analytics-insight-cards">';
                 cards.forEach(function(c) {
-                    html += '<div class="col-6 col-md-4 col-lg-2 mb-3">' +
-                        renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]) + '</div>';
+                    html += renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]);
                 });
                 html += '</div>';
                 html += renderEngagementsChart(insights, comp);
