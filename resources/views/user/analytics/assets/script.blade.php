@@ -321,8 +321,8 @@
                 var html = '<div class="analytics-posts-tab-content">' +
                     '<div class="analytics-posts-header mb-3">' +
                     '<div class="analytics-posts-header-left">' +
-                    '<h6 class="text-muted mb-2"><i class="fas fa-newspaper mr-1"></i>Posts (' + filtered.length + (
-                        searchQuery ? ' of ' + posts.length + ')' : ')') + '</h6>' +
+                    '<div class="analytics-posts-title mb-2"><i class="fas fa-newspaper mr-2"></i>POSTS (' + filtered.length + (
+                        searchQuery ? ' of ' + posts.length + ')' : ')') + '</div>' +
                     searchBar + '</div>' +
                     '<div class="analytics-posts-header-right">' + sortDropdown + '</div></div>' +
                     '<div class="analytics-posts-list">';

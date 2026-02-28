@@ -376,49 +376,100 @@
         flex-wrap: wrap;
         justify-content: space-between;
         align-items: flex-start;
-        gap: 1.5rem;
+        gap: 2rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 1px solid #e9ecef;
     }
 
     .analytics-posts-header-left {
         flex: 1;
-        min-width: 200px;
+        min-width: 220px;
     }
 
     .analytics-posts-header-right {
         flex-shrink: 0;
+        display: flex;
+        align-items: flex-start;
+    }
+
+    .analytics-posts-title {
+        font-size: 1rem;
+        font-weight: 700;
+        color: #212529;
+        letter-spacing: 0.3px;
+    }
+
+    .analytics-posts-title i {
+        color: #6c757d;
     }
 
     .analytics-posts-search-wrap {
         width: 100%;
-        max-width: 480px;
+        max-width: 420px;
+    }
+
+    .analytics-posts-search-wrap .input-group {
+        border: 1px solid #ced4da;
+        border-radius: 6px;
+        background: #fff;
+    }
+
+    .analytics-posts-search-wrap .input-group-text {
+        background: #f8f9fa;
+        border: none;
+        border-right: 1px solid #e9ecef;
+        color: #6c757d;
+    }
+
+    .analytics-posts-search-wrap .form-control {
+        min-height: 40px;
+        border: none;
+        border-left: 0;
+    }
+
+    .analytics-posts-search-wrap .form-control:focus {
+        box-shadow: none;
     }
 
     .analytics-posts-sort-wrap {
         display: flex;
         flex-direction: column;
         align-items: flex-start;
+        gap: 0.5rem;
     }
 
     .analytics-posts-sort-label {
-        font-size: 0.75rem;
+        font-size: 0.7rem;
         font-weight: 600;
         color: #6c757d;
         text-transform: uppercase;
-        letter-spacing: 0.5px;
-        margin-bottom: 0.35rem;
+        letter-spacing: 0.6px;
     }
 
     .analytics-posts-sort-btn {
-        min-width: 140px;
+        min-width: 150px;
         justify-content: space-between;
+        border: 1px solid #ced4da;
+        background: #fff;
+        color: #212529;
+    }
+
+    .analytics-posts-sort-btn:hover {
+        background: #f8f9fa;
+        border-color: #adb5bd;
     }
 
     .analytics-posts-order-btn {
-        padding: 0.35rem 0.6rem;
+        padding: 0.4rem 0.65rem;
+        border: 1px solid #dee2e6;
     }
 
-    .analytics-posts-search-wrap .form-control {
-        min-height: 38px;
+    .analytics-posts-order-btn.btn-outline-secondary {
+        background: #fff;
+    }
+
+    .analytics-posts-order-btn.btn-outline-secondary:hover {
+        background: #f8f9fa;
     }
 
     .analytics-post-card {

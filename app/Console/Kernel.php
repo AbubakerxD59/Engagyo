@@ -7,6 +7,7 @@ use App\Console\Commands\ResetMonthlyUsage;
 use App\Console\Commands\CheckFeatureLimits;
 use App\Console\Commands\ShuffleRssPosts;
 use App\Console\Commands\SyncPageInsights;
+use App\Console\Commands\SyncPagePosts;
 use App\Console\Commands\SyncUserUsage;
 use App\Console\Commands\PublishRssPostsCron;
 use App\Console\Commands\PinterestPublishCron;
@@ -49,6 +50,7 @@ class Kernel extends ConsoleKernel
         CleanupTikTokTestPosts::class, //tiktok:cleanup-tests
         ShuffleRssPosts::class, //app:shuffle-rss-posts
         SyncPageInsights::class, //insights:sync-page
+        SyncPagePosts::class, //insights:sync-posts
     ];
     /**
      * Define the application's command schedule.
@@ -86,6 +88,8 @@ class Kernel extends ConsoleKernel
         // Command to sync page insights for all pages and durations (runs twice daily at 12:00 AM and 12:00 PM)
         $schedule->command('insights:sync-page')->dailyAt('00:00');
         $schedule->command('insights:sync-page')->dailyAt('12:00');
+        // Command to sync page posts and post insights for all pages and durations (runs every 3 hours)
+        $schedule->command('insights:sync-posts')->everyThreeHours();
     }
 
     /**
