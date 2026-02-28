@@ -537,24 +537,28 @@
         margin-top: 0.5rem;
     }
 
-    .analytics-post-insights-row {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        gap: 1rem;
-    }
-
     .analytics-post-insights-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+        grid-template-columns: repeat(5, 1fr);
         gap: 0.75rem;
-        flex: 1;
-        min-width: 0;
+        width: 100%;
     }
 
     .analytics-post-view-btn {
-        flex-shrink: 0;
-        align-self: center;
+        display: inline-block;
+        margin-top: 0.25rem;
+    }
+
+    @media (max-width: 768px) {
+        .analytics-post-insights-grid {
+            grid-template-columns: repeat(2, 1fr);
+        }
+    }
+
+    @media (max-width: 480px) {
+        .analytics-post-insights-grid {
+            grid-template-columns: 1fr;
+        }
     }
 
     .analytics-post-insight-item {

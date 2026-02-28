@@ -375,8 +375,8 @@
                         created + '</p>' +
                         '<p class="analytics-post-message mb-3">' + (msg ||
                         '<em class="text-muted"></em>') + '</p>' +
-                        '<div class="analytics-post-insights-wrap mb-0">' +
-                        '<div class="analytics-post-insights-row">' + insightHtml + link + '</div></div>' +
+                        '<div class="analytics-post-insights-wrap mb-3">' + insightHtml + '</div>' +
+                        link +
                         '</div></div></div></div>';
                 });
                 html += '</div></div>';
