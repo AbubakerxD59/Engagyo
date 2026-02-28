@@ -396,14 +396,17 @@
     }
 
     .analytics-posts-header-left {
-        flex: 1;
-        min-width: 220px;
+        flex: 0 1 auto;
+        max-width: 320px;
+        min-width: 180px;
     }
 
     .analytics-posts-header-right {
-        flex-shrink: 0;
+        flex: 1;
+        min-width: 0;
         display: flex;
         align-items: flex-start;
+        justify-content: flex-end;
     }
 
     .analytics-posts-title {
@@ -447,9 +450,17 @@
 
     .analytics-posts-sort-wrap {
         display: flex;
+        flex-direction: row;
+        align-items: flex-end;
+        gap: 1.25rem;
+        flex-wrap: wrap;
+    }
+
+    .analytics-posts-sort-group {
+        display: flex;
         flex-direction: column;
         align-items: flex-start;
-        gap: 0.5rem;
+        gap: 0.35rem;
     }
 
     .analytics-posts-sort-label {

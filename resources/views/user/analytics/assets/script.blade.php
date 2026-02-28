@@ -307,6 +307,7 @@
                     '</div></div>';
                 var sortLabel = (postSortOptions.find(function(o) { return o.key === sortBy; }) || postSortOptions[0]).label;
                 var sortDropdown = '<div class="analytics-posts-sort-wrap">' +
+                    '<div class="analytics-posts-sort-group">' +
                     '<label class="analytics-posts-sort-label">Sort by</label>' +
                     '<div class="dropdown d-inline-block">' +
                     '<button type="button" class="btn btn-sm btn-light dropdown-toggle analytics-posts-sort-btn d-flex align-items-center" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">' +
@@ -314,12 +315,13 @@
                     '<div class="dropdown-menu dropdown-menu-right">' +
                     postSortOptions.map(function(o) {
                         return '<a class="dropdown-item" href="#" data-sort="' + o.key + '">' + (o.key === sortBy ? '<i class="fas fa-check mr-2 text-primary"></i>' : '<span class="mr-2" style="width:1em;display:inline-block;"></span>') + escapeHtml(o.label) + '</a>';
-                    }).join('') + '</div></div>' +
-                    '<label class="analytics-posts-sort-label mt-2">Order</label>' +
+                    }).join('') + '</div></div></div>' +
+                    '<div class="analytics-posts-sort-group">' +
+                    '<label class="analytics-posts-sort-label">Order</label>' +
                     '<div class="btn-group btn-group-sm" role="group">' +
                     '<button type="button" class="btn btn-sm ' + (sortOrder === 'desc' ? 'btn-primary' : 'btn-outline-secondary') + ' analytics-posts-order-btn" data-order="desc" title="Descending"><i class="fas fa-sort-amount-down"></i></button>' +
                     '<button type="button" class="btn btn-sm ' + (sortOrder === 'asc' ? 'btn-primary' : 'btn-outline-secondary') + ' analytics-posts-order-btn" data-order="asc" title="Ascending"><i class="fas fa-sort-amount-up"></i></button>' +
-                    '</div></div>';
+                    '</div></div></div>';
                 var html = '<div class="analytics-posts-tab-content">' +
                     '<div class="analytics-posts-header mb-3">' +
                     '<div class="analytics-posts-header-left">' +
