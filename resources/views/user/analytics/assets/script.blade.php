@@ -454,6 +454,8 @@
                 currentSince = since || currentSince;
                 currentUntil = until || currentUntil;
 
+                var wasPostsTabActive = $content.find('a[href="#analyticsPostsTab"]').hasClass('active');
+
                 $content.html(
                     '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="mt-2 text-muted">Loading analytics...</p></div>'
                 );
@@ -485,6 +487,12 @@
                             html += renderEmptyState(!!currentPageId);
                         }
                         $content.html(html);
+                        if (wasPostsTabActive) {
+                            $content.find('a[href="#analyticsOverviewTab"]').removeClass('active');
+                            $content.find('a[href="#analyticsPostsTab"]').addClass('active');
+                            $content.find('#analyticsOverviewTab').removeClass('show active');
+                            $content.find('#analyticsPostsTab').addClass('show active');
+                        }
                         window.currentAnalyticsInsights = res.pageInsights || null;
                         window.currentPagePosts = res.pagePosts || null;
                         bindDurationHandlers();
