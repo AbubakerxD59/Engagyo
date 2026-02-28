@@ -111,7 +111,9 @@
                                                         <tr>
                                                             <th>Date</th>
                                                             <th>Message</th>
-                                                            <th>Clicks</th>
+                                                            <th>Post Clicks</th>
+                                                            <th>Reactions</th>
+                                                            <th>Impressions</th>
                                                             <th>Reach</th>
                                                             <th>Eng. Rate</th>
                                                             <th>Link</th>
@@ -122,6 +124,8 @@
                                                             @php
                                                                 $insights = $post['insights'] ?? [];
                                                                 $clicks = $insights['post_clicks'] ?? 0;
+                                                                $reactions = $insights['post_reactions'] ?? 0;
+                                                                $impressions = $insights['post_impressions'] ?? 0;
                                                                 $reach = $insights['post_reach'] ?? 0;
                                                                 $engRate = $insights['post_engagement_rate'] ?? 0;
                                                                 $msg = \Illuminate\Support\Str::limit($post['message'] ?? $post['story'] ?? '—', 80);
@@ -132,6 +136,8 @@
                                                                 <td class="text-nowrap">{{ $created }}</td>
                                                                 <td>{{ $msg }}</td>
                                                                 <td>{{ number_format($clicks) }}</td>
+                                                                <td>{{ number_format($reactions) }}</td>
+                                                                <td>{{ number_format($impressions) }}</td>
                                                                 <td>{{ number_format($reach) }}</td>
                                                                 <td>{{ $engRate }}%</td>
                                                                 <td>
