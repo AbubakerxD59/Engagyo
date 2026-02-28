@@ -1027,6 +1027,9 @@ class FacebookService
                 ? round((($clicks + $reactions) / $impressions) * 100, 2)
                 : 0;
 
+            unset($insights['post_media_view']);
+            unset($insights['post_impressions_unique']);
+            unset($insights['post_reactions_by_type_total']);
             $post['insights'] = $insights;
         }
         unset($post);
