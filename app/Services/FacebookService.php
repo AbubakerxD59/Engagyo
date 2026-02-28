@@ -1016,7 +1016,7 @@ class FacebookService
             $clicks = (int) ($insights['post_clicks'] ?? 0);
             $reactions = (int) ($insights['post_reactions_by_type_total'] ?? 0);
             $impressions = (int) ($insights['post_media_view'] ?? 0);
-            $reach = (int) ($insights['post_impressions_unique'] ?? 0);
+            $reach = (int) ($insights['post_media_view'] ?? 0);
 
             $insights['post_clicks'] = $clicks;
             $insights['post_reactions'] = $reactions;

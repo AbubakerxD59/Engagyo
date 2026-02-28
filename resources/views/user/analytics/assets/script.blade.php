@@ -306,9 +306,12 @@
                                     postInsightLabels[key] || key) + '</span></div>');
                         }
                     }
+                    console.log(insights);
                     for (var key in insights) {
+                        console.log(key);
                         if (insights.hasOwnProperty(key) && order.indexOf(key) === -1) {
                             var val = insights[key];
+                            console.log(val);
                             var displayVal = (key === 'post_engagement_rate') ? (val || 0) + '%' : (val ||
                                 0).toLocaleString();
                             insightItems.push(
