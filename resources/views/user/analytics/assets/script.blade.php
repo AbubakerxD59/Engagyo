@@ -19,9 +19,7 @@
 
             function renderDurationDropdown(duration, since, until) {
                 var customStyle = duration === 'custom' ? '' : ' style="display: none !important;"';
-                return '<div class="d-flex flex-wrap align-items-center justify-content-between mb-3">' +
-                    '<h6 class="text-muted mb-0"><i class="fas fa-chart-pie mr-1"></i>Page Insights</h6>' +
-                    '<div class="analytics-duration-controls d-flex align-items-center gap-2 flex-wrap">' +
+                return '<div class="analytics-duration-controls d-flex align-items-center gap-2 flex-wrap">' +
                     '<select id="analyticsDuration" class="form-control form-control-sm" style="width: auto; min-width: 140px;">' +
                     '<option value="last_7"' + (duration === 'last_7' ? ' selected' : '') +
                     '>Last 7 days</option>' +
@@ -44,7 +42,7 @@
                         until || '') + '" style="width: auto;">' +
                     '<button type="button" id="analyticsApplyCustom" class="btn btn-sm btn-primary">Apply</button>' +
                     '</div>' +
-                    '</div></div>';
+                    '</div>';
             }
 
             function renderComparisonBadge(comp, isPercent) {
@@ -227,8 +225,10 @@
             }
 
             function formatPostDate(createdTime) {
-                if (!createdTime) return '';
-                var d = new Date(createdTime);
+                var val = createdTime && (typeof createdTime === 'object' ? createdTime.date : createdTime);
+                if (!val) return '';
+                var d = new Date(val);
+                if (isNaN(d.getTime())) return '';
                 var datePart = d.toLocaleDateString('en-US', {
                     month: 'long',
                     day: 'numeric',
@@ -287,8 +287,10 @@
                 filtered.sort(function(a, b) {
                     var va, vb;
                     if (sortBy === 'created_time') {
-                        va = new Date(a.created_time || 0).getTime();
-                        vb = new Date(b.created_time || 0).getTime();
+                        var aTime = a.created_time && (a.created_time.date || a.created_time);
+                        var bTime = b.created_time && (b.created_time.date || b.created_time);
+                        va = new Date(aTime || 0).getTime();
+                        vb = new Date(bTime || 0).getTime();
                     } else {
                         va = parseInt((a.insights || {})[sortBy], 10) || 0;
                         vb = parseInt((b.insights || {})[sortBy], 10) || 0;
@@ -330,7 +332,8 @@
                     var rawMsg = post.message || post.story || '';
                     var msg = escapeHtml(rawMsg.substring(0, 200));
                     if (rawMsg.length > 200) msg += '...';
-                    var created = formatPostDate(post.created_time);
+                    var createdTimeVal = post.created_time && (post.created_time.date || post.created_time);
+                    var created = formatPostDate(createdTimeVal);
                     var img = post.full_picture ? '<img src="' + escapeHtml(post.full_picture) +
                         '" alt="" class="analytics-post-thumb" loading="lazy">' :
                         '<div class="analytics-post-thumb-placeholder"><i class="fas fa-image text-muted"></i></div>';
@@ -391,9 +394,7 @@
                 duration = duration || 'last_28';
                 since = since || '';
                 until = until || '';
-                var overviewContent = '<div class="analytics-page-insights mb-4">' + renderDurationDropdown(
-                    duration, since,
-                    until);
+                var overviewContent = '<div class="analytics-page-insights mb-4">';
                 if (!hasMeaningfulInsights(insights)) {
                     overviewContent += '<div class="alert alert-info mb-0" role="alert">' +
                         '<strong><i class="fas fa-info-circle mr-2"></i>Insights can\'t be fetched for this page.</strong>' +
@@ -421,10 +422,14 @@
                     overviewContent += '</div>';
                 }
                 var postsContent = renderPostsList(pagePosts, since, until, currentPostsSearchQuery, currentPostsSortBy, currentPostsSortOrder);
-                return '<ul class="nav nav-tabs analytics-insight-tabs mb-3" role="tablist">' +
+                var durationDropdown = renderDurationDropdown(duration, since, until);
+                return '<div class="analytics-tabs-row d-flex flex-wrap align-items-center justify-content-between mb-3">' +
+                    '<ul class="nav nav-tabs analytics-insight-tabs mb-0" role="tablist">' +
                     '<li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#analyticsOverviewTab" role="tab">Overview</a></li>' +
                     '<li class="nav-item"><a class="nav-link" data-toggle="tab" href="#analyticsPostsTab" role="tab">Posts</a></li>' +
                     '</ul>' +
+                    '<div class="analytics-tabs-duration">' + durationDropdown + '</div>' +
+                    '</div>' +
                     '<div class="tab-content">' +
                     '<div class="tab-pane fade show active" id="analyticsOverviewTab" role="tabpanel">' +
                     overviewContent + '</div>' +

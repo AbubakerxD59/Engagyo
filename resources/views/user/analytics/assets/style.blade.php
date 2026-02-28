@@ -272,6 +272,20 @@
         text-overflow: ellipsis;
     }
 
+    .analytics-tabs-row {
+        gap: 1rem;
+        align-items: center;
+    }
+
+    .analytics-tabs-row .analytics-insight-tabs {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .analytics-tabs-duration {
+        flex-shrink: 0;
+    }
+
     .analytics-insight-tabs {
         border-bottom: 1px solid #dee2e6;
     }
