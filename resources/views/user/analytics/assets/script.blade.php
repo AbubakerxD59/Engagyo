@@ -270,15 +270,15 @@
                     });
                 }
                 var searchBar =
-                    '<div class="analytics-posts-search-wrap" style="min-width: 220px; max-width: 320px;">' +
+                    '<div class="analytics-posts-search-wrap">' +
                     '<div class="input-group input-group-sm">' +
                     '<div class="input-group-prepend"><span class="input-group-text"><i class="fas fa-search text-muted"></i></span></div>' +
                     '<input type="search" id="analyticsPostsSearch" class="form-control" placeholder="Search posts by message..." aria-label="Search posts" value="' +
                     escapeHtml(searchQuery) + '">' +
                     '</div></div>';
                 var html = '<div class="analytics-posts-tab-content">' +
-                    '<div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">' +
-                    '<h6 class="text-muted mb-0"><i class="fas fa-newspaper mr-1"></i>Posts (' + filtered.length + (
+                    '<div class="analytics-posts-header mb-3">' +
+                    '<h6 class="text-muted mb-2"><i class="fas fa-newspaper mr-1"></i>Posts (' + filtered.length + (
                         searchQuery ? ' of ' + posts.length + ')' : ')') + '</h6>' +
                     searchBar + '</div>' +
                     '<div class="analytics-posts-list">';
@@ -286,8 +286,7 @@
                     var rawMsg = post.message || post.story || '';
                     var msg = escapeHtml(rawMsg.substring(0, 200));
                     if (rawMsg.length > 200) msg += '...';
-                    var post_created = post.created_time;
-                    var created = formatPostDate(post_created.date);
+                    var created = formatPostDate(post.created_time);
                     var img = post.full_picture ? '<img src="' + escapeHtml(post.full_picture) +
                         '" alt="" class="analytics-post-thumb" loading="lazy">' :
                         '<div class="analytics-post-thumb-placeholder"><i class="fas fa-image text-muted"></i></div>';
@@ -306,12 +305,9 @@
                                     postInsightLabels[key] || key) + '</span></div>');
                         }
                     }
-                    console.log(insights);
                     for (var key in insights) {
-                        console.log(key);
                         if (insights.hasOwnProperty(key) && order.indexOf(key) === -1) {
                             var val = insights[key];
-                            console.log(val);
                             var displayVal = (key === 'post_engagement_rate') ? (val || 0) + '%' : (val ||
                                 0).toLocaleString();
                             insightItems.push(
@@ -324,7 +320,7 @@
                         '<div class="analytics-post-insights-grid">' + insightItems.join('') + '</div>' :
                         '<p class="text-muted small mb-0">No insights available</p>';
                     var link = post.permalink_url ? '<a href="' + escapeHtml(post.permalink_url) +
-                        '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary"><i class="fas fa-external-link-alt mr-1"></i>View on Facebook</a>' :
+                        '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary analytics-post-view-btn"><i class="fas fa-external-link-alt mr-1"></i>View on Facebook</a>' :
                         '';
                     html += '<div class="analytics-post-card card mb-3">' +
                         '<div class="card-body">' +
@@ -335,8 +331,9 @@
                         created + '</p>' +
                         '<p class="analytics-post-message mb-3">' + (msg ||
                         '<em class="text-muted"></em>') + '</p>' +
-                        '<div class="analytics-post-insights-wrap mb-3">' + insightHtml + '</div>' +
-                        link + '</div></div></div></div>';
+                        '<div class="analytics-post-insights-wrap mb-0">' +
+                        '<div class="analytics-post-insights-row">' + insightHtml + link + '</div></div>' +
+                        '</div></div></div></div>';
                 });
                 html += '</div></div>';
                 if (filtered.length === 0 && searchQuery) {

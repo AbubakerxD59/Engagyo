@@ -371,6 +371,21 @@
         border: 1px solid #e9ecef;
     }
 
+    .analytics-posts-header {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .analytics-posts-search-wrap {
+        width: 100%;
+        max-width: 480px;
+    }
+
+    .analytics-posts-search-wrap .form-control {
+        min-height: 38px;
+    }
+
     .analytics-post-card {
         border: 1px solid #e9ecef;
         border-radius: 10px;
@@ -436,10 +451,24 @@
         margin-top: 0.5rem;
     }
 
+    .analytics-post-insights-row {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 1rem;
+    }
+
     .analytics-post-insights-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
         gap: 0.75rem;
+        flex: 1;
+        min-width: 0;
+    }
+
+    .analytics-post-view-btn {
+        flex-shrink: 0;
+        align-self: center;
     }
 
     .analytics-post-insight-item {
