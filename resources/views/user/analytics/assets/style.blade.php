@@ -373,13 +373,48 @@
 
     .analytics-posts-header {
         display: flex;
-        flex-direction: column;
+        flex-wrap: wrap;
+        justify-content: space-between;
         align-items: flex-start;
+        gap: 1.5rem;
+    }
+
+    .analytics-posts-header-left {
+        flex: 1;
+        min-width: 200px;
+    }
+
+    .analytics-posts-header-right {
+        flex-shrink: 0;
     }
 
     .analytics-posts-search-wrap {
         width: 100%;
         max-width: 480px;
+    }
+
+    .analytics-posts-sort-wrap {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .analytics-posts-sort-label {
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6c757d;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 0.35rem;
+    }
+
+    .analytics-posts-sort-btn {
+        min-width: 140px;
+        justify-content: space-between;
+    }
+
+    .analytics-posts-order-btn {
+        padding: 0.35rem 0.6rem;
     }
 
     .analytics-posts-search-wrap .form-control {

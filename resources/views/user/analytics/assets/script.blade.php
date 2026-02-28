@@ -8,6 +8,9 @@
             var currentDuration = '{{ $duration ?? 'last_28' }}';
             var currentSince = '{{ $since ?? '' }}';
             var currentUntil = '{{ $until ?? '' }}';
+            var currentPostsSearchQuery = '';
+            var currentPostsSortBy = 'post_impressions';
+            var currentPostsSortOrder = 'desc';
             var isLoadingAnalytics = false;
 
             function formatMetric(val) {
@@ -249,8 +252,19 @@
 
             var postInsightDisplayOrder = ['post_clicks', 'post_reactions', 'post_impressions', 'post_reach', 'post_engagement_rate'];
 
-            function renderPostsList(posts, since, until, searchQuery) {
+            var postSortOptions = [
+                { key: 'post_impressions', label: 'Impressions' },
+                { key: 'post_reach', label: 'Reach' },
+                { key: 'post_clicks', label: 'Post Clicks' },
+                { key: 'post_reactions', label: 'Reactions' },
+                { key: 'post_engagement_rate', label: 'Eng. Rate' },
+                { key: 'created_time', label: 'Date' }
+            ];
+
+            function renderPostsList(posts, since, until, searchQuery, sortBy, sortOrder) {
                 searchQuery = (searchQuery || '').trim().toLowerCase();
+                sortBy = sortBy || 'post_impressions';
+                sortOrder = sortOrder || 'desc';
                 if (posts === null) {
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
                         '<i class="fas fa-th-large fa-4x text-muted mb-3"></i>' +
@@ -269,6 +283,19 @@
                         return msg.indexOf(searchQuery) !== -1 || story.indexOf(searchQuery) !== -1;
                     });
                 }
+                filtered = filtered.slice();
+                filtered.sort(function(a, b) {
+                    var va, vb;
+                    if (sortBy === 'created_time') {
+                        va = new Date(a.created_time || 0).getTime();
+                        vb = new Date(b.created_time || 0).getTime();
+                    } else {
+                        va = parseInt((a.insights || {})[sortBy], 10) || 0;
+                        vb = parseInt((b.insights || {})[sortBy], 10) || 0;
+                    }
+                    if (sortOrder === 'asc') return va > vb ? 1 : (va < vb ? -1 : 0);
+                    return va < vb ? 1 : (va > vb ? -1 : 0);
+                });
                 var searchBar =
                     '<div class="analytics-posts-search-wrap">' +
                     '<div class="input-group input-group-sm">' +
@@ -276,11 +303,28 @@
                     '<input type="search" id="analyticsPostsSearch" class="form-control" placeholder="Search posts by message..." aria-label="Search posts" value="' +
                     escapeHtml(searchQuery) + '">' +
                     '</div></div>';
+                var sortLabel = (postSortOptions.find(function(o) { return o.key === sortBy; }) || postSortOptions[0]).label;
+                var sortDropdown = '<div class="analytics-posts-sort-wrap">' +
+                    '<label class="analytics-posts-sort-label">Sort by</label>' +
+                    '<div class="dropdown d-inline-block">' +
+                    '<button type="button" class="btn btn-sm btn-light dropdown-toggle analytics-posts-sort-btn d-flex align-items-center" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">' +
+                    escapeHtml(sortLabel) + ' <i class="fas fa-chevron-down ml-1"></i></button>' +
+                    '<div class="dropdown-menu dropdown-menu-right">' +
+                    postSortOptions.map(function(o) {
+                        return '<a class="dropdown-item" href="#" data-sort="' + o.key + '">' + (o.key === sortBy ? '<i class="fas fa-check mr-2 text-primary"></i>' : '<span class="mr-2" style="width:1em;display:inline-block;"></span>') + escapeHtml(o.label) + '</a>';
+                    }).join('') + '</div></div>' +
+                    '<label class="analytics-posts-sort-label mt-2">Order</label>' +
+                    '<div class="btn-group btn-group-sm" role="group">' +
+                    '<button type="button" class="btn btn-sm ' + (sortOrder === 'desc' ? 'btn-primary' : 'btn-outline-secondary') + ' analytics-posts-order-btn" data-order="desc" title="Descending"><i class="fas fa-sort-amount-down"></i></button>' +
+                    '<button type="button" class="btn btn-sm ' + (sortOrder === 'asc' ? 'btn-primary' : 'btn-outline-secondary') + ' analytics-posts-order-btn" data-order="asc" title="Ascending"><i class="fas fa-sort-amount-up"></i></button>' +
+                    '</div></div>';
                 var html = '<div class="analytics-posts-tab-content">' +
                     '<div class="analytics-posts-header mb-3">' +
+                    '<div class="analytics-posts-header-left">' +
                     '<h6 class="text-muted mb-2"><i class="fas fa-newspaper mr-1"></i>Posts (' + filtered.length + (
                         searchQuery ? ' of ' + posts.length + ')' : ')') + '</h6>' +
                     searchBar + '</div>' +
+                    '<div class="analytics-posts-header-right">' + sortDropdown + '</div></div>' +
                     '<div class="analytics-posts-list">';
                 filtered.forEach(function(post) {
                     var rawMsg = post.message || post.story || '';
@@ -376,7 +420,7 @@
                     overviewContent += renderEngagementsChart(insights, comp);
                     overviewContent += '</div>';
                 }
-                var postsContent = renderPostsList(pagePosts, since, until);
+                var postsContent = renderPostsList(pagePosts, since, until, currentPostsSearchQuery, currentPostsSortBy, currentPostsSortOrder);
                 return '<ul class="nav nav-tabs analytics-insight-tabs mb-3" role="tablist">' +
                     '<li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#analyticsOverviewTab" role="tab">Overview</a></li>' +
                     '<li class="nav-item"><a class="nav-link" data-toggle="tab" href="#analyticsPostsTab" role="tab">Posts</a></li>' +
@@ -441,6 +485,7 @@
                         bindDurationHandlers();
                         bindChartMetricHandlers();
                         bindPostsSearchHandler();
+                        bindPostsSortHandler();
                         var selectedMetric = $('.chart-metric-section').data('selected-metric') ||
                         'engagements';
                         if (res.selectedPage && res.pageInsights) {
@@ -481,14 +526,40 @@
                 });
             }
 
+            function refreshPostsTab() {
+                var posts = window.currentPagePosts;
+                if (posts === null || !Array.isArray(posts)) return;
+                var query = $('#analyticsPostsSearch').length ? $('#analyticsPostsSearch').val().trim() : currentPostsSearchQuery;
+                currentPostsSearchQuery = query;
+                var postsContent = renderPostsList(posts, currentSince, currentUntil, query, currentPostsSortBy, currentPostsSortOrder);
+                $('#analyticsPostsTab').html(postsContent);
+                bindPostsSearchHandler();
+                bindPostsSortHandler();
+            }
+
             function bindPostsSearchHandler() {
                 $content.off('input', '#analyticsPostsSearch');
                 $content.on('input', '#analyticsPostsSearch', function() {
-                    var posts = window.currentPagePosts;
-                    if (posts === null || !Array.isArray(posts)) return;
-                    var query = $(this).val().trim();
-                    var postsContent = renderPostsList(posts, currentSince, currentUntil, query);
-                    $('#analyticsPostsTab').html(postsContent);
+                    currentPostsSearchQuery = $(this).val().trim();
+                    refreshPostsTab();
+                });
+            }
+
+            function bindPostsSortHandler() {
+                $content.off('click', '.analytics-posts-sort-btn, .dropdown-item[data-sort], .analytics-posts-order-btn');
+                $content.on('click', '.dropdown-item[data-sort]', function(e) {
+                    e.preventDefault();
+                    var sort = $(this).data('sort');
+                    if (!sort) return;
+                    currentPostsSortBy = sort;
+                    refreshPostsTab();
+                });
+                $content.on('click', '.analytics-posts-order-btn', function(e) {
+                    e.preventDefault();
+                    var order = $(this).data('order');
+                    if (!order) return;
+                    currentPostsSortOrder = order;
+                    refreshPostsTab();
                 });
             }
 
