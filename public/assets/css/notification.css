@@ -305,3 +305,134 @@
     margin-bottom: 10px;
     opacity: 0.5;
 }
+
+/* Timezone Dropdown Styles */
+.timezone-dropdown {
+    position: relative;
+}
+
+.timezone-dropdown .nav-link {
+    padding: 12px !important;
+    color: rgba(255, 255, 255, 0.8) !important;
+}
+
+.timezone-dropdown .nav-link:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #fff !important;
+}
+
+.timezone-icon {
+    color: black;
+    font-size: 20px !important;
+}
+
+.timezone-menu {
+    width: 380px;
+    height: 50vh;
+    max-height: 60vh;
+    overflow: hidden;
+    padding: 0;
+    display: none;
+    flex-direction: column;
+    border-radius: 20px;
+    border: none;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+#timezoneDropdown {
+    line-height: 0;
+}
+
+.timezone-menu.show {
+    display: flex !important;
+}
+
+.timezone-menu .dropdown-header {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    padding: 12px 15px;
+    border-bottom: 1px solid #dee2e6;
+    flex-shrink: 0;
+}
+
+.timezone-search-wrapper {
+    position: relative;
+    flex-shrink: 0;
+    padding: 10px 15px;
+    border-bottom: 1px solid #dee2e6;
+    background: #fff;
+}
+
+.timezone-search-input {
+    width: 100%;
+    padding: 8px 12px 8px 36px;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s;
+}
+
+.timezone-search-input:focus {
+    border-color: #007bff;
+}
+
+.timezone-search-input::placeholder {
+    color: #999;
+}
+
+.timezone-search-icon {
+    position: absolute;
+    left: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6c757d;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.timezone-list {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 0;
+}
+
+.timezone-item {
+    padding: 12px 15px;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.timezone-item:hover {
+    background-color: #f8f9fa;
+}
+
+.timezone-item:last-child {
+    border-bottom: none;
+}
+
+.timezone-item-circle {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #6c757d;
+    border-radius: 50%;
+    flex-shrink: 0;
+    transition: all 0.2s;
+}
+
+.timezone-item.selected .timezone-item-circle {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.timezone-item-text {
+    flex: 1;
+    font-size: 14px;
+    color: #333;
+}

@@ -24,6 +24,9 @@
                 $menu.removeClass('show').fadeOut(200);
                 $(this).attr('aria-expanded', 'false');
             } else {
+                // Close timezone dropdown when opening notifications
+                $('.timezone-menu').removeClass('show').fadeOut(200);
+                $('#timezoneDropdown').attr('aria-expanded', 'false');
                 // Show menu
                 $menu.addClass('show').fadeIn(200);
                 $(this).attr('aria-expanded', 'true');
@@ -38,7 +41,127 @@
                 $('.notifications-menu').removeClass('show').fadeOut(200);
                 $('#notificationsDropdown').attr('aria-expanded', 'false');
             }
+            if (!$(e.target).closest('.timezone-dropdown').length) {
+                $('.timezone-menu').removeClass('show').fadeOut(200);
+                $('#timezoneDropdown').attr('aria-expanded', 'false');
+            }
         });
+
+        // Timezone Dropdown
+        let timezonesLoaded = false;
+        $('#timezoneDropdown').on('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            const $menu = $('.timezone-menu');
+            const isExpanded = $(this).attr('aria-expanded') === 'true';
+
+            if (isExpanded) {
+                $menu.removeClass('show').fadeOut(200);
+                $(this).attr('aria-expanded', 'false');
+            } else {
+                // Close notifications dropdown when opening timezone
+                $('.notifications-menu').removeClass('show').fadeOut(200);
+                $('#notificationsDropdown').attr('aria-expanded', 'false');
+                $menu.addClass('show').fadeIn(200);
+                $(this).attr('aria-expanded', 'true');
+                $('#timezoneSearchInput').val('').trigger('input');
+                setTimeout(function() {
+                    $('#timezoneSearchInput').focus();
+                }, 250);
+                if (!timezonesLoaded) {
+                    fetchTimezones();
+                }
+            }
+        });
+
+        function fetchTimezones() {
+            $.ajax({
+                url: '{{ route('panel.timezones') }}',
+                method: 'GET',
+                success: function(response) {
+                    if (response.success) {
+                        timezonesLoaded = true;
+                        updateTimezonesUI(response.timezones);
+                    }
+                },
+                error: function(xhr) {
+                    $('#timezoneList').html(
+                        '<div class="dropdown-item text-center text-muted py-3"><i class="fas fa-exclamation-triangle"></i> Failed to load timezones</div>'
+                    );
+                }
+            });
+        }
+
+        function updateTimezonesUI(timezones) {
+            const $trigger = $('#timezoneDropdown');
+            const $list = $('#timezoneList');
+            const $selectedDisplay = $('#timezoneSelectedDisplay');
+            const currentId = $trigger.data('current-timezone-id');
+            const currentName = $trigger.data('current-timezone-name');
+
+            $selectedDisplay.text(currentName || 'Select timezone');
+
+            let html = '';
+            timezones.forEach(function(tz) {
+                const isSelected = tz.id == currentId;
+                const displayName = tz.offset ? `${tz.name} (${tz.offset})` : tz.name;
+                const searchText = (tz.name + ' ' + (tz.offset || '') + ' ' + (tz.abbr || ''))
+                    .toLowerCase();
+                html += `
+                    <div class="timezone-item ${isSelected ? 'selected' : ''}" data-id="${tz.id}" data-name="${escapeHtml(displayName)}" data-search="${searchText.replace(/"/g, '&quot;')}">
+                        <span class="timezone-item-circle"></span>
+                        <span class="timezone-item-text">${escapeHtml(displayName)}</span>
+                    </div>
+                `;
+            });
+            $list.html(html);
+
+            // Search filter
+            $('#timezoneSearchInput').off('input').on('input', function() {
+                const query = $(this).val().toLowerCase().trim();
+                $('.timezone-item').each(function() {
+                    const $item = $(this);
+                    const matches = !query || $item.data('search').indexOf(query) !== -1;
+                    $item.toggle(matches);
+                });
+            });
+
+            $('.timezone-item').on('click', function() {
+                const timezoneId = $(this).data('id');
+                const timezoneName = $(this).data('name');
+                updateUserTimezone(timezoneId, timezoneName);
+            });
+        }
+
+        function updateUserTimezone(timezoneId, timezoneName) {
+            $.ajax({
+                url: '{{ route('panel.settings.updateTimezone') }}',
+                method: 'POST',
+                data: {
+                    timezone_id: timezoneId,
+                    _token: '{{ csrf_token() }}'
+                },
+                success: function(response) {
+                    if (response.success) {
+                        $('#timezoneDropdown').data('current-timezone-id', timezoneId);
+                        $('#timezoneDropdown').data('current-timezone-name', timezoneName);
+                        $('#timezoneSelectedDisplay').text(timezoneName);
+                        $('.timezone-item').removeClass('selected');
+                        $(`.timezone-item[data-id="${timezoneId}"]`).addClass('selected');
+                        if (typeof toastr !== 'undefined') {
+                            toastr.success('Timezone updated');
+                        }
+                    }
+                },
+                error: function(xhr) {
+                    const msg = xhr.responseJSON && xhr.responseJSON.message ? xhr.responseJSON
+                        .message : 'Failed to update timezone';
+                    if (typeof toastr !== 'undefined') {
+                        toastr.error(msg);
+                    }
+                }
+            });
+        }
 
         function fetchNotifications() {
             $.ajax({

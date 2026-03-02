@@ -10,6 +10,29 @@
     </ul>
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
+        <!-- Timezone Dropdown -->
+        <li class="nav-item dropdown timezone-dropdown">
+            <a class="nav-link" href="#" id="timezoneDropdown" aria-haspopup="true" aria-expanded="false"
+                role="button"
+                data-current-timezone-id="{{ auth()->user()->timezone_id ?? '' }}"
+                data-current-timezone-name="{{ auth()->user()->timezone ? auth()->user()->timezone->display_name : 'Select timezone' }}">
+                <i class="fas fa-globe timezone-icon" title="Timezone"></i>
+            </a>
+            <div class="dropdown-menu dropdown-menu-lg dropdown-menu-right timezone-menu"
+                aria-labelledby="timezoneDropdown">
+                <span class="dropdown-item dropdown-header" id="timezoneSelectedDisplay">{{ auth()->user()->timezone ? auth()->user()->timezone->display_name : 'Select timezone' }}</span>
+                <div class="dropdown-divider"></div>
+                <div class="timezone-search-wrapper">
+                    <input type="text" id="timezoneSearchInput" class="timezone-search-input" placeholder="Search timezone..." autocomplete="off">
+                    <i class="fas fa-search timezone-search-icon"></i>
+                </div>
+                <div id="timezoneList" class="timezone-list">
+                    <div class="dropdown-item text-center text-muted py-3">
+                        <i class="fas fa-spinner fa-spin"></i> Loading timezones...
+                    </div>
+                </div>
+            </div>
+        </li>
         <!-- Notifications Dropdown -->
         <li class="nav-item dropdown notifications-dropdown">
             <a class="nav-link" href="#" id="notificationsDropdown" aria-haspopup="true" aria-expanded="false"
@@ -91,7 +114,8 @@
 
     /* Ensure notification dropdown appears above feature-limit-alert */
     .notifications-dropdown .dropdown-menu.notifications-menu,
-    .notifications-dropdown .dropdown-menu {
+    .notifications-dropdown .dropdown-menu,
+    .timezone-dropdown .dropdown-menu.timezone-menu {
         z-index: 1062 !important;
     }
 

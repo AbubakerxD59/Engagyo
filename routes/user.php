@@ -17,7 +17,7 @@ use App\Http\Controllers\User\UrlTrackingController;
 use App\Http\Controllers\User\LinkShortenerController;
 use App\Http\Controllers\User\AnalyticsController;
 
-Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_admin", "team.menu"])->group(function () {
+Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone", "redirect_if_admin", "team.menu"])->group(function () {
     // Schedule Routes
     Route::controller(ScheduleController::class)->middleware(['feature:' . Feature::$features_list[1]])->group(function () {
         Route::get("schedule", "index")->name("schedule");
@@ -135,11 +135,13 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "redirect_if_a
     // Settings Routes
     Route::controller(SettingsController::class)->group(function () {
         Route::get("settings", "index")->name("settings");
+        Route::get("timezones", "timezones")->name("timezones");
         Route::name("settings.")->prefix("settings/")->group(function () {
             Route::post("update", "update")->name("update");
             Route::post("update-profile-pic", "updateProfilePic")->name("updateProfilePic");
             Route::post("remove-profile-pic", "removeProfilePic")->name("removeProfilePic");
             Route::post("update-password", "updatePassword")->name("updatePassword");
+            Route::post("update-timezone", "updateTimezone")->name("updateTimezone");
         });
     });
     // Plan & Billing Routes

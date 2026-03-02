@@ -165,4 +165,40 @@ class SettingsController extends BaseController
 
         return $this->successResponse([], 'Password updated successfully');
     }
+
+    /**
+     * Get all timezones for dropdown.
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function timezones()
+    {
+        $timezones = Timezone::orderBy('offset')->orderBy('name')->get();
+        return response()->json([
+            'success' => true,
+            'timezones' => $timezones,
+        ]);
+    }
+
+    /**
+     * Update the user's timezone.
+     *
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function updateTimezone(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'timezone_id' => 'required|exists:timezones,id',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors()->first(), 422);
+        }
+
+        $user = Auth::guard('user')->user();
+        $user->update(['timezone_id' => $request->timezone_id]);
+
+        return $this->successResponse([], 'Timezone updated');
+    }
 }

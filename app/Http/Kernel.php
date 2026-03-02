@@ -76,5 +76,6 @@ class Kernel extends HttpKernel
         'feature' => \App\Http\Middleware\CheckFeatureLimit::class,
         'team.account' => \App\Http\Middleware\CheckTeamMemberAccountAccess::class,
         'team.menu' => \App\Http\Middleware\CheckTeamMemberMenuAccess::class,
+        'user.timezone' => \App\Http\Middleware\SetUserTimezone::class,
     ];
 }

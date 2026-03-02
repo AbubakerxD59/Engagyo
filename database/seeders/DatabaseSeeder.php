@@ -18,6 +18,7 @@ class DatabaseSeeder extends Seeder
             PackageSeeder::class,
             MenuSeeder::class,
             FeatureSeeder::class,
+            TimezoneSeeder::class
         ]);
     }
 }
