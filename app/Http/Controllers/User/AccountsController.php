@@ -152,9 +152,11 @@ class AccountsController extends Controller
             $board = $request->board_data;
             if ($board) {
                 $pinterest = $this->pinterest->search($request->pin_id)->firstOrfail();
+                $urlShortenerEnabled = in_array('pinterest', $user->url_shorten_platforms ?? []);
                 $boardModel = $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "board_id" => $board["id"]], [
                     "name" => $board["name"],
-                    "status" => 1
+                    "status" => 1,
+                    "url_shortener_enabled" => $urlShortenerEnabled,
                 ]);
                 
                 // Log board connection
@@ -343,11 +345,13 @@ class AccountsController extends Controller
                     }
                 }
 
+                $urlShortenerEnabled = in_array('facebook', $user->url_shorten_platforms ?? []);
                 $pageData = [
                     "name" => $page["name"],
                     "status" => 1,
                     "access_token" => $page["access_token"],
-                    "expires_in" => time()
+                    "expires_in" => time(),
+                    "url_shortener_enabled" => $urlShortenerEnabled,
                 ];
 
                 // Add profile_image if we have it

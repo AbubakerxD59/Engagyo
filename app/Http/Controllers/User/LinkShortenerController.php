@@ -34,19 +34,10 @@ class LinkShortenerController extends Controller
             ->orderByDesc('created_at')
             ->get();
 
-        // Platforms enabled for URL shortener: platform is selected if ALL its accounts have url_shortener_enabled
-        $enabledPlatforms = [];
-        if ($user->pages->isNotEmpty() && $user->pages->every(fn($p) => (bool) ($p->url_shortener_enabled ?? false))) {
-            $enabledPlatforms[] = 'facebook';
-        }
-        if ($user->boards->isNotEmpty() && $user->boards->every(fn($b) => (bool) ($b->url_shortener_enabled ?? false))) {
-            $enabledPlatforms[] = 'pinterest';
-        }
-        if ($user->tiktok->isNotEmpty() && $user->tiktok->every(fn($t) => (bool) ($t->url_shortener_enabled ?? false))) {
-            $enabledPlatforms[] = 'tiktok';
-        }
+        // Multi-select value: user's saved url_shorten_platforms (array), used for link shortener dropdown
+        $urlShortenPlatforms = $user->url_shorten_platforms ?? [];
 
-        return view('user.link-shortener.index', compact('shortLinks', 'accounts', 'enabledPlatforms'));
+        return view('user.link-shortener.index', compact('shortLinks', 'accounts', 'urlShortenPlatforms'));
     }
 
     /**
@@ -62,6 +53,13 @@ class LinkShortenerController extends Controller
         $platforms = $request->platforms ?? [];
         $userId = Auth::guard('user')->id();
         $updated = 0;
+
+        // Save selected platforms to user for link shortener multi-select and for new-account default
+        $user = User::find($userId);
+        if ($user) {
+            $user->url_shorten_platforms = $platforms;
+            $user->save();
+        }
 
         // Facebook pages
         $count = Page::where('user_id', $userId)->update(['url_shortener_enabled' => in_array('facebook', $platforms)]);

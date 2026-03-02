@@ -24,11 +24,11 @@
                             <select id="urlShortenerPlatforms" class="form-control select2" multiple
                                 data-placeholder="Select platforms (Facebook, Pinterest, TikTok)">
                                 <option value="facebook"
-                                    {{ in_array('facebook', $enabledPlatforms ?? []) ? 'selected' : '' }}>Facebook</option>
+                                    {{ in_array('facebook', $urlShortenPlatforms ?? []) ? 'selected' : '' }}>Facebook</option>
                                 <option value="pinterest"
-                                    {{ in_array('pinterest', $enabledPlatforms ?? []) ? 'selected' : '' }}>Pinterest
+                                    {{ in_array('pinterest', $urlShortenPlatforms ?? []) ? 'selected' : '' }}>Pinterest
                                 </option>
-                                <option value="tiktok" {{ in_array('tiktok', $enabledPlatforms ?? []) ? 'selected' : '' }}>
+                                <option value="tiktok" {{ in_array('tiktok', $urlShortenPlatforms ?? []) ? 'selected' : '' }}>
                                     TikTok</option>
                             </select>
                             <small class="form-text text-muted">

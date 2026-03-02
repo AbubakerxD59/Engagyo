@@ -54,6 +54,7 @@ class TikTokController extends Controller
                     if (!empty($userInfo)) {
                         $tiktok_id = $userInfo["open_id"] ?? ($userInfo["union_id"] ?? null);
                         if ($tiktok_id) {
+                            $urlShortenerEnabled = in_array('tiktok', $user->url_shorten_platforms ?? []);
                             $data = [
                                 "user_id" => $user->id,
                                 "tiktok_id" => $tiktok_id,
@@ -64,6 +65,7 @@ class TikTokController extends Controller
                                 "expires_in" => $tokenData["expires_in"] ?? 3600,
                                 "refresh_token" => $tokenData["refresh_token"] ?? null,
                                 "refresh_token_expires_in" => $tokenData["refresh_token_expires_in"] ?? null,
+                                "url_shortener_enabled" => $urlShortenerEnabled,
                             ];
 
                             $tiktokAccount = $user->tiktok()->updateOrCreate(["tiktok_id" => $tiktok_id], $data);

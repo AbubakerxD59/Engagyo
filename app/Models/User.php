@@ -38,6 +38,7 @@ class User extends Authenticatable
         'rss_filters',
         'package_id',
         'stripe_id',
+        'url_shorten_platforms',
     ];
 
     /**
@@ -59,7 +60,8 @@ class User extends Authenticatable
      */
     protected $casts = [
         'email_verified_at' => 'datetime',
-        'rss_filters' => 'array'
+        'rss_filters' => 'array',
+        'url_shorten_platforms' => 'array',
     ];
 
     protected $appends = ['full_name'];
