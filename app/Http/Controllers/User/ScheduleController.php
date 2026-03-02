@@ -1252,18 +1252,6 @@ class  ScheduleController extends Controller
                             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                             }
-
-                            // Use validateToken for proper error handling
-                            $tokenResponse = FacebookService::validateToken($account);
-                            if (!$tokenResponse['success']) {
-                                return array(
-                                    "success" => false,
-                                    "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
-                                );
-                            }
-                            $access_token = $tokenResponse['access_token'];
-                            $postData = PostService::postTypeBody($post);
-                            PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                         }
                         if ($account->type == "pinterest") {
                             $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
@@ -1289,18 +1277,6 @@ class  ScheduleController extends Controller
                                 if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                                     $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                                 }
-
-                                // Use validateToken for proper error handling
-                                $tokenResponse = PinterestService::validateToken($account);
-                                if (!$tokenResponse['success']) {
-                                    return array(
-                                        "success" => false,
-                                        "message" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token."
-                                    );
-                                }
-                                $access_token = $tokenResponse['access_token'];
-                                $postData = PostService::postTypeBody($post);
-                                PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                             }
                         }
                         if ($account->type == "tiktok") {
@@ -1338,18 +1314,6 @@ class  ScheduleController extends Controller
                                 if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                                     $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                                 }
-
-                                // Use validateToken for proper error handling
-                                $tokenResponse = TikTokService::validateToken($account);
-                                if (!$tokenResponse['success']) {
-                                    return array(
-                                        "success" => false,
-                                        "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
-                                    );
-                                }
-                                $access_token = $tokenResponse['access_token'];
-                                $postData = PostService::postTypeBody($post);
-                                PublishTikTokPost::dispatch($post->id, $postData, $access_token, "photo"); // Changed from "link" to "photo"
                             }
                         }
                     } else {
@@ -1429,18 +1393,6 @@ class  ScheduleController extends Controller
                         if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                             $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                         }
-
-                        // Use validateToken for proper error handling
-                        $tokenResponse = FacebookService::validateToken($account);
-                        if (!$tokenResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
-                            );
-                        }
-                        $access_token = $tokenResponse['access_token'];
-                        $postData = PostService::postTypeBody($post);
-                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
                     }
                     if ($account->type == "pinterest") {
                         $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
@@ -1465,18 +1417,6 @@ class  ScheduleController extends Controller
                             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                             }
-
-                            // Use validateToken for proper error handling
-                            $tokenResponse = PinterestService::validateToken($account);
-                            if (!$tokenResponse['success']) {
-                                return array(
-                                    "success" => false,
-                                    "message" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token."
-                                );
-                            }
-                            $access_token = $tokenResponse['access_token'];
-                            $postData = PostService::postTypeBody($post);
-                            PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                         }
                     }
                     if ($account->type == "tiktok") {
@@ -1511,18 +1451,6 @@ class  ScheduleController extends Controller
                             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                             }
-
-                            // Use validateToken for proper error handling
-                            $tokenResponse = TikTokService::validateToken($account);
-                            if (!$tokenResponse['success']) {
-                                return array(
-                                    "success" => false,
-                                    "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
-                                );
-                            }
-                            $access_token = $tokenResponse['access_token'];
-                            $postData = PostService::postTypeBody($post);
-                            PublishTikTokPost::dispatch($post->id, $postData, $access_token, "photo"); // Changed from "link" to "photo"
                         }
                     }
                 }
@@ -1923,7 +1851,7 @@ class  ScheduleController extends Controller
     {
         try {
             $post = Post::with('user')->findOrFail($id);
-                $publishDateTimeLocal = date("Y-m-d", strtotime($request->edit_post_publish_date)) . " " . date("H:i", strtotime($request->edit_post_publish_time));
+            $publishDateTimeLocal = date("Y-m-d", strtotime($request->edit_post_publish_date)) . " " . date("H:i", strtotime($request->edit_post_publish_time));
             $data = [
                 "title" => $request->edit_post_title,
                 "url" => $request->edit_post_link,

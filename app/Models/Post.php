@@ -360,90 +360,78 @@ class Post extends Model
             return $selectedDate . ' ' . date('H:i:s', strtotime($selectedTimeslot));
         }
     }
+    /**
+     * Get the next available (date, timeslot) for queue posts.
+     * Rules:
+     * - One post per timeslot per day; when all timeslots are used for a day, use next day.
+     * - For today: skip timeslots that are already in the past.
+     * - If an existing post uses a timeslot on a date, that (date, timeslot) is taken; use the next available.
+     *
+     * @param array $search Search criteria (account_id, social_type, source, etc.)
+     * @param \Illuminate\Support\Collection $timeslots Collection of Timeslot models (each has ->timeslot time string)
+     * @return string "Y-m-d H:i" in user's local timezone
+     */
     public function nextScheduleTime($search, $timeslots)
     {
-        $current_hour = strtotime(date("H:i"));
-        $lastPost = $this->exist($search)->orderByDesc('publish_date')->exists();
-        if (!$lastPost) { //if no post exists
-            foreach ($timeslots as $timeslot) {
-                $posting_hour = strtotime($timeslot->timeslot);
-                //if current hour is greater or equal to posting hour, skip it
-                if ($current_hour > $posting_hour)
-                    continue;
-                // if posting hour is greater than current hour, create a post for current day
-                if ($posting_hour >= $current_hour) {
-                    $selectedDate = date("Y-m-d");
-                    break;
-                }
-            }
-            if (!isset($selectedDate)) {
-                $selectedDate = date("Y-m-d", strtotime("+1 days"));
-                $timeslot = $timeslots->first();
-                $posting_hour = strtotime($timeslot->timeslot);
-            }
-            $timeslotDateTime = $selectedDate . " " . date("H:i", $posting_hour);
-            return $timeslotDateTime;
+        $timeslots = $timeslots->sortBy(function ($ts) {
+            return strtotime($ts->timeslot);
+        })->values();
+
+        if ($timeslots->isEmpty()) {
+            return date('Y-m-d H:i', strtotime('+1 day'));
         }
-        if ($lastPost) { //if post exists
-            // Build set of used times (in user timezone) - publish_date is stored in UTC
-            $usedTimes = collect();
-            $this->exist($search)->get()->each(function ($post) use (&$usedTimes) {
-                $local = $this->parsePublishDateFromUtc($post);
-                $usedTimes->push($local->format('H:i'));
-            });
-            $checkPost = true;
-            $offset = 0;
+
+        $currentDateTime = now();
+        $currentDate = $currentDateTime->format('Y-m-d');
+        $currentTime = $currentDateTime->format('H:i:s');
+
+        // Build used (date => [times]) from existing posts (publish_date is stored in UTC)
+        $usedTimeslotsByDate = [];
+        $existingPosts = $this->exist($search)
+            ->where('status', '!=', 1)
+            ->orderBy('publish_date', 'ASC')
+            ->get();
+
+        foreach ($existingPosts as $post) {
+            $local = $this->parsePublishDateFromUtc($post);
+            $postDate = $local->format('Y-m-d');
+            $postTime = $local->format('H:i:s');
+            if (!isset($usedTimeslotsByDate[$postDate])) {
+                $usedTimeslotsByDate[$postDate] = [];
+            }
+            $usedTimeslotsByDate[$postDate][] = $postTime;
+        }
+
+        // Find first available (date, timeslot): start from today, then tomorrow, ...
+        $maxDays = 365;
+        $checkDate = $currentDate;
+
+        for ($day = 0; $day < $maxDays; $day++) {
+            $isToday = ($checkDate === $currentDate);
+
             foreach ($timeslots as $timeslot) {
-                $timeslotTime = date("H:i", strtotime($timeslot->timeslot));
-                $checkPost = $usedTimes->contains($timeslotTime);
-                if ($checkPost) { //continue if post exists
-                    $offset++;
+                $timeslot24Hour = date('H:i:s', strtotime($timeslot->timeslot));
+
+                // If this (date, timeslot) is already used by an existing post, skip it
+                if (isset($usedTimeslotsByDate[$checkDate]) && in_array($timeslot24Hour, $usedTimeslotsByDate[$checkDate])) {
                     continue;
                 }
-                if (!$checkPost) { //if no post exists
-                    $posting_hour = strtotime($timeslot->timeslot);
-                    //if current hour is greater or equal to posting hour, skip it
-                    if ($current_hour > $posting_hour)
-                        continue;
-                    // if posting hour is greater than current hour, create a post for current day
-                    if ($posting_hour >= $current_hour) {
-                        $selectedDate = date("Y-m-d");
-                    }
-                    break;
+
+                // For today: ignore timeslots that are in the past
+                if ($isToday && $timeslot24Hour <= $currentTime) {
+                    continue;
                 }
+
+                // This (date, timeslot) is free and valid
+                return $checkDate . ' ' . date('H:i', strtotime($timeslot->timeslot));
             }
-            if (!$checkPost) {
-                if (!isset($selectedDate)) {
-                    $selectedDate = date("Y-m-d", strtotime("+1 days"));
-                    $timeslot = $timeslots->skip($offset)->first();
-                    $posting_hour = strtotime($timeslot->timeslot);
-                }
-                $timeslotDateTime = $selectedDate . " " . date("H:i", $posting_hour);
-                return $timeslotDateTime;
-            }
-            if ($checkPost) {
-                $lastPost = $this->exist($search)->latest()->first();
-                $lastPostLocal = $this->parsePublishDateFromUtc($lastPost);
-                $lastPostDate = $lastPostLocal->format("Y-m-d");
-                $nextPostDate = date("Y-m-d", strtotime($lastPostDate . ' +1 day'));
-                $lastPostTime = $lastPostLocal->format("H:i");
-                $offset = 0;
-                foreach ($timeslots as $timeslot) {
-                    $posting_hour = $timeslot->timeslot;
-                    if ($lastPostTime == $posting_hour) {
-                        $nextPostingHour = isset($timeslots[$offset + 1]) ? $timeslots[$offset + 1] : $timeslots[0];
-                    }
-                    $offset++;
-                }
-                if (!isset($nextPostingHour)) {
-                    $nextPostingHour = $timeslots[0];
-                }
-                $posting_hour = $nextPostingHour->timeslot;
-                $selectedDate = $nextPostDate;
-                $timeslotDateTime = $selectedDate . " " . $posting_hour;
-                return $timeslotDateTime;
-            }
+
+            // All timeslots used for this day; try next day
+            $checkDate = date('Y-m-d', strtotime($checkDate . ' +1 day'));
         }
+
+        // Fallback (should not be reached)
+        return $checkDate . ' ' . date('H:i', strtotime($timeslots->first()->timeslot));
     }
 
     public function publishDate($date, $time)
