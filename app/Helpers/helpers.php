@@ -565,6 +565,15 @@ function newDateTime($nextDate, $time)
     return $nextDate;
 }
 
+/**
+ * Convert user's local datetime to UTC for storage.
+ * @deprecated Use \App\Services\TimezoneService::toUtc() instead
+ */
+function user_local_datetime_to_utc(string $datetime, ?User $user = null): string
+{
+    return \App\Services\TimezoneService::toUtc($datetime, $user);
+}
+
 function loader()
 {
     $loader = "<span class='preLoader' id='preLoader'></span>";

@@ -2,30 +2,31 @@
 
 namespace App\Http\Controllers\User;
 
-use Exception;
-use App\Models\Page;
-use App\Models\Post;
-use App\Models\User;
+use App\Http\Controllers\Controller;
+use App\Jobs\FetchPost;
+use App\Jobs\PublishFacebookPost;
+use App\Jobs\PublishPinterestPost;
+use App\Jobs\PublishTikTokPost;
+use App\Jobs\RefreshPosts;
 use App\Models\Board;
 use App\Models\Domain;
-use App\Models\Tiktok;
-use App\Jobs\FetchPost;
 use App\Models\Facebook;
+use App\Models\Page;
 use App\Models\Pinterest;
-use App\Jobs\RefreshPosts;
-use Illuminate\Http\Request;
-use App\Services\FeedService;
-use App\Services\PostService;
-use App\Jobs\PublishTikTokPost;
-use App\Services\TikTokService;
-use App\Jobs\PublishFacebookPost;
+use App\Models\Post;
+use App\Models\Tiktok;
+use App\Models\User;
 use App\Services\FacebookService;
-use App\Jobs\PublishPinterestPost;
+use App\Services\FeedService;
 use App\Services\HtmlParseService;
 use App\Services\PinterestService;
-use Illuminate\Support\Facades\Log;
-use App\Http\Controllers\Controller;
+use App\Services\PostService;
+use App\Services\TikTokService;
+use App\Services\TimezoneService;
+use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class AutomationController extends Controller
 {
@@ -68,7 +69,7 @@ class AutomationController extends Controller
         $search = null;
         $domain = isset($data["domain"]) ? $data["domain"] : [];
         $lastFetch = '';
-        $posts = $this->post->with("page.facebook", "board.pinterest", "domain")->isRss()->accountExist();
+        $posts = $this->post->with("page.facebook", "board.pinterest", "domain", "user.timezone")->isRss()->accountExist();
         if ($account) {
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($account);
@@ -165,12 +166,13 @@ class AutomationController extends Controller
         ]);
         if (!empty($id)) {
             $user = Auth::guard('user')->user();
-            $post = $this->post->notPublished()->where("id", $id)->first();
+            $post = $this->post->with('user.timezone')->notPublished()->where("id", $id)->first();
             if ($post) {
+                $publishDateTimeLocal = $post->publishDate($request->post_date, $request->post_time);
                 $data = [
                     "title" => $request->post_title,
                     "url" => $request->post_url,
-                    "publish_date" => $post->publishDate($request->post_date, $request->post_time),
+                    "publish_date" => TimezoneService::toUtc($publishDateTimeLocal, $post->user ?? $user),
                 ];
                 if ($request->has("post_image")) {
                     $data['image'] = saveImage($request->File('post_image'));
@@ -706,16 +708,17 @@ class AutomationController extends Controller
 
             // Delete posts if any
             if (!empty($deletedPostIds) && is_array($deletedPostIds)) {
+                $accountUser = $account->user()->with('timezone')->first();
                 $postsToDelete = $this->post->whereIn('id', $deletedPostIds)
                     ->where('account_id', $accountId)
                     ->get();
 
-                // Get the earliest publish date from deleted posts
+                // Get the earliest publish date from deleted posts (publish_date is stored in UTC)
                 $earliestDeletedDate = null;
                 foreach ($postsToDelete as $post) {
-                    $postDate = strtotime($post->publish_date);
-                    if ($earliestDeletedDate === null || $postDate < $earliestDeletedDate) {
-                        $earliestDeletedDate = $postDate;
+                    $postLocal = \Carbon\Carbon::parse($post->publish_date, 'UTC')->setTimezone($accountUser && $accountUser->timezone ? $accountUser->timezone->name : 'America/New_York');
+                    if ($earliestDeletedDate === null || $postLocal->lt($earliestDeletedDate)) {
+                        $earliestDeletedDate = $postLocal->copy();
                     }
                     // Delete post photos
                     $post->photo()->delete();
@@ -724,7 +727,7 @@ class AutomationController extends Controller
 
                 // Rearrange remaining posts
                 if ($earliestDeletedDate !== null) {
-                    $earliestDate = date('Y-m-d', $earliestDeletedDate);
+                    $earliestDate = $earliestDeletedDate->format('Y-m-d');
 
                     // Get all remaining posts for this account, ordered by publish_date
                     $remainingPosts = $this->post->where('account_id', $accountId)
@@ -732,15 +735,15 @@ class AutomationController extends Controller
                         ->orderBy('publish_date', 'ASC')
                         ->get();
 
-                    // Rearrange posts starting from the earliest deleted date
+                    // Rearrange posts starting from the earliest deleted date (convert to UTC for storage)
                     $currentDate = $earliestDate;
                     foreach ($remainingPosts as $post) {
-                        // Get the time from the original publish_date
-                        $originalTime = date('H:i:s', strtotime($post->publish_date));
-                        $newPublishDate = $currentDate . ' ' . $originalTime;
+                        $postLocal = \Carbon\Carbon::parse($post->publish_date, 'UTC')->setTimezone($accountUser && $accountUser->timezone ? $accountUser->timezone->name : 'America/New_York');
+                        $originalTime = $postLocal->format('H:i:s');
+                        $newPublishDateLocal = $currentDate . ' ' . $originalTime;
 
                         $post->update([
-                            'publish_date' => $newPublishDate
+                            'publish_date' => TimezoneService::toUtc($newPublishDateLocal, $accountUser)
                         ]);
 
                         // Move to next day
@@ -791,6 +794,7 @@ class AutomationController extends Controller
 
                 // Rearrange posts according to updated timeslots
                 if (!empty($allTimeslots)) {
+                    $accountUser = $account->user()->with('timezone')->first();
                     // Sort timeslots chronologically
                     usort($allTimeslots, function ($a, $b) {
                         $timeA = strtotime($a);
@@ -849,10 +853,10 @@ class AutomationController extends Controller
                                 $timeslot24Hour = date('H:i:s', strtotime($availableTimeslotForCurrentDate));
                                 $timeslotKey = $timeslot24Hour;
 
-                                // Assign post to this timeslot on current date
-                                $publishDateTime = $currentScheduleDate . ' ' . $timeslot24Hour;
+                                // Assign post to this timeslot on current date (convert to UTC for storage)
+                                $publishDateTimeLocal = $currentScheduleDate . ' ' . $timeslot24Hour;
                                 $post->update([
-                                    'publish_date' => $publishDateTime
+                                    'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $accountUser)
                                 ]);
 
                                 // Mark timeslot as used for this date
@@ -918,10 +922,10 @@ class AutomationController extends Controller
                                         continue;
                                     }
 
-                                    // Timeslot is available for this date, assign post
-                                    $publishDateTime = $currentScheduleDate . ' ' . $timeslot24Hour;
+                                    // Timeslot is available for this date, assign post (convert to UTC for storage)
+                                    $publishDateTimeLocal = $currentScheduleDate . ' ' . $timeslot24Hour;
                                     $post->update([
-                                        'publish_date' => $publishDateTime
+                                        'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $accountUser)
                                     ]);
 
                                     // Mark timeslot as used for this date
@@ -944,13 +948,13 @@ class AutomationController extends Controller
 
                                 // If we couldn't assign (shouldn't happen with proper logic), fallback
                                 if (!$assigned) {
-                                    // Fallback: assign to next day with first timeslot
+                                    // Fallback: assign to next day with first timeslot (convert to UTC for storage)
                                     $fallbackDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
                                     $fallbackTimeslot = $allTimeslots[0];
                                     $fallbackTime = date('H:i:s', strtotime($fallbackTimeslot));
-                                    $publishDateTime = $fallbackDate . ' ' . $fallbackTime;
+                                    $publishDateTimeLocal = $fallbackDate . ' ' . $fallbackTime;
                                     $post->update([
-                                        'publish_date' => $publishDateTime
+                                        'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $accountUser)
                                     ]);
                                     $currentScheduleDate = $fallbackDate;
                                     $timeslotIndex = 1;

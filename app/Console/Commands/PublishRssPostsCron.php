@@ -78,15 +78,15 @@ class PublishRssPostsCron extends Command
      */
     public function handle(PinterestService $pinterestService, FacebookService $facebookService)
     {
-        $now = Carbon::now();
+        $now = Carbon::now('UTC');
         $twoHoursAgo = $now->copy()->subHours(2);
 
-        // Get all pending RSS posts that are due (publish_date is before now but not older than 2 hours)
+        // Get all pending RSS posts that are due (publish_date is stored in UTC)
         $posts = Post::with("user", "page.facebook", "board.pinterest", "tiktok")
             ->where('source', 'rss')
             ->where('status', 0) // Pending
-            ->where('publish_date', '<=', $now)
-            ->where('publish_date', '>=', $twoHoursAgo)
+            ->where('publish_date', '<=', $now->format('Y-m-d H:i'))
+            ->where('publish_date', '>=', $twoHoursAgo->format('Y-m-d H:i'))
             ->get();
 
         info("RSS Publish Cron: Found {$posts->count()} RSS posts to process.");

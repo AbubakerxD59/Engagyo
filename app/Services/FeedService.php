@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Board;
 use App\Enums\LinkPostEnable;
+use App\Models\User;
 use Exception;
 use App\Models\Post;
 use App\Models\Notification;
@@ -104,6 +105,11 @@ class FeedService
                 $items = $feedUrls["data"];
                 info("items_count: " . count($items));
                 if (count($items) > 0) {
+                    $user = User::with('timezone')->find($this->data["user_id"]);
+                    $timezone = ($user && $user->timezone) ? $user->timezone->name : 'America/New_York';
+                    date_default_timezone_set($timezone);
+                    config(['app.timezone' => $timezone]);
+
                     foreach ($items as $key => $item) {
                         $nextTime = $this->post->nextTime(["account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"]], $this->data["time"]);
                         $post = $this->post->exist(["account_id" => $this->data["account_id"], "social_type" => $this->data["social_type"], "source" => $this->data["source"], "type" => $this->data["type"], "domain_id" => $this->data["domain_id"], "url" => $item["link"]])->first();

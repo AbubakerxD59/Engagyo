@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Scopes\PostScope;
 use App\Models\Scopes\UserScope;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Casts\Attribute;
@@ -235,13 +236,14 @@ class Post extends Model
         $currentDate = $currentDateTime->format('Y-m-d');
         $currentTime = $currentDateTime->format('H:i:s');
 
-        // Get the last post to determine starting point
+        // Get the last post to determine starting point (publish_date is stored in UTC)
         $lastPost = $this->exist($search)->orderByDesc('publish_date')->first();
 
         if ($lastPost) {
-            // If there's a last post, check each timeslot starting from the last post's date
-            $lastPostDate = date('Y-m-d', strtotime($lastPost->publish_date));
-            $lastPostTime = date('H:i:s', strtotime($lastPost->publish_date));
+            // If there's a last post, convert UTC to user timezone for comparison
+            $lastPostLocal = $this->parsePublishDateFromUtc($lastPost);
+            $lastPostDate = $lastPostLocal->format('Y-m-d');
+            $lastPostTime = $lastPostLocal->format('H:i:s');
 
             // Find the index of the last post's timeslot
             $lastTimeslotIndex = -1;
@@ -267,8 +269,9 @@ class Post extends Model
                 ->get();
 
             foreach ($existingPosts as $post) {
-                $postDate = date('Y-m-d', strtotime($post->publish_date));
-                $postTime = date('H:i:s', strtotime($post->publish_date));
+                $postLocal = $this->parsePublishDateFromUtc($post);
+                $postDate = $postLocal->format('Y-m-d');
+                $postTime = $postLocal->format('H:i:s');
                 if (!isset($usedTimeslotsByDate[$postDate])) {
                     $usedTimeslotsByDate[$postDate] = [];
                 }
@@ -382,10 +385,17 @@ class Post extends Model
             return $timeslotDateTime;
         }
         if ($lastPost) { //if post exists
+            // Build set of used times (in user timezone) - publish_date is stored in UTC
+            $usedTimes = collect();
+            $this->exist($search)->get()->each(function ($post) use (&$usedTimes) {
+                $local = $this->parsePublishDateFromUtc($post);
+                $usedTimes->push($local->format('H:i'));
+            });
             $checkPost = true;
             $offset = 0;
             foreach ($timeslots as $timeslot) {
-                $checkPost = $this->exist($search)->where("publish_date", "like", "%$timeslot->timeslot%")->exists();
+                $timeslotTime = date("H:i", strtotime($timeslot->timeslot));
+                $checkPost = $usedTimes->contains($timeslotTime);
                 if ($checkPost) { //continue if post exists
                     $offset++;
                     continue;
@@ -413,9 +423,10 @@ class Post extends Model
             }
             if ($checkPost) {
                 $lastPost = $this->exist($search)->latest()->first();
-                $lastPostDate = date("Y-m-d", strtotime($lastPost->publish_date));
+                $lastPostLocal = $this->parsePublishDateFromUtc($lastPost);
+                $lastPostDate = $lastPostLocal->format("Y-m-d");
                 $nextPostDate = date("Y-m-d", strtotime($lastPostDate . ' +1 day'));
-                $lastPostTime = date("H:i", strtotime($lastPost->publish_date));
+                $lastPostTime = $lastPostLocal->format("H:i");
                 $offset = 0;
                 foreach ($timeslots as $timeslot) {
                     $posting_hour = $timeslot->timeslot;
@@ -463,7 +474,7 @@ class Post extends Model
             $post = $post->where("status", $status);
         }
         $post = $post->first();
-        return $post ? date("jS M, Y", strtotime($post->publish_date)) : 'NA';
+        return $post ? $post->load('user.timezone')->getPublishDateInUserTimezone()->format('jS M, Y') : 'NA';
     }
 
     protected function title(): Attribute
@@ -496,12 +507,29 @@ class Post extends Model
         return !empty($video_key) ? fetchFromS3($video_key) : '';
     }
 
+    /**
+     * Get publish_date in user's timezone for display.
+     */
+    protected function getPublishDateInUserTimezone(): Carbon
+    {
+        $user = $this->relationLoaded('user') ? $this->user : $this->user()->with('timezone')->first();
+        return \App\Services\TimezoneService::parseUtcToUserCarbon($this->publish_date, $user);
+    }
+
+    /**
+     * Parse UTC publish_date to Carbon in user's timezone (for nextTime/nextScheduleTime).
+     */
+    private function parsePublishDateFromUtc(Post $post): Carbon
+    {
+        $user = $post->relationLoaded('user') ? $post->user : $post->user()->with('timezone')->first();
+        return \App\Services\TimezoneService::parseUtcToUserCarbon($post->publish_date, $user);
+    }
+
     protected function date(): Attribute
     {
         return Attribute::make(
             get: function () {
-                $date = date("Y-m-d", strtotime($this->publish_date));
-                return $date;
+                return $this->getPublishDateInUserTimezone()->format('Y-m-d');
             }
         );
     }
@@ -510,8 +538,7 @@ class Post extends Model
     {
         return Attribute::make(
             get: function () {
-                $time = date("h:i A", strtotime($this->publish_date));
-                return $time;
+                return $this->getPublishDateInUserTimezone()->format('h:i A');
             }
         );
     }
@@ -520,8 +547,7 @@ class Post extends Model
     {
         return Attribute::make(
             get: function () {
-                $time = date("H:i", strtotime($this->publish_date));
-                return $time;
+                return $this->getPublishDateInUserTimezone()->format('H:i');
             }
         );
     }
@@ -818,8 +844,7 @@ class Post extends Model
 
     public function getPublishDateTimeAttribute()
     {
-        $publish_datetime = $this->publish_date;
-        return date("Y-m-d h:i A", strtotime($publish_datetime));
+        return $this->getPublishDateInUserTimezone()->format('Y-m-d h:i A');
     }
 
     public function getPublishedAtFormattedAttribute()

@@ -9,6 +9,8 @@ use App\Models\Board;
 use App\Models\Tiktok;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishPinterestPost;
+use App\Models\User;
+use App\Services\TimezoneService;
 use App\Services\UtmService;
 use App\Services\UrlShortenerService;
 use Illuminate\Support\Facades\Auth;
@@ -19,6 +21,12 @@ class PostService
     {
         self::applyUtmCodesToData($data);
         self::applyLinkShorteningToData($data);
+
+        // Convert publish_date from user's local timezone to UTC for storage
+        if (!empty($data['publish_date']) && !empty($data['user_id'])) {
+            $user = User::with('timezone')->find($data['user_id']);
+            $data['publish_date'] = TimezoneService::toUtc($data['publish_date'], $user);
+        }
 
         $post = Post::create([
             "user_id" => $data["user_id"],

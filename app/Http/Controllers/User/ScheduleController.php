@@ -311,7 +311,7 @@ class  ScheduleController extends Controller
                         "image" => $image,
                         "video" => $video,
                         "status" => 0,
-                        "publish_date" => date("Y-m-d H:i"),
+                        "publish_date" => date('Y-m-d H:i'),
                     ];
                     $post = PostService::create($data);
 
@@ -355,7 +355,7 @@ class  ScheduleController extends Controller
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
-                            "publish_date" => date("Y-m-d H:i"),
+                            "publish_date" => date('Y-m-d H:i'),
                         ];
                         $post = PostService::create($data);
 
@@ -396,7 +396,7 @@ class  ScheduleController extends Controller
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
-                            "publish_date" => date("Y-m-d H:i"),
+                            "publish_date" => date('Y-m-d H:i'),
                         ];
                         $post = PostService::create($data);
 
@@ -444,7 +444,7 @@ class  ScheduleController extends Controller
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
-                            "publish_date" => date("Y-m-d H:i"),
+                            "publish_date" => date('Y-m-d H:i'),
                         ];
                         $post = PostService::create($data);
 
@@ -554,7 +554,7 @@ class  ScheduleController extends Controller
                             "url" => $image, // For photo posts
                             "file_url" => $video, // For video posts
                             "status" => 0, // Draft status
-                            "publish_date" => date("Y-m-d H:i"),
+                            "publish_date" => date('Y-m-d H:i'),
                         ];
                         $post = PostService::create($data);
 
@@ -682,7 +682,7 @@ class  ScheduleController extends Controller
                             "image" => $linkInfo['image'], // Store thumbnail image URL
                             "link" => $link,
                             "status" => 0, // Draft status
-                            "publish_date" => date("Y-m-d H:i"),
+                            "publish_date" => date('Y-m-d H:i'),
                         ];
                         $post = PostService::create($data);
 
@@ -1078,7 +1078,7 @@ class  ScheduleController extends Controller
                             "url" => $url,
                             "image" => $image,
                             "status" => 0,
-                            "publish_date" => date("Y-m-d H:i"),
+                            "publish_date" => date('Y-m-d H:i'),
                         ];
                         $post = PostService::create($data);
 
@@ -1112,7 +1112,7 @@ class  ScheduleController extends Controller
                             "url" => $url,
                             "image" => $image,
                             "status" => 0,
-                            "publish_date" => date("Y-m-d H:i"),
+                            "publish_date" => date('Y-m-d H:i'),
                         ];
                         $post = PostService::create($data);
 
@@ -1154,7 +1154,7 @@ class  ScheduleController extends Controller
                             "url" => $url,
                             "image" => $localImage, // Store thumbnail image URL
                             "status" => 0,
-                            "publish_date" => date("Y-m-d H:i"),
+                            "publish_date" => date('Y-m-d H:i'),
                         ];
                         $post = PostService::create($data);
 
@@ -1683,7 +1683,8 @@ class  ScheduleController extends Controller
                         });
 
                         // Get all unpublished scheduled posts for this account
-                        $posts = Post::where('account_id', $accountId)
+                        $posts = Post::with('user.timezone')
+                            ->where('account_id', $accountId)
                             ->where('status', '!=', 1) // Not published
                             ->where('scheduled', 1) // Scheduled posts only
                             ->orderBy('publish_date', 'ASC')
@@ -1734,10 +1735,10 @@ class  ScheduleController extends Controller
                                     $timeslot24Hour = date('H:i:s', strtotime($availableTimeslotForCurrentDate));
                                     $timeslotKey = $timeslot24Hour;
 
-                                    // Assign post to this timeslot on current date
-                                    $publishDateTime = $currentScheduleDate . ' ' . $timeslot24Hour;
+                                    // Assign post to this timeslot on current date (convert to UTC for storage)
+                                    $publishDateTimeLocal = $currentScheduleDate . ' ' . $timeslot24Hour;
                                     $post->update([
-                                        'publish_date' => $publishDateTime
+                                        'publish_date' => \App\Services\TimezoneService::toUtc($publishDateTimeLocal, $post->user)
                                     ]);
 
                                     // Mark timeslot as used for this date
@@ -1803,10 +1804,10 @@ class  ScheduleController extends Controller
                                             continue;
                                         }
 
-                                        // Timeslot is available for this date, assign post
-                                        $publishDateTime = $currentScheduleDate . ' ' . $timeslot24Hour;
+                                        // Timeslot is available for this date, assign post (convert to UTC for storage)
+                                        $publishDateTimeLocal = $currentScheduleDate . ' ' . $timeslot24Hour;
                                         $post->update([
-                                            'publish_date' => $publishDateTime
+                                            'publish_date' => \App\Services\TimezoneService::toUtc($publishDateTimeLocal, $post->user)
                                         ]);
 
                                         // Mark timeslot as used for this date
@@ -1848,7 +1849,7 @@ class  ScheduleController extends Controller
     public function postsListing(Request $request)
     {
         $data = $request->all();
-        $posts = Post::with("page.facebook", "board.pinterest")->isScheduled();
+        $posts = Post::with("page.facebook", "board.pinterest", "user.timezone")->isScheduled();
         // filters
         if (!empty($request->account_id)) {
             $posts = $posts->whereIn("account_id", $request->account_id);
@@ -1921,12 +1922,13 @@ class  ScheduleController extends Controller
     public function postUpdate($id, Request $request)
     {
         try {
-            $post = Post::findOrFail($id);
+            $post = Post::with('user')->findOrFail($id);
+                $publishDateTimeLocal = date("Y-m-d", strtotime($request->edit_post_publish_date)) . " " . date("H:i", strtotime($request->edit_post_publish_time));
             $data = [
                 "title" => $request->edit_post_title,
                 "url" => $request->edit_post_link,
                 "comment" => $request->edit_post_comment,
-                "publish_date" => date("Y-m-d", strtotime($request->edit_post_publish_date)) . " " . date("H:i", strtotime($request->edit_post_publish_time)),
+                "publish_date" => \App\Services\TimezoneService::toUtc($publishDateTimeLocal, $post->user),
             ];
             if ($request->has("edit_post_publish_image") && $request->File("edit_post_publish_image")) {
                 $image = saveImage($request->file("edit_post_publish_image"));

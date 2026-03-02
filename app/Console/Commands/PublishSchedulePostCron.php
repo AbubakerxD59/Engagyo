@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\Post;
 use App\Models\Notification;
+use Carbon\Carbon;
 use App\Services\PostService;
 use Illuminate\Console\Command;
 use App\Jobs\PublishFacebookPost;
@@ -74,7 +75,7 @@ class PublishSchedulePostCron extends Command
      */
     public function handle(Post $post, PinterestService $pinterestService, FacebookService $facebookService)
     {
-        $now = date("Y-m-d H:i");
+        $now = Carbon::now('UTC')->format('Y-m-d H:i');
         $query = $post->with("user", "page.facebook", "board.pinterest")->notPublished()->past($now)->schedule();
 
         $posts = $query->get();
