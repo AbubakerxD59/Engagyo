@@ -53,8 +53,9 @@ class PostService
         if ($post) {
             $status = $post->status;
             $social_type = $post->social_type;
+            $post_id = $post->post_id ?? null;
             $post->delete();
-            if ($status == 1) {
+            if ($status == 1 && !empty($post_id)) {
                 if ($social_type == "facebook") {
                     $service = new FacebookService();
                     $service->delete($post);

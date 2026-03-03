@@ -17,7 +17,6 @@ use Illuminate\Http\Request;
 use App\Services\TikTokService;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
-use App\Services\PostService;
 use App\Services\SocialMediaLogService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -81,7 +80,7 @@ class AccountsController extends Controller
                     // Delete Posts
                     $postsToDelete = Post::where("account_id", $board->id)->get();
                     foreach ($postsToDelete as $post) {
-                        PostService::delete($post->id);
+                        $post->delete();
                     }
                     // Delete Domains
                     Domain::where("account_id", $board->id)->delete();
@@ -198,7 +197,7 @@ class AccountsController extends Controller
                 // posts
                 $postsToDelete = $board->posts()->get();
                 foreach ($postsToDelete as $post) {
-                    PostService::delete($post->id);
+                    $post->delete();
                 }
                 // domains
                 $board->domains()->delete();
@@ -252,7 +251,7 @@ class AccountsController extends Controller
                     // Delete Posts
                     $postsToDelete = Post::where("account_id", $page->id)->get();
                     foreach ($postsToDelete as $post) {
-                        PostService::delete($post->id);
+                        $post->delete();
                     }
                     // Delete Domains
                     Domain::where("account_id", $page->id)->delete();
@@ -398,7 +397,7 @@ class AccountsController extends Controller
                 // posts
                 $postsToDelete = $page->posts()->get();
                 foreach ($postsToDelete as $post) {
-                    PostService::delete($post->id);
+                    $post->delete();
                 }
                 // domains
                 $page->domains()->delete();
