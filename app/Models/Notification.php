@@ -111,9 +111,16 @@ class Notification extends Model
         $this->update(['is_read' => true]);
     }
 
-    public function getCreatedAtAttribute($value)
+    /**
+     * Get created_at formatted in a given user's timezone (e.g. for display in navbar).
+     * Stored value is UTC; pass the viewer's user to show in their timezone.
+     */
+    public function getCreatedAtForUser(?User $user): string
     {
-        $localDate = TimezoneService::toUserLocal($value);
-        return Carbon::parse($localDate)->diffForHumans();
+        $utc = $this->getRawOriginal('created_at');
+        if (empty($utc)) {
+            return '';
+        }
+        return TimezoneService::parseUtcToUserCarbon($utc, $user)->diffForHumans();
     }
 }

@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Notification;
+use App\Services\TimezoneService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -65,7 +66,7 @@ class NotificationController extends Controller
                     'modal' => $notification->modal,
                     'is_system' => $notification->is_system,
                     'is_read' => $isRead,
-                    'created_at' => $notification->created_at,
+                    'created_at' => $notification->getCreatedAtForUser($user),
                     'social_type' => $socialType,
                     'account_image' => $displayImage,
                     'account_name' => $accountName,
