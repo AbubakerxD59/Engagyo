@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Services\TimezoneService;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -95,5 +96,10 @@ class Notification extends Model
     public function markAsRead()
     {
         $this->update(['is_read' => true]);
+    }
+
+    public function getCreatedAtAttribute($value)
+    {
+        return TimezoneService::toUserLocal($value);
     }
 }
