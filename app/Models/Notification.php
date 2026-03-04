@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Services\TimezoneService;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -22,6 +23,7 @@ class Notification extends Model
     ];
 
     protected $casts = [
+        'created_at' => 'datetime',
         "body" => "array",
         "is_read" => "boolean",
         "is_system" => "boolean",
@@ -100,6 +102,9 @@ class Notification extends Model
 
     public function getCreatedAtAttribute($value)
     {
-        return TimezoneService::toUserLocal($value);
+        $date = date('Y-m-d H:i:s', strtotime($value));
+        $localDate = TimezoneService::toUserLocal($date);
+        $diffForHumans = Carbon::parse($localDate)->diffForHumans();
+        return $diffForHumans;
     }
 }
