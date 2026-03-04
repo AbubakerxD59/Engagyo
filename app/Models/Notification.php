@@ -17,10 +17,12 @@ class Notification extends Model
     {
         static::creating(function (Notification $notification) {
             $user = $notification->user_id ? User::find($notification->user_id) : null;
+            $tz = TimezoneService::getUserTimezone($user);
             $value = $notification->created_at
-                ? Carbon::parse($notification->created_at)->setTimezone(TimezoneService::getUserTimezone($user))->format('Y-m-d H:i')
-                : Carbon::now(TimezoneService::getUserTimezone($user))->format('Y-m-d H:i');
-            $notification->created_at = Carbon::parse(TimezoneService::toUtc($value, $user), 'UTC');
+                ? Carbon::parse($notification->created_at)->setTimezone($tz)->format('Y-m-d H:i:s')
+                : Carbon::now($tz)->format('Y-m-d H:i:s');
+            // Store in UTC with seconds (Notification only; TimezoneService::toUtc uses Y-m-d H:i for others)
+            $notification->created_at = Carbon::parse($value, $tz)->utc();
         });
     }
 

@@ -11,6 +11,30 @@ use Illuminate\Support\Facades\Auth;
 class NotificationController extends Controller
 {
     /**
+     * Test route: create a sample notification for the authenticated user.
+     * GET /panel/notifications/create-test
+     */
+    public function createTest()
+    {
+        $user = Auth::guard('user')->user();
+        $notification = Notification::create([
+            'user_id' => $user->id,
+            'title' => 'Test notification',
+            'body' => [
+                'type' => 'success',
+                'message' => 'This is a test notification created at ' . now()->format('Y-m-d H:i:s'),
+            ],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+        return response()->json([
+            'success' => true,
+            'message' => 'Test notification created',
+            'notification_id' => $notification->id,
+        ]);
+    }
+
+    /**
      * Get notifications for the authenticated user (both read and unread)
      * Includes user-specific notifications and system notifications
      * Latest notifications shown first

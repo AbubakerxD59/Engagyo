@@ -16,14 +16,14 @@ class TimezoneService
      * Convert user's local datetime to UTC for storage.
      * Use when storing publish_date - cron jobs compare with UTC.
      *
-     * @param string $datetime Datetime string in user's timezone (e.g. "2025-03-15 14:30")
+     * @param string $datetime Datetime string in user's timezone (e.g. "2025-03-15 14:30" or "2025-03-15 14:30:00")
      * @param User|null $user User model (for timezone). Uses DEFAULT_TIMEZONE if null/no timezone.
      * @return string Datetime in UTC format "Y-m-d H:i"
      */
     public static function toUtc(string $datetime, ?User $user = null): string
     {
         $timezone = self::getUserTimezone($user);
-        return Carbon::createFromFormat('Y-m-d H:i', $datetime, $timezone)->utc()->format('Y-m-d H:i');
+        return Carbon::parse($datetime, $timezone)->utc()->format('Y-m-d H:i');
     }
 
     /**
