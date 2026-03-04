@@ -10,7 +10,7 @@ class TimezoneService
     /**
      * Default timezone when user has none selected.
      */
-    public const DEFAULT_TIMEZONE = config('app.timezone');
+    public const DEFAULT_TIMEZONE = "UTC";
 
     /**
      * Convert user's local datetime to UTC for storage.
