@@ -490,7 +490,7 @@ class Post extends Model
         );
     }
 
-    public function getVideoKeyAttribute()
+    public function getVideoKeyAttribute(): string
     {
         $video_key = $this->video;
         return !empty($video_key) ? fetchFromS3($video_key) : '';
@@ -498,7 +498,7 @@ class Post extends Model
 
     /**
      * Get publish_date in user's timezone for display.
-     * If user tz === default tz, show as-is; else convert (default → UTC → user tz).
+     * If user tz === default tz, show as-is; else convert (default to UTC to user tz).
      */
     protected function getPublishDateInUserTimezone(): Carbon
     {
@@ -841,7 +841,9 @@ class Post extends Model
     public function getPublishedAtFormattedAttribute()
     {
         if ($this->published_at) {
-            return date("Y-m-d h:i A", strtotime($this->published_at));
+            $user = $this->relationLoaded('user') ? $this->user : $this->user()->with('timezone')->first();
+            return TimezoneService::toUserLocal($this->published_at, $user);
+            // return date("Y-m-d h:i A", strtotime($this->published_at));
         }
         return null;
     }
