@@ -55,8 +55,8 @@ class NotificationController extends Controller
                             ->whereNull('user_id');
                       });
             })
-            ->orderBy('created_at', 'desc') // Latest first
-            ->limit(100) // Limit to 100 most recent
+            ->latestFirst()
+            ->limit(100)
             ->get()
             ->map(function($notification) use ($user) {
                 // Check if notification is read

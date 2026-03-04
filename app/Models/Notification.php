@@ -61,6 +61,14 @@ class Notification extends Model
     }
 
     /**
+     * Scope to order by latest first (newest on top)
+     */
+    public function scopeLatestFirst($query)
+    {
+        return $query->orderByDesc('created_at');
+    }
+
+    /**
      * Scope to get unread notifications
      */
     public function scopeUnread($query)
