@@ -2,12 +2,13 @@
 
 namespace App\Console\Commands;
 
-use Exception;
-use App\Models\Post;
-use Illuminate\Console\Command;
 use App\Jobs\PublishTikTokPost;
-use App\Services\TikTokService;
+use App\Models\Post;
 use App\Services\PostService;
+use App\Services\TikTokService;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Console\Command;
 
 class TikTokPublishCron extends Command
 {
@@ -30,7 +31,8 @@ class TikTokPublishCron extends Command
      */
     public function handle(Post $post)
     {
-        $now = date("Y-m-d H:i");
+        // $now = date("Y-m-d H:i");
+        $now = Carbon::now('UTC')->format('Y-m-d H:i');
 
         $posts = $post->with("user", "tiktok")->notPublished()->past($now)->tiktok()->notSchedule()->get();
         foreach ($posts as $key => $post) {

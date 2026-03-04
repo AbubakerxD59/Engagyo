@@ -6,6 +6,7 @@ use App\Models\Board;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\Tiktok;
+use App\Services\TimezoneService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
@@ -49,7 +50,7 @@ class ShuffleRssPosts extends Command
                     $account = Board::find($account_id);
                 }
                 if ($social_type == "tiktok") {
-                    $account = Tiktok::find($account_id);
+                    $account = Tiktok::find($account_id); 
                 }
                 $shuffle = $account ? $account->shuffle : false;
                 echo 'shuffle: ' . $shuffle . '<br>';
@@ -64,7 +65,7 @@ class ShuffleRssPosts extends Command
                     $count = 0;
                     foreach ($accountBasedPost as $index => $post) {
                         $post->update([
-                            "publish_date" => $shuffledDates[$count],
+                            "publish_date" => TimezoneService::toUtc($shuffledDates[$count], $post->user),
                         ]);
                         $count++;
                     }

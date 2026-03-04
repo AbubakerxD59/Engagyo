@@ -19,7 +19,7 @@ class SetUserTimezone
     {
         $user = Auth::guard('user')->user();
 
-        $timezoneName = 'America/New_York'; // Default when no timezone is selected
+        $timezoneName = 'UTC'; // Default when no timezone is selected
 
         if ($user && $user->timezone_id) {
             $timezone = $user->timezone;
@@ -27,9 +27,6 @@ class SetUserTimezone
                 $timezoneName = $timezone->name;
             }
         }
-
-        date_default_timezone_set($timezoneName);
-        config(['app.timezone' => $timezoneName]);
 
         return $next($request);
     }

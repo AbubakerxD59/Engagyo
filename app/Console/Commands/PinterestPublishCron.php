@@ -2,11 +2,12 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Post;
-use App\Services\PostService;
-use Illuminate\Console\Command;
 use App\Jobs\PublishPinterestPost;
+use App\Models\Post;
 use App\Services\PinterestService;
+use App\Services\PostService;
+use Carbon\Carbon;
+use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
 class PinterestPublishCron extends Command
@@ -30,7 +31,8 @@ class PinterestPublishCron extends Command
      */
     public function handle(Post $post, PinterestService $pinterestService)
     {
-        $now = date("Y-m-d H:i");
+        // $now = date("Y-m-d H:i");
+        $now = Carbon::now('UTC')->format('Y-m-d H:i');
         $posts = $post->with("user", "board.pinterest")->notPublished()->past($now)->pinterest()->notSchedule()->get();
         
         foreach ($posts as $post) {

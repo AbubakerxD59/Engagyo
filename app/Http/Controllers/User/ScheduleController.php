@@ -2,27 +2,28 @@
 
 namespace App\Http\Controllers\User;
 
-use Exception;
-use App\Models\Page;
-use App\Models\Post;
+use App\Enums\DraftEnum;
+use App\Http\Controllers\Controller;
+use App\Jobs\PublishFacebookPost;
+use App\Jobs\PublishPinterestPost;
+use App\Jobs\PublishTikTokPost;
 use App\Models\Board;
 use App\Models\Facebook;
-use App\Models\Timeslot;
+use App\Models\Page;
 use App\Models\Pinterest;
-use Illuminate\Http\Request;
-use App\Jobs\PublishFacebookPost;
-use App\Services\FacebookService;
-use App\Jobs\PublishPinterestPost;
-use App\Services\PinterestService;
-use App\Services\TikTokService;
-use App\Jobs\PublishTikTokPost;
-use App\Http\Controllers\Controller;
-use App\Models\User;
+use App\Models\Post;
 use App\Models\Tiktok;
-use App\Services\PostService;
+use App\Models\Timeslot;
+use App\Models\User;
+use App\Services\FacebookService;
 use App\Services\FeatureUsageService;
-use App\Enums\DraftEnum;
+use App\Services\PinterestService;
+use App\Services\PostService;
 use App\Services\SocialMediaLogService;
+use App\Services\TikTokService;
+use App\Services\TimezoneService;
+use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class  ScheduleController extends Controller
@@ -1666,7 +1667,7 @@ class  ScheduleController extends Controller
                                     // Assign post to this timeslot on current date (convert to UTC for storage)
                                     $publishDateTimeLocal = $currentScheduleDate . ' ' . $timeslot24Hour;
                                     $post->update([
-                                        'publish_date' => \App\Services\TimezoneService::toUtc($publishDateTimeLocal, $post->user)
+                                        'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $user)
                                     ]);
 
                                     // Mark timeslot as used for this date
@@ -1735,7 +1736,7 @@ class  ScheduleController extends Controller
                                         // Timeslot is available for this date, assign post (convert to UTC for storage)
                                         $publishDateTimeLocal = $currentScheduleDate . ' ' . $timeslot24Hour;
                                         $post->update([
-                                            'publish_date' => \App\Services\TimezoneService::toUtc($publishDateTimeLocal, $post->user)
+                                            'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $user)
                                         ]);
 
                                         // Mark timeslot as used for this date
@@ -1856,7 +1857,7 @@ class  ScheduleController extends Controller
                 "title" => $request->edit_post_title,
                 "url" => $request->edit_post_link,
                 "comment" => $request->edit_post_comment,
-                "publish_date" => \App\Services\TimezoneService::toUtc($publishDateTimeLocal, $post->user),
+                "publish_date" => TimezoneService::toUtc($publishDateTimeLocal, $post->user),
             ];
             if ($request->has("edit_post_publish_image") && $request->File("edit_post_publish_image")) {
                 $image = saveImage($request->file("edit_post_publish_image"));

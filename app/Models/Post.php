@@ -4,11 +4,12 @@ namespace App\Models;
 
 use App\Models\Scopes\PostScope;
 use App\Models\Scopes\UserScope;
+use App\Services\TimezoneService;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Post extends Model
 {
@@ -497,20 +498,22 @@ class Post extends Model
 
     /**
      * Get publish_date in user's timezone for display.
+     * If user tz === default tz, show as-is; else convert (default → UTC → user tz).
      */
     protected function getPublishDateInUserTimezone(): Carbon
     {
         $user = $this->relationLoaded('user') ? $this->user : $this->user()->with('timezone')->first();
-        return \App\Services\TimezoneService::parseUtcToUserCarbon($this->publish_date, $user);
+        return TimezoneService::publishDateForDisplay($this->publish_date, $user);
     }
 
     /**
-     * Parse UTC publish_date to Carbon in user's timezone (for nextTime/nextScheduleTime).
+     * Parse publish_date to Carbon in user's timezone (for nextTime/nextScheduleTime).
+     * Uses same display logic: default tz as-is if user tz matches, else via UTC to user tz.
      */
     private function parsePublishDateFromUtc(Post $post): Carbon
     {
         $user = $post->relationLoaded('user') ? $post->user : $post->user()->with('timezone')->first();
-        return \App\Services\TimezoneService::parseUtcToUserCarbon($post->publish_date, $user);
+        return TimezoneService::publishDateForDisplay($post->publish_date, $user);
     }
 
     protected function date(): Attribute

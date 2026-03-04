@@ -85,8 +85,7 @@ class PublishRssPostsCron extends Command
         $posts = Post::with("user", "page.facebook", "board.pinterest", "tiktok")
             ->where('source', 'rss')
             ->where('status', 0) // Pending
-            ->where('publish_date', '<=', $now->format('Y-m-d H:i'))
-            ->where('publish_date', '>=', $twoHoursAgo->format('Y-m-d H:i'))
+            ->whereBetween('publish_date', [$twoHoursAgo->format('Y-m-d H:i'), $now->format('Y-m-d H:i')])
             ->get();
 
         info("RSS Publish Cron: Found {$posts->count()} RSS posts to process.");

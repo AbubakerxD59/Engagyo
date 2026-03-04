@@ -2,12 +2,13 @@
 
 namespace App\Console\Commands;
 
-use Exception;
-use App\Models\Post;
-use Illuminate\Console\Command;
 use App\Jobs\PublishFacebookPost;
+use App\Models\Post;
 use App\Services\FacebookService;
 use App\Services\PostService;
+use Carbon\Carbon;
+use Exception;
+use Illuminate\Console\Command;
 
 class FacebookPublishCron extends Command
 {
@@ -30,7 +31,8 @@ class FacebookPublishCron extends Command
      */
     public function handle(Post $post, FacebookService $facebookService)
     {
-        $now = date("Y-m-d H:i");
+        // $now = date("Y-m-d H:i");
+        $now = Carbon::now('UTC')->format('Y-m-d H:i');
 
         $posts = $post->with("user", "page.facebook")->notPublished()->past($now)->facebook()->notSchedule()->get();
         foreach ($posts as $key => $post) {

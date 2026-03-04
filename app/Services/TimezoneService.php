@@ -10,7 +10,7 @@ class TimezoneService
     /**
      * Default timezone when user has none selected.
      */
-    public const DEFAULT_TIMEZONE = 'America/New_York';
+    public const DEFAULT_TIMEZONE = config('app.timezone');
 
     /**
      * Convert user's local datetime to UTC for storage.
@@ -23,7 +23,7 @@ class TimezoneService
     public static function toUtc(string $datetime, ?User $user = null): string
     {
         $timezone = self::getUserTimezone($user);
-        return Carbon::parse($datetime, $timezone)->utc()->format('Y-m-d H:i');
+        return Carbon::createFromFormat('Y-m-d H:i', $datetime, $timezone)->utc()->format('Y-m-d H:i');
     }
 
     /**
@@ -50,6 +50,25 @@ class TimezoneService
     {
         $timezone = self::getUserTimezone($user);
         return Carbon::parse($utcDatetime, 'UTC')->setTimezone($timezone);
+    }
+
+    /**
+     * Get publish_date as Carbon in user's timezone for display.
+     * Stored publish_date is in default timezone. If user's timezone equals default, return as-is; otherwise convert via UTC to user's timezone.
+     *
+     * @param string $publishDate Stored publish_date (in default timezone)
+     * @param User|null $user User model (for timezone)
+     * @return Carbon Carbon instance in user's timezone for formatting
+     */
+    public static function publishDateForDisplay(string $publishDate, ?User $user = null): Carbon
+    {
+        $userTz = self::getUserTimezone($user);
+        $default_timezone = date_default_timezone_get();
+        $parsed = Carbon::parse($publishDate, $default_timezone);
+        if ($userTz === $default_timezone) {
+            return $parsed;
+        }
+        return $parsed->utc()->setTimezone($userTz);
     }
 
     /**
