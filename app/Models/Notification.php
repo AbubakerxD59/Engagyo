@@ -43,8 +43,8 @@ class Notification extends Model
     public function users()
     {
         return $this->belongsToMany(User::class, 'notification_user')
-                    ->withPivot('is_read', 'read_at')
-                    ->withTimestamps();
+            ->withPivot('is_read', 'read_at')
+            ->withTimestamps();
     }
 
     /**
@@ -100,11 +100,14 @@ class Notification extends Model
         $this->update(['is_read' => true]);
     }
 
+    public function setCreatedAtAttribute($value)
+    {
+        $this->attributes['created_at'] = TimezoneService::toUtc($value);
+    }
+
     public function getCreatedAtAttribute($value)
     {
-        $date = date('Y-m-d H:i:s', strtotime($value));
-        $localDate = TimezoneService::toUserLocal($date);
-        $diffForHumans = Carbon::parse($localDate)->diffForHumans();
-        return $diffForHumans;
+        $localDate = TimezoneService::toUserLocal($value);
+        return Carbon::parse($localDate)->diffForHumans();
     }
 }
