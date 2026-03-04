@@ -221,23 +221,34 @@ class Post extends Model
         return $accountUrl;
     }
 
-    public function nextTime($search, array $times)
+    /**
+     * Get next available (date, time) from given timeslots.
+     * When $user is provided, uses user's timezone for "now" and for interpreting existing publish_date.
+     *
+     * @param array $search Search criteria (account_id, social_type, source, type, etc.)
+     * @param array $times Timeslot strings (e.g. ["09:00", "14:00"])
+     * @param \App\Models\User|null $user User for timezone
+     * @return string "Y-m-d H:i:s"
+     */
+    public function nextTime($search, array $times, $user = null)
     {
-        // Sort timeslots chronologically
         usort($times, function ($a, $b) {
             $timeA = strtotime($a);
             $timeB = strtotime($b);
             return $timeA - $timeB;
         });
 
-        $currentDateTime = now();
+        $tz = $user ? TimezoneService::getUserTimezone($user) : null;
+        $currentDateTime = $tz ? Carbon::now($tz) : now();
         $currentDate = $currentDateTime->format('Y-m-d');
         $currentTime = $currentDateTime->format('H:i:s');
 
         $lastPost = $this->exist($search)->orderByDesc('publish_date')->first();
 
         if ($lastPost) {
-            $lastPostLocal = Carbon::parse($lastPost->publish_date);
+            $lastPostLocal = $user
+                ? TimezoneService::publishDateForDisplay($lastPost->publish_date, $user)
+                : Carbon::parse($lastPost->publish_date);
             $lastPostDate = $lastPostLocal->format('Y-m-d');
             $lastPostTime = $lastPostLocal->format('H:i:s');
 
@@ -265,7 +276,9 @@ class Post extends Model
                 ->get();
 
             foreach ($existingPosts as $post) {
-                $postLocal = Carbon::parse($post->publish_date);
+                $postLocal = $user
+                    ? TimezoneService::publishDateForDisplay($post->publish_date, $user)
+                    : Carbon::parse($post->publish_date);
                 $postDate = $postLocal->format('Y-m-d');
                 $postTime = $postLocal->format('H:i:s');
                 if (!isset($usedTimeslotsByDate[$postDate])) {

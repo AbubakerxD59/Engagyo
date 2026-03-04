@@ -25,7 +25,7 @@ return new class extends Migration
             $table->integer("domain_id")->nullable();
             $table->text("url")->nullable();
             $table->text("image")->nullable();
-            $table->text("publish_date")->nullable();
+            $table->text("publish_date")->nullable()->index();
             $table->integer("status")->default(0);
             $table->timestamps();
         });
