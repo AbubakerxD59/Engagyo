@@ -2,14 +2,12 @@
 
 namespace App\Models;
 
-use App\Models\Scopes\PostScope;
 use App\Models\Scopes\UserScope;
 use App\Services\TimezoneService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Post extends Model
 {
@@ -369,7 +367,7 @@ class Post extends Model
      * - If an existing post uses a timeslot on a date, that (date, timeslot) is taken; use the next available.
      *
      * @param array $search Search criteria (account_id, social_type, source, etc.)
-     * @param \Illuminate\Support\Collection $timeslots Collection of Timeslot models (each has ->timeslot time string)
+     * @param \Illuminate\Support\Collection $timeslots of Timeslot models (each has ->timeslot time string)
      * @return string "Y-m-d H:i" in user's local timezone
      */
     public function nextScheduleTime($search, $timeslots)
@@ -842,7 +840,9 @@ class Post extends Model
     {
         if ($this->published_at) {
             $user = $this->relationLoaded('user') ? $this->user : $this->user()->with('timezone')->first();
-            return TimezoneService::toUserLocal($this->published_at, $user);
+            $user_tz = $user->timezone->name;
+            $published_at = Carbon::parse($this->published_at, 'UTC')->setTimezone($user_tz)->format('Y-m-d H:i');
+            return $published_at;
             // return date("Y-m-d h:i A", strtotime($this->published_at));
         }
         return null;
