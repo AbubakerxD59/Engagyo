@@ -22,7 +22,7 @@ class TimezoneService
      */
     public static function toUtc(string $datetime, ?User $user = null): string
     {
-        $timezone = self::getUserTimezone($user);
+        $timezone = self::DEFAULT_TIMEZONE;
         return Carbon::parse($datetime, $timezone)->utc()->format('Y-m-d H:i');
     }
 
