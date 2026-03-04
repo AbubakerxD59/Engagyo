@@ -102,7 +102,7 @@ class Notification extends Model
 
     public function setCreatedAtAttribute($value)
     {
-        $this->attributes['created_at'] = TimezoneService::toUtc($value);
+        $this->attributes['created_at'] = TimezoneService::toUtc($value, $this->user);
     }
 
     public function getCreatedAtAttribute($value)
