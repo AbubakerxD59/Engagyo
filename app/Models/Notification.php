@@ -13,6 +13,17 @@ class Notification extends Model
 
     protected $table =  "notifications";
 
+    protected static function booted(): void
+    {
+        static::creating(function (Notification $notification) {
+            $user = $notification->user_id ? User::find($notification->user_id) : null;
+            $value = $notification->created_at
+                ? Carbon::parse($notification->created_at)->setTimezone(TimezoneService::getUserTimezone($user))->format('Y-m-d H:i')
+                : Carbon::now(TimezoneService::getUserTimezone($user))->format('Y-m-d H:i');
+            $notification->created_at = Carbon::parse(TimezoneService::toUtc($value, $user), 'UTC');
+        });
+    }
+
     protected $fillable = [
         "user_id",
         "title",
@@ -98,11 +109,6 @@ class Notification extends Model
     public function markAsRead()
     {
         $this->update(['is_read' => true]);
-    }
-
-    public function setCreatedAtAttribute($value)
-    {
-        $this->attributes['created_at'] = TimezoneService::toUtc($value, $this->user);
     }
 
     public function getCreatedAtAttribute($value)

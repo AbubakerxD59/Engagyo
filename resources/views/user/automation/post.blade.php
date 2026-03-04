@@ -26,7 +26,7 @@
                      <div class="form-group font-weight-bold">
                          <span class="row">
                              <i class="fa fa-clock m-1"></i>
-                             <p>{{ date('Y-m-d H:i A', strtotime($post->publish_date)) }}</p>
+                             <p>{{ date('Y-m-d H:i A', strtotime($post->publish_datetime)) }}</p>
                          </span>
                      </div>
                  </div>

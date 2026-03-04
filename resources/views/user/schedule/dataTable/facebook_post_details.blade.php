@@ -9,7 +9,7 @@
                 <div class="post-author">
                     {{ $post->account_name ?? ucfirst($post->social_type) }}
                 </div>
-                <div class="post-date">{{ date('F j, Y', strtotime($post->publish_date)) }} <i
+                <div class="post-date">{{ date('F j, Y', strtotime($post->publish_datetime)) }} <i
                         class="fas fa-globe-americas"></i></div>
             </div>
         </div>

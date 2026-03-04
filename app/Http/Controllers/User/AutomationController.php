@@ -716,7 +716,7 @@ class AutomationController extends Controller
                 // Get the earliest publish date from deleted posts (publish_date is stored in UTC)
                 $earliestDeletedDate = null;
                 foreach ($postsToDelete as $post) {
-                    $postLocal = \Carbon\Carbon::parse($post->publish_date, 'UTC')->setTimezone($accountUser && $accountUser->timezone ? $accountUser->timezone->name : 'America/New_York');
+                    $postLocal = \Carbon\Carbon::parse($post->publish_date, 'UTC')->setTimezone($accountUser && $accountUser->timezone ? $accountUser->timezone->name : 'UTC');
                     if ($earliestDeletedDate === null || $postLocal->lt($earliestDeletedDate)) {
                         $earliestDeletedDate = $postLocal->copy();
                     }
@@ -738,7 +738,7 @@ class AutomationController extends Controller
                     // Rearrange posts starting from the earliest deleted date (convert to UTC for storage)
                     $currentDate = $earliestDate;
                     foreach ($remainingPosts as $post) {
-                        $postLocal = \Carbon\Carbon::parse($post->publish_date, 'UTC')->setTimezone($accountUser && $accountUser->timezone ? $accountUser->timezone->name : 'America/New_York');
+                        $postLocal = \Carbon\Carbon::parse($post->publish_date, 'UTC')->setTimezone($accountUser && $accountUser->timezone ? $accountUser->timezone->name : 'UTC');
                         $originalTime = $postLocal->format('H:i:s');
                         $newPublishDateLocal = $currentDate . ' ' . $originalTime;
 
