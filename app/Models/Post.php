@@ -221,7 +221,6 @@ class Post extends Model
         return $accountUrl;
     }
 
-
     public function nextTime($search, array $times)
     {
         // Sort timeslots chronologically
@@ -235,12 +234,10 @@ class Post extends Model
         $currentDate = $currentDateTime->format('Y-m-d');
         $currentTime = $currentDateTime->format('H:i:s');
 
-        // Get the last post to determine starting point (publish_date is stored in UTC)
         $lastPost = $this->exist($search)->orderByDesc('publish_date')->first();
 
         if ($lastPost) {
-            // If there's a last post, convert UTC to user timezone for comparison
-            $lastPostLocal = $this->parsePublishDateFromUtc($lastPost);
+            $lastPostLocal = Carbon::parse($lastPost->publish_date);
             $lastPostDate = $lastPostLocal->format('Y-m-d');
             $lastPostTime = $lastPostLocal->format('H:i:s');
 
@@ -268,7 +265,7 @@ class Post extends Model
                 ->get();
 
             foreach ($existingPosts as $post) {
-                $postLocal = $this->parsePublishDateFromUtc($post);
+                $postLocal = Carbon::parse($post->publish_date);
                 $postDate = $postLocal->format('Y-m-d');
                 $postTime = $postLocal->format('H:i:s');
                 if (!isset($usedTimeslotsByDate[$postDate])) {
@@ -359,18 +356,8 @@ class Post extends Model
             return $selectedDate . ' ' . date('H:i:s', strtotime($selectedTimeslot));
         }
     }
-    /**
-     * Get the next available (date, timeslot) for queue posts.
-     * Rules:
-     * - One post per timeslot per day; when all timeslots are used for a day, use next day.
-     * - For today: skip timeslots that are already in the past.
-     * - If an existing post uses a timeslot on a date, that (date, timeslot) is taken; use the next available.
-     *
-     * @param array $search Search criteria (account_id, social_type, source, etc.)
-     * @param \Illuminate\Support\Collection $timeslots of Timeslot models (each has ->timeslot time string)
-     * @return string "Y-m-d H:i" in user's local timezone
-     */
-    public function nextScheduleTime($search, $timeslots)
+
+    public function nextScheduleTime($search, $timeslots, $user = null)
     {
         $timeslots = $timeslots->sortBy(function ($ts) {
             return strtotime($ts->timeslot);
@@ -380,11 +367,11 @@ class Post extends Model
             return date('Y-m-d H:i', strtotime('+1 day'));
         }
 
-        $currentDateTime = now();
+        $tz = $user ? TimezoneService::getUserTimezone($user) : null;
+        $currentDateTime = $tz ? Carbon::now($tz) : now();
         $currentDate = $currentDateTime->format('Y-m-d');
         $currentTime = $currentDateTime->format('H:i:s');
 
-        // Build used (date => [times]) from existing posts (publish_date is stored in UTC)
         $usedTimeslotsByDate = [];
         $existingPosts = $this->exist($search)
             ->where('status', '!=', 1)
@@ -392,7 +379,9 @@ class Post extends Model
             ->get();
 
         foreach ($existingPosts as $post) {
-            $local = $this->parsePublishDateFromUtc($post);
+            $local = $user
+                ? TimezoneService::publishDateForDisplay($post->publish_date, $user)
+                : Carbon::parse($post->publish_date);
             $postDate = $local->format('Y-m-d');
             $postTime = $local->format('H:i:s');
             if (!isset($usedTimeslotsByDate[$postDate])) {
@@ -502,16 +491,6 @@ class Post extends Model
     {
         $user = $this->relationLoaded('user') ? $this->user : $this->user()->with('timezone')->first();
         return TimezoneService::publishDateForDisplay($this->publish_date, $user);
-    }
-
-    /**
-     * Parse publish_date to Carbon in user's timezone (for nextTime/nextScheduleTime).
-     * Uses same display logic: default tz as-is if user tz matches, else via UTC to user tz.
-     */
-    private function parsePublishDateFromUtc(Post $post): Carbon
-    {
-        $user = $post->relationLoaded('user') ? $post->user : $post->user()->with('timezone')->first();
-        return TimezoneService::publishDateForDisplay($post->publish_date, $user);
     }
 
     protected function date(): Attribute

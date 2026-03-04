@@ -22,6 +22,7 @@ use App\Services\PostService;
 use App\Services\SocialMediaLogService;
 use App\Services\TikTokService;
 use App\Services\TimezoneService;
+use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -291,6 +292,8 @@ class  ScheduleController extends Controller
                 ];
             }
 
+            $publishDateNow = Carbon::now(TimezoneService::getUserTimezone($user))->format('Y-m-d H:i');
+
             foreach ($accounts as $account) {
                 if ($account->type == "facebook") {
 
@@ -312,7 +315,7 @@ class  ScheduleController extends Controller
                         "image" => $image,
                         "video" => $video,
                         "status" => 0,
-                        "publish_date" => date('Y-m-d H:i'),
+                        "publish_date" => $publishDateNow,
                     ];
                     $post = PostService::create($data);
 
@@ -356,7 +359,7 @@ class  ScheduleController extends Controller
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
-                            "publish_date" => date('Y-m-d H:i'),
+                            "publish_date" => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -397,7 +400,7 @@ class  ScheduleController extends Controller
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
-                            "publish_date" => date('Y-m-d H:i'),
+                            "publish_date" => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -445,7 +448,7 @@ class  ScheduleController extends Controller
                             "image" => $image,
                             "video" => $video,
                             "status" => 0,
-                            "publish_date" => date('Y-m-d H:i'),
+                            "publish_date" => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -534,6 +537,8 @@ class  ScheduleController extends Controller
                 ];
             }
 
+            $publishDateNow = Carbon::now(TimezoneService::getUserTimezone($user))->format('Y-m-d H:i');
+
             foreach ($draftAccounts as $account) {
                 // Handle TikTok draft posts
                 if ($account->type == "tiktok" && DraftEnum::isDraftActiveFor("tiktok")) {
@@ -555,7 +560,7 @@ class  ScheduleController extends Controller
                             "url" => $image, // For photo posts
                             "file_url" => $video, // For video posts
                             "status" => 0, // Draft status
-                            "publish_date" => date('Y-m-d H:i'),
+                            "publish_date" => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -657,6 +662,8 @@ class  ScheduleController extends Controller
                 ];
             }
 
+            $publishDateNow = Carbon::now(TimezoneService::getUserTimezone($user))->format('Y-m-d H:i');
+
             foreach ($draftAccounts as $account) {
                 // Handle TikTok draft link posts
                 if ($account->type == "tiktok" && DraftEnum::isDraftActiveFor("tiktok")) {
@@ -683,7 +690,7 @@ class  ScheduleController extends Controller
                             "image" => $linkInfo['image'], // Store thumbnail image URL
                             "link" => $link,
                             "status" => 0, // Draft status
-                            "publish_date" => date('Y-m-d H:i'),
+                            "publish_date" => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -789,7 +796,7 @@ class  ScheduleController extends Controller
                 if (count($account->timeslots) > 0) {
                     if ($account->type == "facebook") {
                         Facebook::where("id", $account->fb_id)->firstOrFail();
-                        $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots);
+                        $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots, $user);
                         // store in db
                         if ($file) {
                             $type = !empty($image) ?  "photo" : "video";
@@ -820,7 +827,7 @@ class  ScheduleController extends Controller
                     if ($account->type == "pinterest") {
                         Pinterest::where("id", $account->pin_id)->firstOrFail();
                         if ($file) {
-                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots);
+                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots, $user);
                             // store in db
                             $type = !empty($image) ? "photo" : "video";
                             $data = [
@@ -848,13 +855,13 @@ class  ScheduleController extends Controller
                     if ($account->type == "tiktok") {
                         Tiktok::where("id", $account->id)->firstOrFail();
                         if ($file) {
-                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots);
-                            // store in db
-                            $type = !empty($image) ? "photo" : "video";
-                            $data = [
-                                "user_id" => $user->id,
-                                "account_id" => $account->id,
-                                "social_type" => "tiktok",
+$nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots, $user);
+                        // store in db
+                        $type = !empty($image) ? "photo" : "video";
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "tiktok",
                                 "type" => $type,
                                 "source" => $this->source,
                                 "title" => $content,
@@ -1065,6 +1072,8 @@ class  ScheduleController extends Controller
                     ];
                 }
 
+                $publishDateNow = Carbon::now(TimezoneService::getUserTimezone($user))->format('Y-m-d H:i');
+
                 foreach ($accounts as $account) {
                     if ($account->type == "facebook") {
                         // store in db
@@ -1079,7 +1088,7 @@ class  ScheduleController extends Controller
                             "url" => $url,
                             "image" => $image,
                             "status" => 0,
-                            "publish_date" => date('Y-m-d H:i'),
+                            "publish_date" => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -1113,7 +1122,7 @@ class  ScheduleController extends Controller
                             "url" => $url,
                             "image" => $image,
                             "status" => 0,
-                            "publish_date" => date('Y-m-d H:i'),
+                            "publish_date" => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -1155,7 +1164,7 @@ class  ScheduleController extends Controller
                             "url" => $url,
                             "image" => $localImage, // Store thumbnail image URL
                             "status" => 0,
-                            "publish_date" => date('Y-m-d H:i'),
+                            "publish_date" => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -1232,7 +1241,7 @@ class  ScheduleController extends Controller
                     if (count($account->timeslots) > 0) {
                         if ($account->type == "facebook") {
                             Facebook::where("id", $account->fb_id)->firstOrFail();
-                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots);
+                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots, $user);
                             // store in db
                             $data = [
                                 "user_id" => $user->id,
@@ -1257,7 +1266,7 @@ class  ScheduleController extends Controller
                         if ($account->type == "pinterest") {
                             $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
                             if ($pinterest) {
-                                $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots);
+                                $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots, $user);
                                 // store in db
                                 $data = [
                                     "user_id" => $user->id,
@@ -1293,7 +1302,7 @@ class  ScheduleController extends Controller
                                     );
                                 }
 
-                                $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots);
+                                $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots, $user);
 
                                 // store in db as photo post (not link)
                                 $data = [

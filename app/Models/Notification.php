@@ -21,7 +21,6 @@ class Notification extends Model
             $value = $notification->created_at
                 ? Carbon::parse($notification->created_at)->setTimezone($tz)->format('Y-m-d H:i:s')
                 : Carbon::now($tz)->format('Y-m-d H:i:s');
-            // Store in UTC with seconds (Notification only; TimezoneService::toUtc uses Y-m-d H:i for others)
             $notification->created_at = Carbon::parse($value, $tz)->utc();
         });
     }
