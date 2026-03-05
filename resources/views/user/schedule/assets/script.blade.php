@@ -384,6 +384,8 @@
             originalUrlInContent = null;
             $('#content').val('');
             $('#comment').val('');
+            $('#content').attr('rows', 3).css({ height: '', minHeight: '', maxHeight: '' });
+            $('#comment').attr('rows', 1).css({ height: '', minHeight: '', maxHeight: '' });
             $('#characterCount').text('');
             $('#article-container').empty();
             reloadPosts();
