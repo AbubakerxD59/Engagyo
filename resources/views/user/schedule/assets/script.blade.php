@@ -37,6 +37,25 @@
             };
         }
 
+        // Update the selected-account header above the content textarea (show first selected account)
+        function updateSelectedAccountHeader() {
+            var $first = $('.account-card.active').first();
+            var $header = $('#selected-account-header');
+            if (!$first.length) {
+                $header.hide();
+                return;
+            }
+            var src = $first.find('.account-avatar img').attr('src') || '';
+            var name = $first.find('.account-name').text().trim() || 'Account';
+            var type = ($first.data('type') || 'facebook').toLowerCase();
+            $('#selected-account-header-img').attr('src', src).attr('alt', name);
+            $('#selected-account-header-name').text(name);
+            var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok').addClass(type);
+            $badge.find('i').attr('class',
+                type === 'pinterest' ? 'fab fa-pinterest-p' : type === 'tiktok' ? 'fab fa-tiktok' : 'fab fa-facebook-f');
+            $header.show();
+        }
+
         // account status
         $(".account-card").on("click", function() {
             var $card = $(this);
@@ -55,15 +74,18 @@
                 success: function(response) {
                     if (response.success) {
                         toastr.success(response.message);
+                        updateSelectedAccountHeader();
                         // Reload posts when account selection changes
                         loadPosts(1);
                     } else {
                         $card.toggleClass("active");
+                        updateSelectedAccountHeader();
                         toastr.error(response.message);
                     }
                 },
                 error: function(response) {
                     $card.toggleClass("active");
+                    updateSelectedAccountHeader();
                     toastr.error("Something went Wrong!");
                 }
             });
@@ -75,6 +97,20 @@
             var isCollapsed = $('#accounts-sidebar').hasClass('collapsed');
             $(this).find('i').attr('class', isCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left');
         });
+
+        // Show selected-account header on load when at least one account is selected
+        updateSelectedAccountHeader();
+
+        // Header List view button (active state only; calendar removed)
+        $(document).on('click', '.selected-account-view-list', function() {
+            $(this).addClass('is-active');
+        });
+
+        // New Post: focus content textarea
+        $(document).on('click', '.selected-account-new-post', function() {
+            $('#content').focus();
+        });
+
         // DropZone
         var dropZone = new Dropzone("#dropZone", {
             autoProcessQueue: false,
@@ -502,47 +538,71 @@
             $('.schedule_btn').attr("disabled", false);
             $('.schedule-modal').modal("hide");
         };
-        // settings modal
-        $('.setting_btn').on("click", function() {
+        // Open queue settings modal (optionally for one account only)
+        function openQueueSettingsModal(filterAccount) {
             var modal = $('.settings-modal');
-            modal.find(".modal-body").empty();
+            if (filterAccount) {
+                modal.data('filterAccount', filterAccount);
+            } else {
+                modal.removeData('filterAccount');
+            }
             modal.modal("toggle");
 
-            // Reset tracking when modal opens
             originalQueueTimeslots = {};
             queueTimeslotsChanged = false;
             $('#saveQueueSettings').hide();
+        }
 
-            // Store original timeslots after modal is shown and select2 is initialized
-            modal.off('shown.bs.modal').on('shown.bs.modal', function() {
-                setTimeout(function() {
-                    $('.timeslot').each(function() {
-                        var $select = $(this);
+        // Apply filter when modal is shown: show only one account's row if filterAccount is set
+        $('.settings-modal').off('shown.bs.modal').on('shown.bs.modal', function() {
+            var modal = $(this);
+            var filter = modal.data('filterAccount');
+            var $rows = modal.find('.queue-settings-item');
+
+            if (filter && filter.id != null && filter.type != null) {
+                $rows.each(function() {
+                    var $row = $(this);
+                    var $select = $row.find('.timeslot');
+                    var match = $select.data('id') == filter.id && $select.data('type') === filter.type;
+                    $row.toggle(match);
+                });
+                modal.find('.queue-settings-modal-title').text(filter.name ? ('Queue settings – ' + filter.name) : 'Queue settings');
+            } else {
+                $rows.show();
+                modal.find('.queue-settings-modal-title').text('Queue settings');
+            }
+
+            setTimeout(function() {
+                $('.timeslot').each(function() {
+                    var $select = $(this);
+                    if ($select.closest('.queue-settings-item').is(':visible')) {
                         var accountId = $select.data("id");
                         var accountType = $select.data("type");
                         var key = accountType + '_' + accountId;
-                        var originalValue = $select.val() ? $select.val().sort()
-                            .join(',') : '';
+                        var originalValue = $select.val() ? $select.val().sort().join(',') : '';
                         originalQueueTimeslots[key] = originalValue;
-                    });
-                }, 300);
-            });
+                    }
+                });
+            }, 300);
+        });
 
-            // $.ajax({
-            //     url: "{{ route('panel.schedule.get.setting') }}",
-            //     type: "GET",
-            //     success: function(response) {
-            //         if (response.success) {
-            //             modal.find(".modal-body").html(response.data);
-            //             // select2
-            //             $('.select2').select2({
-            //                 closeOnSelect: false
-            //             });
-            //         } else {
-            //             toastr.error("Something went Wrong!");
-            //         }
-            //     }
-            // });
+        $('.settings-modal').on('hidden.bs.modal', function() {
+            $(this).removeData('filterAccount');
+        });
+
+        // settings modal – all accounts
+        $('.setting_btn').on("click", function() {
+            openQueueSettingsModal();
+        });
+
+        // Header settings icon – queue settings for the selected account only
+        $(document).on('click', '#selected-account-header-settings', function() {
+            var $first = $('.account-card.active').first();
+            if (!$first.length) return;
+            var id = $first.data('id');
+            var type = $first.data('type');
+            var name = $first.find('.account-name').text().trim() || 'Account';
+            openQueueSettingsModal({ id: id, type: type, name: name });
         });
         // Track original timeslots for queue settings modal
         var originalQueueTimeslots = {};
@@ -566,11 +626,12 @@
             }
         });
 
-        // Check if queue timeslots have changed
+        // Check if queue timeslots have changed (only visible rows when modal is filtered)
         function checkQueueTimeslotChanges() {
             queueTimeslotsChanged = false;
             $('.timeslot').each(function() {
                 var $select = $(this);
+                if (!$select.closest('.queue-settings-item').is(':visible')) return;
                 var accountId = $select.data("id");
                 var accountType = $select.data("type");
                 var key = accountType + '_' + accountId;

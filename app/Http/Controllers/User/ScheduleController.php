@@ -156,9 +156,10 @@ class  ScheduleController extends Controller
     }
     public function index()
     {
-        $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->find(Auth::guard('user')->id());
+        $user = User::with("boards.pinterest", "pages.facebook", "tiktok", "timezone")->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
-        return view("user.schedule.index", compact("accounts"));
+        $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
+        return view("user.schedule.index", compact("accounts", "userTimezoneName"));
     }
     /**
      * Summary of accountStatus

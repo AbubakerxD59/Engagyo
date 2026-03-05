@@ -355,6 +355,372 @@
          }
      }
 
+     /* --- Selected account header (above content textarea) --- */
+     .selected-account-header {
+         background: #fff;
+         border-radius: 10px;
+         padding: 12px 16px;
+         margin-bottom: 14px;
+         border: 1px solid #e0e0e0;
+         display: flex;
+         align-items: center;
+         justify-content: space-between;
+         gap: 16px;
+         flex-wrap: wrap;
+     }
+
+     .selected-account-info {
+         display: flex;
+         align-items: center;
+         gap: 12px;
+     }
+
+     .selected-account-avatar-wrap {
+         position: relative;
+         flex-shrink: 0;
+     }
+
+     .selected-account-avatar {
+         width: 44px;
+         height: 44px;
+         border-radius: 50%;
+         object-fit: cover;
+         border: 2px solid #e0e0e0;
+         display: block;
+     }
+
+     .selected-account-platform-badge {
+         position: absolute;
+         bottom: -2px;
+         left: -2px;
+         width: 20px;
+         height: 20px;
+         border-radius: 50%;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         font-size: 10px;
+         color: #fff;
+         border: 2px solid #fff;
+     }
+
+     .selected-account-platform-badge.facebook {
+         background: #1877F2;
+     }
+
+     .selected-account-platform-badge.pinterest {
+         background: #E60023;
+     }
+
+     .selected-account-platform-badge.tiktok {
+         background: #000000;
+     }
+
+     .selected-account-text {
+         display: flex;
+         flex-direction: row;
+         align-items: center;
+         gap: 10px;
+         flex-wrap: wrap;
+     }
+
+     .selected-account-header-settings-btn {
+         display: inline-flex;
+         align-items: center;
+         justify-content: center;
+         width: 32px;
+         height: 32px;
+         padding: 0;
+         border: 1px solid #e0e0e0;
+         border-radius: 6px;
+         background: #f5f5f5;
+         color: #333;
+         cursor: pointer;
+         transition: background 0.2s, color 0.2s;
+     }
+
+     .selected-account-header-settings-btn:hover {
+         background: #e8e8e8;
+         color: #000;
+     }
+
+     .selected-account-header-settings-btn i {
+         font-size: 14px;
+     }
+
+     .selected-account-name {
+         font-size: 15px;
+         font-weight: 600;
+         color: #000;
+         line-height: 1.3;
+     }
+
+     .selected-account-tagline {
+         font-size: 13px;
+         color: #333;
+         line-height: 1.3;
+     }
+
+     /* Header right-side actions (List, Calendar, New Post, Tags, Location, More) */
+     .selected-account-actions {
+         display: flex;
+         align-items: center;
+         gap: 8px;
+         flex-wrap: wrap;
+     }
+
+     .selected-account-action-btn {
+         display: inline-flex;
+         align-items: center;
+         gap: 6px;
+         padding: 6px 12px;
+         border-radius: 8px;
+         border: 1px solid #dee2e6;
+         background: #f1f3f5;
+         color: #1a1a1a;
+         font-size: 13px;
+         font-weight: 500;
+         cursor: pointer;
+         transition: background 0.2s, border-color 0.2s, color 0.2s;
+     }
+
+     .selected-account-action-btn:hover {
+         background: #e9ecef;
+         border-color: #ced4da;
+     }
+
+     .selected-account-action-btn i {
+         font-size: 12px;
+         opacity: 0.9;
+     }
+
+     .selected-account-action-btn.selected-account-view-list.is-active {
+         background: #2d8a4e;
+         border-color: #2d8a4e;
+         color: #fff;
+     }
+
+     .selected-account-action-btn.selected-account-view-list.is-active:hover {
+         background: #26803f;
+         border-color: #26803f;
+         color: #fff;
+     }
+
+     .selected-account-action-btn.selected-account-new-post {
+         background: #495057;
+         border-color: #495057;
+         color: #fff;
+     }
+
+     .selected-account-action-btn.selected-account-new-post:hover {
+         background: #343a40;
+         border-color: #343a40;
+         color: #fff;
+     }
+
+     .selected-account-action-chip {
+         display: inline-flex;
+         align-items: center;
+         gap: 6px;
+         padding: 6px 10px;
+         border-radius: 8px;
+         border: 1px solid #dee2e6;
+         background: #f8f9fa;
+         color: #1a1a1a;
+         font-size: 13px;
+         cursor: pointer;
+         transition: background 0.2s, border-color 0.2s;
+     }
+
+     .selected-account-action-chip:hover {
+         background: #e9ecef;
+         border-color: #ced4da;
+     }
+
+     .selected-account-action-chip i:first-child {
+         font-size: 11px;
+         opacity: 0.85;
+     }
+
+     .selected-account-timezone-wrap .selected-account-timezone-text {
+         max-width: 180px;
+         overflow: hidden;
+         text-overflow: ellipsis;
+         white-space: nowrap;
+     }
+
+     /* --- Queue settings modal (redesign) --- */
+     .queue-settings-modal-redesign .queue-settings-modal-content {
+         border: none;
+         border-radius: 12px;
+         box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+         overflow: hidden;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-modal-header {
+         padding: 18px 24px;
+         border-bottom: 1px solid #e9ecef;
+         background: #fff;
+         align-items: center;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-modal-title {
+         font-size: 1.25rem;
+         font-weight: 600;
+         color: #1a1a1a;
+         margin: 0;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-modal-close {
+         width: 36px;
+         height: 36px;
+         padding: 0;
+         border: none;
+         border-radius: 8px;
+         background: transparent;
+         color: #6c757d;
+         display: inline-flex;
+         align-items: center;
+         justify-content: center;
+         transition: background 0.2s, color 0.2s;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-modal-close:hover {
+         background: #f1f3f5;
+         color: #1a1a1a;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-modal-body {
+         padding: 24px;
+         background: #f8f9fa;
+         max-height: 60vh;
+         overflow-y: auto;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-modal-description {
+         font-size: 0.9375rem;
+         color: #6c757d;
+         margin-bottom: 20px;
+         line-height: 1.5;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-list {
+         display: flex;
+         flex-direction: column;
+         gap: 14px;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-item {
+         background: #fff;
+         border-radius: 10px;
+         padding: 16px 20px;
+         display: flex;
+         align-items: center;
+         justify-content: space-between;
+         gap: 20px;
+         flex-wrap: wrap;
+         border: 1px solid #e9ecef;
+         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+     }
+
+     .queue-settings-modal-redesign .queue-settings-account {
+         display: flex;
+         align-items: center;
+         gap: 14px;
+         min-width: 0;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-avatar-wrap {
+         position: relative;
+         flex-shrink: 0;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-avatar {
+         width: 44px;
+         height: 44px;
+         border-radius: 50%;
+         object-fit: cover;
+         border: 2px solid #e9ecef;
+         display: block;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-platform-badge {
+         position: absolute;
+         bottom: -2px;
+         right: -2px;
+         width: 20px;
+         height: 20px;
+         border-radius: 50%;
+         display: flex;
+         align-items: center;
+         justify-content: center;
+         font-size: 10px;
+         color: #fff;
+         border: 2px solid #fff;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-badge-facebook {
+         background: #1877F2;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-badge-pinterest {
+         background: #E60023;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-badge-tiktok {
+         background: #000000;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-account-name {
+         font-size: 1rem;
+         font-weight: 600;
+         color: #1a1a1a;
+         line-height: 1.3;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-hours {
+         flex: 1;
+         min-width: 200px;
+         max-width: 320px;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-hours-label {
+         display: block;
+         font-size: 0.8125rem;
+         font-weight: 500;
+         color: #495057;
+         margin-bottom: 6px;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-select {
+         border-radius: 8px;
+         border-color: #dee2e6;
+         font-size: 0.9375rem;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-select:focus {
+         border-color: #0d6efd;
+         box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.15);
+     }
+
+     .queue-settings-modal-redesign .queue-settings-modal-footer {
+         padding: 16px 24px;
+         border-top: 1px solid #e9ecef;
+         background: #fff;
+         gap: 10px;
+         flex-wrap: wrap;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-btn-cancel {
+         border-radius: 8px;
+         font-weight: 500;
+     }
+
+     .queue-settings-modal-redesign .queue-settings-btn-save {
+         border-radius: 8px;
+         font-weight: 500;
+     }
+
      /* --- Custom Skeleton Styling --- */
 
      /* Animation Definition */
