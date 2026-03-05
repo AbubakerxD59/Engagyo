@@ -215,41 +215,66 @@ class GeneralController extends Controller
 
     public function previewLink(Request $request)
     {
+        $link = $request->link;
+        if (empty($link)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Please enter a valid Link!',
+            ]);
+        }
+
+        if ($this->isFacebookOrInstagramLink($link)) {
+            return response()->json([
+                'success' => true,
+                'title' => $link,
+                'image' => null,
+                'link' => $link,
+                'no_preview' => true,
+                'message' => "Due to recent changes with Facebook's Data Policy, we can no longer generate link previews for Facebook and Instagram links",
+            ]);
+        }
+
         $user = User::with("pages.facebook", "boards.pinterest")->findOrFail(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $check = $accounts->where("schedule_status", "active")->where("type", "!=", "pinterest")->first();
         $pinterest_active = $check ? false : true;
-        $link = $request->link;
-        $link = $request->link;
-        if (!empty($link)) {
-            $max_tries = 3;
-            $retry = 1;
-            $service = new HtmlParseService($pinterest_active);
-            while ($max_tries >= $retry) {
-                $get_info = $service->get_info($link, 1);
-                if ($get_info["status"] && !empty($get_info["title"]) && !empty($get_info["image"])) {
-                    $response = array(
-                        "success" => true,
-                        "title" => isset($get_info["title"]) ? $get_info["title"] : "",
-                        "image" => isset($get_info["image"]) ? $get_info["image"] : "",
-                        "link" => $link,
-                    );
-                    break;
-                } else {
-                    $response = array(
-                        "success" => false,
-                        "message" => isset($get_info["message"]) ? $get_info["message"] : "Something went wrong!"
-                    );
-                    $retry++;
-                    sleep(5);
-                }
+        $service = new HtmlParseService($pinterest_active);
+        $max_tries = 3;
+        $retry = 1;
+        $response = [
+            'success' => false,
+            'message' => 'Something went wrong!',
+        ];
+
+        while ($max_tries >= $retry) {
+            $get_info = $service->get_info($link, 1);
+            if (!empty($get_info['status']) && !empty($get_info['title']) && !empty($get_info['image'])) {
+                $response = [
+                    'success' => true,
+                    'title' => $get_info['title'] ?? '',
+                    'image' => $get_info['image'] ?? '',
+                    'link' => $link,
+                ];
+                break;
             }
-        } else {
-            $response = array(
-                "success" => false,
-                "message" => "Please enter a valid Link!",
-            );
+            $response['message'] = $get_info['message'] ?? 'Something went wrong!';
+            $retry++;
+            sleep(5);
         }
+
         return response()->json($response);
+    }
+
+    /**
+     * Check if the URL is a Facebook or Instagram link (no preview available per Facebook Data Policy).
+     */
+    private function isFacebookOrInstagramLink(string $url): bool
+    {
+        $host = parse_url($url, PHP_URL_HOST);
+        if ($host === null) {
+            return false;
+        }
+        $host = strtolower($host);
+        return str_contains($host, 'facebook.com') || str_contains($host, 'instagram.com');
     }
 }

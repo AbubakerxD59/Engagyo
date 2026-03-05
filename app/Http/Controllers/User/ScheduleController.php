@@ -1058,8 +1058,8 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
             $comment = $request->get("comment") ?? null;
             $url = $request->get("url") ?? null;
             $image = $request->get("image") ?? null;
-            if (!empty($url) && !empty($image)) {
-                // Count total posts to be created
+            if (!empty($url)) {
+                // Count total posts to be created (link allowed without image for Facebook/Instagram per Data Policy)
                 $totalPostsToCreate = count($accounts);
                 
                 // Check scheduled posts limit before creating any posts
@@ -1076,7 +1076,7 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
 
                 foreach ($accounts as $account) {
                     if ($account->type == "facebook") {
-                        // store in db
+                        // store in db (image may be empty for Facebook/Instagram links)
                         $data = [
                             "user_id" => $user->id,
                             "account_id" => $account->id,
@@ -1143,8 +1143,8 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
                         $postData = PostService::postTypeBody($post);
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
                     }
-                    if ($account->type == "tiktok") {
-                        $localImage = $image ? saveImageFromUrl($image, 'uploads') : null;
+                    if ($account->type == "tiktok" && !empty($image)) {
+                        $localImage = saveImageFromUrl($image, 'uploads');
                         if (empty($content) || empty($localImage)) {
                             return array(
                                 "success" => false,
@@ -1216,8 +1216,8 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
             $comment = $request->get("comment") ?? null;
             $url = $request->get("url") ?? null;
             $image = $request->get("image") ?? null;
-            if (!empty($url) && !empty($image)) {
-                // Count how many posts will be created (accounts with timeslots)
+            if (!empty($url)) {
+                // Count how many posts will be created (link allowed without image for Facebook/Instagram)
                 $postsToCreate = 0;
                 foreach ($accounts as $account) {
                     if (count($account->timeslots) > 0) {
@@ -1242,7 +1242,7 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
                         if ($account->type == "facebook") {
                             Facebook::where("id", $account->fb_id)->firstOrFail();
                             $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots, $user);
-                            // store in db
+                            // store in db (image may be empty for Facebook/Instagram links)
                             $data = [
                                 "user_id" => $user->id,
                                 "account_id" => $account->id,
@@ -1289,13 +1289,11 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
                                 }
                             }
                         }
-                        if ($account->type == "tiktok") {
+                        if ($account->type == "tiktok" && !empty($image)) {
                             $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
                             if ($tiktok) {
-                                // For TikTok, fetch title and thumbnail from link and convert to photo post
-
-                                $localImage = $image ? saveImageFromUrl($image, 'uploads') : null;
-                                if (empty($content) || empty($image)) {
+                                $localImage = saveImageFromUrl($image, 'uploads');
+                                if (empty($content) || empty($localImage)) {
                                     return array(
                                         "success" => false,
                                         "message" => "Content or image is required."
@@ -1365,8 +1363,8 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
             $schedule_time = $request->schedule_time;
             $url = $request->get("url") ?? null;
             $image = $request->get("image") ?? null;
-            if (!empty($url) && !empty($image)) {
-                // Count total posts to be created
+            if (!empty($url)) {
+                // Count total posts to be created (link allowed without image for Facebook/Instagram)
                 $totalPostsToCreate = count($accounts);
                 
                 // Check scheduled posts limit before creating any posts
@@ -1383,7 +1381,7 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
                     $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
                     if ($account->type == "facebook") {
                         Facebook::where("id", $account->fb_id)->firstOrFail();
-                        // store in db
+                        // store in db (image may be empty for Facebook/Instagram links)
                         $data = [
                             "user_id" => $user->id,
                             "account_id" => $account->id,
@@ -1429,12 +1427,11 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
                             }
                         }
                     }
-                    if ($account->type == "tiktok") {
+                    if ($account->type == "tiktok" && !empty($image)) {
                         $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
                         if ($tiktok) {
-
-                            $localImage = $image ? saveImageFromUrl($image, 'uploads') : null;
-                            if (empty($content) || empty($image)) {
+                            $localImage = saveImageFromUrl($image, 'uploads');
+                            if (empty($content) || empty($localImage)) {
                                 return array(
                                     "success" => false,
                                     "message" => "Content or image is required."

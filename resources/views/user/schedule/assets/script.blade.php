@@ -441,17 +441,33 @@
                         if (response.success) {
                             var title = response.title;
                             var image = response.image;
-                            if (!empty(title)) {
+                            if (response.no_preview) {
+                                if (title) {
+                                    $("#content").val(title);
+                                }
+                                container.html(
+                                    '<div id="real-article" class="real-article-wrapper" style="opacity: 1;">' +
+                                    '<div class="content-col">' +
+                                    '<p class="text-muted mb-2" style="font-size: 0.9rem;">' + (response.message || '') + '</p>' +
+                                    '<p class="link_url">' + (response.link || '') + '</p>' +
+                                    '<p class="small text-muted mt-1">You can still schedule, queue or publish this link without a preview image.</p>' +
+                                    '</div></div>'
+                                );
+                                is_link = 1;
+                                toastr.info(response.message);
+                            } else if (!empty(title)) {
                                 $("#content").val(response.title);
                                 $("#content").trigger("input");
                             }
-                            if (!empty(image)) {
-                                renderArticleContent(response);
-                                is_link = 1;
-                            } else {
-                                container.html(
-                                    '<div style="padding: 1rem; color: #DC2626;">Error loading data. Please try again.</div>'
-                                );
+                            if (!response.no_preview) {
+                                if (!empty(image)) {
+                                    renderArticleContent(response);
+                                    is_link = 1;
+                                } else {
+                                    container.html(
+                                        '<div style="padding: 1rem; color: #DC2626;">Error loading data. Please try again.</div>'
+                                    );
+                                }
                             }
                         } else {
                             container.html(

@@ -19,9 +19,9 @@ function empty(value) {
         return false;
     }
 }
-// check link
+// check link (includes URLs with query params e.g. ?fbid=123&set=a.456)
 function checkLink(value) {
-    const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?$/i;
+    const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?(\?[^\s]*)?$/i;
     if (urlRegex.test(value)) {
         return true;
     }
