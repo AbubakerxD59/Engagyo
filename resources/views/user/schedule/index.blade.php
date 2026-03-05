@@ -17,7 +17,7 @@
                                 <div class="accounts-grid">
                                     @foreach ($accounts as $account)
                                         @if ($account->type == 'facebook')
-                                            <div class="account-card has-tooltip @if ($account->schedule_status == 'active') active @endif"
+                                            <div class="account-card @if ($account->schedule_status == 'active') active @endif"
                                                 data-type="{{ $account->type }}" data-id="{{ $account->id }}"
                                                 data-tooltip="{{ $account->facebook?->username }}">
                                                 <div class="account-card-inner">
