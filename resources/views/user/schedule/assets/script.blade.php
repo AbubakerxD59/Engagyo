@@ -179,7 +179,7 @@
                 schedule_modal.modal("toggle");
             } else {
                 // for link posting only when no file in dropzone; with file we publish as photo/video
-                if (is_link && dropZone.getAcceptedFiles().length === 0) {
+                if (is_link && dropZone.getAcceptedFiles().length <= 0) {
                     if (checkAccounts()) {
                         processLink();
                         return true;
@@ -418,11 +418,13 @@
         // check link for content (only fetch when no file in dropzone; otherwise treat pasted URL as text)
         $('#content').on('input', function() {
             var value = $(this).val();
-            is_link = 0;
-            if (checkLink(value) && dropZone.getAcceptedFiles().length === 0) {
-                fetchFromLink(value);
+            if(!empty(value)){
+                is_link = 0;
+                if (checkLink(value) && dropZone.getAcceptedFiles().length === 0) {
+                    fetchFromLink(value);
+                }
+                toggleContentShortenerVisibility();
             }
-            toggleContentShortenerVisibility();
         });
         // fetch from link
         var fetchFromLink = function(link) {
