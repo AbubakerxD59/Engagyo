@@ -68,6 +68,13 @@
                 }
             });
         });
+
+        // Accounts sidebar toggle (closed by default: avatars only; open: full cards)
+        $('#accounts-sidebar .accounts-sidebar-toggle').on('click', function() {
+            $('#accounts-sidebar').toggleClass('collapsed');
+            var isCollapsed = $('#accounts-sidebar').hasClass('collapsed');
+            $(this).find('i').attr('class', isCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left');
+        });
         // DropZone
         var dropZone = new Dropzone("#dropZone", {
             autoProcessQueue: false,

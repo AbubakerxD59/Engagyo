@@ -1,14 +1,76 @@
  <style>
-    /* --- Accounts Container Styling --- */
-    .accounts-container {
-        /* max-height: 280px; */
-        /* overflow-y: auto; */
-        overflow: visible;
-        padding: 10px 5px;
-        margin-bottom: 10px;
-        border: 1px solid #e9ecef;
-        border-radius: 10px;
+    /* --- Schedule page layout with accounts sidebar --- */
+    .schedule-page-wrapper {
+        display: flex;
+        gap: 0;
+        align-items: flex-start;
+        min-height: 0;
+    }
+
+    .accounts-sidebar {
+        flex-shrink: 0;
+        width: 260px;
+        transition: width 0.25s ease;
+        border-right: 1px solid #e9ecef;
         background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+        border-radius: 10px 0 0 10px;
+        padding: 10px 8px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .accounts-sidebar.collapsed {
+        width: 4rem;
+        padding: 10px 6px;
+    }
+
+    .accounts-sidebar .accounts-sidebar-toggle {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        width: 28px;
+        height: 28px;
+        border: 1px solid #dee2e6;
+        border-radius: 6px;
+        background: #fff;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #6c757d;
+        transition: color 0.2s, background 0.2s;
+        z-index: 10;
+    }
+
+    .accounts-sidebar .accounts-sidebar-toggle:hover {
+        background: #e9ecef;
+        color: #495057;
+    }
+
+    .accounts-sidebar.collapsed .accounts-sidebar-toggle {
+        right: 50%;
+        transform: translateX(50%);
+        top: auto;
+        bottom: 8px;
+    }
+
+    .schedule-main-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    /* --- Accounts Container inside sidebar --- */
+    .accounts-sidebar .accounts-container {
+        overflow: visible;
+        padding: 32px 4px 10px 4px;
+        margin-bottom: 0;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+    }
+
+    .accounts-sidebar.collapsed .accounts-container {
+        padding: 8px 0 36px 0;
     }
 
      .accounts-container::-webkit-scrollbar {
@@ -28,6 +90,18 @@
      .accounts-container::-webkit-scrollbar-thumb:hover {
          background: #a1a1a1;
      }
+
+    .accounts-sidebar .accounts-grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+        width: 100%;
+        box-sizing: border-box;
+    }
+
+    .accounts-sidebar:not(.collapsed) .accounts-grid {
+        grid-template-columns: 1fr;
+    }
 
     .accounts-grid {
         display: grid;
@@ -83,6 +157,41 @@
          display: flex;
          align-items: center;
          gap: 10px;
+     }
+
+     /* Sidebar collapsed: show only profile pic + platform icon */
+     .accounts-sidebar.collapsed .account-details {
+         display: none !important;
+     }
+
+     .accounts-sidebar.collapsed .account-card-inner {
+         justify-content: center;
+         gap: 0;
+     }
+
+     .accounts-sidebar.collapsed .account-card {
+         padding: 6px;
+         min-height: auto;
+     }
+
+     .accounts-sidebar.collapsed .account-avatar img {
+         width: 36px;
+         height: 36px;
+     }
+
+     .accounts-sidebar.collapsed .platform-badge {
+         width: 14px;
+         height: 14px;
+         font-size: 7px;
+         bottom: -1px;
+         right: -1px;
+     }
+
+     /* Hide tick icon on selected accounts in sidebar */
+     .accounts-sidebar .account-card.active::before,
+     .accounts-sidebar .account-card.active.has-tooltip::before {
+         display: none !important;
+         content: none !important;
      }
 
      .account-avatar {

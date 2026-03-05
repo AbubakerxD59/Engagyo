@@ -6,18 +6,12 @@
         <div class="content-header clearfix"></div>
         <section class="content">
             <div class="container-fluid">
-                <div class="card">
-                    <div class="card-header with-border clearfix">
-                        <div class="card-title">
-                            <span>Schedule</span>
-                        </div>
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body">
+                <div class="schedule-page-wrapper">
+                    {{-- Accounts sidebar (closed by default: profile pic + platform icon only) --}}
+                    <aside id="accounts-sidebar" class="accounts-sidebar collapsed">
+                        <button type="button" class="accounts-sidebar-toggle" aria-label="Toggle accounts">
+                            <i class="fas fa-chevron-right"></i>
+                        </button>
                         @if (count($accounts) > 0)
                             <div class="accounts-container">
                                 <div class="accounts-grid">
@@ -90,7 +84,21 @@
                                 </div>
                             </div>
                         @endif
-                        <div class="card-body px-0">
+                    </aside>
+                    <div class="schedule-main-content">
+                        <div class="card">
+                            <div class="card-header with-border clearfix">
+                                <div class="card-title">
+                                    <span>Schedule</span>
+                                </div>
+                                <div class="card-tools">
+                                    <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
+                                        <i class="fas fa-minus"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="card-body">
+                                <div class="card-body px-0">
                             <div class="row">
                                 <textarea name="content" id="content" class="form-control col-md-12 check_count" placeholder="Paste your link here!"
                                     rows="3" data-max="100"></textarea>
@@ -134,14 +142,14 @@
                                     </div>
                                 </div>
                             </div>
+                                </div>
+                            </div>
                         </div>
-                    </div>
-                </div>
-                <div class="card">
-                    <div class="card-header with-border clearfix">
-                        <div class="card-title">
-                            <span>Posts</span>
-                        </div>
+                        <div class="card">
+                            <div class="card-header with-border clearfix">
+                                <div class="card-title">
+                                    <span>Posts</span>
+                                </div>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
                                 <i class="fas fa-minus"></i>
@@ -186,6 +194,8 @@
                                 <ul class="pagination pagination-sm mb-0"></ul>
                             </nav>
                         </div>
+                    </div>
+                </div>
                     </div>
                 </div>
             </div>
