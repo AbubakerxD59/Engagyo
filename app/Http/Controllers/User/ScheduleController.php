@@ -853,13 +853,13 @@ class  ScheduleController extends Controller
                     if ($account->type == "tiktok") {
                         Tiktok::where("id", $account->id)->firstOrFail();
                         if ($file) {
-$nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots, $user);
-                        // store in db
-                        $type = !empty($image) ? "photo" : "video";
-                        $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "tiktok",
+                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots, $user);
+                            // store in db
+                            $type = !empty($image) ? "photo" : "video";
+                            $data = [
+                                "user_id" => $user->id,
+                                "account_id" => $account->id,
+                                "social_type" => "tiktok",
                                 "type" => $type,
                                 "source" => $this->source,
                                 "title" => $content,
@@ -1831,7 +1831,7 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
      */
     public function postsStatusCounts(Request $request)
     {
-        $base = Post::query()->isScheduled();
+        $base = Post::query();
         if (!empty($request->account_id)) {
             $base = $base->whereIn('account_id', (array) $request->account_id);
         }
@@ -1839,7 +1839,7 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
             $base = $base->whereIn('social_type', (array) $request->type);
         }
 
-        $queue = (clone $base)->where('scheduled', 1)->where('status', 0)->count();
+        $queue = (clone $base)->where('status', 0)->where('status', 0)->count();
         $sent = (clone $base)->where('status', 1)->count();
         $failed = (clone $base)->where('status', -1)->count();
 

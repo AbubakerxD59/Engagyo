@@ -12,14 +12,28 @@
                         <button type="button" class="accounts-sidebar-toggle" aria-label="Toggle accounts">
                             <i class="fas fa-chevron-right"></i>
                         </button>
+                        <button type="button" class="accounts-sidebar-search-icon" id="sidebarSearchIcon"
+                            aria-label="Search accounts" title="Search accounts">
+                            <i class="fas fa-search"></i>
+                        </button>
+                        <div class="accounts-sidebar-search-wrap" id="sidebarSearchWrap">
+                            <div class="accounts-sidebar-search-box">
+                                <i class="fas fa-search accounts-sidebar-search-icon-inner"></i>
+                                <input type="text" id="accountSearchInput" class="accounts-sidebar-search-input"
+                                    placeholder="Search accounts..." autocomplete="off">
+                                <button type="button" class="accounts-sidebar-search-clear" id="accountSearchClear"
+                                    style="display:none;">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            </div>
+                        </div>
                         @if (count($accounts) > 0)
                             <div class="accounts-container">
                                 <div class="accounts-grid">
                                     @foreach ($accounts as $account)
                                         @if ($account->type == 'facebook')
                                             <div class="account-card @if ($account->schedule_status == 'active') active @endif"
-                                                data-type="{{ $account->type }}" data-id="{{ $account->id }}"
-                                                data-tooltip="{{ $account->facebook?->username }}">
+                                                data-type="{{ $account->type }}" data-id="{{ $account->id }}">
                                                 <div class="account-card-inner">
                                                     <div class="account-avatar">
                                                         <img src="{{ $account->profile_image }}"
@@ -38,9 +52,8 @@
                                                 </div>
                                             </div>
                                         @elseif($account->type == 'pinterest')
-                                            <div class="account-card has-tooltip @if ($account->schedule_status == 'active') active @endif"
-                                                data-type="{{ $account->type }}" data-id="{{ $account->id }}"
-                                                data-tooltip="{{ $account->pinterest?->username }}">
+                                            <div class="account-card @if ($account->schedule_status == 'active') active @endif"
+                                                data-type="{{ $account->type }}" data-id="{{ $account->id }}">
                                                 <div class="account-card-inner">
                                                     <div class="account-avatar">
                                                         <img src="{{ $account->pinterest?->profile_image }}"
@@ -59,9 +72,8 @@
                                                 </div>
                                             </div>
                                         @elseif($account->type == 'tiktok')
-                                            <div class="account-card has-tooltip @if ($account->schedule_status == 'active') active @endif"
-                                                data-type="{{ $account->type }}" data-id="{{ $account->id }}"
-                                                data-tooltip="{{ $account->username }}">
+                                            <div class="account-card @if ($account->schedule_status == 'active') active @endif"
+                                                data-type="{{ $account->type }}" data-id="{{ $account->id }}">
                                                 <div class="account-card-inner">
                                                     <div class="account-avatar">
                                                         <img src="{{ $account->profile_image }}"
@@ -87,46 +99,87 @@
                     </aside>
                     <div class="schedule-main-content">
                         <div class="card">
-                    
                             <div class="card-body">
-                                {{-- Selected account header (shown when at least one account is selected) --}}
-                                <div id="selected-account-header" class="selected-account-header" style="display: none;">
-                                    <div class="selected-account-info">
-                                        <div class="selected-account-avatar-wrap">
-                                            <img id="selected-account-header-img" class="selected-account-avatar"
-                                                src="" alt="" loading="lazy">
-                                            <span id="selected-account-header-badge"
-                                                class="selected-account-platform-badge facebook"><i
-                                                    class="fab fa-facebook-f"></i></span>
+                                {{-- Selected account header + post type tabs (sticky when scrolling) --}}
+                                <div class="selected-account-container">
+                                    <div class="selected-account-sticky-wrap">
+                                        <div id="selected-account-header" class="selected-account-header"
+                                            style="display: none;">
+                                            <div class="selected-account-info">
+                                                <div class="selected-account-avatar-wrap">
+                                                    <img id="selected-account-header-img" class="selected-account-avatar"
+                                                        src="" alt="" loading="lazy">
+                                                    <span id="selected-account-header-badge"
+                                                        class="selected-account-platform-badge facebook"><i
+                                                            class="fab fa-facebook-f"></i></span>
+                                                </div>
+                                                <div class="selected-account-text">
+                                                    <span id="selected-account-header-name"
+                                                        class="selected-account-name"></span>
+                                                    <button type="button" class="selected-account-header-settings-btn"
+                                                        id="selected-account-header-settings"
+                                                        aria-label="Queue settings for this account" title="Queue settings">
+                                                        <i class="fas fa-cog"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="selected-account-actions">
+                                                <button type="button"
+                                                    class="selected-account-action-btn selected-account-view-list is-active"
+                                                    data-view="list" title="List view" aria-label="List view">
+                                                    <i class="fas fa-list-ul"></i>
+                                                    <span>List</span>
+                                                </button>
+                                                <button type="button"
+                                                    class="selected-account-action-btn selected-account-new-post"
+                                                    title="New post" aria-label="New post">
+                                                    <i class="fas fa-plus"></i>
+                                                    <span>New Post</span>
+                                                </button>
+                                                <div class="selected-account-action-chip selected-account-timezone-wrap"
+                                                    title="Your timezone">
+                                                    <i class="fas fa-clock"></i>
+                                                    <span
+                                                        class="selected-account-timezone-text">{{ $userTimezoneName ?? 'UTC' }}</span>
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div class="selected-account-text">
-                                            <span id="selected-account-header-name" class="selected-account-name"></span>
-                                            <button type="button" class="selected-account-header-settings-btn"
-                                                id="selected-account-header-settings"
-                                                aria-label="Queue settings for this account" title="Queue settings">
-                                                <i class="fas fa-cog"></i>
+                                        {{-- Posts status tabs (Queue, Sent, Failed) --}}
+                                        <div id="posts-status-tabs" class="posts-status-tabs" style="display: none;">
+                                            <button type="button" class="posts-status-tab is-active" data-tab="queue"
+                                                aria-selected="true">
+                                                <span class="posts-status-tab-label">Queue</span>
+                                                <span class="posts-status-tab-badge" data-count="queue">0</span>
+                                            </button>
+                                            <button type="button" class="posts-status-tab" data-tab="sent"
+                                                aria-selected="false">
+                                                <span class="posts-status-tab-label">Sent</span>
+                                                <span class="posts-status-tab-badge" data-count="sent">0</span>
+                                            </button>
+                                            <button type="button" class="posts-status-tab" data-tab="failed"
+                                                aria-selected="false">
+                                                <span class="posts-status-tab-label">Failed</span>
+                                                <span class="posts-status-tab-badge" data-count="failed">0</span>
                                             </button>
                                         </div>
                                     </div>
-                                    <div class="selected-account-actions">
-                                        <button type="button" class="selected-account-action-btn selected-account-view-list is-active" data-view="list" title="List view" aria-label="List view">
-                                            <i class="fas fa-list-ul"></i>
-                                            <span>List</span>
-                                        </button>
-                                        <button type="button" class="selected-account-action-btn selected-account-new-post" title="New post" aria-label="New post">
-                                            <i class="fas fa-plus"></i>
-                                            <span>New Post</span>
-                                        </button>
-                                        <div class="selected-account-action-chip selected-account-timezone-wrap" title="Your timezone">
-                                            <i class="fas fa-clock"></i>
-                                            <span class="selected-account-timezone-text">{{ $userTimezoneName ?? 'UTC' }}</span>
+                                    {{-- Queue tab: timeslots section (selected account's queue settings) --}}
+                                    <div id="queue-timeslots-section" class="queue-timeslots-section"
+                                        style="display: none;">
+                                        <div id="queue-timeslots-content" class="queue-timeslots-content">
+                                            {{-- Filled by JS: date groups (Today, Tomorrow, ...) and time rows with + New --}}
+                                        </div>
+                                        <div id="queue-timeslots-empty" class="queue-timeslots-empty"
+                                            style="display: none;">
+                                            <p class="queue-timeslots-empty-text">No posting hours set. Open Queue settings
+                                                to choose hours for this account.</p>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="card-body px-0">
                                     <div class="row">
-                                        <textarea name="content" id="content" class="form-control col-md-12 check_count" placeholder="Paste your link here!"
-                                            rows="3" data-max="100"></textarea>
+                                        <textarea name="content" id="content" class="form-control col-md-12 check_count"
+                                            placeholder="Paste your link here!" rows="3" data-max="100"></textarea>
                                         <span id="characterCount" class="text-muted"></span>
                                     </div>
                                     <div id="article-container" class="card-container"></div>

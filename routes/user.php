@@ -28,6 +28,8 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
             Route::post("timeslot/setting", "timeslotSetting")->name("timeslot.setting");
             Route::post("timeslot/setting/save", "saveTimeslotSettings")->name("timeslot.setting.save");
             Route::get("posts/listing", "postsListing")->name("posts.listing");
+            Route::get("posts/status-counts", "postsStatusCounts")->name("posts.status.counts");
+            Route::get("timeslots", "getTimeslots")->name("timeslots");
             Route::prefix("post/")->name("post.")->group(function () {
                 Route::get("delete/{id?}", "postDelete")->name('delete');
                 Route::get("edit/{id?}", "postEdit")->name("edit");

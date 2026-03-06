@@ -237,15 +237,11 @@ class User extends Authenticatable
 
     public function getAccounts()
     {
-        // Pinterest Boards
-        $boards = Board::with("pinterest", "timeslots")->get();
-        // Facebook Pages
-        $pages = Page::with("facebook", "timeslots")->get();
-        // TikTok Accounts
-        $tiktoks = Tiktok::with("timeslots")->get();
-        $accounts = collect();
-        $accounts = $boards->concat($pages)->concat($tiktoks);
-        return $accounts;
+        $pages = Page::with("facebook", "timeslots")->orderBy("name")->get();
+        $boards = Board::with("pinterest", "timeslots")->orderBy("name")->get();
+        $tiktoks = Tiktok::with("timeslots")->orderBy("username")->get();
+
+        return $pages->concat($boards)->concat($tiktoks);
     }
 
     public function getDomains($id, $type)
