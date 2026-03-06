@@ -54,7 +54,7 @@ class PublishFacebookPost implements ShouldQueue
             if ($post_id && !empty($this->comment)) {
                 if ($this->type == "video") {
                     PublishFacebookComment::dispatch($this->id, $post_id, $this->access_token, $this->comment)
-                        ->delay(now()->addMinutes(3));
+                        ->delay(now()->addMinutes(1));
                 } else {
                     $commentResponse = $facebookService->postComment($post_id, $this->access_token, $this->comment);
                     if ($commentResponse["success"] && isset($commentResponse["data"])) {
