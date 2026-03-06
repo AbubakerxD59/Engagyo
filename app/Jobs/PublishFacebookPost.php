@@ -54,14 +54,12 @@ class PublishFacebookPost implements ShouldQueue
             if ($post_id && !empty($this->comment)) {
                 if ($this->type == "video") {
                     sleep(60);
-                    PublishFacebookComment::dispatch($this->id, $post_id, $this->access_token, $this->comment);
-                } else {
-                    $commentResponse = $facebookService->postComment($post_id, $this->access_token, $this->comment);
-                    if ($commentResponse["success"] && isset($commentResponse["data"])) {
-                        $commentId = $commentResponse["data"]->getGraphNode()["id"] ?? null;
-                        if ($commentId) {
-                            Post::withoutGlobalScopes()->where('id', $this->id)->update(['comment_id' => $commentId]);
-                        }
+                }
+                $commentResponse = $facebookService->postComment($post_id, $this->access_token, $this->comment);
+                if ($commentResponse["success"] && isset($commentResponse["data"])) {
+                    $commentId = $commentResponse["data"]->getGraphNode()["id"] ?? null;
+                    if ($commentId) {
+                        Post::withoutGlobalScopes()->where('id', $this->id)->update(['comment_id' => $commentId]);
                     }
                 }
             }
