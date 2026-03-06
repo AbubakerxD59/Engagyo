@@ -1803,28 +1803,29 @@ class  ScheduleController extends Controller
             $posts = $posts->whereIn("type", $request->post_type);
         }
         // Post status tab: queue, sent, failed (takes precedence over status filter)
-        $postStatusTab = $request->input('post_status_tab', 'queue');
-        if (in_array($postStatusTab, ['queue', 'sent', 'failed'], true)) {
-            if ($postStatusTab === 'queue') {
-                $posts = $posts->where('scheduled', 1)->where('status', 0);
-            } elseif ($postStatusTab === 'sent') {
-                $posts = $posts->where('status', 1);
-            } else {
-                // failed
-                $posts = $posts->where('status', -1);
-            }
-        } else {
-            if ($request->has('status')) {
-                $posts = $posts->where("status", $request->status);
-            }
-        }
+        // $postStatusTab = $request->input('post_status_tab', 'queue');
+        // if (in_array($postStatusTab, ['queue', 'sent', 'failed'], true)) {
+        //     if ($postStatusTab === 'queue') {
+        //         $posts = $posts->where('scheduled', 1)->where('status', 0);
+        //     } elseif ($postStatusTab === 'sent') {
+        //         $posts = $posts->where('status', 1);
+        //     } else {
+        //         // failed
+        //         $posts = $posts->where('status', -1);
+        //     }
+        // } else {
+        //     if ($request->has('status')) {
+        //         $posts = $posts->where("status", $request->status);
+        //     }
+        // }
         $totalRecordswithFilter = clone $posts;
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
-        if ($postStatusTab === 'sent') {
-            $posts = $posts->orderBy("published_at", "desc")->get();
-        } else {
-            $posts = $posts->orderBy("publish_date", "asc")->get();
-        }
+        // if ($postStatusTab === 'sent') {
+        //     $posts = $posts->orderBy("published_at", "desc")->get();
+        // } else {
+        //     $posts = $posts->orderBy("publish_date", "asc")->get();
+        // }
+        $posts = $posts->orderBy("publish_date", "asc")->get();
         $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "account_name", "account_profile", "published_at_formatted", "facebook_post_url"]);
         $response = [
             "draw" => intval($data['draw']),
