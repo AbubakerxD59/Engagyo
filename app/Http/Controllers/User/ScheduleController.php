@@ -339,10 +339,7 @@ class  ScheduleController extends Controller
                     }
                     $access_token = $tokenResponse['access_token'];
                     $postData = PostService::postTypeBody($post);
-                    $this->logService->log('facebook', 'publish_post', 'Post published successfully', [
-                        'data' => $postData
-                    ]);
-                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $comment);
+                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $post->comment);
                 }
                 if ($account->type == "pinterest") {
                     $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
@@ -1108,7 +1105,7 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
                         }
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
-                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $comment);
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $post->comment);
                     }
                     if ($account->type == "pinterest") {
                         // store in db
@@ -1796,13 +1793,30 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
         if (!empty($request->post_type)) {
             $posts = $posts->whereIn("type", $request->post_type);
         }
-        if ($request->has('status')) {
-            $posts = $posts->where("status", $request->status);
+        // Post status tab: queue, sent, failed (takes precedence over status filter)
+        $postStatusTab = $request->input('post_status_tab', 'queue');
+        if (in_array($postStatusTab, ['queue', 'sent', 'failed'], true)) {
+            if ($postStatusTab === 'queue') {
+                $posts = $posts->where('scheduled', 1)->where('status', 0);
+            } elseif ($postStatusTab === 'sent') {
+                $posts = $posts->where('status', 1);
+            } else {
+                // failed
+                $posts = $posts->where('status', -1);
+            }
+        } else {
+            if ($request->has('status')) {
+                $posts = $posts->where("status", $request->status);
+            }
         }
         $totalRecordswithFilter = clone $posts;
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
-        $posts = $posts->orderBy("publish_date", "asc")->get();
-        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "account_name", "account_profile", "published_at_formatted"]);
+        if ($postStatusTab === 'sent') {
+            $posts = $posts->orderBy("published_at", "desc")->get();
+        } else {
+            $posts = $posts->orderBy("publish_date", "asc")->get();
+        }
+        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "account_name", "account_profile", "published_at_formatted", "facebook_post_url"]);
         $response = [
             "draw" => intval($data['draw']),
             "iTotalRecords" => Post::count(),
@@ -1810,6 +1824,69 @@ $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_
             "data" => $posts
         ];
         return response()->json($response);
+    }
+
+    /**
+     * Return counts for post status tabs (queue, sent, failed) for selected accounts.
+     */
+    public function postsStatusCounts(Request $request)
+    {
+        $base = Post::query()->isScheduled();
+        if (!empty($request->account_id)) {
+            $base = $base->whereIn('account_id', (array) $request->account_id);
+        }
+        if (!empty($request->type)) {
+            $base = $base->whereIn('social_type', (array) $request->type);
+        }
+
+        $queue = (clone $base)->where('scheduled', 1)->where('status', 0)->count();
+        $sent = (clone $base)->where('status', 1)->count();
+        $failed = (clone $base)->where('status', -1)->count();
+
+        return response()->json([
+            'queue' => $queue,
+            'sent' => $sent,
+            'failed' => $failed,
+        ]);
+    }
+
+    /**
+     * Get timeslots for the selected account (from queue settings). Used by the queue tab schedule section.
+     */
+    public function getTimeslots(Request $request)
+    {
+        $id = $request->input('account_id');
+        $type = $request->input('type');
+
+        if (!$id || !$type) {
+            return response()->json(['timeslots' => []]);
+        }
+
+        $account = null;
+        if ($type === 'facebook') {
+            $account = Page::with('timeslots')->find($id);
+        } elseif ($type === 'pinterest') {
+            $account = Board::with('timeslots')->find($id);
+        } elseif ($type === 'tiktok') {
+            $account = Tiktok::with('timeslots')->find($id);
+        }
+
+        if (!$account || !$account->timeslots) {
+            return response()->json(['timeslots' => []]);
+        }
+
+        $timeslots = $account->timeslots
+            ->where('type', 'schedule')
+            ->sortBy(function ($ts) {
+                return $ts->timeslot;
+            })
+            ->map(function ($ts) {
+                return date('H:i', strtotime($ts->timeslot));
+            })
+            ->values()
+            ->toArray();
+
+        return response()->json(['timeslots' => $timeslots]);
     }
 
     public function postDelete(Request $request)

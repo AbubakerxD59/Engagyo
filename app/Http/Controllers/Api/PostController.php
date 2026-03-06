@@ -150,7 +150,8 @@ class PostController extends BaseController
                 $post->id,
                 $postData,
                 $page->access_token,
-                $type
+                $type,
+                $post->comment
             );
 
             return $this->successResponse([
@@ -546,7 +547,8 @@ class PostController extends BaseController
                 $post->id,
                 $postData,
                 $accessToken,
-                'video'
+                'video',
+                $post->comment
             );
 
             return $this->successResponse([
