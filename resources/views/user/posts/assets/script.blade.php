@@ -37,6 +37,125 @@
             };
         }
 
+        // Update the selected-account header above the content textarea (show first selected account)
+        function updateSelectedAccountHeader() {
+            var $first = $('.account-card.active').first();
+            var $header = $('#selected-account-header');
+            var $tabs = $('#posts-status-tabs');
+            if (!$first.length) {
+                $header.hide();
+                $tabs.hide();
+                return;
+            }
+            var src = $first.find('.account-avatar img').attr('src') || '';
+            var name = $first.find('.account-name').text().trim() || 'Account';
+            var type = ($first.data('type') || 'facebook').toLowerCase();
+            $('#selected-account-header-img').attr('src', src).attr('alt', name);
+            $('#selected-account-header-name').text(name);
+            var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok').addClass(type);
+            $badge.find('i').attr('class',
+                type === 'pinterest' ? 'fab fa-pinterest-p' : type === 'tiktok' ? 'fab fa-tiktok' : 'fab fa-facebook-f');
+            $header.show();
+            $tabs.show();
+            loadPostsStatusCounts();
+            if (currentPostStatusTab === 'queue') {
+                $('#queue-timeslots-section').show();
+                loadQueueTimeslotsSection();
+            } else {
+                $('#queue-timeslots-section').hide();
+            }
+        }
+
+        // Current post status tab for filtering (queue, sent, failed)
+        var currentPostStatusTab = 'queue';
+
+        // Fetch and display post status tab counts
+        function loadPostsStatusCounts() {
+            var selectedAccounts = getSelectedAccounts();
+            if (selectedAccounts.accountIds.length === 0) return;
+            $.ajax({
+                url: "{{ route('panel.schedule.posts.status.counts') }}",
+                type: "GET",
+                data: {
+                    account_id: selectedAccounts.accountIds,
+                    type: selectedAccounts.accountTypes
+                },
+                success: function(data) {
+                    $('#posts-status-tabs [data-count="queue"]').text(data.queue);
+                    $('#posts-status-tabs [data-count="sent"]').text(data.sent);
+                    $('#posts-status-tabs [data-count="failed"]').text(data.failed);
+                }
+            });
+        }
+
+        // Queue tab: load and render timeslots section (selected account's queue settings)
+        function loadQueueTimeslotsSection() {
+            var selectedAccounts = getSelectedAccounts();
+            var $content = $('#queue-timeslots-content');
+            var $empty = $('#queue-timeslots-empty');
+            if (selectedAccounts.accountIds.length === 0) {
+                $content.empty().hide();
+                $empty.show();
+                return;
+            }
+            var accountId = selectedAccounts.accountIds[0];
+            var accountType = selectedAccounts.accountTypes[0];
+            $.ajax({
+                url: "{{ route('panel.schedule.timeslots') }}",
+                type: "GET",
+                data: { account_id: accountId, type: accountType },
+                success: function(data) {
+                    var timeslots = data.timeslots || [];
+                    $empty.hide();
+                    if (timeslots.length === 0) {
+                        $content.empty().hide();
+                        $empty.show();
+                        return;
+                    }
+                    $content.show();
+                    var now = new Date();
+                    var dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+                    var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    var html = '';
+                    for (var d = 0; d < 7; d++) {
+                        var date = new Date(today);
+                        date.setDate(date.getDate() + d);
+                        var dateLabel = '';
+                        if (d === 0) dateLabel = 'Today, ' + monthNames[date.getMonth()] + ' ' + date.getDate();
+                        else if (d === 1) dateLabel = 'Tomorrow, ' + monthNames[date.getMonth()] + ' ' + date.getDate();
+                        else dateLabel = dayLabels[date.getDay()] + ', ' + monthNames[date.getMonth()] + ' ' + date.getDate();
+                        html += '<div class="queue-timeslots-day-group"><h3 class="queue-timeslots-day-header">' + dateLabel + '</h3>';
+                        timeslots.forEach(function(time) {
+                            html += '<div class="queue-timeslots-row"><span class="queue-timeslots-time">' + time + '</span><button type="button" class="queue-timeslots-new-btn">+ New</button></div>';
+                        });
+                        html += '</div>';
+                    }
+                    $content.html(html);
+                },
+                error: function() {
+                    $content.empty().hide();
+                    $empty.show();
+                }
+            });
+        }
+
+        // Posts status tab click
+        $(document).on('click', '.posts-status-tab', function() {
+            var tab = $(this).data('tab');
+            if (!tab) return;
+            currentPostStatusTab = tab;
+            $('#posts-status-tabs .posts-status-tab').removeClass('is-active').attr('aria-selected', 'false');
+            $(this).addClass('is-active').attr('aria-selected', 'true');
+            if (tab === 'queue') {
+                $('#queue-timeslots-section').show();
+                loadQueueTimeslotsSection();
+            } else {
+                $('#queue-timeslots-section').hide();
+            }
+            loadPosts(1);
+        });
+
         // account status
         $(".account-card").on("click", function() {
             var $card = $(this);
@@ -55,19 +174,74 @@
                 success: function(response) {
                     if (response.success) {
                         toastr.success(response.message);
+                        updateSelectedAccountHeader();
                         // Reload posts when account selection changes
                         loadPosts(1);
                     } else {
                         $card.toggleClass("active");
+                        updateSelectedAccountHeader();
                         toastr.error(response.message);
                     }
                 },
                 error: function(response) {
                     $card.toggleClass("active");
+                    updateSelectedAccountHeader();
                     toastr.error("Something went Wrong!");
                 }
             });
         });
+
+        // Accounts sidebar toggle (closed by default: avatars only; open: full cards)
+        $('#accounts-sidebar .accounts-sidebar-toggle').on('click', function() {
+            $('#accounts-sidebar').toggleClass('collapsed');
+            var isCollapsed = $('#accounts-sidebar').hasClass('collapsed');
+            $(this).find('i').attr('class', isCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left');
+            if (isCollapsed) {
+                $('#accountSearchInput').val('');
+                $('#accountSearchClear').hide();
+                $('.account-card').show();
+            }
+        });
+
+        // Search icon click (collapsed state): expand sidebar and focus search
+        $('#sidebarSearchIcon').on('click', function() {
+            var $sidebar = $('#accounts-sidebar');
+            if ($sidebar.hasClass('collapsed')) {
+                $sidebar.removeClass('collapsed');
+                $sidebar.find('.accounts-sidebar-toggle i').attr('class', 'fas fa-chevron-left');
+            }
+            setTimeout(function() { $('#accountSearchInput').focus(); }, 200);
+        });
+
+        // Account search input: filter cards by name
+        $('#accountSearchInput').on('input', function() {
+            var query = $(this).val().toLowerCase().trim();
+            $('#accountSearchClear').toggle(query.length > 0);
+            $('.account-card').each(function() {
+                var name = $(this).find('.account-name').text().toLowerCase();
+                var username = $(this).find('.account-username').text().toLowerCase();
+                $(this).toggle(name.indexOf(query) !== -1 || username.indexOf(query) !== -1);
+            });
+        });
+
+        // Clear search
+        $('#accountSearchClear').on('click', function() {
+            $('#accountSearchInput').val('').trigger('input').focus();
+        });
+
+        // Show selected-account header on load when at least one account is selected
+        updateSelectedAccountHeader();
+
+        // Header List view button (active state only; calendar removed)
+        $(document).on('click', '.selected-account-view-list', function() {
+            $(this).addClass('is-active');
+        });
+
+        // New Post: focus content textarea
+        $(document).on('click', '.selected-account-new-post', function() {
+            $('#content').focus();
+        });
+
         // DropZone
         var dropZone = new Dropzone("#dropZone", {
             autoProcessQueue: false,
@@ -384,16 +558,8 @@
             originalUrlInContent = null;
             $('#content').val('');
             $('#comment').val('');
-            $('#content').attr('rows', 3).css({
-                height: '',
-                minHeight: '',
-                maxHeight: ''
-            });
-            $('#comment').attr('rows', 1).css({
-                height: '',
-                minHeight: '',
-                maxHeight: ''
-            });
+            $('#content').attr('rows', 3).css({ height: '', minHeight: '', maxHeight: '' });
+            $('#comment').attr('rows', 1).css({ height: '', minHeight: '', maxHeight: '' });
             $('#characterCount').text('');
             $('#article-container').empty();
             reloadPosts();
@@ -426,7 +592,7 @@
         // check link for content (only fetch when no file in dropzone; otherwise treat pasted URL as text)
         $('#content').on('input', function() {
             var value = $(this).val();
-            if (!empty(value)) {
+            if(!empty(value)){
                 is_link = 0;
                 if (checkLink(value) && dropZone.getAcceptedFiles().length === 0) {
                     fetchFromLink(value);
@@ -458,10 +624,8 @@
                                 container.html(
                                     '<div id="real-article" class="real-article-wrapper" style="opacity: 1;">' +
                                     '<div class="content-col">' +
-                                    '<p class="text-muted mb-2" style="font-size: 0.9rem;">' +
-                                    (response.message || '') + '</p>' +
-                                    '<p class="link_url">' + (response.link || '') +
-                                    '</p>' +
+                                    '<p class="text-muted mb-2" style="font-size: 0.9rem;">' + (response.message || '') + '</p>' +
+                                    '<p class="link_url">' + (response.link || '') + '</p>' +
                                     '<p class="small text-muted mt-1">You can still schedule, queue or publish this link without a preview image.</p>' +
                                     '</div></div>'
                                 );
@@ -505,47 +669,71 @@
             $('.schedule_btn').attr("disabled", false);
             $('.schedule-modal').modal("hide");
         };
-        // settings modal
-        $('.setting_btn').on("click", function() {
+        // Open queue settings modal (optionally for one account only)
+        function openQueueSettingsModal(filterAccount) {
             var modal = $('.settings-modal');
-            modal.find(".modal-body").empty();
+            if (filterAccount) {
+                modal.data('filterAccount', filterAccount);
+            } else {
+                modal.removeData('filterAccount');
+            }
             modal.modal("toggle");
 
-            // Reset tracking when modal opens
             originalQueueTimeslots = {};
             queueTimeslotsChanged = false;
             $('#saveQueueSettings').hide();
+        }
 
-            // Store original timeslots after modal is shown and select2 is initialized
-            modal.off('shown.bs.modal').on('shown.bs.modal', function() {
-                setTimeout(function() {
-                    $('.timeslot').each(function() {
-                        var $select = $(this);
+        // Apply filter when modal is shown: show only one account's row if filterAccount is set
+        $('.settings-modal').off('shown.bs.modal').on('shown.bs.modal', function() {
+            var modal = $(this);
+            var filter = modal.data('filterAccount');
+            var $rows = modal.find('.queue-settings-item');
+
+            if (filter && filter.id != null && filter.type != null) {
+                $rows.each(function() {
+                    var $row = $(this);
+                    var $select = $row.find('.timeslot');
+                    var match = $select.data('id') == filter.id && $select.data('type') === filter.type;
+                    $row.toggle(match);
+                });
+                modal.find('.queue-settings-modal-title').text(filter.name ? ('Queue settings – ' + filter.name) : 'Queue settings');
+            } else {
+                $rows.show();
+                modal.find('.queue-settings-modal-title').text('Queue settings');
+            }
+
+            setTimeout(function() {
+                $('.timeslot').each(function() {
+                    var $select = $(this);
+                    if ($select.closest('.queue-settings-item').is(':visible')) {
                         var accountId = $select.data("id");
                         var accountType = $select.data("type");
                         var key = accountType + '_' + accountId;
-                        var originalValue = $select.val() ? $select.val().sort()
-                            .join(',') : '';
+                        var originalValue = $select.val() ? $select.val().sort().join(',') : '';
                         originalQueueTimeslots[key] = originalValue;
-                    });
-                }, 300);
-            });
+                    }
+                });
+            }, 300);
+        });
 
-            // $.ajax({
-            //     url: "{{ route('panel.schedule.get.setting') }}",
-            //     type: "GET",
-            //     success: function(response) {
-            //         if (response.success) {
-            //             modal.find(".modal-body").html(response.data);
-            //             // select2
-            //             $('.select2').select2({
-            //                 closeOnSelect: false
-            //             });
-            //         } else {
-            //             toastr.error("Something went Wrong!");
-            //         }
-            //     }
-            // });
+        $('.settings-modal').on('hidden.bs.modal', function() {
+            $(this).removeData('filterAccount');
+        });
+
+        // settings modal – all accounts
+        $('.setting_btn').on("click", function() {
+            openQueueSettingsModal();
+        });
+
+        // Header settings icon – queue settings for the selected account only
+        $(document).on('click', '#selected-account-header-settings', function() {
+            var $first = $('.account-card.active').first();
+            if (!$first.length) return;
+            var id = $first.data('id');
+            var type = $first.data('type');
+            var name = $first.find('.account-name').text().trim() || 'Account';
+            openQueueSettingsModal({ id: id, type: type, name: name });
         });
         // Track original timeslots for queue settings modal
         var originalQueueTimeslots = {};
@@ -569,11 +757,12 @@
             }
         });
 
-        // Check if queue timeslots have changed
+        // Check if queue timeslots have changed (only visible rows when modal is filtered)
         function checkQueueTimeslotChanges() {
             queueTimeslotsChanged = false;
             $('.timeslot').each(function() {
                 var $select = $(this);
+                if (!$select.closest('.queue-settings-item').is(':visible')) return;
                 var accountId = $select.data("id");
                 var accountType = $select.data("type");
                 var key = accountType + '_' + accountId;
@@ -646,6 +835,10 @@
                         // Reload posts if needed
                         if (typeof reloadPosts === 'function') {
                             reloadPosts();
+                        }
+                        // Refresh queue timeslots section when settings are saved
+                        if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
+                            loadQueueTimeslotsSection();
                         }
                     } else {
                         toastr.error(response.message);
@@ -840,11 +1033,13 @@
                     type: selectedAccounts.accountTypes,
                     post_type: $("#filter_post_type").val(),
                     status: getStatusFilterValue(),
+                    post_status_tab: currentPostStatusTab,
                 },
                 success: function(response) {
                     totalPosts = response.iTotalDisplayRecords;
                     renderPosts(response.data);
                     renderPagination();
+                    loadPostsStatusCounts();
                 },
                 error: function() {
                     $('#postsGrid').html(`
@@ -870,11 +1065,115 @@
                 return;
             }
 
+            if (currentPostStatusTab === 'sent') {
+                renderSentPosts(posts);
+                return;
+            }
+
             var html = '';
             posts.forEach(function(post) {
                 html += renderPostCard(post);
             });
             $('#postsGrid').html(html);
+        }
+
+        // Render sent posts grouped by date in timeline layout
+        function renderSentPosts(posts) {
+            var grouped = {};
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+            var yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+            posts.forEach(function(post) {
+                var dateStr = post.published_at_formatted || post.publish_datetime || '';
+                var datePart = dateStr.split(' ')[0] || '';
+                var d = new Date(datePart);
+                d.setHours(0, 0, 0, 0);
+                var label = '';
+                if (d.getTime() === today.getTime()) {
+                    label = 'Today, ' + monthNames[d.getMonth()] + ' ' + d.getDate();
+                } else if (d.getTime() === yesterday.getTime()) {
+                    label = 'Yesterday, ' + monthNames[d.getMonth()] + ' ' + d.getDate();
+                } else {
+                    label = dayNames[d.getDay()] + ', ' + monthNames[d.getMonth()] + ' ' + d.getDate();
+                }
+                if (!grouped[label]) grouped[label] = [];
+                grouped[label].push(post);
+            });
+
+            var html = '<div class="sent-posts-timeline">';
+            Object.keys(grouped).forEach(function(dateLabel) {
+                html += '<div class="sent-day-group">';
+                html += '<h3 class="sent-day-header">' + dateLabel + '</h3>';
+                grouped[dateLabel].forEach(function(post) {
+                    html += renderSentPostCard(post);
+                });
+                html += '</div>';
+            });
+            html += '</div>';
+            $('#postsGrid').html(html);
+        }
+
+        // Render a single sent post card (timeline row: time + source on left, card on right)
+        function renderSentPostCard(post) {
+            var dateStr = post.published_at_formatted || post.publish_datetime || '';
+            var timePart = dateStr.split(' ').slice(1).join(' ') || '';
+            if (timePart) {
+                var timeParts = timePart.split(':');
+                if (timeParts.length >= 2) timePart = timeParts[0] + ':' + timeParts[1];
+            }
+
+            var sourceLabel = '';
+            if (post.source) {
+                var sName = post.source === 'rss' ? 'RSS' : (post.source === 'api' ? 'API' : 'Custom');
+                sourceLabel = '<span class="sent-post-source"><i class="fas fa-layer-group"></i> ' + sName + '</span>';
+            }
+
+            var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' :
+                (post.social_type === 'pinterest' ? 'fab fa-pinterest-p' : 'fab fa-tiktok');
+            var platformClass = post.social_type;
+            var platformName = post.social_type === 'facebook' ? 'Facebook' :
+                (post.social_type === 'pinterest' ? 'Pinterest' : 'TikTok');
+
+            var viewPostBtn = '';
+            if (post.facebook_post_url) {
+                viewPostBtn = '<a href="' + post.facebook_post_url + '" target="_blank" class="sent-post-view-btn"><i class="fas fa-external-link-alt"></i> View Post</a>';
+            } else if (post.social_type === 'pinterest' && post.post_id) {
+                viewPostBtn = '<a href="https://www.pinterest.com/pin/' + post.post_id + '/" target="_blank" class="sent-post-view-btn"><i class="fas fa-external-link-alt"></i> View Post</a>';
+            }
+
+            return `
+                <div class="sent-post-row">
+                    <div class="sent-post-time-col">
+                        <span class="sent-post-time">${timePart}</span>
+                        ${sourceLabel}
+                    </div>
+                    <div class="sent-post-card-col">
+                        <div class="sent-post-card">
+                            <div class="sent-post-preview">
+                                ${post.post_details}
+                            </div>
+                            <div class="sent-post-footer">
+                                <div class="sent-post-published-via">
+                                    Published via <span class="platform-icon ${platformClass}"><i class="${platformIcon}"></i></span> ${platformName}
+                                </div>
+                                <div class="sent-post-footer-actions">
+                                    ${viewPostBtn}
+                                    <div class="sent-post-menu-wrap">
+                                        <button type="button" class="sent-post-menu-btn" data-id="${post.id}"><i class="fas fa-ellipsis-v"></i></button>
+                                        <div class="sent-post-menu-dropdown">
+                                            <button class="sent-post-menu-item delete_btn" data-id="${post.id}"><i class="fas fa-trash"></i> Delete</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            `;
         }
 
         // Render single post card
@@ -1034,6 +1333,18 @@
 
             $('.pagination').html(paginationHtml);
         }
+
+        // Sent post 3-dot menu toggle
+        $(document).on('click', '.sent-post-menu-btn', function(e) {
+            e.stopPropagation();
+            var $wrap = $(this).closest('.sent-post-menu-wrap');
+            var wasOpen = $wrap.hasClass('open');
+            $('.sent-post-menu-wrap.open').removeClass('open');
+            if (!wasOpen) $wrap.addClass('open');
+        });
+        $(document).on('click', function() {
+            $('.sent-post-menu-wrap.open').removeClass('open');
+        });
 
         // Pagination click
         $(document).on('click', '.pagination .page-link', function(e) {

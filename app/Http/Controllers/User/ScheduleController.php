@@ -161,6 +161,15 @@ class  ScheduleController extends Controller
         $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
         return view("user.schedule.index", compact("accounts", "userTimezoneName"));
     }
+
+    public function newDesign()
+    {
+        $user = User::with("boards.pinterest", "pages.facebook", "tiktok", "timezone")->find(Auth::guard('user')->id());
+        $accounts = $user->getAccounts();
+        $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
+        return view("user.posts.index", compact("accounts", "userTimezoneName"));
+    }
+
     /**
      * Summary of accountStatus
      * @param Request $request
