@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\Post;
 use Illuminate\Bus\Queueable;
 use App\Services\FacebookService;
 use Illuminate\Support\Facades\Log;
@@ -50,8 +51,14 @@ class PublishFacebookPost implements ShouldQueue
         }
         if ($publish_response["success"]) {
             $post_id = $publish_response["data"]->getGraphNode() ? $publish_response["data"]->getGraphNode()["id"] : null;
-            if ($post_id) {
-                $facebookService->postComment($post_id, $this->access_token, $this->comment);
+            if ($post_id && !empty($this->comment)) {
+                $commentResponse = $facebookService->postComment($post_id, $this->access_token, $this->comment);
+                if ($commentResponse["success"] && isset($commentResponse["data"])) {
+                    $commentId = $commentResponse["data"]->getGraphNode()["id"] ?? null;
+                    if ($commentId) {
+                        Post::withoutGlobalScopes()->where('id', $this->id)->update(['comment_id' => $commentId]);
+                    }
+                }
             }
         }
     }

@@ -17,6 +17,7 @@ class Post extends Model
         "user_id",
         "api_key_id",
         "post_id",
+        "comment_id",
         "account_id",
         "social_type",
         "type",
