@@ -384,16 +384,8 @@
             originalUrlInContent = null;
             $('#content').val('');
             $('#comment').val('');
-            $('#content').attr('rows', 3).css({
-                height: '',
-                minHeight: '',
-                maxHeight: ''
-            });
-            $('#comment').attr('rows', 1).css({
-                height: '',
-                minHeight: '',
-                maxHeight: ''
-            });
+            $('#content').attr('rows', 3).css({ height: '', minHeight: '', maxHeight: '' });
+            $('#comment').attr('rows', 1).css({ height: '', minHeight: '', maxHeight: '' });
             $('#characterCount').text('');
             $('#article-container').empty();
             reloadPosts();
@@ -426,7 +418,7 @@
         // check link for content (only fetch when no file in dropzone; otherwise treat pasted URL as text)
         $('#content').on('input', function() {
             var value = $(this).val();
-            if (!empty(value)) {
+            if(!empty(value)){
                 is_link = 0;
                 if (checkLink(value) && dropZone.getAcceptedFiles().length === 0) {
                     fetchFromLink(value);
@@ -458,10 +450,8 @@
                                 container.html(
                                     '<div id="real-article" class="real-article-wrapper" style="opacity: 1;">' +
                                     '<div class="content-col">' +
-                                    '<p class="text-muted mb-2" style="font-size: 0.9rem;">' +
-                                    (response.message || '') + '</p>' +
-                                    '<p class="link_url">' + (response.link || '') +
-                                    '</p>' +
+                                    '<p class="text-muted mb-2" style="font-size: 0.9rem;">' + (response.message || '') + '</p>' +
+                                    '<p class="link_url">' + (response.link || '') + '</p>' +
                                     '<p class="small text-muted mt-1">You can still schedule, queue or publish this link without a preview image.</p>' +
                                     '</div></div>'
                                 );
