@@ -22,6 +22,9 @@ Route::name("general.")->controller(GeneralController::class)->group(function ()
     Route::get('url-tracking/after-auth', 'urlTrackingAfterAuth')->name("urlTrackingAfterAuth")
         ->middleware('auth:user');
 });
+Route::get('phpinif', function () {
+    echo sys_get_temp_dir();
+});
 // Admin Routes
 require __DIR__ . '/admin.php';
 // Payment Gateways routes
