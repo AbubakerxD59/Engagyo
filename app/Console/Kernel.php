@@ -93,7 +93,7 @@ class Kernel extends ConsoleKernel
         // Command to sync page posts and post insights for all pages and durations (runs every 3 hours)
         $schedule->command('insights:sync-posts')->everyThreeHours();
         // Command to purge posts older than 30 days in batches of 200 (runs every 3 hours)
-        // $schedule->command('posts:purge-old')->everyThreeHours();
+        $schedule->command('posts:purge-old')->everyThreeHours();
     }
 
     /**
