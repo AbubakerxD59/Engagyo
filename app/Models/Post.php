@@ -833,7 +833,7 @@ class Post extends Model
     {
         if ($this->published_at) {
             $user = $this->relationLoaded('user') ? $this->user : $this->user()->with('timezone')->first();
-            $user_tz = $user->timezone->name;
+            $user_tz = $user->timezone ? $user->timezone->name : "UTC";
             $published_at = Carbon::parse($this->published_at, 'UTC')->setTimezone($user_tz)->format('Y-m-d h:i A');
             return $published_at;
             // return date("Y-m-d h:i A", strtotime($this->published_at));
