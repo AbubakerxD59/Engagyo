@@ -22,6 +22,7 @@ use App\Console\Commands\CleanupPinterestTestPosts;
 use App\Console\Commands\RunTikTokTests;
 use App\Console\Commands\CleanupTikTokTestPosts;
 use App\Console\Commands\PurgeOldPosts;
+use App\Console\Commands\PublishPendingCommentsCron;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -53,6 +54,7 @@ class Kernel extends ConsoleKernel
         SyncPageInsights::class, //insights:sync-page
         SyncPagePosts::class, //insights:sync-posts
         PurgeOldPosts::class, //posts:purge-old
+        PublishPendingCommentsCron::class, //facebook:publish-pending-comments
     ];
     /**
      * Define the application's command schedule.
@@ -94,6 +96,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('insights:sync-posts')->everyThreeHours();
         // Command to purge posts older than 30 days in batches of 200 (runs every 3 hours)
         $schedule->command('posts:purge-old')->everyThreeHours();
+        // Command to publish pending comments on recently published Facebook posts (videos take time to appear)
+        $schedule->command('facebook:publish-pending-comments')->everyFiveMinutes();
     }
 
     /**

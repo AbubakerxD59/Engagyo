@@ -49,12 +49,9 @@ class PublishFacebookPost implements ShouldQueue
         } elseif ($this->type == "video") {
             $publish_response = $facebookService->video($this->id, $this->access_token, $this->data);
         }
-        if ($publish_response["success"]) {
+        if ($publish_response["success"] && $this->type != "video") {
             $post_id = $publish_response["data"]->getGraphNode() ? $publish_response["data"]->getGraphNode()["id"] : null;
             if ($post_id && !empty($this->comment)) {
-                if ($this->type == "video") {
-                    sleep(60);
-                }
                 $commentResponse = $facebookService->postComment($post_id, $this->access_token, $this->comment);
                 if ($commentResponse["success"] && isset($commentResponse["data"])) {
                     $commentId = $commentResponse["data"]->getGraphNode()["id"] ?? null;
