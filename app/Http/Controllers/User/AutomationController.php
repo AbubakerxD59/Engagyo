@@ -233,7 +233,9 @@ class AutomationController extends Controller
                 if (isset($parsedUrl['host'])) {
                     $urlDomain = $parsedUrl["host"];
                     if (isset($parsedUrl["path"])) {
-                        $category = str_contains($parsedUrl["path"], "rss") || str_contains($parsedUrl["path"], "feed") ? null : $parsedUrl["path"];
+                        // Remove "/feed" from the path if it exists (case-insensitive at the end of path)
+                        $parsedUrl["path"] = preg_replace('#/feed/?$#i', '', $parsedUrl["path"] ?? '');
+                        $category = $parsedUrl["path"];
                     } else {
                         $category = null;
                     }
