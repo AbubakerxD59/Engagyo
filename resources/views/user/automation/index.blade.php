@@ -26,7 +26,7 @@
                                 @endphp
                                 <div class="col-md-4 form-group mb-0">
                                     <label for="fetch_account">Accounts</label>
-                                    <select name="account" id="account" class="form-control adv_filter">
+                                    <select name="account" id="account" class="form-control select2 adv_filter">
                                         <option value="">All Accounts</option>
                                         @foreach ($accounts as $key => $account)
                                             <option value="{{ $account->id }}" data-type="{{ $account->type }}"
