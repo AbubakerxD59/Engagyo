@@ -1144,4 +1144,335 @@
             justify-content: space-between;
         }
     }
+
+    /* --- Queue settings modal (redesign) --- */
+    .queue-settings-modal-redesign .queue-settings-modal-content {
+        border: none;
+        border-radius: 16px;
+        box-shadow: 0 25px 60px rgba(0, 0, 0, 0.12), 0 0 0 1px rgba(0, 0, 0, 0.04);
+        overflow: hidden;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-modal-header {
+        padding: 20px 28px;
+        border-bottom: 1px solid #f0f0f0;
+        background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-header-left {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-header-icon {
+        width: 42px;
+        height: 42px;
+        border-radius: 12px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        color: #fff;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 16px;
+        flex-shrink: 0;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-modal-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #111827;
+        margin: 0;
+        letter-spacing: -0.01em;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-modal-subtitle {
+        font-size: 0.8125rem;
+        color: #9ca3af;
+        margin: 2px 0 0 0;
+        font-weight: 400;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-modal-close {
+        width: 34px;
+        height: 34px;
+        padding: 0;
+        border: none;
+        border-radius: 10px;
+        background: #f3f4f6;
+        color: #6b7280;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-modal-close:hover {
+        background: #e5e7eb;
+        color: #111827;
+        transform: rotate(90deg);
+    }
+
+    .queue-settings-modal-redesign .queue-settings-modal-body {
+        padding: 24px 28px;
+        background: #f9fafb;
+        max-height: 60vh;
+        overflow-y: auto;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-modal-body::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-modal-body::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-modal-body::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 10px;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-modal-body::-webkit-scrollbar-thumb:hover {
+        background: #9ca3af;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-info-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        background: linear-gradient(135deg, #eff6ff, #f0f5ff);
+        border: 1px solid #dbeafe;
+        border-radius: 10px;
+        margin-bottom: 20px;
+        font-size: 0.8125rem;
+        color: #3b82f6;
+        line-height: 1.5;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-info-bar i {
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-item {
+        background: #fff;
+        border-radius: 14px;
+        padding: 18px 22px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 20px;
+        flex-wrap: wrap;
+        border: 1px solid #e5e7eb;
+        transition: all 0.25s ease;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-item:hover {
+        border-color: #c7d2fe;
+        box-shadow: 0 4px 16px rgba(99, 102, 241, 0.08);
+    }
+
+    .queue-settings-modal-redesign .queue-settings-account {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        min-width: 0;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-avatar-wrap {
+        position: relative;
+        flex-shrink: 0;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-avatar {
+        width: 46px;
+        height: 46px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 2.5px solid #f3f4f6;
+        display: block;
+        transition: border-color 0.2s ease;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-item:hover .queue-settings-avatar {
+        border-color: #e0e7ff;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-platform-badge {
+        position: absolute;
+        bottom: -2px;
+        right: -2px;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 9px;
+        color: #fff;
+        border: 2.5px solid #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12);
+    }
+
+    .queue-settings-modal-redesign .queue-settings-badge-facebook {
+        background: #1877F2;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-badge-pinterest {
+        background: #E60023;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-badge-tiktok {
+        background: #010101;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-account-info {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-account-name {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: #111827;
+        line-height: 1.3;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-account-type {
+        font-size: 0.75rem;
+        color: #9ca3af;
+        font-weight: 500;
+        margin-top: 1px;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-hours {
+        flex: 1;
+        min-width: 200px;
+        max-width: 340px;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-hours-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        margin-bottom: 8px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-hours-label i {
+        font-size: 11px;
+        color: #9ca3af;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-select {
+        border-radius: 10px;
+        border: 1.5px solid #e5e7eb;
+        font-size: 0.875rem;
+        transition: all 0.2s ease;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-select:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+    }
+
+    .queue-settings-modal-redesign .queue-settings-modal-footer {
+        padding: 18px 28px;
+        border-top: 1px solid #f0f0f0;
+        background: #fff;
+        gap: 10px;
+        flex-wrap: wrap;
+        display: flex;
+        justify-content: flex-end;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-btn-cancel {
+        border-radius: 10px;
+        font-weight: 500;
+        font-size: 0.875rem;
+        padding: 9px 22px;
+        color: #6b7280;
+        background: #f3f4f6;
+        border: 1.5px solid #e5e7eb;
+        transition: all 0.2s ease;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-btn-cancel:hover {
+        background: #e5e7eb;
+        color: #374151;
+        border-color: #d1d5db;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-btn-save {
+        border-radius: 10px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        padding: 9px 24px;
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+        border: none;
+        color: #fff;
+        box-shadow: 0 2px 8px rgba(99, 102, 241, 0.3);
+        transition: all 0.25s ease;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-btn-save:hover {
+        background: linear-gradient(135deg, #4f46e5, #7c3aed);
+        box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+        transform: translateY(-1px);
+    }
+
+    .queue-settings-modal-redesign .queue-settings-btn-save:active {
+        transform: translateY(0);
+    }
+
+    @media (max-width: 576px) {
+        .queue-settings-modal-redesign .queue-settings-item {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 14px;
+        }
+
+        .queue-settings-modal-redesign .queue-settings-hours {
+            max-width: 100%;
+            width: 100%;
+        }
+
+        .queue-settings-modal-redesign .queue-settings-modal-header {
+            padding: 16px 20px;
+        }
+
+        .queue-settings-modal-redesign .queue-settings-modal-body {
+            padding: 20px;
+        }
+
+        .queue-settings-modal-redesign .queue-settings-modal-footer {
+            padding: 14px 20px;
+        }
+
+        .queue-settings-modal-redesign .queue-settings-account-name {
+            max-width: 140px;
+        }
+    }
 </style>

@@ -21,6 +21,7 @@ use App\Console\Commands\RunPinterestTests;
 use App\Console\Commands\CleanupPinterestTestPosts;
 use App\Console\Commands\RunTikTokTests;
 use App\Console\Commands\CleanupTikTokTestPosts;
+use App\Console\Commands\PurgeOldPosts;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -51,6 +52,7 @@ class Kernel extends ConsoleKernel
         ShuffleRssPosts::class, //app:shuffle-rss-posts
         SyncPageInsights::class, //insights:sync-page
         SyncPagePosts::class, //insights:sync-posts
+        PurgeOldPosts::class, //posts:purge-old
     ];
     /**
      * Define the application's command schedule.
@@ -90,6 +92,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('insights:sync-page')->dailyAt('12:00');
         // Command to sync page posts and post insights for all pages and durations (runs every 3 hours)
         $schedule->command('insights:sync-posts')->everyThreeHours();
+        // Command to purge posts older than 30 days in batches of 200 (runs every 3 hours)
+        $schedule->command('posts:purge-old')->everyThreeHours();
     }
 
     /**
