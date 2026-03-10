@@ -1160,6 +1160,23 @@
             var shares = post.shares ?? 0;
             var clicks = ins.post_clicks ?? '-';
 
+            var commentsList = post.comments_list || [];
+            var commentsHtml = '';
+            if (commentsList.length > 0) {
+                commentsHtml = '<div class="sent-card-comments"><div class="sent-card-comments-title"><i class="far fa-comment"></i> Comments (' + commentsList.length + ')</div><div class="sent-card-comments-list">';
+                commentsList.forEach(function(c) {
+                    var cMsg = (c.message || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    var cName = (c.from_name || 'Unknown').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                    var cTime = '';
+                    var cDt = parseCreatedTime(c.created_time);
+                    if (cDt && !isNaN(cDt.getTime())) {
+                        cTime = cDt.toLocaleDateString() + ' ' + cDt.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                    }
+                    commentsHtml += '<div class="sent-card-comment"><div class="sent-card-comment-header"><span class="sent-card-comment-author">' + cName + '</span>' + (cTime ? '<span class="sent-card-comment-time">' + cTime + '</span>' : '') + '</div><div class="sent-card-comment-message">' + cMsg + '</div></div>';
+                });
+                commentsHtml += '</div></div>';
+            }
+
             return `
                 <div class="sent-post-row">
                     <div class="sent-post-time-col">
@@ -1188,6 +1205,7 @@
                                 <div class="sent-card-stat"><i class="fas fa-share-alt"></i> <span class="stat-label">Shares</span> <strong>${shares}</strong></div>
                                 <div class="sent-card-stat"><i class="fas fa-mouse-pointer"></i> <span class="stat-label">Clicks</span> <strong>${clicks}</strong></div>
                             </div>
+                            ${commentsHtml}
                             <div class="sent-card-footer">
                                 <div class="sent-card-published-via">
                                     Published via <span class="sent-card-platform-icon facebook"><i class="fab fa-facebook-f"></i></span> Facebook

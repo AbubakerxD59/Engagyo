@@ -868,7 +868,7 @@ class FacebookService
         $sinceIso = $since . 'T00:00:00+0000';
         $untilIso = $until . 'T23:59:59+0000';
 
-        $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story,comments.limit(0).summary(true)';
+        $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story,comments.limit(10).summary(true){message,from{name},created_time}';
         $endpoint = '/' . $pageId . '/feed?fields=' . urlencode($fields)
             . '&since=' . urlencode($sinceIso)
             . '&until=' . urlencode($untilIso)
@@ -886,12 +886,40 @@ class FacebookService
 
                 $commentsRaw = $node->getField('comments');
                 $comments = 0;
+                $commentsList = [];
                 if ($commentsRaw) {
                     if (is_object($commentsRaw) && method_exists($commentsRaw, 'getField')) {
                         $summary = $commentsRaw->getField('summary');
                         $comments = is_object($summary) ? (int) ($summary->getField('total_count') ?? 0) : (is_array($summary) ? (int) ($summary['total_count'] ?? 0) : 0);
-                    } elseif (is_array($commentsRaw) && isset($commentsRaw['summary']['total_count'])) {
-                        $comments = (int) $commentsRaw['summary']['total_count'];
+                        if (method_exists($commentsRaw, 'getIterator') || $commentsRaw instanceof \Traversable) {
+                            foreach ($commentsRaw as $commentNode) {
+                                $fromName = '';
+                                if (method_exists($commentNode, 'getField')) {
+                                    $fromRaw = $commentNode->getField('from');
+                                    if ($fromRaw && is_object($fromRaw) && method_exists($fromRaw, 'getField')) {
+                                        $fromName = (string) ($fromRaw->getField('name') ?? '');
+                                    } elseif (is_array($fromRaw) && isset($fromRaw['name'])) {
+                                        $fromName = (string) $fromRaw['name'];
+                                    }
+                                    $ct = $commentNode->getField('created_time');
+                                    $commentsList[] = [
+                                        'message' => (string) ($commentNode->getField('message') ?? ''),
+                                        'from_name' => $fromName,
+                                        'created_time' => $ct instanceof \DateTimeInterface ? $ct->format('Y-m-d H:i:s') : $ct,
+                                    ];
+                                }
+                            }
+                        }
+                    } elseif (is_array($commentsRaw)) {
+                        $comments = (int) ($commentsRaw['summary']['total_count'] ?? 0);
+                        $data = $commentsRaw['data'] ?? [];
+                        foreach ($data as $c) {
+                            $commentsList[] = [
+                                'message' => $c['message'] ?? '',
+                                'from_name' => $c['from']['name'] ?? '',
+                                'created_time' => $c['created_time'] ?? null,
+                            ];
+                        }
                     }
                 }
 
@@ -905,6 +933,7 @@ class FacebookService
                     'permalink_url' => $node->getField('permalink_url'),
                     'shares' => $shares,
                     'comments' => $comments,
+                    'comments_list' => $commentsList,
                     'status_type' => $node->getField('status_type'),
                     'story' => $node->getField('story'),
                     'type' => $node->getField('type'),
