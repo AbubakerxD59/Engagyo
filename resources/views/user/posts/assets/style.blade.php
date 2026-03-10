@@ -559,12 +559,14 @@
          padding: 8px;
          flex-shrink: 0;
      }
+
      .all-channels-icon span {
          width: 100%;
          height: 100%;
          border-radius: 50%;
          background: #9ca3af;
      }
+
      .accounts-sidebar.collapsed .all-channels-icon {
          width: 36px;
          height: 36px;
@@ -584,6 +586,7 @@
          padding: 11px;
          flex-shrink: 0;
      }
+
      .selected-account-allch-icon span {
          width: 100%;
          height: 100%;
@@ -857,7 +860,7 @@
          flex: 1;
          min-height: 0;
          overflow-y: auto;
-         padding: 20px 25%;
+         padding: 20px 20%;
      }
 
      .queue-timeslots-section::-webkit-scrollbar {
@@ -877,7 +880,7 @@
          flex: 1;
          min-height: 0;
          overflow-y: auto;
-         padding: 20px 25%;
+         padding: 20px 20%;
      }
 
      .posts-grid-section::-webkit-scrollbar {
@@ -906,8 +909,9 @@
      }
 
      .queue-timeslots-day-header {
-         font-size: 15px;
-         font-weight: 600;
+         font-size: 14px;
+         font-weight: 500;
+         text-transform: capitalize;
          color: #1a1a1a;
          margin: 0 0 4px 0;
      }
@@ -926,7 +930,7 @@
      }
 
      .queue-timeslots-time {
-         font-size: 14px;
+         font-size: 13px;
          color: #495057;
          width: 10%;
          font-variant-numeric: tabular-nums;
@@ -977,11 +981,13 @@
          text-align: center;
          color: #9ca3af;
      }
+
      .empty-state-box i {
          font-size: 40px;
          margin-bottom: 12px;
          color: #d1d5db;
      }
+
      .empty-state-box p {
          font-size: 15px;
          font-weight: 500;
@@ -1003,8 +1009,9 @@
      }
 
      .sent-day-header {
-         font-size: 15px;
-         font-weight: 700;
+         font-size: 14px;
+         font-weight: 500;
+         text-transform: capitalize;
          color: #111827;
          margin: 0 0 4px 0;
          padding: 0;
@@ -1037,7 +1044,7 @@
      }
 
      .sent-post-time {
-         font-size: 15px;
+         font-size: 13px;
          font-weight: 700;
          color: #111827;
          font-variant-numeric: tabular-nums;
