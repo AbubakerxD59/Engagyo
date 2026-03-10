@@ -17,11 +17,10 @@
         var currentTikTokScheduleTime = null;
         // character count
         getCharacterCount($('.check_count'));
-        // Get selected accounts from account cards
         function getSelectedAccounts() {
             var accountIds = [];
             var accountTypes = [];
-            $('.account-card.active').each(function() {
+            $('.account-card.active:not(.all-channels-card)').each(function() {
                 var accountId = $(this).data("id");
                 var accountType = $(this).data("type");
                 if (accountId && accountType) {
@@ -37,39 +36,107 @@
             };
         }
 
-        // Update the selected-account header above the content textarea (show first selected account)
+        function isAllChannelsActive() {
+            return $('.all-channels-card').hasClass('active');
+        }
+
+        function updateUrlFromAccountSelection() {
+            var url = new URL(window.location.href);
+            if (isAllChannelsActive()) {
+                url.searchParams.delete('account_id');
+            } else {
+                var selected = getSelectedAccounts();
+                if (selected.accountIds.length === 1) {
+                    url.searchParams.set('account_id', selected.accountIds[0]);
+                } else {
+                    url.searchParams.delete('account_id');
+                }
+            }
+            var newUrl = url.pathname + (url.search ? url.search : '');
+            if (window.location.pathname + window.location.search !== newUrl) {
+                window.history.replaceState({}, '', newUrl);
+            }
+        }
+
+        function applyAccountSelectionFromUrl() {
+            var params = new URLSearchParams(window.location.search);
+            var accountId = params.get('account_id');
+            if (!accountId) return;
+            var $card = $('.account-card:not(.all-channels-card)[data-id="' + accountId + '"]');
+            if ($card.length === 0) return;
+            $('.account-card').removeClass('active');
+            $card.addClass('active');
+        }
+
         function updateSelectedAccountHeader() {
-            var $first = $('.account-card.active').first();
+            var $allCh = $('.all-channels-card');
+            var $realActive = $('.account-card.active:not(.all-channels-card)');
             var $header = $('#selected-account-header');
             var $tabs = $('#posts-status-tabs');
-            if (!$first.length) {
+            var $avatarWrap = $('#selected-account-avatar-wrap');
+            var $allchIcon = $('#selected-account-allch-icon');
+            var $settingsBtn = $('#selected-account-header-settings');
+
+            if ($allCh.hasClass('active')) {
+                $avatarWrap.hide();
+                $allchIcon.show();
+                $('#selected-account-header-name').text('All Channels');
+                $settingsBtn.hide();
+            } else if ($realActive.length === 1) {
+                var $first = $realActive.first();
+                var src = $first.find('.account-avatar img').attr('src') || '';
+                var name = $first.find('.account-name').text().trim() || 'Account';
+                var type = ($first.data('type') || 'facebook').toLowerCase();
+                $allchIcon.hide();
+                $avatarWrap.show();
+                $('#selected-account-header-img').attr('src', src).attr('alt', name);
+                $('#selected-account-header-name').text(name);
+                var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok').addClass(type);
+                $badge.find('i').attr('class', 'fab fa-facebook-f');
+                $settingsBtn.show();
+            } else if ($realActive.length > 1) {
+                var $first = $realActive.first();
+                var src = $first.find('.account-avatar img').attr('src') || '';
+                $allchIcon.hide();
+                $avatarWrap.show();
+                $('#selected-account-header-img').attr('src', src);
+                $('#selected-account-header-name').text($realActive.length + ' Accounts');
+                $settingsBtn.hide();
+            } else {
                 $header.hide();
                 $tabs.hide();
                 return;
             }
-            var src = $first.find('.account-avatar img').attr('src') || '';
-            var name = $first.find('.account-name').text().trim() || 'Account';
-            var type = ($first.data('type') || 'facebook').toLowerCase();
-            $('#selected-account-header-img').attr('src', src).attr('alt', name);
-            $('#selected-account-header-name').text(name);
-            var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok').addClass(type);
-            $badge.find('i').attr('class',
-                type === 'pinterest' ? 'fab fa-pinterest-p' : type === 'tiktok' ? 'fab fa-tiktok' : 'fab fa-facebook-f');
+
             $header.show();
             $tabs.show();
+            cachedSentPagePosts = null;
             loadPostsStatusCounts();
             if (currentPostStatusTab === 'queue') {
                 $('#queue-timeslots-section').show();
+                $('#postsGrid').hide();
                 loadQueueTimeslotsSection();
+            } else if (currentPostStatusTab === 'sent') {
+                $('#queue-timeslots-section').hide();
+                $('#postsGrid').show();
+                showSentPosts();
             } else {
                 $('#queue-timeslots-section').hide();
+                $('#postsGrid').show();
+                loadPosts(1);
             }
         }
 
-        // Current post status tab for filtering (queue, sent, failed)
         var currentPostStatusTab = 'queue';
+        var cachedSentPagePosts = null;
 
-        // Fetch and display post status tab counts
+        function parseCreatedTime(ct) {
+            if (!ct) return null;
+            if (typeof ct === 'string') return new Date(ct);
+            if (typeof ct === 'object' && ct.date) return new Date(ct.date.replace(' ', 'T') + 'Z');
+            return null;
+        }
+
         function loadPostsStatusCounts() {
             var selectedAccounts = getSelectedAccounts();
             if (selectedAccounts.accountIds.length === 0) return;
@@ -82,19 +149,139 @@
                 },
                 success: function(data) {
                     $('#posts-status-tabs [data-count="queue"]').text(data.queue);
-                    $('#posts-status-tabs [data-count="sent"]').text(data.sent);
                     $('#posts-status-tabs [data-count="failed"]').text(data.failed);
+                }
+            });
+            loadSentPagePostsCached(selectedAccounts);
+        }
+
+        function loadSentPagePostsCached(selectedAccounts) {
+            cachedSentPagePosts = null;
+            $.ajax({
+                url: "{{ route('panel.schedule.posts.sent.page') }}",
+                type: "GET",
+                data: { account_id: selectedAccounts.accountIds },
+                success: function(response) {
+                    if (response.success && response.posts) {
+                        cachedSentPagePosts = response.posts;
+                        $('#posts-status-tabs [data-count="sent"]').text(response.posts.length);
+                    } else {
+                        cachedSentPagePosts = [];
+                        $('#posts-status-tabs [data-count="sent"]').text(0);
+                    }
+                    if (currentPostStatusTab === 'sent') {
+                        showSentPosts();
+                    }
+                },
+                error: function() {
+                    cachedSentPagePosts = [];
+                    $('#posts-status-tabs [data-count="sent"]').text(0);
+                    if (currentPostStatusTab === 'sent') {
+                        showSentPosts();
+                    }
                 }
             });
         }
 
+        var sentPostsGroupedByDay = [];
+        var sentDayOffset = 0;
+        var sentLoadingMore = false;
+        var sentDaysBatchSize = 7;
+
+        function showSentPosts() {
+            if (cachedSentPagePosts === null) {
+                $('#postsGrid').html('<div class="loading-state text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="mt-2 text-muted">Loading sent posts...</p></div>');
+                return;
+            }
+            if (cachedSentPagePosts.length === 0) {
+                sentPostsGroupedByDay = [];
+                $('#postsGrid').html('<div class="empty-state-box"><i class="far fa-folder-open"></i><p>No sent posts found.</p></div>');
+                return;
+            }
+            sentPostsGroupedByDay = buildSentPostsGroupedByDay(cachedSentPagePosts);
+            sentDayOffset = 0;
+            if (sentPostsGroupedByDay.length === 0) {
+                $('#postsGrid').html('<div class="empty-state-box"><i class="far fa-folder-open"></i><p>No sent posts found.</p></div>');
+                return;
+            }
+            renderSentPagePosts(0, Math.min(sentDaysBatchSize, sentPostsGroupedByDay.length));
+        }
+
+        function buildSentPostsGroupedByDay(posts) {
+            var today = new Date();
+            today.setHours(0, 0, 0, 0);
+            var yesterday = new Date(today);
+            yesterday.setDate(yesterday.getDate() - 1);
+            var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+            var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            var grouped = {};
+            posts.forEach(function(post) {
+                var d = parseCreatedTime(post.created_time);
+                if (!d || isNaN(d.getTime())) return;
+                var dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                var dayPart = '';
+                var dateSuffix = monthNames[dDay.getMonth()] + ' ' + dDay.getDate();
+                if (dDay.getTime() === today.getTime()) dayPart = 'Today';
+                else if (dDay.getTime() === yesterday.getTime()) dayPart = 'Yesterday';
+                else dayPart = dayNames[dDay.getDay()];
+                var label = dayPart + '|' + dateSuffix;
+                if (!grouped[label]) grouped[label] = { dateKey: dDay.getTime(), posts: [] };
+                grouped[label].posts.push(post);
+            });
+            return Object.keys(grouped)
+                .map(function(k) { return { label: k, dateKey: grouped[k].dateKey, posts: grouped[k].posts }; })
+                .sort(function(a, b) { return b.dateKey - a.dateKey; });
+        }
+
+        function loadMoreSentDays() {
+            if (sentLoadingMore || sentDayOffset >= sentPostsGroupedByDay.length) return;
+            sentLoadingMore = true;
+            var start = sentDayOffset;
+            var count = Math.min(sentDaysBatchSize, sentPostsGroupedByDay.length - sentDayOffset);
+            appendSentPagePosts(start, count);
+            sentDayOffset += count;
+            sentLoadingMore = false;
+        }
+
         // Queue tab: load and render timeslots section (selected account's queue settings)
+        var queueTimeslotsList = [];
+        var queueDayOffset = 0;
+        var queueLoadingMore = false;
+        var queueBatchSize = 7;
+        var dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+        function buildDayLabel(date, dayOffset) {
+            if (dayOffset === 0) return 'Today, ' + monthNames[date.getMonth()] + ' ' + date.getDate();
+            if (dayOffset === 1) return 'Tomorrow, ' + monthNames[date.getMonth()] + ' ' + date.getDate();
+            return dayLabels[date.getDay()] + ', ' + monthNames[date.getMonth()] + ' ' + date.getDate();
+        }
+
+        function renderTimeslotDays(startOffset, count) {
+            var now = new Date();
+            var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+            var html = '';
+            for (var d = startOffset; d < startOffset + count; d++) {
+                var date = new Date(today);
+                date.setDate(date.getDate() + d);
+                html += '<div class="queue-timeslots-day-group"><h3 class="queue-timeslots-day-header">' + buildDayLabel(date, d) + '</h3>';
+                queueTimeslotsList.forEach(function(time) {
+                    html += '<div class="queue-timeslots-row"><span class="queue-timeslots-time">' + time + '</span><button type="button" class="queue-timeslots-new-btn">+ New</button></div>';
+                });
+                html += '</div>';
+            }
+            return html;
+        }
+
         function loadQueueTimeslotsSection() {
             var selectedAccounts = getSelectedAccounts();
             var $content = $('#queue-timeslots-content');
             var $empty = $('#queue-timeslots-empty');
+            queueDayOffset = 0;
+            queueTimeslotsList = [];
             if (selectedAccounts.accountIds.length === 0) {
                 $content.empty().hide();
+                $empty.find('.queue-timeslots-empty-text').text('No queued posts found.');
                 $empty.show();
                 return;
             }
@@ -112,26 +299,10 @@
                         $empty.show();
                         return;
                     }
+                    queueTimeslotsList = timeslots;
                     $content.show();
-                    var now = new Date();
-                    var dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-                    var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-                    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-                    var html = '';
-                    for (var d = 0; d < 7; d++) {
-                        var date = new Date(today);
-                        date.setDate(date.getDate() + d);
-                        var dateLabel = '';
-                        if (d === 0) dateLabel = 'Today, ' + monthNames[date.getMonth()] + ' ' + date.getDate();
-                        else if (d === 1) dateLabel = 'Tomorrow, ' + monthNames[date.getMonth()] + ' ' + date.getDate();
-                        else dateLabel = dayLabels[date.getDay()] + ', ' + monthNames[date.getMonth()] + ' ' + date.getDate();
-                        html += '<div class="queue-timeslots-day-group"><h3 class="queue-timeslots-day-header">' + dateLabel + '</h3>';
-                        timeslots.forEach(function(time) {
-                            html += '<div class="queue-timeslots-row"><span class="queue-timeslots-time">' + time + '</span><button type="button" class="queue-timeslots-new-btn">+ New</button></div>';
-                        });
-                        html += '</div>';
-                    }
-                    $content.html(html);
+                    $content.html(renderTimeslotDays(0, queueBatchSize));
+                    queueDayOffset = queueBatchSize;
                 },
                 error: function() {
                     $content.empty().hide();
@@ -139,6 +310,30 @@
                 }
             });
         }
+
+        function loadMoreTimeslotDays() {
+            if (queueLoadingMore || queueTimeslotsList.length === 0) return;
+            queueLoadingMore = true;
+            var $content = $('#queue-timeslots-content');
+            $content.append(renderTimeslotDays(queueDayOffset, queueBatchSize));
+            queueDayOffset += queueBatchSize;
+            queueLoadingMore = false;
+        }
+
+        $('#queue-timeslots-section').on('scroll', function() {
+            var el = this;
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+                loadMoreTimeslotDays();
+            }
+        });
+
+        $('#postsGrid').on('scroll', function() {
+            if (currentPostStatusTab !== 'sent' || sentPostsGroupedByDay.length === 0) return;
+            var el = this;
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+                loadMoreSentDays();
+            }
+        });
 
         // Posts status tab click
         $(document).on('click', '.posts-status-tab', function() {
@@ -149,46 +344,36 @@
             $(this).addClass('is-active').attr('aria-selected', 'true');
             if (tab === 'queue') {
                 $('#queue-timeslots-section').show();
+                $('#postsGrid').hide();
                 loadQueueTimeslotsSection();
+            } else if (tab === 'sent') {
+                $('#queue-timeslots-section').hide();
+                $('#postsGrid').show();
+                showSentPosts();
             } else {
                 $('#queue-timeslots-section').hide();
+                $('#postsGrid').show();
+                loadPosts(1);
             }
-            loadPosts(1);
         });
 
-        // account status
-        $(".account-card").on("click", function() {
+        $(document).on("click", ".all-channels-card", function() {
+            var $allCh = $(this);
+            if ($allCh.hasClass('active')) return;
+            $('.account-card').removeClass('active');
+            $allCh.addClass('active');
+            $('.account-card:not(.all-channels-card)').addClass('active');
+            updateSelectedAccountHeader();
+            updateUrlFromAccountSelection();
+        });
+
+        $(document).on("click", ".account-card:not(.all-channels-card)", function() {
             var $card = $(this);
-            $card.toggleClass("active");
-            var type = $card.data("type");
-            var id = $card.data("id");
-            var status = $card.hasClass("active") ? 1 : 0;
-            $.ajax({
-                url: "{{ route('panel.schedule.account.status') }}",
-                type: "GET",
-                data: {
-                    "type": type,
-                    "id": id,
-                    "status": status,
-                },
-                success: function(response) {
-                    if (response.success) {
-                        toastr.success(response.message);
-                        updateSelectedAccountHeader();
-                        // Reload posts when account selection changes
-                        loadPosts(1);
-                    } else {
-                        $card.toggleClass("active");
-                        updateSelectedAccountHeader();
-                        toastr.error(response.message);
-                    }
-                },
-                error: function(response) {
-                    $card.toggleClass("active");
-                    updateSelectedAccountHeader();
-                    toastr.error("Something went Wrong!");
-                }
-            });
+            if ($card.hasClass('active') && $('.account-card.active:not(.all-channels-card)').length === 1) return;
+            $('.account-card').removeClass('active');
+            $card.addClass('active');
+            updateSelectedAccountHeader();
+            updateUrlFromAccountSelection();
         });
 
         // Accounts sidebar toggle (closed by default: avatars only; open: full cards)
@@ -229,6 +414,8 @@
             $('#accountSearchInput').val('').trigger('input').focus();
         });
 
+        // Apply account selection from URL (e.g. ?account_id=123) before initial render
+        applyAccountSelectionFromUrl();
         // Show selected-account header on load when at least one account is selected
         updateSelectedAccountHeader();
 
@@ -242,118 +429,15 @@
             $('#content').focus();
         });
 
-        // DropZone
-        var dropZone = new Dropzone("#dropZone", {
-            autoProcessQueue: false,
-            url: '{{ route('panel.schedule.process.post') }}',
-            headers: {
-                'X-CSRF-TOKEN': "{{ csrf_token() }}"
-            },
-            maxFiles: 10,
-            paramName: "files",
-            maxFilesize: 256,
-            acceptedFiles: 'image/*, video/*',
-            parallelUploads: 100,
-            addRemoveLinks: true,
-            dictRemoveFile: "×",
-            dictCancelUpload: "X",
-            init: function() {
-                // file added
-                this.on("addedfile", function(file) {
-                    var supportedFormats = [
-                        'image/jpeg', 'image/jpg',
-                        'image/png',
-                        'video/mp4',
-                        'video/quicktime',
-                        'video/mpg',
-                        'video/webm',
-                        'video/mov'
-                    ];
-                    var fileExtension = file.name.split('.').pop().toLowerCase();
-                    if (!$.inArray(fileExtension, supportedFormats) ||
-                        (fileExtension !== 'jpg' &&
-                            fileExtension !== 'jpeg' &&
-                            fileExtension !== 'png' &&
-                            fileExtension !== 'bmp' &&
-                            fileExtension !== 'gif' &&
-                            fileExtension !== 'tiff' &&
-                            fileExtension !== 'webp' &&
-                            fileExtension !== 'mp4' &&
-                            fileExtension !== 'mkv' &&
-                            fileExtension !== 'mov' &&
-                            fileExtension !== 'mpeg' &&
-                            fileExtension !== 'webm'
-                        )
-                    ) {
-                        toastr.error("This image format is not supported.");
-                        this.removeFile(file);
-                    }
-                    if (fileExtension == 'mp4' ||
-                        fileExtension == 'mkv' ||
-                        fileExtension == 'mov' ||
-                        fileExtension == 'mpeg' ||
-                        fileExtension == 'webm') {
-                        is_video = 1;
-                    }
-                    // With file in dropzone, treat any pasted link as text and post as photo/video
-                    is_link = 0;
-                    $('#article-container').empty();
-                    toggleContentShortenerVisibility();
-                });
-                // file sending (with file = always photo/video post, not link)
-                this.on("sending", function(file, xhr, data) {
-                    var content = $("#content").val();
-                    if ($('#use_short_link_content').is(':checked') &&
-                        originalUrlInContent && currentShortUrl) {
-                        content = content.replace(originalUrlInContent, currentShortUrl);
-                    }
-                    var comment = $("#comment").val();
-                    var schedule_date = $("#schedule_date").val();
-                    var schedule_time = $("#schedule_time").val();
-                    var action = action_name;
-
-                    data.append("content", content);
-                    data.append("comment", comment);
-                    data.append("link", 0);
-                    data.append("video", is_video);
-                    // for schedule action
-                    data.append("schedule_date", schedule_date);
-                    data.append("schedule_time", schedule_time);
-                    data.append("action", action);
-                });
-                // request success
-                this.on("success", function(file, response) {
-                    if (response.success) {
-                        toastr.success(response.message);
-                    } else {
-                        toastr.error(response.message);
-                    }
-                    this.removeFile(file);
-                    processQueueWithDelay(dropZone.files);
-                });
-                // request complete
-                this.on("complete", function(file) {
-                    if (this.getUploadingFiles().length === 0 &&
-                        this.getQueuedFiles().length === 0) {
-                        resetPostArea();
-                    }
-                });
-                // request error
-                this.on("error", function(file, response) {
-                    toastr.error(response.message);
-                });
-            }
-        });
+        
         // publish/queue/schedule post
         $('.action_btn').on('click', function() {
             action_name = $(this).attr("href");
-            // for schedule
             if (action_name == "schedule") {
                 var schedule_modal = $(".schedule-modal");
                 schedule_modal.modal("toggle");
             } else {
-                // for link posting only when no file in dropzone; with file we publish as photo/video
-                if (is_link && dropZone.getAcceptedFiles().length <= 0) {
+                if (is_link) {
                     if (checkAccounts()) {
                         processLink();
                         return true;
@@ -373,7 +457,7 @@
                 return false;
             }
             if (!checkPastDateTime(schedule_date, schedule_time)) {
-                if (is_link && dropZone.getAcceptedFiles().length === 0) {
+                if (is_link) {
                     processLink();
                 } else {
                     validateAndProcess();
@@ -382,61 +466,16 @@
         });
         // validate and process post
         var validateAndProcess = function() {
-            var isValid = false;
-            // check accounts
-            if (checkAccounts()) {
-                isValid = true;
-            }
-            if (isValid) {
-                // Check if TikTok accounts are selected
-                var hasTikTokAccounts = false;
-                var tiktokAccounts = [];
-                $('.account-card.active').each(function() {
-                    if ($(this).data('type') === 'tiktok') {
-                        hasTikTokAccounts = true;
-                        tiktokAccounts.push({
-                            id: $(this).data('id'),
-                            name: $(this).find('.account-name').text().trim()
-                        });
-                    }
-                });
-
-                // If TikTok accounts are selected and there are files, show TikTok modal
-                if (hasTikTokAccounts && dropZone.getAcceptedFiles().length > 0) {
-                    var filesCopy = [...dropZone.files];
-                    if (filesCopy.length > 0) {
-                        showTikTokModal(filesCopy[0], tiktokAccounts);
-                        return;
-                    }
-                }
-
-                // check content
-                var drop_files = dropZone.getAcceptedFiles().length;
-                if (drop_files == 0) {
-                    var content = $("#content").val();
-                    if (empty(content)) {
-                        isValid = false;
-                    }
-                    if (isValid) {
-                        processContentOnly();
-                    } else {
-                        toastr.error("Please enter post content or upload a file!");
-                    }
-                } else {
-                    if (isValid) {
-                        if ($('#use_short_link_content').is(':checked') && !currentShortUrl) {
-                            toastr.error('Please wait for the link to shorten.');
-                            return;
-                        }
-                        var filesCopy = [...dropZone.files];
-                        processQueueWithDelay(filesCopy);
-                    } else {
-                        toastr.error("Please enter post content or upload a file!");
-                    }
-                }
-            } else {
+            if (!checkAccounts()) {
                 toastr.error("Please select atleast one channel!");
+                return;
             }
+            var content = $("#content").val();
+            if (empty(content)) {
+                toastr.error("Please enter post content!");
+                return;
+            }
+            processContentOnly();
         }
         // check accounts status
         var checkAccounts = function() {
@@ -448,18 +487,7 @@
             });
             return account;
         }
-        // process dropzone queue
-        function processQueueWithDelay(filesCopy) {
-            disableActionButton();
-            if (filesCopy.length > current_file) {
-                var file = filesCopy[current_file];
-                dropZone.processFile(file);
-            } else {
-                // All files processed
-                current_file = 0;
-                resetPostArea();
-            }
-        }
+        
         // process content only
         var processContentOnly = function() {
             if ($('#use_short_link_content').is(':checked') && !currentShortUrl) {
@@ -550,7 +578,6 @@
         }
         // reset post area
         var resetPostArea = function() {
-            dropZone.removeAllFiles(true);
             current_file = 0;
             is_link = 0;
             is_video = 0;
@@ -589,12 +616,12 @@
                 }
             }
         }
-        // check link for content (only fetch when no file in dropzone; otherwise treat pasted URL as text)
+        // check link for content
         $('#content').on('input', function() {
             var value = $(this).val();
             if(!empty(value)){
                 is_link = 0;
-                if (checkLink(value) && dropZone.getAcceptedFiles().length === 0) {
+                if (checkLink(value)) {
                     fetchFromLink(value);
                 }
                 toggleContentShortenerVisibility();
@@ -995,7 +1022,6 @@
         var perPage = 9;
         var totalPosts = 0;
 
-        // Load posts
         function loadPosts(page = 1) {
             currentPage = page;
 
@@ -1006,15 +1032,14 @@
                 </div>
             `);
 
-            // Get selected accounts from account cards
             var selectedAccounts = getSelectedAccounts();
 
-            // If no account is selected, show empty posts
             if (selectedAccounts.accountIds.length === 0) {
+                var tabLabel = currentPostStatusTab === 'failed' ? 'failed' : 'queued';
                 $('#postsGrid').html(`
-                    <div class="empty-state text-center py-5" style="grid-column: 1/-1;">
-                        <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
-                        <p class="text-muted">Please select an account above to view posts.</p>
+                    <div class="empty-state-box">
+                        <i class="far fa-folder-open"></i>
+                        <p>No ${tabLabel} posts found.</p>
                     </div>
                 `);
                 totalPosts = 0;
@@ -1043,7 +1068,7 @@
                 },
                 error: function() {
                     $('#postsGrid').html(`
-                        <div class="empty-state">
+                        <div class="empty-state-box">
                             <i class="fas fa-exclamation-circle"></i>
                             <p>Failed to load posts. Please try again.</p>
                         </div>
@@ -1055,18 +1080,13 @@
         // Render posts grid
         function renderPosts(posts) {
             if (posts.length === 0) {
+                var tabLabel = currentPostStatusTab === 'failed' ? 'failed' : 'queued';
                 $('#postsGrid').html(`
-                    <div class="empty-state">
-                        <i class="fas fa-inbox"></i>
-                        <p>No posts found</p>
-                        <small>Create a new post using the form above</small>
+                    <div class="empty-state-box">
+                        <i class="far fa-folder-open"></i>
+                        <p>No ${tabLabel} posts found.</p>
                     </div>
                 `);
-                return;
-            }
-
-            if (currentPostStatusTab === 'sent') {
-                renderSentPosts(posts);
                 return;
             }
 
@@ -1077,73 +1097,72 @@
             $('#postsGrid').html(html);
         }
 
-        // Render sent posts grouped by date in timeline layout
-        function renderSentPosts(posts) {
-            var grouped = {};
-            var today = new Date();
-            today.setHours(0, 0, 0, 0);
-            var yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
-            var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-            var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-            posts.forEach(function(post) {
-                var dateStr = post.published_at_formatted || post.publish_datetime || '';
-                var datePart = dateStr.split(' ')[0] || '';
-                var d = new Date(datePart);
-                d.setHours(0, 0, 0, 0);
-                var label = '';
-                if (d.getTime() === today.getTime()) {
-                    label = 'Today, ' + monthNames[d.getMonth()] + ' ' + d.getDate();
-                } else if (d.getTime() === yesterday.getTime()) {
-                    label = 'Yesterday, ' + monthNames[d.getMonth()] + ' ' + d.getDate();
-                } else {
-                    label = dayNames[d.getDay()] + ', ' + monthNames[d.getMonth()] + ' ' + d.getDate();
-                }
-                if (!grouped[label]) grouped[label] = [];
-                grouped[label].push(post);
-            });
-
-            var html = '<div class="sent-posts-timeline">';
-            Object.keys(grouped).forEach(function(dateLabel) {
+        function renderSentDayGroupsHtml(startOffset, count) {
+            var html = '';
+            for (var i = startOffset; i < startOffset + count && i < sentPostsGroupedByDay.length; i++) {
+                var day = sentPostsGroupedByDay[i];
+                var parts = day.label.split('|');
                 html += '<div class="sent-day-group">';
-                html += '<h3 class="sent-day-header">' + dateLabel + '</h3>';
-                grouped[dateLabel].forEach(function(post) {
-                    html += renderSentPostCard(post);
+                html += '<h3 class="sent-day-header"><strong>' + parts[0] + '</strong>, <span>' + parts[1] + '</span></h3>';
+                day.posts.forEach(function(post) {
+                    html += renderSentPagePostCard(post);
                 });
                 html += '</div>';
-            });
-            html += '</div>';
-            $('#postsGrid').html(html);
+            }
+            return html;
         }
 
-        // Render a single sent post card (timeline row: time + source on left, card on right)
-        function renderSentPostCard(post) {
-            var dateStr = post.published_at_formatted || post.publish_datetime || '';
-            var timePart = dateStr.split(' ').slice(1).join(' ') || '';
-            if (timePart) {
-                var timeParts = timePart.split(':');
-                if (timeParts.length >= 2) timePart = timeParts[0] + ':' + timeParts[1];
+        function renderSentPagePosts(startOffset, count) {
+            var html = '<div class="sent-posts-timeline">' + renderSentDayGroupsHtml(startOffset, count) + '</div>';
+            $('#postsGrid').html(html);
+            sentDayOffset = startOffset + count;
+        }
+
+        function appendSentPagePosts(startOffset, count) {
+            var html = renderSentDayGroupsHtml(startOffset, count);
+            var $timeline = $('#postsGrid .sent-posts-timeline');
+            if ($timeline.length) {
+                $timeline.append(html);
+            }
+        }
+
+        function renderSentPagePostCard(post) {
+            var ct = parseCreatedTime(post.created_time);
+            var timePart = '';
+            if (ct && !isNaN(ct.getTime())) {
+                var h = ct.getHours(), m = ct.getMinutes();
+                var ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                timePart = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m) + ' ' + ampm;
             }
 
-            var sourceLabel = '';
-            if (post.source) {
-                var sName = post.source === 'rss' ? 'RSS' : (post.source === 'api' ? 'API' : 'Custom');
-                sourceLabel = '<span class="sent-post-source"><i class="fas fa-layer-group"></i> ' + sName + '</span>';
+            var statusType = post.status_type || '';
+            var sourceLabel = statusType ? '<span class="sent-post-source"><i class="fas fa-layer-group"></i> ' + statusType.replace(/_/g, ' ') + '</span>' : '';
+
+            var profileImg = post.account_profile || '';
+            var socialLogo = "{{ social_logo('facebook') }}";
+            var accountName = post.account_name || 'Facebook Page';
+
+            var imageHtml = '';
+            if (post.full_picture) {
+                imageHtml = '<div class="sent-card-image"><img src="' + post.full_picture + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>';
             }
 
-            var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' :
-                (post.social_type === 'pinterest' ? 'fab fa-pinterest-p' : 'fab fa-tiktok');
-            var platformClass = post.social_type;
-            var platformName = post.social_type === 'facebook' ? 'Facebook' :
-                (post.social_type === 'pinterest' ? 'Pinterest' : 'TikTok');
+            var message = post.message || post.story || '';
+            var escapedMsg = $('<span>').text(message).html();
+            var truncMsg = escapedMsg.length > 140 ? escapedMsg.substring(0, 140) + '...' : escapedMsg;
 
             var viewPostBtn = '';
-            if (post.facebook_post_url) {
-                viewPostBtn = '<a href="' + post.facebook_post_url + '" target="_blank" class="sent-post-view-btn"><i class="fas fa-external-link-alt"></i> View Post</a>';
-            } else if (post.social_type === 'pinterest' && post.post_id) {
-                viewPostBtn = '<a href="https://www.pinterest.com/pin/' + post.post_id + '/" target="_blank" class="sent-post-view-btn"><i class="fas fa-external-link-alt"></i> View Post</a>';
+            if (post.permalink_url) {
+                viewPostBtn = '<a href="' + post.permalink_url + '" target="_blank" class="sent-card-view-btn"><i class="fas fa-external-link-alt"></i> View Post</a>';
             }
+
+            var ins = post.insights || {};
+            var reactions = ins.post_reactions ?? 0;
+            var comments = post.comments ?? 0;
+            var impressions = ins.post_impressions ?? '-';
+            var shares = post.shares ?? 0;
+            var clicks = ins.post_clicks ?? '-';
 
             return `
                 <div class="sent-post-row">
@@ -1152,22 +1171,33 @@
                         ${sourceLabel}
                     </div>
                     <div class="sent-post-card-col">
-                        <div class="sent-post-card">
-                            <div class="sent-post-preview">
-                                ${post.post_details}
-                            </div>
-                            <div class="sent-post-footer">
-                                <div class="sent-post-published-via">
-                                    Published via <span class="platform-icon ${platformClass}"><i class="${platformIcon}"></i></span> ${platformName}
-                                </div>
-                                <div class="sent-post-footer-actions">
-                                    ${viewPostBtn}
-                                    <div class="sent-post-menu-wrap">
-                                        <button type="button" class="sent-post-menu-btn" data-id="${post.id}"><i class="fas fa-ellipsis-v"></i></button>
-                                        <div class="sent-post-menu-dropdown">
-                                            <button class="sent-post-menu-item delete_btn" data-id="${post.id}"><i class="fas fa-trash"></i> Delete</button>
+                        <div class="sent-card">
+                            <div class="sent-card-body">
+                                <div class="sent-card-content">
+                                    <div class="sent-card-account">
+                                        <div class="sent-card-avatar-wrap">
+                                            <img src="${profileImg}" class="sent-card-avatar" onerror="this.onerror=null;this.src='${socialLogo}';" loading="lazy">
+                                            <span class="sent-card-platform-badge facebook"><i class="fab fa-facebook-f"></i></span>
                                         </div>
+                                        <span class="sent-card-account-name">${accountName}</span>
                                     </div>
+                                    <p class="sent-card-title">${truncMsg}</p>
+                                </div>
+                                ${imageHtml}
+                            </div>
+                            <div class="sent-card-stats">
+                                <div class="sent-card-stat"><i class="far fa-thumbs-up"></i> <span class="stat-label">Likes</span> <strong>${reactions}</strong></div>
+                                <div class="sent-card-stat"><i class="far fa-comment"></i> <span class="stat-label">Comments</span> <strong>${comments}</strong></div>
+                                <div class="sent-card-stat"><i class="far fa-eye"></i> <span class="stat-label">Impressions</span> <strong>${impressions}</strong></div>
+                                <div class="sent-card-stat"><i class="fas fa-share-alt"></i> <span class="stat-label">Shares</span> <strong>${shares}</strong></div>
+                                <div class="sent-card-stat"><i class="fas fa-mouse-pointer"></i> <span class="stat-label">Clicks</span> <strong>${clicks}</strong></div>
+                            </div>
+                            <div class="sent-card-footer">
+                                <div class="sent-card-published-via">
+                                    Published via <span class="sent-card-platform-icon facebook"><i class="fab fa-facebook-f"></i></span> Facebook
+                                </div>
+                                <div class="sent-card-footer-actions">
+                                    ${viewPostBtn}
                                 </div>
                             </div>
                         </div>
@@ -1664,11 +1694,10 @@
         }
 
         // Show TikTok modal for link posts
-        // Note: For link posts, no file in dropzone is needed since fetchLink already provides the image
         function showTikTokLinkModal(title, url, imageUrl, accounts, scheduleDate, scheduleTime) {
             currentTikTokAccounts = Array.isArray(accounts) ? accounts : [accounts];
             currentTikTokLinkUrl = url;
-            currentTikTokLinkImage = imageUrl; // Use fetched link image, no dropzone file needed
+            currentTikTokLinkImage = imageUrl;
             currentTikTokScheduleDate = scheduleDate;
             currentTikTokScheduleTime = scheduleTime;
 
@@ -1681,7 +1710,7 @@
             $('#tiktok-post-type').val('photo');
             $('#tiktok-file-url').val(imageUrl); // Use fetched link image URL
 
-            // Show link image preview (from fetched link, not dropzone)
+            // Show link image preview
             $('#preview-image').show().find('img').attr('src', imageUrl);
             $('#preview-video').hide();
             $('#preview-title').text(title);
@@ -1930,8 +1959,6 @@
                 return;
             }
 
-            // Check if this is a link post
-            // For link posts, no dropzone file is needed - we use the fetched link image
             var isLinkPost = currentTikTokLinkUrl && currentTikTokLinkImage;
 
             // Only require file for non-link posts
@@ -1944,16 +1971,13 @@
             var formData = new FormData();
 
             if (isLinkPost) {
-                // For link posts: use fetched link image (no dropzone file needed)
-                // Title comes from modal textarea, image comes from fetched link
                 var title = $('#tiktok-title').val();
                 var comment = $('#comment').val();
                 formData.append('content', title); // Use title from modal textarea
                 formData.append('comment', comment);
                 formData.append('link', 1);
                 formData.append('url', currentTikTokLinkUrl);
-                formData.append('image',
-                    currentTikTokLinkImage); // Fetched link image, not from dropzone
+                formData.append('image', currentTikTokLinkImage);
                 if (currentTikTokScheduleDate) {
                     formData.append('schedule_date', currentTikTokScheduleDate);
                 }
@@ -1961,7 +1985,6 @@
                     formData.append('schedule_time', currentTikTokScheduleTime);
                 }
             } else {
-                // For regular file posts (requires dropzone file)
                 formData.append('files', currentTikTokFile);
                 formData.append('content', $('#tiktok-title').val());
             }
@@ -1997,27 +2020,11 @@
                     if (response.success) {
                         toastr.success(response.message);
                         $('.tiktok-post-modal').modal('hide');
-
-                        if (isLinkPost) {
-                            // For link posts: no dropzone files to handle, just reset variables
-                            currentTikTokLinkUrl = null;
-                            currentTikTokLinkImage = null;
-                            currentTikTokScheduleDate = null;
-                            currentTikTokScheduleTime = null;
-                            resetPostArea();
-                        } else {
-                            // For file posts: remove file from dropzone and process remaining files
-                            if (currentTikTokFile) {
-                                dropZone.removeFile(currentTikTokFile);
-                            }
-                            // Process remaining files
-                            var remainingFiles = dropZone.getAcceptedFiles();
-                            if (remainingFiles.length > 0) {
-                                processQueueWithDelay(remainingFiles);
-                            } else {
-                                resetPostArea();
-                            }
-                        }
+                        currentTikTokLinkUrl = null;
+                        currentTikTokLinkImage = null;
+                        currentTikTokScheduleDate = null;
+                        currentTikTokScheduleTime = null;
+                        resetPostArea();
                     } else {
                         toastr.error(response.message);
                         $('#tiktok-publish-btn').prop('disabled', false).html(

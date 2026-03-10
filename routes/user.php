@@ -30,6 +30,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
             Route::post("timeslot/setting/save", "saveTimeslotSettings")->name("timeslot.setting.save");
             Route::get("posts/listing", "postsListing")->name("posts.listing");
             Route::get("posts/status-counts", "postsStatusCounts")->name("posts.status.counts");
+            Route::get("posts/sent-page-posts", "getPageSentPosts")->name("posts.sent.page");
             Route::get("timeslots", "getTimeslots")->name("timeslots");
             Route::prefix("post/")->name("post.")->group(function () {
                 Route::get("delete/{id?}", "postDelete")->name('delete');
@@ -127,6 +128,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
         Route::get("api-posts", "index")->name("api-posts");
         Route::name("api-posts.")->prefix("api-posts/")->group(function () {
             Route::get("posts/listing", "postsListing")->name("posts.listing");
+            Route::get("queue-timeline", "getQueueTimeline")->name("queue.timeline");
             Route::prefix("post/")->name("post.")->group(function () {
                 Route::get("delete", "postDelete")->name('delete');
                 Route::get("edit", "postEdit")->name("edit");

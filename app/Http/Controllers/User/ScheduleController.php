@@ -10,6 +10,7 @@ use App\Jobs\PublishTikTokPost;
 use App\Models\Board;
 use App\Models\Facebook;
 use App\Models\Page;
+use App\Models\PagePost;
 use App\Models\Pinterest;
 use App\Models\Post;
 use App\Models\Tiktok;
@@ -1792,7 +1793,7 @@ class  ScheduleController extends Controller
     {
         $data = $request->all();
         $posts = Post::with("page.facebook", "board.pinterest", "user.timezone")->isScheduled();
-        // filters
+
         if (!empty($request->account_id)) {
             $posts = $posts->whereIn("account_id", $request->account_id);
         }
@@ -1802,13 +1803,26 @@ class  ScheduleController extends Controller
         if (!empty($request->post_type)) {
             $posts = $posts->whereIn("type", $request->post_type);
         }
-        if ($request->has('status')) {
+
+        $tab = $request->input('post_status_tab');
+        if ($tab === 'sent') {
+            $posts = $posts->where("status", 1);
+        } elseif ($tab === 'failed') {
+            $posts = $posts->where("status", -1);
+        } elseif ($tab === 'queue') {
+            $posts = $posts->where("status", 0);
+        } elseif ($request->has('status')) {
             $posts = $posts->where("status", $request->status);
         }
+
         $totalRecordswithFilter = clone $posts;
         $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
-        $posts = $posts->orderBy("publish_date", "asc")->get();
-        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "account_name", "account_profile", "published_at_formatted"]);
+
+        $sortDir = ($tab === 'sent' || $tab === 'failed') ? 'desc' : 'asc';
+        $sortCol = ($tab === 'sent') ? 'published_at' : 'publish_date';
+        $posts = $posts->orderBy($sortCol, $sortDir)->get();
+
+        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "account_name", "account_profile", "published_at_formatted", "facebook_post_url"]);
         $response = [
             "draw" => intval($data['draw']),
             "iTotalRecords" => Post::count(),
@@ -1894,5 +1908,238 @@ class  ScheduleController extends Controller
     {
         $response = PostService::publishNow($request->id);
         return response()->json($response);
+    }
+
+    public function postsStatusCounts(Request $request)
+    {
+        $accountIds = $request->input('account_id', []);
+        $accountTypes = $request->input('type', []);
+
+        if (empty($accountIds)) {
+            return response()->json(['queue' => 0, 'sent' => 0, 'failed' => 0]);
+        }
+
+        $base = Post::withoutGlobalScopes()
+            ->whereIn('account_id', (array) $accountIds);
+
+        $queue = (clone $base)->where('status', 0)->count();
+        $sent = (clone $base)->where('status', 1)->count();
+        $failed = (clone $base)->where('status', -1)->count();
+
+        return response()->json(['queue' => $queue, 'sent' => $sent, 'failed' => $failed]);
+    }
+
+    public function getTimeslots(Request $request)
+    {
+        $accountId = $request->input('account_id');
+        $accountType = $request->input('type');
+
+        if (!$accountId || !$accountType) {
+            return response()->json(['timeslots' => []]);
+        }
+
+        $timeslots = Timeslot::where('account_id', $accountId)
+            ->where('account_type', $accountType)
+            ->pluck('timeslot')
+            ->sort()
+            ->values()
+            ->map(function ($slot) {
+                return date('h:i A', strtotime($slot));
+            });
+
+        return response()->json(['timeslots' => $timeslots]);
+    }
+
+    public function getQueueTimeline(Request $request)
+    {
+        $accountId = $request->input('account_id');
+        $accountType = $request->input('account_type');
+        $days = (int) $request->input('days', 14);
+        $offset = (int) $request->input('offset', 0);
+
+        if (!$accountId || !$accountType) {
+            return response()->json(['success' => false, 'message' => 'Account required']);
+        }
+
+        $user = Auth::guard('user')->user();
+        $userTz = TimezoneService::getUserTimezone($user);
+
+        $timeslots = Timeslot::where('account_id', $accountId)
+            ->where('account_type', $accountType)
+            ->pluck('timeslot')
+            ->sort()
+            ->values()
+            ->toArray();
+
+        if (empty($timeslots)) {
+            return response()->json(['success' => true, 'timeline' => [], 'has_more' => false, 'message' => 'No posting hours configured for this account.']);
+        }
+
+        $socialType = $accountType === 'pinterest' ? 'pinterest' : ($accountType === 'tiktok' ? 'tiktok' : 'facebook');
+
+        $startDate = Carbon::now($userTz)->addDays($offset)->startOfDay();
+        $endDate = $startDate->copy()->addDays($days - 1)->endOfDay();
+
+        $existingPosts = Post::withoutGlobalScopes()
+            ->where('account_id', $accountId)
+            ->where('social_type', 'like', "%{$socialType}%")
+            ->whereIn('status', [0, 1])
+            ->whereBetween('publish_date', [
+                $startDate->copy()->setTimezone('UTC')->format('Y-m-d H:i:s'),
+                $endDate->copy()->setTimezone('UTC')->format('Y-m-d H:i:s'),
+            ])
+            ->get()
+            ->keyBy(function ($post) use ($userTz) {
+                return Carbon::parse($post->publish_date, 'UTC')->setTimezone($userTz)->format('Y-m-d H:i');
+            });
+
+        $timeline = [];
+        $now = Carbon::now($userTz);
+
+        for ($d = 0; $d < $days; $d++) {
+            $date = $startDate->copy()->addDays($d);
+            $daySlots = [];
+
+            foreach ($timeslots as $slot) {
+                $slotTime = Carbon::parse($date->format('Y-m-d') . ' ' . $slot, $userTz);
+
+                if ($offset === 0 && $slotTime->lt($now)) {
+                    continue;
+                }
+
+                $key = $slotTime->format('Y-m-d H:i');
+                $post = $existingPosts->get($key);
+
+                $daySlots[] = [
+                    'time' => $slotTime->format('H:i'),
+                    'time_display' => $slotTime->format('h:i A'),
+                    'datetime_utc' => $slotTime->copy()->setTimezone('UTC')->format('Y-m-d H:i:s'),
+                    'has_post' => $post !== null,
+                    'post' => $post ? [
+                        'id' => $post->id,
+                        'title' => $post->title,
+                        'type' => $post->type,
+                        'status' => (int) $post->status,
+                        'image' => $post->image,
+                    ] : null,
+                ];
+            }
+
+            if (!empty($daySlots)) {
+                $isToday = $date->isToday();
+                $isTomorrow = $date->isTomorrow();
+                $label = $isToday ? 'Today' : ($isTomorrow ? 'Tomorrow' : $date->format('l'));
+
+                $timeline[] = [
+                    'date' => $date->format('Y-m-d'),
+                    'label' => $label,
+                    'date_display' => $date->format('F j'),
+                    'slots' => $daySlots,
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'timeline' => $timeline,
+            'has_more' => true,
+            'next_offset' => $offset + $days,
+        ]);
+    }
+
+    public function getPageSentPosts(Request $request)
+    {
+        $accountIds = (array) $request->input('account_id', []);
+        if (empty($accountIds)) {
+            return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
+        }
+
+        $pages = Page::whereIn('id', $accountIds)->get();
+        if ($pages->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No pages found', 'posts' => []]);
+        }
+
+        $since = now()->subDays(28)->format('Y-m-d');
+        $until = now()->format('Y-m-d');
+
+        $allPosts = [];
+        foreach ($pages as $page) {
+            $posts = $this->fetchPagePostsFromStore($page, $since, $until);
+            if (!$posts) {
+                continue;
+            }
+
+            foreach ($posts as &$post) {
+                $post['account_name'] = $page->name;
+                $post['account_profile'] = $page->profile_image;
+                $post['social_type'] = 'facebook';
+                $post['page_db_id'] = $page->id;
+            }
+            unset($post);
+
+            $allPosts = array_merge($allPosts, $posts);
+        }
+
+        usort($allPosts, function ($a, $b) {
+            $ta = $this->parseCreatedTime($a['created_time'] ?? null);
+            $tb = $this->parseCreatedTime($b['created_time'] ?? null);
+            return $tb - $ta;
+        });
+
+        return response()->json(['success' => true, 'posts' => $allPosts]);
+    }
+
+    private function fetchPagePostsFromStore(Page $page, string $since, string $until): ?array
+    {
+        if (empty($page->page_id) || empty($page->access_token)) {
+            return null;
+        }
+
+        $stored = PagePost::where('page_id', $page->id)
+            ->where('since', $since)
+            ->where('until', $until)
+            ->first();
+
+        if ($stored && $stored->posts !== null) {
+            return $stored->posts;
+        }
+
+        $tokenCheck = FacebookService::validateToken($page);
+        if (!$tokenCheck['success']) {
+            return null;
+        }
+
+        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
+        $facebookService = new FacebookService();
+        $posts = $facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until);
+
+        PagePost::updateOrCreate(
+            [
+                'page_id' => $page->id,
+                'since' => $since,
+                'until' => $until,
+            ],
+            [
+                'duration' => 'last_28',
+                'posts' => $posts,
+                'synced_at' => now(),
+            ]
+        );
+
+        return $posts;
+    }
+
+    private function parseCreatedTime($value): int
+    {
+        if (is_string($value)) {
+            return strtotime($value) ?: 0;
+        }
+        if (is_array($value) && isset($value['date'])) {
+            return strtotime($value['date']) ?: 0;
+        }
+        if ($value instanceof \DateTimeInterface) {
+            return $value->getTimestamp();
+        }
+        return 0;
     }
 }
