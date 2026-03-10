@@ -17,6 +17,9 @@
         @endphp
         <li class="nav-item d-flex align-items-center navbar-clock-item" id="navbarLiveClock" data-timezone="{{ $userTz }}">
             <span class="navbar-live-clock">
+                <i class="far fa-calendar-alt navbar-clock-icon"></i>
+                <span id="navbarClockDate">---</span>
+                <span class="navbar-clock-sep">|</span>
                 <i class="far fa-clock navbar-clock-icon"></i>
                 <span id="navbarClockTime">--:--:--</span>
                 <span class="navbar-clock-tz">{{ $userTzAbbr ?: 'UTC' }}</span>
@@ -166,6 +169,17 @@
         font-size: 13px;
         color: #6366f1;
     }
+    #navbarClockDate {
+        font-size: 13px;
+        font-weight: 500;
+        color: #4b5563;
+        letter-spacing: 0.2px;
+    }
+    .navbar-clock-sep {
+        color: #d1d5db;
+        font-size: 13px;
+        font-weight: 300;
+    }
     #navbarClockTime {
         font-size: 13.5px;
         font-weight: 600;
@@ -189,6 +203,11 @@
             padding: 4px 8px;
             gap: 4px;
         }
+        #navbarClockDate,
+        .navbar-clock-sep,
+        .navbar-clock-icon:first-child {
+            display: none;
+        }
         #navbarClockTime {
             font-size: 12px;
         }
@@ -201,10 +220,12 @@
 <script>
 (function() {
     var timeEl = document.getElementById('navbarClockTime');
+    var dateEl = document.getElementById('navbarClockDate');
     var container = document.getElementById('navbarLiveClock');
-    if (!timeEl || !container) return;
+    if (!timeEl || !dateEl || !container) return;
 
     var tz = container.getAttribute('data-timezone') || 'UTC';
+    var lastDate = '';
 
     function updateClock() {
         try {
@@ -216,9 +237,22 @@
                 second: '2-digit',
                 hour12: true
             });
+            var dateStr = now.toLocaleDateString('en-US', {
+                timeZone: tz,
+                weekday: 'short',
+                month: 'short',
+                day: 'numeric'
+            });
+            if (dateStr !== lastDate) {
+                dateEl.textContent = dateStr;
+                lastDate = dateStr;
+            }
         } catch (e) {
             timeEl.textContent = new Date().toLocaleTimeString('en-US', {
                 hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+            });
+            dateEl.textContent = new Date().toLocaleDateString('en-US', {
+                weekday: 'short', month: 'short', day: 'numeric'
             });
         }
     }
