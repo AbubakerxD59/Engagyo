@@ -51,25 +51,12 @@
          overflow-x: hidden;
          position: relative;
          z-index: 100;
-         scrollbar-width: thin;
-         scrollbar-color: #ced4da transparent;
+         scrollbar-width: none;
+         -ms-overflow-style: none;
      }
 
      .accounts-sidebar::-webkit-scrollbar {
-         width: 5px;
-     }
-
-     .accounts-sidebar::-webkit-scrollbar-track {
-         background: transparent;
-     }
-
-     .accounts-sidebar::-webkit-scrollbar-thumb {
-         background: #ced4da;
-         border-radius: 3px;
-     }
-
-     .accounts-sidebar::-webkit-scrollbar-thumb:hover {
-         background: #adb5bd;
+         display: none;
      }
 
      .accounts-sidebar.collapsed {
@@ -860,7 +847,7 @@
          flex: 1;
          min-height: 0;
          overflow-y: auto;
-         padding: 20px 20%;
+         padding: 20px 10%;
      }
 
      .queue-timeslots-section::-webkit-scrollbar {
@@ -880,7 +867,7 @@
          flex: 1;
          min-height: 0;
          overflow-y: auto;
-         padding: 20px 20%;
+         padding: 20px 10%;
      }
 
      .posts-grid-section::-webkit-scrollbar {
