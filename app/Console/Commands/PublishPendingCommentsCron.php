@@ -16,6 +16,15 @@ class PublishPendingCommentsCron extends Command
 
     public function handle(): void
     {
+        $this->publishPendingComments();
+
+        sleep(30);
+
+        $this->publishPendingComments();
+    }
+
+    private function publishPendingComments(): void
+    {
         $since = Carbon::now('UTC')->subMinutes(30);
 
         $posts = Post::withoutGlobalScopes()

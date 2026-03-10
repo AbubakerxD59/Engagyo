@@ -97,7 +97,8 @@ class Kernel extends ConsoleKernel
         // Command to purge posts older than 30 days in batches of 200 (runs every 3 hours)
         $schedule->command('posts:purge-old')->everyThreeHours();
         // Command to publish pending comments on recently published Facebook posts (videos take time to appear)
-        $schedule->command('facebook:publish-pending-comments')->everyFiveMinutes();
+        // Runs every minute; the command itself executes twice (at 0s and ~30s) for near-realtime retries
+        $schedule->command('facebook:publish-pending-comments')->everyMinute()->runInBackground();
     }
 
     /**
