@@ -18,7 +18,7 @@ class UserController extends Controller
     public function __construct()
     {
         // permissions
-        $this->middleware('permission:view_user', ['only' => ['index']]);
+        $this->middleware('permission:view_user', ['only' => ['index', 'socialAccounts']]);
         $this->middleware('permission:add_user', ['only' => ['create']]);
         $this->middleware('permission:edit_user', ['only' => ['edit', 'showInfo']]);
         $this->middleware('permission:delete_user', ['only' => ['destroy']]);
@@ -330,6 +330,88 @@ class UserController extends Controller
                 return back()->with('error', 'Unable to delete User!');
             }
         }
+    }
+
+    /**
+     * Get social accounts for a user (for admin popup).
+     */
+    public function socialAccounts(User $user)
+    {
+        $user->load([
+            'pages.facebook',
+            'boards.pinterest',
+            'tiktok',
+            'package',
+            'userPackages.package.features',
+        ]);
+
+        $pages = $user->pages()->with('facebook')->orderBy('name')->get()->map(function ($page) {
+            return [
+                'id' => $page->id,
+                'platform' => 'facebook',
+                'name' => $page->name,
+                'username' => $page->facebook ? $page->facebook->username : null,
+                'profile_image' => $page->profile_image ?? ($page->facebook ? $page->facebook->profile_image : null),
+            ];
+        });
+
+        $boards = $user->boards()->with('pinterest')->orderBy('name')->get()->map(function ($board) {
+            return [
+                'id' => $board->id,
+                'platform' => 'pinterest',
+                'name' => $board->name,
+                'username' => $board->pinterest ? $board->pinterest->username : null,
+                'profile_image' => $board->pinterest ? $board->pinterest->profile_image : null,
+            ];
+        });
+
+        $tiktoks = $user->tiktok()->orderBy('username')->get()->map(function ($tiktok) {
+            return [
+                'id' => $tiktok->id,
+                'platform' => 'tiktok',
+                'name' => $tiktok->display_name ?? $tiktok->username,
+                'username' => $tiktok->username,
+                'profile_image' => $tiktok->profile_image,
+            ];
+        });
+
+        $total = $pages->count() + $boards->count() + $tiktoks->count();
+
+        $limit = null;
+        $remaining = null;
+        if ($user->activeUserPackage && $user->activeUserPackage->package) {
+            $socialAccountsFeature = $user->activeUserPackage->package->features()
+                ->where('key', 'social_accounts')
+                ->wherePivot('is_enabled', true)
+                ->first();
+            if ($socialAccountsFeature) {
+                $limit = $socialAccountsFeature->pivot->limit_value ?? null;
+                if ($limit !== null && $limit > 0) {
+                    $remaining = max(0, $limit - $total);
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'user' => [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'full_name' => $user->full_name,
+                'email' => $user->email,
+            ],
+            'accounts' => [
+                'facebook' => $pages->values()->all(),
+                'pinterest' => $boards->values()->all(),
+                'tiktok' => $tiktoks->values()->all(),
+            ],
+            'summary' => [
+                'total' => $total,
+                'limit' => $limit,
+                'remaining' => $remaining,
+            ],
+        ]);
     }
 
     public function dataTable(Request $request)

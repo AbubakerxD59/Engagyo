@@ -40,6 +40,13 @@
                                                     <i class="fas fa-star mr-2"></i>Features & Usage
                                                 </a>
                                             </li>
+                                            <li class="nav-item">
+                                                <a class="nav-link" id="social-accounts-tab" data-toggle="tab"
+                                                    href="#social-accounts" role="tab" aria-controls="social-accounts"
+                                                    aria-selected="false">
+                                                    <i class="fas fa-share-alt mr-2"></i>Social Accounts
+                                                </a>
+                                            </li>
                                         </ul>
                                     </div>
                                     <div class="card-body">
@@ -53,6 +60,11 @@
                                             <div class="tab-pane fade" id="features-usage" role="tabpanel"
                                                 aria-labelledby="features-usage-tab">
                                                 @include('admin.users.tabs.features_usage')
+                                            </div>
+                                            <!-- Social Accounts Tab -->
+                                            <div class="tab-pane fade" id="social-accounts" role="tabpanel"
+                                                aria-labelledby="social-accounts-tab">
+                                                @include('admin.users.tabs.social_accounts')
                                             </div>
                                         </div>
                                     </div>

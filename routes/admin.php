@@ -30,6 +30,7 @@ Route::prefix("admin/")->name("admin.")->group(function () {
         Route::resource('users', UserController::class)->except('show');
         Route::controller(UserController::class)->prefix('users/')->name('users.')->group(function () {
             Route::get('dataTable', 'dataTable')->name('dataTable');
+            Route::get('{user}/social-accounts', 'socialAccounts')->name('socialAccounts');
         });
 
         //  Roles
