@@ -64,34 +64,43 @@
          padding: 10px 6px;
      }
 
-     .accounts-sidebar .accounts-sidebar-toggle {
-         position: absolute;
-         top: 8px;
-         right: 8px;
+     /* --- Sticky search area (stays on top when scrolling) --- */
+     .accounts-sidebar-sticky {
+         position: sticky;
+         top: 0;
+         z-index: 10;
+         flex-shrink: 0;
+         background: linear-gradient(135deg, #f8f9fa 0%, #fff 100%);
+         padding-bottom: 8px;
+         margin-bottom: 0;
+         display: flex;
+         flex-direction: column;
+     }
+
+     /* --- Toggle button (expanded state only: collapse sidebar, above search bar) --- */
+     .accounts-sidebar-toggle {
+         display: none;
          width: 28px;
          height: 28px;
          border: 1px solid #dee2e6;
          border-radius: 6px;
          background: #fff;
          cursor: pointer;
-         display: flex;
          align-items: center;
          justify-content: center;
          color: #6c757d;
          transition: color 0.2s, background 0.2s;
-         z-index: 10;
+         margin-bottom: 8px;
+         margin-left: auto;
      }
 
-     .accounts-sidebar .accounts-sidebar-toggle:hover {
+     .accounts-sidebar-toggle:hover {
          background: #e9ecef;
          color: #495057;
      }
 
-     .accounts-sidebar.collapsed .accounts-sidebar-toggle {
-         right: 50%;
-         transform: translateX(50%);
-         top: auto;
-         bottom: 8px;
+     .accounts-sidebar:not(.collapsed) .accounts-sidebar-toggle {
+         display: flex;
      }
 
      /* --- Sidebar search icon (collapsed state) --- */
@@ -125,8 +134,7 @@
      .accounts-sidebar-search-wrap {
          display: none;
          padding: 0 4px;
-         margin-bottom: 8px;
-         margin-top: 32px;
+         margin-top: 0;
      }
 
      .accounts-sidebar:not(.collapsed) .accounts-sidebar-search-wrap {
@@ -240,7 +248,7 @@
      /* --- Accounts Container inside sidebar --- */
      .accounts-sidebar .accounts-container {
          overflow: visible;
-         padding: 32px 4px 10px 4px;
+         padding: 0 4px 10px 4px;
          margin-bottom: 0;
          border: none;
          border-radius: 0;
@@ -248,7 +256,7 @@
      }
 
      .accounts-sidebar.collapsed .accounts-container {
-         padding: 8px 0 36px 0;
+         padding: 8px 0 16px 0;
      }
 
      .accounts-container::-webkit-scrollbar {
@@ -657,9 +665,9 @@
          width: 32px;
          height: 32px;
          padding: 0;
-         border: 1px solid #e0e0e0;
-         border-radius: 6px;
-         background: #f5f5f5;
+         border: none;
+         border-radius: 10px;
+         background: transparent;
          color: #333;
          cursor: pointer;
          transition: background 0.2s, color 0.2s;
@@ -667,6 +675,7 @@
 
      .selected-account-header-settings-btn:hover {
          background: #e8e8e8;
+         border-radius: 10px;
          color: #000;
      }
 

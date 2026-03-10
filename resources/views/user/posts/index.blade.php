@@ -9,22 +9,25 @@
                 <div class="schedule-page-wrapper">
                     {{-- Accounts sidebar (closed by default: profile pic + platform icon only) --}}
                     <aside id="accounts-sidebar" class="accounts-sidebar collapsed">
-                        <button type="button" class="accounts-sidebar-toggle" aria-label="Toggle accounts">
-                            <i class="fas fa-chevron-right"></i>
-                        </button>
-                        <button type="button" class="accounts-sidebar-search-icon" id="sidebarSearchIcon"
-                            aria-label="Search accounts" title="Search accounts">
-                            <i class="fas fa-search"></i>
-                        </button>
-                        <div class="accounts-sidebar-search-wrap" id="sidebarSearchWrap">
-                            <div class="accounts-sidebar-search-box">
-                                <i class="fas fa-search accounts-sidebar-search-icon-inner"></i>
-                                <input type="text" id="accountSearchInput" class="accounts-sidebar-search-input"
-                                    placeholder="Search accounts..." autocomplete="off">
-                                <button type="button" class="accounts-sidebar-search-clear" id="accountSearchClear"
-                                    style="display:none;">
-                                    <i class="fas fa-times"></i>
-                                </button>
+                        <div class="accounts-sidebar-sticky">
+                            <button type="button" class="accounts-sidebar-search-icon" id="sidebarSearchIcon"
+                                aria-label="Search accounts" title="Search accounts">
+                                <i class="fas fa-search"></i>
+                            </button>
+                            <button type="button" class="accounts-sidebar-toggle" id="sidebarCollapseBtn"
+                                aria-label="Collapse sidebar" title="Collapse sidebar">
+                                <i class="fas fa-chevron-left"></i>
+                            </button>
+                            <div class="accounts-sidebar-search-wrap" id="sidebarSearchWrap">
+                                <div class="accounts-sidebar-search-box">
+                                    <i class="fas fa-search accounts-sidebar-search-icon-inner"></i>
+                                    <input type="text" id="accountSearchInput" class="accounts-sidebar-search-input"
+                                        placeholder="Search accounts..." autocomplete="off">
+                                    <button type="button" class="accounts-sidebar-search-clear" id="accountSearchClear"
+                                        style="display:none;">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         <div class="accounts-container">

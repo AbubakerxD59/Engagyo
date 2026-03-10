@@ -376,26 +376,22 @@
             updateUrlFromAccountSelection();
         });
 
-        // Accounts sidebar toggle (closed by default: avatars only; open: full cards)
-        $('#accounts-sidebar .accounts-sidebar-toggle').on('click', function() {
-            $('#accounts-sidebar').toggleClass('collapsed');
-            var isCollapsed = $('#accounts-sidebar').hasClass('collapsed');
-            $(this).find('i').attr('class', isCollapsed ? 'fas fa-chevron-right' : 'fas fa-chevron-left');
-            if (isCollapsed) {
-                $('#accountSearchInput').val('');
-                $('#accountSearchClear').hide();
-                $('.account-card').show();
-            }
-        });
-
         // Search icon click (collapsed state): expand sidebar and focus search
         $('#sidebarSearchIcon').on('click', function() {
             var $sidebar = $('#accounts-sidebar');
             if ($sidebar.hasClass('collapsed')) {
                 $sidebar.removeClass('collapsed');
-                $sidebar.find('.accounts-sidebar-toggle i').attr('class', 'fas fa-chevron-left');
+                setTimeout(function() { $('#accountSearchInput').focus(); }, 200);
             }
-            setTimeout(function() { $('#accountSearchInput').focus(); }, 200);
+        });
+
+        // Collapse button (expanded state): collapse sidebar
+        $('#sidebarCollapseBtn').on('click', function() {
+            var $sidebar = $('#accounts-sidebar');
+            $sidebar.addClass('collapsed');
+            $('#accountSearchInput').val('');
+            $('#accountSearchClear').hide();
+            $('.account-card').show();
         });
 
         // Account search input: filter cards by name
