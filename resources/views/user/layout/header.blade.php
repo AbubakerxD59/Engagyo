@@ -10,6 +10,18 @@
     </ul>
     <!-- Right navbar links -->
     <ul class="navbar-nav ml-auto">
+        <!-- Live Clock -->
+        @php
+            $userTz = auth()->user()->timezone ? auth()->user()->timezone->name : config('app.timezone');
+            $userTzAbbr = auth()->user()->timezone ? auth()->user()->timezone->abbr : 'UTC';
+        @endphp
+        <li class="nav-item d-flex align-items-center navbar-clock-item" id="navbarLiveClock" data-timezone="{{ $userTz }}">
+            <span class="navbar-live-clock">
+                <i class="far fa-clock navbar-clock-icon"></i>
+                <span id="navbarClockTime">--:--:--</span>
+                <span class="navbar-clock-tz">{{ $userTzAbbr ?: 'UTC' }}</span>
+            </span>
+        </li>
         <!-- Timezone Dropdown -->
         <li class="nav-item dropdown timezone-dropdown">
             <a class="nav-link" href="#" id="timezoneDropdown" aria-haspopup="true" aria-expanded="false"
@@ -129,4 +141,89 @@
     .main-header .dropdown-menu {
         z-index: 1062 !important;
     }
+
+    /* Live Clock */
+    .navbar-clock-item {
+        margin-right: 4px;
+    }
+    .navbar-live-clock {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background: #f4f3ff;
+        border: 1px solid #e0dff8;
+        border-radius: 8px;
+        padding: 5px 12px;
+        font-variant-numeric: tabular-nums;
+        white-space: nowrap;
+        cursor: default;
+        transition: background 0.2s ease;
+    }
+    .navbar-live-clock:hover {
+        background: #eceaff;
+    }
+    .navbar-clock-icon {
+        font-size: 13px;
+        color: #6366f1;
+    }
+    #navbarClockTime {
+        font-size: 13.5px;
+        font-weight: 600;
+        color: #1f2937;
+        letter-spacing: 0.3px;
+    }
+    .navbar-clock-tz {
+        font-size: 10px;
+        font-weight: 700;
+        color: #6366f1;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        background: #e0dff8;
+        padding: 1px 5px;
+        border-radius: 4px;
+        line-height: 1.4;
+    }
+
+    @media (max-width: 576px) {
+        .navbar-live-clock {
+            padding: 4px 8px;
+            gap: 4px;
+        }
+        #navbarClockTime {
+            font-size: 12px;
+        }
+        .navbar-clock-tz {
+            display: none;
+        }
+    }
 </style>
+
+<script>
+(function() {
+    var timeEl = document.getElementById('navbarClockTime');
+    var container = document.getElementById('navbarLiveClock');
+    if (!timeEl || !container) return;
+
+    var tz = container.getAttribute('data-timezone') || 'UTC';
+
+    function updateClock() {
+        try {
+            var now = new Date();
+            timeEl.textContent = now.toLocaleTimeString('en-US', {
+                timeZone: tz,
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+                hour12: true
+            });
+        } catch (e) {
+            timeEl.textContent = new Date().toLocaleTimeString('en-US', {
+                hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true
+            });
+        }
+    }
+
+    updateClock();
+    setInterval(updateClock, 1000);
+})();
+</script>
