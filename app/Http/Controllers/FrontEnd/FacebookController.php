@@ -122,7 +122,7 @@ class FacebookController extends Controller
                 $facebookDbId = $facebookAccount->id;
 
                 foreach ($items as $page) {
-                    $connected = $this->page->connected(['fb_id' => $facebookDbId, 'page_id' => $page->getField("id")])->first() ? true : false;
+                    $connected = $this->page->where('user_id', $user->id)->connected(['fb_id' => $facebookDbId, 'page_id' => $page->getField("id")])->first() ? true : false;
                     $pageProfileImage = $this->facebookService->pageProfileImage($access_token, $page->getField("id"));
                     if ($pageProfileImage["success"]) {
                         $pageProfileImage = $pageProfileImage["data"];

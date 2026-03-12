@@ -321,7 +321,7 @@ class AccountsController extends Controller
                     ]);
                 }
 
-                $facebook = $this->facebook->search($request->fb_id)->first();
+                $facebook = $this->facebook->where('user_id', $user->id)->search($request->fb_id)->first();
 
                 // Handle profile image - download if needed
                 $profileImage = null;
