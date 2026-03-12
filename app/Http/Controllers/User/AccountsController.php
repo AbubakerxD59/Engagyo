@@ -64,7 +64,7 @@ class AccountsController extends Controller
     {
         if (!empty($id)) {
             $user = User::find(Auth::guard('user')->id());
-            $pinterest = $this->pinterest->search($id)->first();
+            $pinterest = $this->pinterest->where('user_id', $user->id)->search($id)->first();
             if ($pinterest) {
                 $boards = Board::where("pin_id", $pinterest->id)->get();
                 $totalScheduledPosts = 0;
@@ -118,8 +118,9 @@ class AccountsController extends Controller
     public function pinterest($id = null)
     {
         if (!empty($id)) {
+            $user = User::find(Auth::guard('user')->id());
             $pinterestUrl = $this->pinterestService->getLoginUrl();
-            $pinterest = $this->pinterest->search($id)->firstOrFail();
+            $pinterest = $this->pinterest->where('user_id', $user->id)->search($id)->firstOrFail();
             if ($pinterest) {
                 return view('user.accounts.pinterest', compact('pinterestUrl', 'pinterest'));
             } else {
@@ -150,7 +151,7 @@ class AccountsController extends Controller
 
             $board = $request->board_data;
             if ($board) {
-                $pinterest = $this->pinterest->search($request->pin_id)->firstOrfail();
+                $pinterest = $this->pinterest->where('user_id', $user->id)->search($request->pin_id)->firstOrfail();
                 $urlShortenerEnabled = in_array('pinterest', $user->url_shorten_platforms ?? []);
                 $boardModel = $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "board_id" => $board["id"]], [
                     "name" => $board["name"],
@@ -235,7 +236,7 @@ class AccountsController extends Controller
     {
         if (!empty($id)) {
             $user = User::find(Auth::guard('user')->id());
-            $facebook = $this->facebook->search($id)->first();
+            $facebook = $this->facebook->where('user_id', $user->id)->search($id)->first();
             if ($facebook) {
                 $pages = Page::with("posts", "domains", "timeslots")->where('fb_id', $facebook->id)->get();
                 $totalScheduledPosts = 0;
@@ -289,8 +290,9 @@ class AccountsController extends Controller
     public function facebook($id = null)
     {
         if (!empty($id)) {
+            $user = User::find(Auth::guard('user')->id());
             $facebookUrl = route('panel.accounts.facebook.socialite');
-            $facebook = $this->facebook->search($id)->first();
+            $facebook = $this->facebook->where('user_id', $user->id)->search($id)->first();
             if ($facebook) {
                 return view('user.accounts.facebook', compact('facebookUrl', 'facebook'));
             } else {
