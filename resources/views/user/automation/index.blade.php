@@ -1644,7 +1644,7 @@
                 }
 
                 var confirmMessage =
-                    "Are you sure you want to delete this domain and all its associated posts?"
+                    "Are you sure you want to delete this feed URL? The associated posts will be kept."
                 if (confirm(confirmMessage)) {
                     var token = $('meta[name="csrf-token"]').attr('content');
                     $.ajax({

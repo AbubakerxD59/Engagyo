@@ -9,7 +9,7 @@
             var currentSince = '{{ $since ?? '' }}';
             var currentUntil = '{{ $until ?? '' }}';
             var currentPostsSearchQuery = '';
-            var currentPostsSortBy = 'post_impressions';
+            var currentPostsSortBy = 'created_time';
             var currentPostsSortOrder = 'desc';
             var isLoadingAnalytics = false;
 
@@ -263,7 +263,7 @@
 
             function renderPostsList(posts, since, until, searchQuery, sortBy, sortOrder) {
                 searchQuery = (searchQuery || '').trim().toLowerCase();
-                sortBy = sortBy || 'post_impressions';
+                sortBy = sortBy || 'created_time';
                 sortOrder = sortOrder || 'desc';
                 if (posts === null) {
                     return '<div class="analytics-posts-placeholder text-center py-5">' +

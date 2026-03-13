@@ -642,13 +642,9 @@ class AutomationController extends Controller
             $deletedCount = 0;
             $domain = $this->domain->where('id', $domainId)->first();
             if ($domain) {
-                // Delete all posts associated with this domain
-                $posts = Post::where('domain_id', $domain->id)->get();
-                foreach ($posts as $post) {
-                    $post->photo()->delete();
-                    PostService::delete($post->id);
-                }
-                // Delete the domain
+                // Unlink posts from this domain (keep posts, just remove the link)
+                Post::where('domain_id', $domain->id)->update(['domain_id' => null]);
+                // Delete only the feed URL (domain)
                 $domain->delete();
                 $deletedCount++;
             }
