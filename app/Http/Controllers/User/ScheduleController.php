@@ -1969,6 +1969,7 @@ class  ScheduleController extends Controller
     {
         $accountIds = $request->input('account_id', []);
         $accountTypes = $request->input('type', []);
+        $soruce = $request->input('source', 'schedule');
 
         if (empty($accountIds)) {
             return response()->json(['queue' => 0, 'sent' => 0, 'failed' => 0]);
@@ -1976,6 +1977,9 @@ class  ScheduleController extends Controller
 
         $base = Post::withoutGlobalScopes()
             ->whereIn('account_id', (array) $accountIds);
+        if ($soruce) {
+            $base->where('source', $soruce);
+        }
 
         $queue = (clone $base)->where('status', 0)->count();
         $sent = (clone $base)->where('status', 1)->count();
@@ -2079,7 +2083,7 @@ class  ScheduleController extends Controller
                 $slotTime = Carbon::parse($dateStr . ' ' . $slotNormalized, $userTz);
 
                 if ($offset === 0) {
-                // if ($offset === 0 && $slotTime->lt($now)) {
+                    // if ($offset === 0 && $slotTime->lt($now)) {
                     // continue;
                 }
 
@@ -2103,7 +2107,7 @@ class  ScheduleController extends Controller
                 if (str_starts_with($key, $dateStr . ' ') && !isset($placedKeys[$key])) {
                     $slotTime = Carbon::parse($key, $userTz);
                     if ($offset === 0) {
-                    // if ($offset === 0 && $slotTime->lt($now)) {
+                        // if ($offset === 0 && $slotTime->lt($now)) {
                         // continue;
                     }
                     $daySlots[] = [
