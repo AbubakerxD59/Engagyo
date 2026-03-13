@@ -2,6 +2,7 @@
     $(document).ready(function() {
         // global variables
         var action_name = '';
+        var $createPostActiveButton = null;
         var current_file = 0;
         var is_link = 0;
         var is_video = 0;
@@ -120,10 +121,6 @@
                 $('#queue-timeslots-section').hide();
                 $('#postsGrid').show();
                 showSentPosts();
-            } else {
-                $('#queue-timeslots-section').hide();
-                $('#postsGrid').show();
-                loadPosts(1);
             }
         }
 
@@ -149,7 +146,6 @@
                 },
                 success: function(data) {
                     $('#posts-status-tabs [data-count="queue"]').text(data.queue);
-                    $('#posts-status-tabs [data-count="failed"]').text(data.failed);
                 }
             });
             loadSentPagePostsCached(selectedAccounts);
@@ -188,9 +184,25 @@
         var sentLoadingMore = false;
         var sentDaysBatchSize = 7;
 
+        function getSentPostsSkeletonHtml() {
+            var html = '<div class="sent-posts-skeleton">';
+            for (var i = 0; i < 3; i++) {
+                html += '<div class="sent-post-row sent-skeleton-row">' +
+                    '<div class="sent-post-time-col"><div class="skeleton-line skeleton-time animate-pulse-slow"></div><div class="skeleton-line skeleton-type animate-pulse-slow"></div></div>' +
+                    '<div class="sent-post-card-col"><div class="sent-card sent-skeleton-card">' +
+                    '<div class="sent-card-body"><div class="sent-card-content">' +
+                    '<div class="sent-card-account"><div class="skeleton-avatar animate-pulse-slow"></div><div class="skeleton-line skeleton-name animate-pulse-slow"></div></div>' +
+                    '<div class="skeleton-line skeleton-title animate-pulse-slow"></div><div class="skeleton-line skeleton-title-short animate-pulse-slow"></div>' +
+                    '</div><div class="skeleton-image animate-pulse-slow"></div></div>' +
+                    '<div class="sent-card-stats"><div class="skeleton-stat animate-pulse-slow"></div><div class="skeleton-stat animate-pulse-slow"></div><div class="skeleton-stat animate-pulse-slow"></div></div>' +
+                    '</div></div></div>';
+            }
+            return html + '</div>';
+        }
+
         function showSentPosts() {
             if (cachedSentPagePosts === null) {
-                $('#postsGrid').html('<div class="loading-state text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="mt-2 text-muted">Loading sent posts...</p></div>');
+                $('#postsGrid').html(getSentPostsSkeletonHtml());
                 return;
             }
             if (cachedSentPagePosts.length === 0) {
@@ -243,34 +255,131 @@
             sentLoadingMore = false;
         }
 
-        // Queue tab: load and render timeslots section (selected account's queue settings)
-        var queueTimeslotsList = [];
+        // Queue tab: load and render timeslots section with post cards
+        var queueTimelineData = [];
         var queueDayOffset = 0;
         var queueLoadingMore = false;
         var queueBatchSize = 7;
-        var dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-        var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        var queueHasMore = true;
+        var socialLogos = {
+            facebook: "{{ social_logo('facebook') }}",
+            pinterest: "{{ social_logo('pinterest') }}",
+            tiktok: "{{ social_logo('tiktok') }}"
+        };
 
-        function buildDayLabel(date, dayOffset) {
-            if (dayOffset === 0) return 'Today, ' + monthNames[date.getMonth()] + ' ' + date.getDate();
-            if (dayOffset === 1) return 'Tomorrow, ' + monthNames[date.getMonth()] + ' ' + date.getDate();
-            return dayLabels[date.getDay()] + ', ' + monthNames[date.getMonth()] + ' ' + date.getDate();
+        function getSocialIconClass(socialType) {
+            if (!socialType) return 'fab fa-facebook-f';
+            var t = (socialType || '').toLowerCase();
+            if (t.indexOf('pinterest') !== -1) return 'fab fa-pinterest';
+            if (t.indexOf('tiktok') !== -1) return 'fab fa-tiktok';
+            return 'fab fa-facebook-f';
         }
 
-        function renderTimeslotDays(startOffset, count) {
-            var now = new Date();
-            var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        function renderQueuePostCard(slot, post) {
+            var isLinkPost = post.type === 'link';
+            var title = (post.title || '').trim();
+            var imgSrc = post.image || '';
+            var profileSrc = post.account_profile || socialLogos[post.social_type] || socialLogos.facebook;
+            var accountName = post.account_name || 'Account';
+            var iconClass = getSocialIconClass(post.social_type);
+            var createdAgo = post.created_at || '';
+            var postId = post.id;
+            var linkTitle = post.title || post.url || '';
+            var linkUrl = post.url || '';
+            var linkDesc = post.description || post.title || '';
+
+            var cardHtml = '<div class="queue-post-card' + (isLinkPost ? ' queue-post-card-link' : '') + '" data-post-id="' + postId + '">';
+            cardHtml += '<div class="queue-post-card-inner">';
+            cardHtml += '<div class="queue-post-card-header">';
+            cardHtml += '<div class="queue-post-account">';
+            cardHtml += '<div class="queue-post-avatar-wrap"><img src="' + profileSrc + '" class="queue-post-avatar" loading="lazy" onerror="this.onerror=null;this.src=\'' + socialLogos.facebook + '\';">';
+            cardHtml += '<span class="queue-post-platform-badge ' + (post.social_type || 'facebook').toLowerCase().replace(/ /g, '-') + '"><i class="' + iconClass + '"></i></span></div>';
+            cardHtml += '<span class="queue-post-account-name">' + escapeHtml(accountName) + '</span>';
+            cardHtml += '</div>';
+            cardHtml += '<button type="button" class="queue-post-chat-btn" data-post-id="' + postId + '" data-comment="' + escapeHtml(post.comment || '') + '" aria-label="Comments"><i class="far fa-comment"></i></button>';
+            cardHtml += '</div>';
+            cardHtml += '<div class="queue-post-card-body">';
+            if (isLinkPost) {
+                cardHtml += '<div class="queue-link-preview' + (imgSrc ? '' : ' queue-link-preview-no-thumb') + '">';
+                if (imgSrc) {
+                    cardHtml += '<div class="queue-link-thumbnail"><img src="' + imgSrc + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>';
+                }
+                cardHtml += '<div class="queue-link-content">';
+                if (linkTitle) cardHtml += '<div class="queue-link-title">' + escapeHtml(linkTitle) + '</div>';
+                if (linkUrl) cardHtml += '<div class="queue-link-url"><a href="' + escapeHtml(linkUrl) + '" target="_blank" rel="noopener">' + escapeHtml(linkUrl) + '</a></div>';
+                if (linkDesc) cardHtml += '<div class="queue-link-desc">' + escapeHtml(linkDesc) + '</div>';
+                cardHtml += '</div></div>';
+            } else {
+                if (title) {
+                    cardHtml += '<div class="queue-post-text">' + escapeHtml(title) + '</div>';
+                }
+                if (imgSrc) {
+                    cardHtml += '<div class="queue-post-image-wrap"><img src="' + imgSrc + '" alt="" class="queue-post-image" loading="lazy" onerror="this.style.display=\'none\'"></div>';
+                }
+            }
+            cardHtml += '</div>';
+            cardHtml += '<div class="queue-post-card-footer">';
+            cardHtml += '<span class="queue-post-created">' + (createdAgo ? 'You created this ' + createdAgo : '') + '</span>';
+            cardHtml += '<div class="queue-post-actions">';
+            cardHtml += '<button type="button" class="queue-post-publish-now-btn btn-publish-now" data-id="' + postId + '"><i class="fas fa-paper-plane"></i> Publish Now</button>';
+            cardHtml += '<button type="button" class="queue-post-edit-btn" data-id="' + postId + '" aria-label="Edit"><i class="fas fa-pencil-alt"></i></button>';
+            cardHtml += '<button type="button" class="queue-post-more-btn dropdown-toggle" data-id="' + postId + '" aria-label="More options"><i class="fas fa-ellipsis-v"></i></button>';
+            cardHtml += '</div>';
+            cardHtml += '</div>';
+            cardHtml += '</div></div>';
+            return cardHtml;
+        }
+
+        function escapeHtml(s) {
+            if (!s) return '';
+            var div = document.createElement('div');
+            div.textContent = s;
+            return div.innerHTML;
+        }
+
+        function renderQueueSlotRow(slot, dateLabel) {
+            if (slot.has_post && slot.post) {
+                return '<div class="queue-timeslots-row queue-timeslots-row-has-post">' +
+                    '<div class="queue-timeslots-time-col">' +
+                    '<span class="queue-timeslots-time">' + slot.time_display + '</span>' +
+                    '</div>' +
+                    '<div class="queue-timeslots-post-col">' + renderQueuePostCard(slot, slot.post) + '</div>' +
+                    '</div>';
+            }
+            return '<div class="queue-timeslots-row">' +
+                '<div class="queue-timeslots-time-col">' +
+                '<span class="queue-timeslots-time">' + slot.time_display + '</span>' +
+                '</div>' +
+                '<div class="queue-timeslots-post-col"><button type="button" class="queue-timeslots-new-btn">+ New</button></div>' +
+                '</div>';
+        }
+
+        function renderQueueTimeline(timeline) {
             var html = '';
-            for (var d = startOffset; d < startOffset + count; d++) {
-                var date = new Date(today);
-                date.setDate(date.getDate() + d);
-                html += '<div class="queue-timeslots-day-group"><h3 class="queue-timeslots-day-header">' + buildDayLabel(date, d) + '</h3>';
-                queueTimeslotsList.forEach(function(time) {
-                    html += '<div class="queue-timeslots-row"><span class="queue-timeslots-time">' + time + '</span><button type="button" class="queue-timeslots-new-btn">+ New</button></div>';
+            timeline.forEach(function(day) {
+                html += '<div class="queue-timeslots-day-group"><h3 class="queue-timeslots-day-header">' + day.label + ', ' + day.date_display + '</h3>';
+                day.slots.forEach(function(slot) {
+                    html += renderQueueSlotRow(slot, day.label);
                 });
                 html += '</div>';
-            }
+            });
             return html;
+        }
+
+        function getQueueSkeletonHtml() {
+            var html = '<div class="queue-skeleton">';
+            html += '<div class="queue-timeslots-day-group"><h3 class="queue-timeslots-day-header"><div class="skeleton-line skeleton-day-header animate-pulse-slow"></div></h3>';
+            for (var i = 0; i < 3; i++) {
+                html += '<div class="queue-timeslots-row queue-skeleton-row">' +
+                    '<div class="queue-timeslots-time-col"><div class="skeleton-line skeleton-time animate-pulse-slow"></div><div class="skeleton-line skeleton-type animate-pulse-slow"></div></div>' +
+                    '<div class="queue-timeslots-post-col"><div class="queue-post-card queue-skeleton-card">' +
+                    '<div class="queue-post-card-inner">' +
+                    '<div class="queue-post-card-header"><div class="queue-post-account"><div class="skeleton-avatar animate-pulse-slow"></div><div class="skeleton-line skeleton-name animate-pulse-slow"></div></div><div class="skeleton-icon-btn animate-pulse-slow"></div></div>' +
+                    '<div class="queue-post-card-body"><div class="queue-skeleton-body-text"><div class="skeleton-line skeleton-text animate-pulse-slow"></div><div class="skeleton-line skeleton-text-short animate-pulse-slow"></div></div><div class="skeleton-image-sm animate-pulse-slow"></div></div>' +
+                    '<div class="queue-post-card-footer"><div class="skeleton-line skeleton-created animate-pulse-slow"></div><div class="skeleton-actions"><div class="skeleton-btn animate-pulse-slow"></div><div class="skeleton-circle animate-pulse-slow"></div><div class="skeleton-circle animate-pulse-slow"></div></div></div>' +
+                    '</div></div></div></div>';
+            }
+            return html + '</div></div>';
         }
 
         function loadQueueTimeslotsSection() {
@@ -278,7 +387,8 @@
             var $content = $('#queue-timeslots-content');
             var $empty = $('#queue-timeslots-empty');
             queueDayOffset = 0;
-            queueTimeslotsList = [];
+            queueTimelineData = [];
+            queueHasMore = true;
             if (selectedAccounts.accountIds.length === 0) {
                 $content.empty().hide();
                 $empty.find('.queue-timeslots-empty-text').text('No queued posts found.');
@@ -287,43 +397,233 @@
             }
             var accountId = selectedAccounts.accountIds[0];
             var accountType = selectedAccounts.accountTypes[0];
+            $content.html(getQueueSkeletonHtml()).show();
+            $empty.hide();
             $.ajax({
-                url: "{{ route('panel.schedule.timeslots') }}",
+                url: "{{ route('panel.schedule.queue.timeline') }}",
                 type: "GET",
-                data: { account_id: accountId, type: accountType },
+                data: { account_id: accountId, type: accountType, days: queueBatchSize, offset: 0, source: 'schedule' },
                 success: function(data) {
-                    var timeslots = data.timeslots || [];
-                    $empty.hide();
-                    if (timeslots.length === 0) {
+                    if (!data.success || !data.timeline || data.timeline.length === 0) {
                         $content.empty().hide();
+                        $empty.find('.queue-timeslots-empty-text').text(data.message || 'No queued posts found.');
                         $empty.show();
                         return;
                     }
-                    queueTimeslotsList = timeslots;
-                    $content.show();
-                    $content.html(renderTimeslotDays(0, queueBatchSize));
-                    queueDayOffset = queueBatchSize;
+                    queueTimelineData = data.timeline;
+                    queueDayOffset = data.timeline.length;
+                    queueHasMore = data.has_more;
+                    $content.html(renderQueueTimeline(data.timeline));
+                    bindQueuePostActions();
                 },
                 error: function() {
                     $content.empty().hide();
+                    $empty.find('.queue-timeslots-empty-text').text('Failed to load queue.');
                     $empty.show();
                 }
             });
         }
 
-        function loadMoreTimeslotDays() {
-            if (queueLoadingMore || queueTimeslotsList.length === 0) return;
+        function loadMoreQueueTimeline() {
+            if (queueLoadingMore || !queueHasMore) return;
+            var selectedAccounts = getSelectedAccounts();
+            if (selectedAccounts.accountIds.length === 0) return;
             queueLoadingMore = true;
-            var $content = $('#queue-timeslots-content');
-            $content.append(renderTimeslotDays(queueDayOffset, queueBatchSize));
-            queueDayOffset += queueBatchSize;
-            queueLoadingMore = false;
+            var accountId = selectedAccounts.accountIds[0];
+            var accountType = selectedAccounts.accountTypes[0];
+            $.ajax({
+                url: "{{ route('panel.schedule.queue.timeline') }}",
+                type: "GET",
+                data: { account_id: accountId, type: accountType, days: queueBatchSize, offset: queueDayOffset, source: 'schedule' },
+                success: function(data) {
+                    queueLoadingMore = false;
+                    if (data.success && data.timeline && data.timeline.length > 0) {
+                        queueTimelineData = queueTimelineData.concat(data.timeline);
+                        queueDayOffset += data.timeline.length;
+                        queueHasMore = data.has_more;
+                        $('#queue-timeslots-content').append(renderQueueTimeline(data.timeline));
+                        bindQueuePostActions();
+                    } else {
+                        queueHasMore = false;
+                    }
+                },
+                error: function() {
+                    queueLoadingMore = false;
+                }
+            });
         }
+
+        function editPost(id) {
+            var modal = $('.edit-post-modal');
+            modal.find(".modal-body").empty();
+            modal.modal("show");
+            $.ajax({
+                url: "{{ route('panel.schedule.post.edit') }}",
+                type: "GET",
+                data: { id: id },
+                success: function(response) {
+                    if (response.success) {
+                        modal.find("#update-post-form").attr("action", response.action);
+                        modal.find(".modal-body").html(response.data);
+                    } else {
+                        toastr.error(response.message || 'Failed to load post');
+                    }
+                },
+                error: function() {
+                    toastr.error('Failed to load post');
+                }
+            });
+        }
+
+        function publishNowPost(id) {
+            if (!confirm("Do you wish to Publish this Post Now?")) return;
+            $.ajax({
+                url: "{{ route('panel.schedule.post.publish.now') }}",
+                type: "POST",
+                data: { id: id, _token: "{{ csrf_token() }}" },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
+                            loadQueueTimeslotsSection();
+                        }
+                        loadPostsStatusCounts();
+                    } else {
+                        toastr.error(response.message || 'Failed to publish');
+                    }
+                },
+                error: function() {
+                    toastr.error('Failed to publish');
+                }
+            });
+        }
+
+        function togglePostMoreMenu($card, id) {
+            var $menu = $card.find('.queue-post-more-menu');
+            var wasOpen = $menu.length && $menu.is(':visible');
+            $('.queue-post-more-menu').remove();
+            if (wasOpen) return;
+            var menuHtml = '<div class="queue-post-more-menu"><button type="button" class="queue-post-delete-btn" data-id="' + id + '"><i class="fas fa-trash mr-1"></i> Delete</button></div>';
+            var $menuEl = $(menuHtml);
+            $card.find('.queue-post-actions').append($menuEl);
+            $menuEl.on('click', function(e) { e.stopPropagation(); });
+            $menuEl.find('.queue-post-delete-btn').on('click', function(e) {
+                e.stopPropagation();
+                $('.queue-post-more-menu').remove();
+                var postId = $(this).data('id');
+                if (!postId || !confirm("Published post will be delete from Account! Do you wish to Delete this Post?")) return;
+                $.ajax({
+                    url: "{{ route('panel.schedule.post.delete') }}",
+                    type: "GET",
+                    data: { id: postId },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                            if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
+                                loadQueueTimeslotsSection();
+                            }
+                            loadPostsStatusCounts();
+                        } else {
+                            toastr.error(response.message || 'Failed to delete');
+                        }
+                    }
+                });
+            });
+            $(document).one('click', function() {
+                $('.queue-post-more-menu').remove();
+            });
+        }
+
+        $(document).on('click', '.queue-post-delete-btn', function(e) {
+            e.stopPropagation();
+            var id = $(this).data('id');
+            if (!id || !confirm("Published post will be delete from Account! Do you wish to Delete this Post?")) return;
+            $.ajax({
+                url: "{{ route('panel.schedule.post.delete') }}",
+                type: "GET",
+                data: { id: id },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                        if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
+                            loadQueueTimeslotsSection();
+                        }
+                        loadPostsStatusCounts();
+                    } else {
+                        toastr.error(response.message || 'Failed to delete');
+                    }
+                }
+            });
+        });
+
+        function bindQueuePostActions() {
+            $(document).off('click.queuePost', '.queue-post-publish-now-btn');
+            $(document).off('click.queuePost', '.queue-post-edit-btn');
+            $(document).off('click.queuePost', '.queue-post-more-btn');
+            $(document).on('click.queuePost', '.queue-post-publish-now-btn', function() {
+                var id = $(this).data('id');
+                if (id) publishNowPost(id);
+            });
+            $(document).on('click.queuePost', '.queue-post-edit-btn', function() {
+                var id = $(this).data('id');
+                if (id) editPost(id);
+            });
+            $(document).on('click.queuePost', '.queue-post-more-btn', function(e) {
+                e.stopPropagation();
+                var id = $(this).data('id');
+                if (id) {
+                    var $card = $(this).closest('.queue-post-card');
+                    togglePostMoreMenu($card, id);
+                }
+            });
+        }
+
+        // Post comment modal: open on chat button click
+        var currentCommentPostId = null;
+        $(document).on('click', '.queue-post-chat-btn', function() {
+            var postId = $(this).data('post-id');
+            var comment = $(this).attr('data-comment') || '';
+            if (!postId) return;
+            currentCommentPostId = postId;
+            $('#postCommentInput').val(comment);
+            $('#postCommentModal').modal('show');
+            setTimeout(function() { $('#postCommentInput').focus(); }, 300);
+        });
+
+        // Save comment
+        $('#postCommentSaveBtn').on('click', function() {
+            if (!currentCommentPostId) return;
+            var comment = $('#postCommentInput').val().trim();
+            var $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin mr-1"></i> Saving...');
+            $.ajax({
+                url: "{{ route('panel.schedule.post.update.comment', ['id' => 0]) }}".replace(/\/0$/, '/' + currentCommentPostId),
+                type: "POST",
+                data: { comment: comment, _token: "{{ csrf_token() }}" },
+                success: function(response) {
+                    $btn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Save Comment');
+                    if (response.success) {
+                        $('#postCommentModal').modal('hide');
+                        toastr.success(response.message);
+                        $('.queue-post-chat-btn[data-post-id="' + currentCommentPostId + '"]').attr('data-comment', comment);
+                        if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
+                            loadQueueTimeslotsSection();
+                        }
+                    } else {
+                        toastr.error(response.message || 'Failed to save comment');
+                    }
+                },
+                error: function() {
+                    $btn.prop('disabled', false).html('<i class="fas fa-save mr-1"></i> Save Comment');
+                    toastr.error('Failed to save comment');
+                }
+            });
+        });
 
         $('#queue-timeslots-section').on('scroll', function() {
             var el = this;
             if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
-                loadMoreTimeslotDays();
+                loadMoreQueueTimeline();
             }
         });
 
@@ -350,10 +650,6 @@
                 $('#queue-timeslots-section').hide();
                 $('#postsGrid').show();
                 showSentPosts();
-            } else {
-                $('#queue-timeslots-section').hide();
-                $('#postsGrid').show();
-                loadPosts(1);
             }
         });
 
@@ -420,28 +716,447 @@
             $(this).addClass('is-active');
         });
 
-        // New Post: focus content textarea
+        // New Post: open Create Post modal
         $(document).on('click', '.selected-account-new-post', function() {
-            $('#content').focus();
+            $('#createPostModal').modal('show');
         });
 
-        
+        // Queue + New button: open Create Post modal
+        $(document).on('click', '.queue-timeslots-new-btn', function() {
+            $('#createPostModal').modal('show');
+        });
+
+        var lastUsedAccountId = null;
+        var lastUsedAccountData = null;
+
+        // Channels dropdown: toggle
+        $(document).on('click', '#createPostChannelsBtn', function(e) {
+            e.stopPropagation();
+            var $dropdown = $('#createPostChannelsDropdown');
+            $dropdown.toggleClass('is-open');
+            if ($dropdown.hasClass('is-open')) {
+                syncChannelsDropdownFromSidebar();
+                $('#channelsDropdownSearch').val('').trigger('input');
+            }
+        });
+
+        function syncChannelsDropdownFromSidebar() {
+            $('.channels-dropdown-checkbox').each(function() {
+                var scheduleStatus = $(this).data('schedule-status');
+                $(this).prop('checked', scheduleStatus === 'active');
+            });
+        }
+
+        function updateCreatePostModalSelection() {
+            renderSelectedChannels();
+            var checkedCount = $('.channels-dropdown-checkbox:checked').length;
+            if (checkedCount > 0) {
+                var $firstChecked = $('.channels-dropdown-checkbox:checked').first();
+                lastUsedAccountId = $firstChecked.data('id');
+                $('#createPostEmptyState').hide();
+                $('#createPostEditorWrap').show();
+                $('#createPostMainContent').addClass('has-editor');
+                var hasNonFacebook = false;
+                $('.channels-dropdown-checkbox:checked').each(function() {
+                    if ($(this).data('type') === 'pinterest' || $(this).data('type') === 'tiktok') {
+                        hasNonFacebook = true;
+                    }
+                });
+                if (hasNonFacebook) {
+                    $('#createPostCommentWrap').hide();
+                } else {
+                    $('#createPostCommentWrap').show();
+                }
+                var onlyTiktok = true;
+                $('.channels-dropdown-checkbox:checked').each(function() {
+                    if ($(this).data('type') !== 'tiktok') {
+                        onlyTiktok = false;
+                    }
+                });
+                $('.create-post-draft-btn').toggle(onlyTiktok);
+            } else {
+                $('#createPostEmptyState').show();
+                $('#createPostEditorWrap').hide();
+                $('#createPostMainContent').removeClass('has-editor');
+                $('#createPostCommentWrap').hide();
+                $('.create-post-draft-btn').hide();
+            }
+            renderLastUsed();
+        }
+
+        function renderLastUsed() {
+            var $container = $('#createPostLastUsed');
+            $container.empty().hide();
+            var checkedCount = $('.channels-dropdown-checkbox:checked').length;
+            if (checkedCount > 0) return;
+            var acc = lastUsedAccountData;
+            if (!acc || !acc.id) return;
+            var $item = $('.channels-dropdown-checkbox[data-id="' + acc.id + '"]').closest('.channels-dropdown-item');
+            if (!$item.length) return;
+            var type = $item.data('type') || acc.type || 'facebook';
+            var src = acc.profile_image || $item.find('.channels-dropdown-item-avatar img').attr('src') || '';
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok' };
+            var logo = socialLogos[type] || socialLogos.facebook;
+            var icon = iconMap[type] || iconMap.facebook;
+            var html = '<span class="create-post-last-used-label">Last used</span>' +
+                '<span class="create-post-last-used-avatar-wrap">' +
+                '<img src="' + src + '" alt="" onerror="this.onerror=null; this.src=\'' + logo + '\';">' +
+                '<span class="create-post-last-used-badge ' + type + '"><i class="' + icon + '"></i></span>' +
+                '</span>';
+            $container.html(html).attr('data-id', acc.id).show();
+        }
+
+        function fetchLastUsedAccount() {
+            $.get("{{ route('panel.schedule.last-used-account') }}", function(response) {
+                if (response.success) {
+                    lastUsedAccountData = response.account || null;
+                    var accountsStatus = response.accounts_status || {};
+                    $('.channels-dropdown-checkbox').each(function() {
+                        var id = $(this).data('id');
+                        var status = accountsStatus[id];
+                        if (status !== undefined) {
+                            $(this).attr('data-schedule-status', status).prop('checked', status === 'active');
+                        }
+                    });
+                    updateCreatePostModalSelection();
+                } else {
+                    lastUsedAccountData = null;
+                }
+            }).fail(function() {
+                lastUsedAccountData = null;
+            });
+        }
+
+        $(document).on('click', '.create-post-selected-channel-chip-remove', function(e) {
+            e.stopPropagation();
+            var id = $(this).data('id');
+            var type = $(this).closest('.create-post-selected-channel-chip').data('type');
+            var $cb = $('.channels-dropdown-checkbox[data-id="' + id + '"]');
+            if ($cb.length) {
+                $cb.prop('checked', false);
+                updateAccountScheduleStatus(id, false, true, type);
+                updateCreatePostModalSelection();
+            }
+        });
+
+        $(document).on('click', '#createPostLastUsed', function(e) {
+            e.stopPropagation();
+            var id = $(this).attr('data-id');
+            if (!id) return;
+            var $cb = $('.channels-dropdown-checkbox[data-id="' + id + '"]');
+            if ($cb.length) {
+                $cb.prop('checked', true);
+                lastUsedAccountId = id;
+                updateCreatePostModalSelection();
+            }
+        });
+
+        function renderSelectedChannels() {
+            var $container = $('#createPostSelectedChannels');
+            $container.empty();
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok' };
+            $('.channels-dropdown-checkbox:checked').each(function() {
+                var $item = $(this).closest('.channels-dropdown-item');
+                var src = $item.find('.channels-dropdown-item-avatar img').attr('src') || '';
+                var type = $item.data('type') || $(this).data('type') || 'facebook';
+                var logo = socialLogos[type] || socialLogos.facebook;
+                var icon = iconMap[type] || iconMap.facebook;
+                var id = $(this).data('id');
+                var tooltip = ($item.attr('data-tooltip') || $item.find('.channels-dropdown-item-name').text() || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                var html = '<div class="create-post-selected-channel-chip has-tooltip" data-id="' + id + '" data-type="' + type + '" data-tooltip="' + tooltip + '">' +
+                    '<span class="create-post-selected-channel-chip-remove" data-id="' + id + '" aria-label="Remove">' +
+                    '<i class="fas fa-times"></i></span>' +
+                    '<span class="create-post-selected-channel-chip-inner">' +
+                    '<img src="' + src + '" alt="" onerror="this.onerror=null; this.src=\'' + logo + '\';">' +
+                    '<span class="create-post-chip-badge ' + type + '"><i class="' + icon + '"></i></span>' +
+                    '</span></div>';
+                $container.append(html);
+            });
+        }
+
+        function updateAccountScheduleStatus(accountId, isChecked, showToast, accountType) {
+            showToast = showToast !== false;
+            var type = accountType || $('.channels-dropdown-checkbox[data-id="' + accountId + '"]').data('type') || 'facebook';
+            $.ajax({
+                url: "{{ route('panel.schedule.account.status') }}",
+                type: "GET",
+                data: {
+                    type: type,
+                    id: accountId,
+                    status: isChecked ? 1 : 0
+                },
+                success: function(response) {
+                    if (response.success) {
+                        var status = isChecked ? 'active' : 'inactive';
+                        $('.channels-dropdown-checkbox[data-id="' + accountId + '"]').attr('data-schedule-status', status);
+                    }
+                    if (showToast) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                        } else {
+                            toastr.error(response.message || "Failed to update account status");
+                        }
+                    }
+                },
+                error: function() {
+                    if (showToast) toastr.error("Failed to update account status");
+                }
+            });
+        }
+
+        $(document).on('change', '.channels-dropdown-checkbox', function() {
+            var id = $(this).data('id');
+            var isChecked = $(this).is(':checked');
+            if (id) updateAccountScheduleStatus(id, isChecked);
+            if (isChecked) lastUsedAccountId = id;
+            updateCreatePostModalSelection();
+        });
+
+        $(document).on('click', '#channelsDropdownDeselect', function(e) {
+            e.preventDefault();
+            var count = 0;
+            $('.channels-dropdown-checkbox:checked').each(function() {
+                var id = $(this).data('id');
+                var type = $(this).data('type');
+                if (id) {
+                    updateAccountScheduleStatus(id, false, false, type);
+                    count++;
+                }
+            });
+            $('.channels-dropdown-checkbox').prop('checked', false);
+            updateCreatePostModalSelection();
+            if (count > 0) toastr.success("All accounts deselected");
+        });
+
+        $(document).on('input', '#channelsDropdownSearch', function() {
+            var q = $(this).val().toLowerCase().trim();
+            $('.channels-dropdown-item').each(function() {
+                var name = $(this).data('name') || '';
+                $(this).toggle(name.indexOf(q) !== -1);
+            });
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.create-post-channels-dropdown-wrap').length) {
+                $('#createPostChannelsDropdown').removeClass('is-open');
+            }
+        });
+
+        $(document).on('click', '.channels-dropdown-item', function(e) {
+            if ($(e.target).closest('.channels-dropdown-item-checkbox').length) return;
+            var $cb = $(this).find('.channels-dropdown-checkbox');
+            if ($cb.length) $cb.prop('checked', !$cb.prop('checked')).trigger('change');
+        });
+
+        $('#createPostModal').prop('inert', true);
+        $('#createPostModal').on('show.bs.modal', function(e) {
+            e.target.inert = false;
+            updateCreatePostModalSelection();
+        });
+        $('#createPostModal').on('hide.bs.modal', function(e) {
+            e.target.inert = true;
+            $('#createPostScheduleDropdown').removeClass('is-open');
+        });
+        $('#createPostModal').on('hidden.bs.modal', function() {
+            $('#createPostChannelsDropdown').removeClass('is-open');
+            $('#createPostEditorTextarea').val('');
+            $('#createPostComment').val('');
+            $('#createPostFirstComment').val('');
+            $('#createPostLinkPreview').empty();
+            createPostFiles = [];
+            createPostRevokeUrls();
+            $('#createPostUploadPreviews').empty();
+            is_link = 0;
+        });
+
+        $('#createPostModal').on('shown.bs.modal', function() {
+            syncChannelsDropdownFromSidebar();
+            renderSelectedChannels();
+            fetchLastUsedAccount();
+        });
+
+        // Create post editor: file upload (drag & drop, click) - extensions from schedule dropZone
+        var createPostFiles = [];
+        var createPostObjectUrls = [];
+        var createPostAllowedExtensions = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'tiff', 'webp', 'mp4', 'mkv', 'mov', 'mpeg', 'webm'];
+
+        function createPostIsFileAllowed(file) {
+            var ext = (file.name || '').split('.').pop().toLowerCase();
+            return createPostAllowedExtensions.indexOf(ext) !== -1;
+        }
+
+        function createPostRevokeUrls() {
+            createPostObjectUrls.forEach(function(url) { URL.revokeObjectURL(url); });
+            createPostObjectUrls = [];
+        }
+
+        function createPostAddFiles(files) {
+            var allowed = Array.from(files || []).filter(createPostIsFileAllowed);
+            var rejected = files.length - allowed.length;
+            if (allowed.length) {
+                createPostFiles = createPostFiles.concat(allowed);
+                renderCreatePostUploadPreviews();
+                $('#createPostLinkPreview').empty();
+                is_link = 0;
+                toastr.success((allowed.length === 1 ? '1 file' : allowed.length + ' files') + ' added');
+            }
+            if (rejected > 0) toastr.error('Some files were not supported. Allowed: ' + createPostAllowedExtensions.join(', '));
+        }
+
+        function renderCreatePostUploadPreviews() {
+            createPostRevokeUrls();
+            var $container = $('#createPostUploadPreviews');
+            $container.empty();
+            createPostFiles.forEach(function(file, idx) {
+                var ext = (file.name || '').split('.').pop().toLowerCase();
+                var isVideo = ['mp4', 'mkv', 'mov', 'mpeg', 'webm'].indexOf(ext) !== -1;
+                var url = URL.createObjectURL(file);
+                createPostObjectUrls.push(url);
+                var $preview = $('<div class="create-post-upload-preview" data-idx="' + idx + '">');
+                if (isVideo) {
+                    $preview.append($('<video>').attr('src', url).attr('muted', 'true').attr('playsinline', 'true'));
+                } else {
+                    $preview.append($('<img>').attr('src', url));
+                }
+                $preview.append('<button type="button" class="create-post-upload-preview-remove" data-idx="' + idx + '" aria-label="Remove"><i class="fas fa-times"></i></button>');
+                $container.append($preview);
+            });
+        }
+
+        $('#createPostUploadLink, #createPostUploadZone').on('click', function(e) {
+            e.preventDefault();
+            if ($(e.target).closest('.create-post-upload-preview-remove').length) return;
+            $('#createPostFileInput').trigger('click');
+        });
+
+        $('#createPostFileInput').on('change', function() {
+            createPostAddFiles(Array.from(this.files || []));
+            this.value = '';
+        });
+
+        $(document).on('click', '.create-post-upload-preview-remove', function(e) {
+            e.stopPropagation();
+            var idx = parseInt($(this).data('idx'), 10);
+            createPostFiles.splice(idx, 1);
+            renderCreatePostUploadPreviews();
+        });
+
+        function createPostSetupDropZone($el) {
+            $el.on('dragover', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $('#createPostUploadZone').addClass('is-dragover');
+            }).on('dragleave drop', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                $('#createPostUploadZone').removeClass('is-dragover');
+            }).on('drop', function(e) {
+                createPostAddFiles(Array.from(e.originalEvent.dataTransfer.files || []));
+            });
+        }
+
+        createPostSetupDropZone($('#createPostEditorWrap'));
+        createPostSetupDropZone($('#createPostUploadZone'));
+
+        // Create post: link preview when pasting URL
+        $('#createPostEditorTextarea').on('input', function() {
+            var value = $(this).val().trim();
+            if (!value) {
+                $('#createPostLinkPreview').empty();
+                is_link = 0;
+                return;
+            }
+            is_link = 0;
+            var linkToFetch = checkLink(value) ? value : extractUrlFromContent(value);
+            if (linkToFetch && createPostFiles.length === 0) {
+                createPostFetchFromLink(linkToFetch);
+            } else {
+                $('#createPostLinkPreview').empty();
+            }
+        });
+
+        function createPostFetchFromLink(link) {
+            if (!link) return;
+            var $container = $('#createPostLinkPreview');
+            $container.html('<div class="skeleton-wrapper"><div class="content-col"><div class="skeleton-bar bar-title"></div><div class="skeleton-bar bar-full"></div></div><div class="image-col"><div class="skeleton-bar image-placeholder"></div></div></div>');
+            $.ajax({
+                url: "{{ route('general.previewLink') }}",
+                type: "GET",
+                data: { link: link },
+                success: function(response) {
+                    if (response.success) {
+                        if (response.no_preview) {
+                            $container.html('<div class="real-article-wrapper" style="opacity:1;visibility:visible;"><div class="content-col"><p class="text-muted mb-2" style="font-size: 0.9rem;">' + (response.message || '') + '</p><p class="link_url">' + (response.link || '') + '</p></div></div>');
+                            is_link = 1;
+                        } else if (response.image) {
+                            var html = '<div id="real-article" class="real-article-wrapper" style="opacity:1;visibility:visible;"><div class="content-col"><h5 class="link_title">' + (response.title || '').substring(0, 60) + '...</h5><p class="link_url">' + (response.link || '') + '</p></div><div class="image-col"><img id="link_image" src="' + response.image + '" alt="" loading="lazy"><button type="button" class="close-btn-placeholder">×</button></div></div>';
+                            $container.html(html);
+                            is_link = 1;
+                            if (response.title) $('#createPostEditorTextarea').val(response.title);
+                        } else {
+                            $container.html('<div style="padding: 1rem; color: #DC2626;">Error loading preview.</div>');
+                        }
+                    } else {
+                        $container.html('<div style="padding: 1rem; color: #DC2626;">' + (response.message || 'Error') + '</div>');
+                    }
+                },
+                error: function() {
+                    $container.html('<div style="padding: 1rem; color: #DC2626;">Error loading preview.</div>');
+                }
+            });
+        }
+
+        $(document).on('click', '#createPostLinkPreview .close-btn-placeholder', function() {
+            $('#createPostLinkPreview').empty();
+            $('#createPostEditorTextarea').val('');
+            is_link = 0;
+        });
+
         // publish/queue/schedule post
         $('.action_btn').on('click', function() {
             action_name = $(this).attr("href");
+            var inCreatePost = $(this).closest('#createPostModal').length > 0;
+            if (inCreatePost && $(this).hasClass('create-post-segmented-btn')) {
+                $createPostActiveButton = $(this);
+            }
             if (action_name == "schedule") {
-                var schedule_modal = $(".schedule-modal");
-                schedule_modal.modal("toggle");
+                if (inCreatePost) {
+                    $('#createPostScheduleDropdown').toggleClass('is-open');
+                } else {
+                    var schedule_modal = $(".schedule-modal");
+                    schedule_modal.modal("toggle");
+                }
             } else {
-                if (is_link) {
-                    if (checkAccounts()) {
-                        processLink();
-                        return true;
+                if (inCreatePost) {
+                    if (!checkCreatePostAccounts()) {
+                        toastr.error("Please select at least one channel!");
+                        return;
+                    }
+                    if (is_link) {
+                        processCreatePostLink();
+                    } else if (createPostFiles.length > 0) {
+                        processCreatePostPhotoVideo();
                     } else {
-                        toastr.error("Please select atleast one channel!");
+                        var content = $('#createPostEditorTextarea').val().trim();
+                        if (empty(content)) {
+                            toastr.error("Please enter post content or upload a file!");
+                            return;
+                        }
+                        processCreatePostContentOnly();
                     }
                 } else {
-                    validateAndProcess();
+                    if (is_link) {
+                        if (checkAccounts()) {
+                            processLink();
+                            return true;
+                        } else {
+                            toastr.error("Please select atleast one channel!");
+                        }
+                    } else {
+                        validateAndProcess();
+                    }
                 }
             }
         });
@@ -453,13 +1168,226 @@
                 return false;
             }
             if (!checkPastDateTime(schedule_date, schedule_time)) {
-                if (is_link) {
-                    processLink();
+                if ($('#createPostModal').hasClass('show')) {
+                    if (is_link) processCreatePostLink();
+                    else if (createPostFiles.length > 0) processCreatePostPhotoVideo();
+                    else processCreatePostContentOnly();
                 } else {
-                    validateAndProcess();
+                    if (is_link) processLink();
+                    else validateAndProcess();
                 }
             }
         });
+
+        $(document).on('click', '.create-post-schedule-confirm', function(e) {
+            e.stopPropagation();
+            action_name = 'schedule';
+            $createPostActiveButton = $('.create-post-schedule-trigger');
+            if (!checkCreatePostAccounts()) {
+                toastr.error("Please select at least one channel!");
+                return;
+            }
+            if (is_link && !$('#createPostLinkPreview .link_url').text().trim()) {
+                toastr.error("Invalid link preview.");
+                return;
+            }
+            if (!is_link && createPostFiles.length === 0) {
+                var content = $('#createPostEditorTextarea').val().trim();
+                if (empty(content)) {
+                    toastr.error("Please enter post content or upload a file!");
+                    return;
+                }
+            }
+            var dt = getCreatePostScheduleDateTime();
+            var schedule_date = dt.date;
+            var schedule_time = dt.time;
+            if (empty(schedule_date) || empty(schedule_time)) {
+                toastr.error("Schedule date & time are required!");
+                return;
+            }
+            if (!checkPastDateTime(schedule_date, schedule_time)) {
+                $('#createPostScheduleDropdown').removeClass('is-open');
+                if (is_link) processCreatePostLink();
+                else if (createPostFiles.length > 0) processCreatePostPhotoVideo();
+                else processCreatePostContentOnly();
+            }
+        });
+
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.create-post-schedule-trigger, #createPostScheduleDropdown').length) {
+                $('#createPostScheduleDropdown').removeClass('is-open');
+            }
+        });
+        function checkCreatePostAccounts() {
+            return $('.channels-dropdown-checkbox:checked').length > 0;
+        }
+
+        function getCreatePostCommentValue() {
+            if ($('#createPostFirstCommentWrap').is(':visible')) {
+                return $('#createPostFirstComment').val() || '';
+            }
+            return $('#createPostComment').val() || '';
+        }
+
+        function getCreatePostScheduleDateTime() {
+            return {
+                date: $('#createPostScheduleDate').val() || '',
+                time: $('#createPostScheduleTime').val() || ''
+            };
+        }
+
+        function getScheduleDateTime() {
+            if ($('#createPostModal').hasClass('show') && action_name === 'schedule') {
+                var dt = getCreatePostScheduleDateTime();
+                return { date: dt.date, time: dt.time };
+            }
+            return { date: $('#schedule_date').val() || '', time: $('#schedule_time').val() || '' };
+        }
+
+        function processCreatePostLink() {
+            var content = $('#createPostEditorTextarea').val();
+            var comment = getCreatePostCommentValue();
+            var image = $('#createPostLinkPreview #link_image').attr('src');
+            var url = $('#createPostLinkPreview .link_url').text().trim();
+            var dt = getScheduleDateTime();
+            var schedule_date = dt.date;
+            var schedule_time = dt.time;
+            if (!url) {
+                toastr.error("Invalid link preview.");
+                return;
+            }
+            disableActionButton();
+            $.ajax({
+                url: "{{ route('panel.schedule.process.post') }}",
+                type: "POST",
+                data: {
+                    "_token": "{{ csrf_token() }}",
+                    "content": content,
+                    "comment": comment,
+                    "link": 1,
+                    "url": url,
+                    "image": image,
+                    "schedule_date": schedule_date,
+                    "schedule_time": schedule_time,
+                    "action": action_name,
+                },
+                success: function(response) {
+                    if (response.success) {
+                        resetCreatePostArea();
+                        toastr.success(response.message);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                    enableActionButton();
+                },
+                error: function() {
+                    toastr.error("Failed to process post.");
+                    enableActionButton();
+                }
+            });
+        }
+
+        function processCreatePostContentOnly() {
+            var content = $('#createPostEditorTextarea').val();
+            var comment = getCreatePostCommentValue();
+            var dt = getScheduleDateTime();
+            var data = {
+                "_token": "{{ csrf_token() }}",
+                "content": content,
+                "comment": comment,
+                "link": 0,
+                "action": action_name
+            };
+            if (action_name === 'schedule') {
+                data.schedule_date = dt.date;
+                data.schedule_time = dt.time;
+            }
+            disableActionButton();
+            $.ajax({
+                url: "{{ route('panel.schedule.process.post') }}",
+                type: "POST",
+                data: data,
+                success: function(response) {
+                    if (response.success) {
+                        resetCreatePostArea();
+                        toastr.success(response.message);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                    enableActionButton();
+                },
+                error: function() {
+                    toastr.error("Failed to process post.");
+                    enableActionButton();
+                }
+            });
+        }
+
+        function processCreatePostPhotoVideo() {
+            var content = $('#createPostEditorTextarea').val();
+            var comment = getCreatePostCommentValue();
+            var dt = getScheduleDateTime();
+            var schedule_date = dt.date;
+            var schedule_time = dt.time;
+            var hasVideo = createPostFiles.some(function(f) {
+                var ext = (f.name || '').split('.').pop().toLowerCase();
+                return ['mp4', 'mkv', 'mov', 'mpeg', 'webm'].indexOf(ext) !== -1;
+            });
+            var formData = new FormData();
+            formData.append("_token", "{{ csrf_token() }}");
+            formData.append("content", content);
+            formData.append("comment", comment);
+            formData.append("link", 0);
+            formData.append("video", hasVideo ? 1 : 0);
+            formData.append("action", action_name);
+            formData.append("schedule_date", schedule_date || '');
+            formData.append("schedule_time", schedule_time || '');
+            formData.append("files", createPostFiles[0]);
+            if (createPostFiles.length > 1) {
+                toastr.info("Only the first file will be posted. Multiple files create separate posts.");
+            }
+            disableActionButton();
+            $.ajax({
+                url: "{{ route('panel.schedule.process.post') }}",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        resetCreatePostArea();
+                        toastr.success(response.message);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                    enableActionButton();
+                },
+                error: function() {
+                    toastr.error("Failed to upload post.");
+                    enableActionButton();
+                }
+            });
+        }
+
+        function resetCreatePostArea() {
+            $('#createPostModal').modal('hide');
+            $('#createPostEditorTextarea').val('');
+            $('#createPostComment').val('');
+            $('#createPostFirstComment').val('');
+            $('#createPostLinkPreview').empty();
+            createPostFiles = [];
+            createPostRevokeUrls();
+            $('#createPostUploadPreviews').empty();
+            is_link = 0;
+            is_video = 0;
+            current_file = 0;
+            if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
+                loadQueueTimeslotsSection();
+            }
+            loadPostsStatusCounts();
+            if (typeof loadPosts === 'function') loadPosts(1);
+        }
+
         // validate and process post
         var validateAndProcess = function() {
             if (!checkAccounts()) {
@@ -586,6 +1514,10 @@
             $('#characterCount').text('');
             $('#article-container').empty();
             reloadPosts();
+            if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
+                loadQueueTimeslotsSection();
+            }
+            loadPostsStatusCounts();
             enableActionButton();
         }
         // Extract first URL from text (for shortening when link is in content but post is photo/content)
@@ -685,11 +1617,29 @@
         var disableActionButton = function() {
             $('.action_btn').attr("disabled", true);
             $('.schedule_btn').attr("disabled", true);
+            if ($createPostActiveButton && $createPostActiveButton.length) {
+                var $btns = $createPostActiveButton.closest('.create-post-segmented-buttons').find('.create-post-segmented-btn');
+                $btns.prop('disabled', true);
+                if (!$createPostActiveButton.data('original-html')) {
+                    $createPostActiveButton.data('original-html', $createPostActiveButton.html());
+                }
+                $createPostActiveButton.html('<i class="fas fa-spinner fa-spin mr-1"></i>' + $createPostActiveButton.data('original-html').trim());
+            }
         };
         // enable action buttons
         var enableActionButton = function() {
             $('.action_btn').attr("disabled", false);
             $('.schedule_btn').attr("disabled", false);
+            if ($createPostActiveButton && $createPostActiveButton.length) {
+                var $btns = $createPostActiveButton.closest('.create-post-segmented-buttons').find('.create-post-segmented-btn');
+                $btns.prop('disabled', false);
+                var originalHtml = $createPostActiveButton.data('original-html');
+                if (originalHtml) {
+                    $createPostActiveButton.html(originalHtml);
+                    $createPostActiveButton.removeData('original-html');
+                }
+                $createPostActiveButton = null;
+            }
             $('.schedule-modal').modal("hide");
         };
         // Open queue settings modal (optionally for one account only)
@@ -1031,7 +1981,7 @@
             var selectedAccounts = getSelectedAccounts();
 
             if (selectedAccounts.accountIds.length === 0) {
-                var tabLabel = currentPostStatusTab === 'failed' ? 'failed' : 'queued';
+                var tabLabel = 'queued';
                 $('#postsGrid').html(`
                     <div class="empty-state-box">
                         <i class="far fa-folder-open"></i>
@@ -1076,7 +2026,7 @@
         // Render posts grid
         function renderPosts(posts) {
             if (posts.length === 0) {
-                var tabLabel = currentPostStatusTab === 'failed' ? 'failed' : 'queued';
+                var tabLabel = 'queued';
                 $('#postsGrid').html(`
                     <div class="empty-state-box">
                         <i class="far fa-folder-open"></i>
@@ -1437,7 +2387,12 @@
 
         // Reload posts function (for use after actions)
         var reloadPosts = function() {
-            loadPosts(currentPage);
+            if (currentPostStatusTab === 'queue') {
+                if (typeof loadQueueTimeslotsSection === 'function') loadQueueTimeslotsSection();
+            } else if (currentPostStatusTab === 'sent') {
+                cachedSentPagePosts = null;
+                loadSentPagePostsCached(getSelectedAccounts());
+            }
         }
 
         // Track last notification count to detect new notifications
@@ -1470,8 +2425,6 @@
         // Initial notification count fetch
         checkNotificationsAndRefresh();
 
-        // Initial load
-        loadPosts(1)
         // delete post
         $(document).on('click', '.delete_btn', function() {
             if (confirm(
@@ -1557,6 +2510,10 @@
                         if (response.success) {
                             modal.modal("hide");
                             reloadPosts();
+                            if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
+                                loadQueueTimeslotsSection();
+                            }
+                            loadPostsStatusCounts();
                             toastr.success(response.message);
                         } else {
                             toastr.error(response.message);

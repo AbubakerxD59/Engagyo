@@ -31,11 +31,14 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
             Route::get("posts/listing", "postsListing")->name("posts.listing");
             Route::get("posts/status-counts", "postsStatusCounts")->name("posts.status.counts");
             Route::get("posts/sent-page-posts", "getPageSentPosts")->name("posts.sent.page");
+            Route::get("queue-timeline", "getQueueTimeline")->name("queue.timeline");
+            Route::get("last-used-account", "getLastUsedAccount")->name("last-used-account");
             Route::get("timeslots", "getTimeslots")->name("timeslots");
             Route::prefix("post/")->name("post.")->group(function () {
                 Route::get("delete/{id?}", "postDelete")->name('delete');
                 Route::get("edit/{id?}", "postEdit")->name("edit");
                 Route::post("update/{id?}", "postUpdate")->name("update");
+                Route::post("update-comment/{id?}", "postUpdateComment")->name("update.comment");
                 Route::post("publish/now/{id?}", "postPublishNow")->name("publish.now");
             });
         });

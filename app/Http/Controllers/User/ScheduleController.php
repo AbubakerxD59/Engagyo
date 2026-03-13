@@ -168,7 +168,45 @@ class  ScheduleController extends Controller
         $user = User::with("boards.pinterest", "pages.facebook", "tiktok", "timezone")->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
-        return view("user.posts.index", compact("accounts", "userTimezoneName"));
+        return view("user.schedule-new-design.index", compact("accounts", "userTimezoneName"));
+    }
+
+    /**
+     * Get the account used for the most recently created post (last used account)
+     * and the schedule_status of all Facebook pages for dynamic updates
+     */
+    public function getLastUsedAccount()
+    {
+        $userId = Auth::guard('user')->id();
+        $post = Post::where('user_id', $userId)
+            ->where('social_type', 'facebook')
+            ->orderBy('created_at', 'desc')
+            ->first();
+
+        $account = null;
+        if ($post) {
+            $page = Page::with('facebook')->find($post->account_id);
+            if ($page) {
+                $account = [
+                    'id' => $page->id,
+                    'type' => 'facebook',
+                    'name' => $page->name,
+                    'profile_image' => $page->profile_image,
+                ];
+            }
+        }
+
+        $accountsStatus = Page::get(['id', 'schedule_status'])
+            ->mapWithKeys(function ($page) {
+                return [$page->id => $page->schedule_status ?? 'inactive'];
+            })
+            ->toArray();
+
+        return response()->json([
+            'success' => true,
+            'account' => $account,
+            'accounts_status' => $accountsStatus,
+        ]);
     }
 
     /**
@@ -1904,6 +1942,23 @@ class  ScheduleController extends Controller
         return response()->json($response);
     }
 
+    public function postUpdateComment($id, Request $request)
+    {
+        try {
+            $post = Post::findOrFail($id);
+            $post->update(['comment' => $request->input('comment', '')]);
+            return response()->json([
+                'success' => true,
+                'message' => 'Comment updated successfully.',
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
     public function postPublishNow(Request $request)
     {
         $response = PostService::publishNow($request->id);
@@ -1924,9 +1979,8 @@ class  ScheduleController extends Controller
 
         $queue = (clone $base)->where('status', 0)->count();
         $sent = (clone $base)->where('status', 1)->count();
-        $failed = (clone $base)->where('status', -1)->count();
 
-        return response()->json(['queue' => $queue, 'sent' => $sent, 'failed' => $failed]);
+        return response()->json(['queue' => $queue, 'sent' => $sent]);
     }
 
     public function getTimeslots(Request $request)
@@ -1953,9 +2007,10 @@ class  ScheduleController extends Controller
     public function getQueueTimeline(Request $request)
     {
         $accountId = $request->input('account_id');
-        $accountType = $request->input('account_type');
+        $accountType = $request->input('account_type') ?? $request->input('type');
         $days = (int) $request->input('days', 14);
         $offset = (int) $request->input('offset', 0);
+        $source = $request->input('source', 'schedule');
 
         if (!$accountId || !$accountType) {
             return response()->json(['success' => false, 'message' => 'Account required']);
@@ -1966,64 +2021,102 @@ class  ScheduleController extends Controller
 
         $timeslots = Timeslot::where('account_id', $accountId)
             ->where('account_type', $accountType)
+            ->where('type', 'schedule')
             ->pluck('timeslot')
             ->sort()
             ->values()
             ->toArray();
-
-        if (empty($timeslots)) {
-            return response()->json(['success' => true, 'timeline' => [], 'has_more' => false, 'message' => 'No posting hours configured for this account.']);
-        }
 
         $socialType = $accountType === 'pinterest' ? 'pinterest' : ($accountType === 'tiktok' ? 'tiktok' : 'facebook');
 
         $startDate = Carbon::now($userTz)->addDays($offset)->startOfDay();
         $endDate = $startDate->copy()->addDays($days - 1)->endOfDay();
 
-        $existingPosts = Post::withoutGlobalScopes()
+        $postsQuery = Post::with('page.facebook', 'board.pinterest', 'tiktok')
+            ->where('user_id', $user->id)
             ->where('account_id', $accountId)
             ->where('social_type', 'like', "%{$socialType}%")
-            ->whereIn('status', [0, 1])
+            ->where('status', 0)
             ->whereBetween('publish_date', [
                 $startDate->copy()->setTimezone('UTC')->format('Y-m-d H:i:s'),
                 $endDate->copy()->setTimezone('UTC')->format('Y-m-d H:i:s'),
-            ])
-            ->get()
-            ->keyBy(function ($post) use ($userTz) {
-                return Carbon::parse($post->publish_date, 'UTC')->setTimezone($userTz)->format('Y-m-d H:i');
-            });
+            ]);
+        if ($source) {
+            $postsQuery->where('source', $source);
+        }
+        $existingPosts = $postsQuery->get()->keyBy(function ($post) use ($userTz) {
+            return Carbon::parse($post->publish_date, 'UTC')->setTimezone($userTz)->format('Y-m-d H:i');
+        });
 
         $timeline = [];
         $now = Carbon::now($userTz);
 
+        $formatPostForSlot = function ($post) {
+            return [
+                'id' => $post->id,
+                'title' => $post->title,
+                'comment' => $post->comment,
+                'description' => $post->description,
+                'url' => $post->url,
+                'type' => $post->type,
+                'status' => (int) $post->status,
+                'image' => $post->image ? (str_starts_with($post->image, 'http') ? $post->image : asset($post->image)) : null,
+                'account_name' => $post->account_name ?? ucfirst($post->social_type),
+                'account_profile' => $post->account_profile ? (str_starts_with($post->account_profile, 'http') ? $post->account_profile : asset($post->account_profile)) : null,
+                'social_type' => $post->social_type,
+                'created_at' => $post->created_at ? Carbon::parse($post->created_at)->diffForHumans() : null,
+            ];
+        };
+
         for ($d = 0; $d < $days; $d++) {
             $date = $startDate->copy()->addDays($d);
+            $dateStr = $date->format('Y-m-d');
             $daySlots = [];
+            $placedKeys = [];
 
-            foreach ($timeslots as $slot) {
-                $slotTime = Carbon::parse($date->format('Y-m-d') . ' ' . $slot, $userTz);
+            foreach ($timeslots ?: [] as $slot) {
+                $slotNormalized = date('H:i', strtotime($slot));
+                $slotTime = Carbon::parse($dateStr . ' ' . $slotNormalized, $userTz);
 
-                if ($offset === 0 && $slotTime->lt($now)) {
-                    continue;
+                if ($offset === 0) {
+                // if ($offset === 0 && $slotTime->lt($now)) {
+                    // continue;
                 }
 
                 $key = $slotTime->format('Y-m-d H:i');
                 $post = $existingPosts->get($key);
+                if ($post) {
+                    $placedKeys[$key] = true;
+                }
 
                 $daySlots[] = [
                     'time' => $slotTime->format('H:i'),
                     'time_display' => $slotTime->format('h:i A'),
                     'datetime_utc' => $slotTime->copy()->setTimezone('UTC')->format('Y-m-d H:i:s'),
                     'has_post' => $post !== null,
-                    'post' => $post ? [
-                        'id' => $post->id,
-                        'title' => $post->title,
-                        'type' => $post->type,
-                        'status' => (int) $post->status,
-                        'image' => $post->image,
-                    ] : null,
+                    'post' => $post ? $formatPostForSlot($post) : null,
                 ];
             }
+
+            // Generate virtual slots for posts that don't match any configured timeslot
+            foreach ($existingPosts as $key => $post) {
+                if (str_starts_with($key, $dateStr . ' ') && !isset($placedKeys[$key])) {
+                    $slotTime = Carbon::parse($key, $userTz);
+                    if ($offset === 0) {
+                    // if ($offset === 0 && $slotTime->lt($now)) {
+                        // continue;
+                    }
+                    $daySlots[] = [
+                        'time' => $slotTime->format('H:i'),
+                        'time_display' => $slotTime->format('h:i A'),
+                        'datetime_utc' => $slotTime->copy()->setTimezone('UTC')->format('Y-m-d H:i:s'),
+                        'has_post' => true,
+                        'post' => $formatPostForSlot($post),
+                    ];
+                }
+            }
+
+            usort($daySlots, fn($a, $b) => strcmp($a['time'], $b['time']));
 
             if (!empty($daySlots)) {
                 $isToday = $date->isToday();

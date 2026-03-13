@@ -116,7 +116,7 @@
 
                                             </div>
                                         </div>
-                                        {{-- Posts status tabs (Queue, Sent, Failed) --}}
+                                        {{-- Posts status tabs (Queue, Sent) --}}
                                         <div id="posts-status-tabs" class="posts-status-tabs" style="display: none;">
                                             <button type="button" class="posts-status-tab is-active" data-tab="queue"
                                                 aria-selected="true">
@@ -127,11 +127,6 @@
                                                 aria-selected="false">
                                                 <span class="posts-status-tab-label">Sent</span>
                                                 <span class="posts-status-tab-badge" data-count="sent">0</span>
-                                            </button>
-                                            <button type="button" class="posts-status-tab" data-tab="failed"
-                                                aria-selected="false">
-                                                <span class="posts-status-tab-label">Failed</span>
-                                                <span class="posts-status-tab-badge" data-count="failed">0</span>
                                             </button>
                                         </div>
                                     </div>
@@ -149,7 +144,7 @@
                                             </div>
                                         </div>
                                     </div>
-                                    {{-- Sent / Failed posts grid (scrollable) --}}
+                                    {{-- Sent posts grid (scrollable) --}}
                                     <div id="postsGrid" class="posts-grid-section" style="display: none;"></div>
                                 </div>
                             </div>
@@ -161,8 +156,40 @@
     </div>
     @include('user.schedule.modals.settings-modal')
     @include('user.schedule.modals.schedule-modal')
+    @include('user.schedule-new-design.modals.create-post-modal')
     @include('user.schedule.modals.edit-post-modal')
     @include('user.schedule.modals.tiktok-post-modal')
+
+    {{-- Post Comment Modal (design matches Create Post modal) --}}
+    <div class="modal fade post-comment-modal" id="postCommentModal" tabindex="-1" role="dialog" aria-labelledby="postCommentModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered post-comment-modal-dialog" role="document">
+            <div class="modal-content post-comment-modal-content">
+                <div class="post-comment-modal-header">
+                    <div class="post-comment-header-left">
+                        <h5 class="post-comment-modal-title" id="postCommentModalLabel">Post Comment</h5>
+                    </div>
+                    <div class="post-comment-header-actions">
+                        <button type="button" class="post-comment-header-icon-btn post-comment-close-btn" data-dismiss="modal" aria-label="Close">
+                            <i class="fas fa-times"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="post-comment-modal-body">
+                    <p class="post-comment-description">This comment will be posted with your post when it is published.</p>
+                    <textarea id="postCommentInput" class="post-comment-textarea" rows="4" placeholder="Add a comment..."></textarea>
+                </div>
+                <div class="post-comment-modal-footer">
+                    <div class="post-comment-footer-left"></div>
+                    <div class="post-comment-footer-right">
+                        <button type="button" class="post-comment-btn post-comment-btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="button" class="post-comment-btn post-comment-btn-primary" id="postCommentSaveBtn">
+                            <i class="fas fa-save"></i> Save Comment
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- Image Lightbox Modal --}}
     <div class="image-lightbox" id="imageLightbox">
@@ -179,12 +206,56 @@
 
 @push('styles')
     {{-- styling --}}
-    @include('user.posts.assets.style')
+    @include('user.schedule-new-design.assets.style')
     @include('user.schedule.assets.facebook_post')
     @include('user.schedule.assets.pinterest_post')
 @endpush
 
 @push('scripts')
     {{-- scripts --}}
-    @include('user.posts.assets.script')
+    @include('user.schedule-new-design.assets.script')
+    <script type="module">
+        (async function() {
+            await import('https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js');
+            const wrap = document.getElementById('createPostEmojiPickerWrap');
+            const btn = document.getElementById('createPostEmojiBtn');
+            const postTextarea = document.getElementById('createPostEditorTextarea');
+            const commentTextarea = document.getElementById('createPostComment');
+            const firstCommentInput = document.getElementById('createPostFirstComment');
+            if (!wrap || !btn || !postTextarea) return;
+            const textInputs = [postTextarea, commentTextarea, firstCommentInput].filter(Boolean);
+            let lastFocusedInput = postTextarea;
+            textInputs.forEach(function(el) {
+                el.addEventListener('focus', function() { lastFocusedInput = el; });
+            });
+            const picker = document.createElement('emoji-picker');
+            wrap.appendChild(picker);
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                wrap.classList.toggle('is-open');
+            });
+            function insertEmojiAtCursor(target, emoji) {
+                const start = target.selectionStart;
+                const end = target.selectionEnd;
+                const text = target.value;
+                target.value = text.substring(0, start) + emoji + text.substring(end);
+                target.selectionStart = target.selectionEnd = start + emoji.length;
+                target.focus();
+            }
+            picker.addEventListener('emoji-click', function(e) {
+                const emoji = (e.detail.unicode || (e.detail.emoji && e.detail.emoji.unicode)) || '';
+                if (!emoji) return;
+                const target = textInputs.indexOf(document.activeElement) >= 0 ? document.activeElement : lastFocusedInput;
+                insertEmojiAtCursor(target, emoji);
+            });
+            document.addEventListener('click', function(e) {
+                if (!wrap.contains(e.target) && !btn.contains(e.target)) {
+                    wrap.classList.remove('is-open');
+                }
+            });
+            $('#createPostModal').on('hidden.bs.modal', function() {
+                wrap.classList.remove('is-open');
+            });
+        })();
+    </script>
 @endpush
