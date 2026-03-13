@@ -541,6 +541,19 @@
          }
      }
 
+     @media (max-width: 578px) {
+         .queue-timeslots-post-col {
+             flex: 0 0 100%;
+             width: 100%;
+         }
+     }
+
+     @media(max-width: 425px) {
+         .selected-account-action-btn span {
+             display: none;
+         }
+     }
+
      /* --- All Channels icon (sidebar + header) --- */
      .all-channels-icon {
          width: 40px;
@@ -3380,6 +3393,7 @@
          height: 100%;
          object-fit: cover;
          display: block;
+         border-radius: 10px;
      }
 
      .create-post-selected-channel-chip .create-post-chip-badge {
@@ -4450,4 +4464,183 @@
          color: #047857;
          border-color: #6ee7b7;
      }
+
+     /* ========== RESPONSIVE ========== */
+     @media (max-width: 768px) {
+         .page-content {
+             height: calc(100vh - 100px);
+         }
+
+         .queue-timeslots-section,
+         .posts-grid-section {
+             padding: 12px 16px;
+         }
+
+         .selected-account-action-btn {
+             padding: 8px 12px;
+             min-height: 44px;
+         }
+
+         .accounts-grid {
+             grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+         }
+
+         .account-card,
+         .posts-status-tab,
+         .queue-timeslots-new-btn,
+         .create-post-segmented-btn {
+             min-height: 44px;
+         }
+
+         .queue-post-chat-btn,
+         .queue-post-more-btn,
+         .create-post-action-btn {
+             min-width: 44px;
+             min-height: 44px;
+         }
+
+         .create-post-modal .modal-dialog {
+             width: 95vw;
+             max-width: none;
+             margin: 1rem auto;
+             max-height: calc(100vh - 2rem);
+         }
+     }
+
+     @media (max-width: 576px) {
+         .page-content {
+             height: calc(100vh - 56px);
+         }
+
+         .page-content>.content {
+             padding: 0 0.25rem;
+         }
+
+         .queue-timeslots-section,
+         .posts-grid-section {
+             padding: 12px;
+         }
+
+         .queue-timeslots-row {
+             flex-direction: column;
+             gap: 8px;
+             margin-bottom: 12px;
+         }
+
+         .queue-timeslots-time-col {
+             width: 100%;
+             padding-top: 0;
+         }
+
+         .queue-post-card-body {
+             flex-direction: column;
+             gap: 12px;
+         }
+
+         .queue-post-image-wrap {
+             width: 100%;
+             max-width: 200px;
+             height: auto;
+             aspect-ratio: 1;
+             margin-left: 0;
+         }
+
+         .selected-account-info {
+             flex-wrap: wrap;
+         }
+
+         .selected-account-name {
+             font-size: 14px;
+         }
+
+         .accounts-grid {
+             grid-template-columns: 1fr;
+         }
+
+         /* .create-post-modal .modal-dialog {
+             width: 100%;
+             margin: 0;
+             max-height: 100vh;
+             border-radius: 0;
+         } */
+
+         /* .create-post-modal-content {
+             border-radius: 0;
+         } */
+
+         .create-post-segmented-buttons {
+             flex-wrap: wrap;
+             border-radius: 8px;
+         }
+
+         .create-post-segmented-btn {
+             flex: 1 1 45%;
+             min-width: 120px;
+         }
+
+         .create-post-schedule-dropdown {
+             left: 0;
+             right: 0;
+             min-width: auto;
+             width: 100%;
+         }
+     }
+
+     /* Accounts sidebar: visible in flow at all breakpoints (no mobile hide) */
+     @media (max-width: 1024px) {
+         .accounts-sidebar {
+             width: 220px;
+         }
+
+         .accounts-sidebar.collapsed {
+             width: 4rem;
+         }
+     }
+
+     @media (max-width: 576px) {
+         .accounts-sidebar {
+             width: 180px;
+         }
+
+         .accounts-sidebar.collapsed .account-card {
+             padding: 2px;
+         }
+
+         .accounts-sidebar.collapsed {
+             width: 3.5rem;
+         }
+     }
+
+     @media (max-width: 1280px) {
+
+         .queue-timeslots-section,
+         .posts-grid-section {
+             padding: 16px 5%;
+         }
+
+         .create-post-modal .modal-dialog {
+             width: 90vw;
+             max-width: 480px;
+         }
+     }
+
+     /* Mobile toggle and backdrop no longer used - sidebar always visible */
+     .accounts-sidebar-mobile-toggle,
+     .accounts-sidebar-backdrop {
+         display: none !important;
+     }
+
+     /* new post modal responsive */
+     @media (min-width: 576px) {
+         #createPostModal .modal-dialog-centered {
+             min-height: calc(100% - 10rem);
+         }
+     }
+     @media (max-width: 576px) {
+         #createPostModal .modal-dialog-centered {
+             min-height: calc(100% - 10rem);
+         }
+     }
+
+     /* new post modal responsive */
  </style>

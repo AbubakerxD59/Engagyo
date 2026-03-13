@@ -1955,7 +1955,7 @@
   var CLASS_NAME_IS_OPENING$1 = 'sidebar-is-opening';
   var CLASS_NAME_CLOSED = 'sidebar-closed';
   var Default$5 = {
-    autoCollapseSize: 992,
+    autoCollapseSize: 1024,
     enableRemember: false,
     noTransitionAfterReload: true,
     animationSpeed: 300

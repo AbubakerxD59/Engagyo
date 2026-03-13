@@ -70,7 +70,12 @@
                             </div>
                         </div>
                     </aside>
+                    <div id="sidebarBackdrop" class="accounts-sidebar-backdrop" aria-hidden="true"></div>
                     <div class="schedule-main-content">
+                        <button type="button" class="accounts-sidebar-mobile-toggle" id="sidebarMobileToggle"
+                            aria-label="Open channels" title="Open channels" style="display: none;">
+                            <i class="fas fa-bars"></i>
+                        </button>
                         <div class="card">
                             <div class="card-body">
                                 {{-- Selected account header + post type tabs (sticky when scrolling) --}}
@@ -101,12 +106,6 @@
                                                 </div>
                                             </div>
                                             <div class="selected-account-actions">
-                                                <button type="button"
-                                                    class="selected-account-action-btn selected-account-view-list is-active"
-                                                    data-view="list" title="List view" aria-label="List view">
-                                                    <i class="fas fa-list-ul"></i>
-                                                    <span>List</span>
-                                                </button>
                                                 <button type="button"
                                                     class="selected-account-action-btn selected-account-new-post"
                                                     title="New post" aria-label="New post">

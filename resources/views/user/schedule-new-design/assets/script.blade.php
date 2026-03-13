@@ -688,6 +688,42 @@
             $('#accountSearchInput').val('');
             $('#accountSearchClear').hide();
             $('.account-card').show();
+            if ($(window).width() <= 1024) {
+                $sidebar.removeClass('mobile-open');
+                $('#sidebarBackdrop').removeClass('is-visible');
+            }
+        });
+
+        // Mobile sidebar toggle: open sidebar overlay
+        $('#sidebarMobileToggle').on('click', function() {
+            var $sidebar = $('#accounts-sidebar');
+            $sidebar.removeClass('collapsed').addClass('mobile-open');
+            $('#sidebarBackdrop').addClass('is-visible');
+            $('#accountSearchInput').val('');
+            $('#accountSearchClear').hide();
+            $('.account-card').show();
+        });
+
+        // Backdrop click: close mobile sidebar
+        $('#sidebarBackdrop').on('click', function() {
+            $('#accounts-sidebar').removeClass('mobile-open');
+            $(this).removeClass('is-visible');
+        });
+
+        // Close mobile sidebar on account select (when viewport is mobile)
+        $(document).on('click', '.account-card', function() {
+            if ($(window).width() <= 1024) {
+                $('#accounts-sidebar').removeClass('mobile-open');
+                $('#sidebarBackdrop').removeClass('is-visible');
+            }
+        });
+
+        // Close mobile sidebar when resizing to desktop
+        $(window).on('resize', function() {
+            if ($(window).width() > 1024) {
+                $('#accounts-sidebar').removeClass('mobile-open');
+                $('#sidebarBackdrop').removeClass('is-visible');
+            }
         });
 
         // Account search input: filter cards by name

@@ -660,3 +660,76 @@ div.dataTables_wrapper div.dataTables_paginate ul.pagination {
     pointer-events: none;
     cursor: default;
 }
+
+/* Main sidebar: same behavior at 1024px as < 992px (hide sidebar, show burger, overlay when open) */
+@media (max-width: 1024px) {
+    /* Content area full width when sidebar collapsed */
+    body:not(.sidebar-mini-md):not(.sidebar-mini-xs):not(.layout-top-nav) .content-wrapper,
+    body:not(.sidebar-mini-md):not(.sidebar-mini-xs):not(.layout-top-nav) .main-footer,
+    body:not(.sidebar-mini-md):not(.sidebar-mini-xs):not(.layout-top-nav) .main-header {
+        margin-left: 0;
+    }
+    .sidebar-mini-md .content-wrapper,
+    .sidebar-mini-md .main-footer,
+    .sidebar-mini-md .main-header,
+    .sidebar-mini-xs .content-wrapper,
+    .sidebar-mini-xs .main-footer,
+    .sidebar-mini-xs .main-header {
+        margin-left: 0;
+    }
+    /* Overlay visible when sidebar open (burger clicked) */
+    .sidebar-open #sidebar-overlay {
+        display: block;
+    }
+    /* Sidebar slides in when open */
+    .main-sidebar, .main-sidebar::before {
+        box-shadow: none !important;
+        margin-left: -250px;
+    }
+    .sidebar-open .main-sidebar, .sidebar-open .main-sidebar::before {
+        margin-left: 0;
+    }
+    .sidebar-mini.sidebar-collapse .main-sidebar {
+        box-shadow: none !important;
+    }
+}
+
+/* Main navbar: keep horizontal layout on widths < 768px (Bootstrap navbar-expand-md defaults to column) */
+@media (max-width: 767.98px) {
+    .main-header.navbar {
+        flex-flow: row nowrap;
+    }
+    .main-header .navbar-nav {
+        flex-direction: row;
+        flex-wrap: nowrap;
+    }
+    .main-header .navbar-nav .dropdown-menu {
+        position: absolute;
+    }
+    .main-header .navbar-nav .nav-link {
+        padding-right: 0.5rem;
+        padding-left: 0.5rem;
+    }
+    /* Compact live clock to fit */
+    .main-header .navbar-live-clock {
+        padding: 4px 8px;
+        gap: 4px;
+        font-size: 12px;
+    }
+    .main-header #navbarClockDate,
+    .main-header .navbar-clock-sep,
+    .main-header .navbar-clock-icon:first-child {
+        display: none;
+    }
+    .main-header #navbarClockTime {
+        font-size: 12px;
+    }
+    .main-header .navbar-clock-tz {
+        display: none;
+    }
+    /* Hide username on small screens, show only avatar */
+    .main-header .user-nav-name,
+    .main-header .user-nav-arrow {
+        display: none;
+    }
+}
