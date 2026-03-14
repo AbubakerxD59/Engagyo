@@ -1227,8 +1227,8 @@
 
      .queue-post-edit-btn,
      .queue-post-more-btn {
-         width: 32px;
-         height: 32px;
+         width: 30px;
+         height: 30px;
          border: none;
          background: #f1f3f4;
          border-radius: 50%;
@@ -1238,6 +1238,11 @@
          align-items: center;
          justify-content: center;
          transition: background 0.2s, color 0.2s;
+     }
+
+     .queue-post-edit-btn i,
+     .queue-post-more-btn i {
+         font-size: 11px;
      }
 
      .queue-post-edit-btn:hover,
@@ -4466,6 +4471,20 @@
      }
 
      /* ========== RESPONSIVE ========== */
+     @media (max-width: 700px) {
+         .queue-post-card-footer {
+             flex-direction: column;
+             align-items: flex-start;
+         }
+         .queue-post-actions {
+             order: 1;
+         }
+         .queue-post-created {
+             order: 2;
+             flex: none;
+         }
+     }
+
      @media (max-width: 768px) {
          .page-content {
              height: calc(100vh - 100px);
@@ -4493,10 +4512,15 @@
          }
 
          .queue-post-chat-btn,
-         .queue-post-more-btn,
          .create-post-action-btn {
              min-width: 44px;
              min-height: 44px;
+         }
+
+         .queue-post-edit-btn,
+         .queue-post-more-btn {
+             min-width: 30px;
+             min-height: 30px;
          }
 
          .create-post-modal .modal-dialog {

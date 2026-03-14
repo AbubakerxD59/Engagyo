@@ -323,7 +323,7 @@
             cardHtml += '<div class="queue-post-actions">';
             cardHtml += '<button type="button" class="queue-post-publish-now-btn btn-publish-now" data-id="' + postId + '"><i class="fas fa-paper-plane"></i> Publish Now</button>';
             cardHtml += '<button type="button" class="queue-post-edit-btn" data-id="' + postId + '" aria-label="Edit"><i class="fas fa-pencil-alt"></i></button>';
-            cardHtml += '<button type="button" class="queue-post-more-btn dropdown-toggle" data-id="' + postId + '" aria-label="More options"><i class="fas fa-ellipsis-v"></i></button>';
+            cardHtml += '<button type="button" class="queue-post-more-btn" data-id="' + postId + '" aria-label="More options"><i class="fas fa-ellipsis-v"></i></button>';
             cardHtml += '</div>';
             cardHtml += '</div>';
             cardHtml += '</div></div>';
