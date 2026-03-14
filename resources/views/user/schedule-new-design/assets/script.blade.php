@@ -1522,7 +1522,6 @@
         }
 
         function resetCreatePostArea() {
-            $('#createPostModal').modal('hide');
             $('#createPostEditorTextarea').val('');
             $('#createPostComment').val('');
             $('#createPostFirstComment').val('');
@@ -1533,6 +1532,7 @@
             is_link = 0;
             is_video = 0;
             current_file = 0;
+            $('#createPostScheduleDropdown').removeClass('is-open');
             if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
                 loadQueueTimeslotsSection();
             }

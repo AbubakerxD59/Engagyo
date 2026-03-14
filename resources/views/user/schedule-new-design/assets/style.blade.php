@@ -1110,6 +1110,7 @@
          line-height: 1.5;
          white-space: pre-wrap;
          word-break: break-word;
+         text-transform: capitalize;
      }
 
      .queue-post-see-more-btn {
@@ -1129,8 +1130,8 @@
          text-decoration: underline;
      }
 
-     .queue-link-title + .queue-post-see-more-btn,
-     .queue-link-desc + .queue-post-see-more-btn {
+     .queue-link-title+.queue-post-see-more-btn,
+     .queue-link-desc+.queue-post-see-more-btn {
          display: block;
          margin-top: 4px;
      }
@@ -1515,6 +1516,7 @@
          line-height: 1.5;
          margin: 0;
          word-break: break-word;
+         text-transform: capitalize;
      }
 
      .sent-card-image {
@@ -4513,9 +4515,11 @@
              flex-direction: column;
              align-items: flex-start;
          }
+
          .queue-post-actions {
              order: 1;
          }
+
          .queue-post-created {
              order: 2;
              flex: none;
@@ -4697,6 +4701,7 @@
              min-height: calc(100% - 10rem);
          }
      }
+
      @media (max-width: 576px) {
          #createPostModal .modal-dialog-centered {
              min-height: calc(100% - 10rem);
