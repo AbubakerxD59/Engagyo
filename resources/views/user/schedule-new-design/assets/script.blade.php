@@ -2440,8 +2440,9 @@
 
         // Track last notification count to detect new notifications
         var lastNotificationCount = 0;
+        var notificationCheckInitialized = false;
 
-        // Function to check for new notifications and refresh posts
+        // Function to check for new notifications and refresh queue tab
         function checkNotificationsAndRefresh() {
             $.ajax({
                 url: '{{ route('panel.notifications.fetch') }}',
@@ -2449,10 +2450,17 @@
                 success: function(response) {
                     if (response.success) {
                         var currentCount = response.count || 0;
-                        // If notification count increased, refresh posts
-                        if (currentCount > lastNotificationCount && lastNotificationCount > 0) {
-                            // New notification received, refresh posts
+                        if (!notificationCheckInitialized) {
+                            notificationCheckInitialized = true;
+                            lastNotificationCount = currentCount;
+                            return;
+                        }
+                        // If notification count increased, refresh queue tab and status counts
+                        if (currentCount > lastNotificationCount) {
                             reloadPosts();
+                            if (typeof loadPostsStatusCounts === 'function') {
+                                loadPostsStatusCounts();
+                            }
                         }
                         lastNotificationCount = currentCount;
                     }
