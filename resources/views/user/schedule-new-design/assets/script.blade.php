@@ -2294,12 +2294,6 @@
             if (post.permalink_url) {
                 viewPostBtn = '<a href="' + post.permalink_url + '" target="_blank" class="sent-card-view-btn"><i class="fas fa-external-link-alt"></i> View Post</a>';
             }
-            var deletePostBtn = '';
-            if (post.id) {
-                var deleteDataAttrs = 'data-facebook-post-id="' + (post.id || '') + '" data-page-id="' + (post.page_db_id || '') + '"';
-                if (post.db_post_id) deleteDataAttrs += ' data-id="' + post.db_post_id + '"';
-                deletePostBtn = '<button type="button" class="sent-card-delete-btn" ' + deleteDataAttrs + ' title="Delete"><i class="fas fa-trash"></i> Delete</button>';
-            }
 
             var ins = post.insights || {};
             var reactions = ins.post_reactions ?? 0;
@@ -2342,7 +2336,6 @@
                                 </div>
                                 <div class="sent-card-footer-actions">
                                     ${viewPostBtn}
-                                    ${deletePostBtn}
                                 </div>
                             </div>
                         </div>
@@ -2633,20 +2626,14 @@
         checkNotificationsAndRefresh();
 
         // delete post
-        $(document).on('click', '.delete_btn, .sent-card-delete-btn', function() {
+        $(document).on('click', '.delete_btn', function() {
             if (confirm(
                     "Published post will be deleted from your account and Facebook. Do you wish to delete this post?")) {
                 var id = $(this).data('id');
-                var facebookPostId = $(this).data('facebook-post-id');
-                var pageId = $(this).data('page-id');
-                var reqData = {};
-                if (id) reqData.id = id;
-                if (facebookPostId) reqData.facebook_post_id = facebookPostId;
-                if (pageId) reqData.page_id = pageId;
                 $.ajax({
                     url: "{{ route('panel.schedule.post.delete') }}",
                     type: "GET",
-                    data: reqData,
+                    data: { id: id },
                     success: function(response) {
                         if (response.success) {
                             reloadPosts();
