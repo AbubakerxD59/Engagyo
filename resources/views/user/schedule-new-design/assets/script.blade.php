@@ -2177,10 +2177,8 @@
         function renderSentPagePostCard(post) {
             var ct = parseCreatedTime(post.created_time);
             var timePart = '';
-            var datePart = '';
             if (ct && !isNaN(ct.getTime())) {
                 timePart = formatInUserTimezone(ct, { hour: '2-digit', minute: '2-digit', hour12: true });
-                datePart = formatInUserTimezone(ct, { month: 'short', day: 'numeric', year: 'numeric' });
             }
 
             var statusType = post.status_type || '';
@@ -2211,11 +2209,10 @@
             var shares = post.shares ?? 0;
             var clicks = ins.post_clicks ?? '-';
 
-            var dateTimeDisplay = datePart && timePart ? datePart + ' ' + timePart : (timePart || '');
             return `
                 <div class="sent-post-row">
                     <div class="sent-post-time-col">
-                        <span class="sent-post-time">${dateTimeDisplay}</span>
+                        <span class="sent-post-time">${timePart}</span>
                         ${sourceLabel}
                     </div>
                     <div class="sent-post-card-col">
