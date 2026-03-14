@@ -33,6 +33,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
             Route::get("posts/sent-page-posts", "getPageSentPosts")->name("posts.sent.page");
             Route::get("queue-timeline", "getQueueTimeline")->name("queue.timeline");
             Route::get("last-used-account", "getLastUsedAccount")->name("last-used-account");
+            Route::get("accounts-with-status", "getAccountsWithStatus")->name("accounts-with-status");
             Route::get("timeslots", "getTimeslots")->name("timeslots");
             Route::prefix("post/")->name("post.")->group(function () {
                 Route::get("delete/{id?}", "postDelete")->name('delete');

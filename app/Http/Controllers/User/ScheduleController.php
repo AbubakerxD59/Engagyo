@@ -196,7 +196,8 @@ class  ScheduleController extends Controller
             }
         }
 
-        $accountsStatus = Page::get(['id', 'schedule_status'])
+        $accountsStatus = Page::where('user_id', $userId)
+            ->get(['id', 'schedule_status'])
             ->mapWithKeys(function ($page) {
                 return [$page->id => $page->schedule_status ?? 'inactive'];
             })
@@ -206,6 +207,62 @@ class  ScheduleController extends Controller
             'success' => true,
             'account' => $account,
             'accounts_status' => $accountsStatus,
+        ]);
+    }
+
+    /**
+     * Fetch all user accounts with their schedule_status for the create post modal.
+     * Used when New Post button is clicked to sync dropdown selection with server state.
+     */
+    public function getAccountsWithStatus()
+    {
+        $userId = Auth::guard('user')->id();
+        $user = Auth::guard('user')->user();
+        $accountsStatus = collect();
+
+        $user->pages()->get(['id', 'schedule_status'])->each(function ($page) use ($accountsStatus) {
+            $accountsStatus->push([
+                'id' => $page->id,
+                'type' => 'facebook',
+                'schedule_status' => $page->schedule_status ?? 'inactive',
+            ]);
+        });
+        $user->boards()->get(['id', 'schedule_status'])->each(function ($board) use ($accountsStatus) {
+            $accountsStatus->push([
+                'id' => $board->id,
+                'type' => 'pinterest',
+                'schedule_status' => $board->schedule_status ?? 'inactive',
+            ]);
+        });
+        $user->tiktok()->get(['id', 'schedule_status'])->each(function ($tiktok) use ($accountsStatus) {
+            $accountsStatus->push([
+                'id' => $tiktok->id,
+                'type' => 'tiktok',
+                'schedule_status' => $tiktok->schedule_status ?? 'inactive',
+            ]);
+        });
+
+        $account = null;
+        $post = Post::where('user_id', $userId)
+            ->where('social_type', 'facebook')
+            ->orderBy('created_at', 'desc')
+            ->first();
+        if ($post) {
+            $page = Page::with('facebook')->find($post->account_id);
+            if ($page) {
+                $account = [
+                    'id' => $page->id,
+                    'type' => 'facebook',
+                    'name' => $page->name,
+                    'profile_image' => $page->profile_image,
+                ];
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'account' => $account,
+            'accounts_status' => $accountsStatus->toArray(),
         ]);
     }
 

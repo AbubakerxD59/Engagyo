@@ -1,5 +1,29 @@
 <script>
     $(document).ready(function() {
+        var userTimezone = "{{ $userTimezoneName ?? 'UTC' }}";
+
+        function formatInUserTimezone(date, options) {
+            if (!date || isNaN(date.getTime())) return '';
+            try {
+                return new Intl.DateTimeFormat('en-US', Object.assign({ timeZone: userTimezone }, options || {})).format(date);
+            } catch (e) {
+                return new Intl.DateTimeFormat('en-US', options || {}).format(date);
+            }
+        }
+
+        function getDatePartsInUserTimezone(date) {
+            if (!date || isNaN(date.getTime())) return null;
+            try {
+                var formatter = new Intl.DateTimeFormat('en-US', { timeZone: userTimezone, year: 'numeric', month: 'long', day: 'numeric', weekday: 'long' });
+                var parts = formatter.formatToParts(date);
+                var result = {};
+                parts.forEach(function(p) { result[p.type] = p.value; });
+                return result;
+            } catch (e) {
+                return { year: String(date.getFullYear()), month: date.toLocaleString('en-US', { month: 'long' }), day: String(date.getDate()), weekday: ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'][date.getDay()] };
+            }
+        }
+
         // global variables
         var action_name = '';
         var $createPostActiveButton = null;
@@ -220,24 +244,30 @@
         }
 
         function buildSentPostsGroupedByDay(posts) {
-            var today = new Date();
-            today.setHours(0, 0, 0, 0);
-            var yesterday = new Date(today);
-            yesterday.setDate(yesterday.getDate() - 1);
+            var now = new Date();
+            var todayParts = getDatePartsInUserTimezone(now);
+            var yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+            var yesterdayParts = getDatePartsInUserTimezone(yesterdayDate);
             var dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
             var monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
             var grouped = {};
             posts.forEach(function(post) {
                 var d = parseCreatedTime(post.created_time);
                 if (!d || isNaN(d.getTime())) return;
-                var dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+                var parts = getDatePartsInUserTimezone(d);
+                if (!parts) return;
                 var dayPart = '';
-                var dateSuffix = monthNames[dDay.getMonth()] + ' ' + dDay.getDate();
-                if (dDay.getTime() === today.getTime()) dayPart = 'Today';
-                else if (dDay.getTime() === yesterday.getTime()) dayPart = 'Yesterday';
-                else dayPart = dayNames[dDay.getDay()];
+                var dateSuffix = parts.month + ' ' + parts.day;
+                if (parts.year === todayParts.year && parts.month === todayParts.month && parts.day === todayParts.day) {
+                    dayPart = 'Today';
+                } else if (parts.year === yesterdayParts.year && parts.month === yesterdayParts.month && parts.day === yesterdayParts.day) {
+                    dayPart = 'Yesterday';
+                } else {
+                    dayPart = parts.weekday;
+                }
                 var label = dayPart + '|' + dateSuffix;
-                if (!grouped[label]) grouped[label] = { dateKey: dDay.getTime(), posts: [] };
+                var dateKey = d.getTime();
+                if (!grouped[label]) grouped[label] = { dateKey: dateKey, posts: [] };
                 grouped[label].posts.push(post);
             });
             return Object.keys(grouped)
@@ -778,7 +808,7 @@
 
         function syncChannelsDropdownFromSidebar() {
             $('.channels-dropdown-checkbox').each(function() {
-                var scheduleStatus = $(this).data('schedule-status');
+                var scheduleStatus = $(this).attr('data-schedule-status');
                 $(this).prop('checked', scheduleStatus === 'active');
             });
         }
@@ -864,6 +894,34 @@
             });
         }
 
+        function fetchAccountsWithStatus() {
+            $.get("{{ route('panel.schedule.accounts-with-status') }}", function(response) {
+                if (response.success) {
+                    lastUsedAccountData = response.account || null;
+                    var accountsStatusList = response.accounts_status || [];
+                    var statusMap = {};
+                    accountsStatusList.forEach(function(item) {
+                        var key = item.type + '_' + item.id;
+                        statusMap[key] = item.schedule_status;
+                    });
+                    $('.channels-dropdown-checkbox').each(function() {
+                        var id = $(this).data('id');
+                        var type = $(this).data('type') || 'facebook';
+                        var key = type + '_' + id;
+                        var status = statusMap[key];
+                        if (status !== undefined) {
+                            $(this).attr('data-schedule-status', status).prop('checked', status === 'active');
+                        }
+                    });
+                    updateCreatePostModalSelection();
+                } else {
+                    lastUsedAccountData = null;
+                }
+            }).fail(function() {
+                lastUsedAccountData = null;
+            });
+        }
+
         $(document).on('click', '.create-post-selected-channel-chip-remove', function(e) {
             e.stopPropagation();
             var id = $(this).data('id');
@@ -882,8 +940,10 @@
             if (!id) return;
             var $cb = $('.channels-dropdown-checkbox[data-id="' + id + '"]');
             if ($cb.length) {
+                var type = $cb.data('type') || 'facebook';
                 $cb.prop('checked', true);
                 lastUsedAccountId = id;
+                updateAccountScheduleStatus(id, true, false, type);
                 updateCreatePostModalSelection();
             }
         });
@@ -989,7 +1049,7 @@
         $('#createPostModal').prop('inert', true);
         $('#createPostModal').on('show.bs.modal', function(e) {
             e.target.inert = false;
-            updateCreatePostModalSelection();
+            fetchAccountsWithStatus();
         });
         $('#createPostModal').on('hide.bs.modal', function(e) {
             e.target.inert = true;
@@ -1010,7 +1070,6 @@
         $('#createPostModal').on('shown.bs.modal', function() {
             syncChannelsDropdownFromSidebar();
             renderSelectedChannels();
-            fetchLastUsedAccount();
         });
 
         // Create post editor: file upload (drag & drop, click) - extensions from schedule dropZone
@@ -2118,11 +2177,10 @@
         function renderSentPagePostCard(post) {
             var ct = parseCreatedTime(post.created_time);
             var timePart = '';
+            var datePart = '';
             if (ct && !isNaN(ct.getTime())) {
-                var h = ct.getHours(), m = ct.getMinutes();
-                var ampm = h >= 12 ? 'PM' : 'AM';
-                h = h % 12 || 12;
-                timePart = (h < 10 ? '0' + h : h) + ':' + (m < 10 ? '0' + m : m) + ' ' + ampm;
+                timePart = formatInUserTimezone(ct, { hour: '2-digit', minute: '2-digit', hour12: true });
+                datePart = formatInUserTimezone(ct, { month: 'short', day: 'numeric', year: 'numeric' });
             }
 
             var statusType = post.status_type || '';
@@ -2153,10 +2211,11 @@
             var shares = post.shares ?? 0;
             var clicks = ins.post_clicks ?? '-';
 
+            var dateTimeDisplay = datePart && timePart ? datePart + ' ' + timePart : (timePart || '');
             return `
                 <div class="sent-post-row">
                     <div class="sent-post-time-col">
-                        <span class="sent-post-time">${timePart}</span>
+                        <span class="sent-post-time">${dateTimeDisplay}</span>
                         ${sourceLabel}
                     </div>
                     <div class="sent-post-card-col">
