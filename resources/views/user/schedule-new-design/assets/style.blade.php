@@ -1652,6 +1652,27 @@
          text-decoration: none;
      }
 
+     .sent-card-delete-btn {
+         display: inline-flex;
+         align-items: center;
+         gap: 6px;
+         padding: 6px 14px;
+         border: 1px solid #fecaca;
+         border-radius: 8px;
+         background: #fff;
+         color: #dc2626;
+         font-size: 13px;
+         font-weight: 500;
+         cursor: pointer;
+         transition: all 0.15s;
+     }
+
+     .sent-card-delete-btn:hover {
+         background: #fef2f2;
+         border-color: #f87171;
+         color: #b91c1c;
+     }
+
      /* 3-dot menu (shared) */
      .sent-post-menu-wrap {
          position: relative;

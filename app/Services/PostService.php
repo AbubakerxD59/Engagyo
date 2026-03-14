@@ -7,6 +7,7 @@ use App\Models\Post;
 use App\Models\Page;
 use App\Models\Board;
 use App\Models\Tiktok;
+use App\Jobs\DeleteFacebookPostJob;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishPinterestPost;
 use App\Models\User;
@@ -50,17 +51,22 @@ class PostService
         if ($post) {
             $status = $post->status;
             $social_type = $post->social_type;
-            $post_id = $post->post_id ?? null;
+            $facebookPostId = $post->post_id ?? null;
+            $pageId = $post->account_id;
+            $dbPostId = $post->id;
+
+            // Pinterest: delete from API synchronously (needs post object)
+            if ($status == 1 && $social_type == "pinterest" && !empty($post->post_id)) {
+                $service = new PinterestService();
+                $service->delete($post);
+            }
+
+            // Delete from database instantly
             $post->delete();
-            if ($status == 1 && !empty($post_id)) {
-                if ($social_type == "facebook") {
-                    $service = new FacebookService();
-                    $service->delete($post);
-                }
-                if ($social_type == "pinterest") {
-                    $service = new PinterestService();
-                    $service->delete($post);
-                }
+
+            // Facebook: delete via background job (user gets instant response)
+            if ($status == 1 && $social_type == "facebook" && !empty($facebookPostId)) {
+                DeleteFacebookPostJob::dispatch($facebookPostId, $pageId, $dbPostId);
             }
         }
         return true;

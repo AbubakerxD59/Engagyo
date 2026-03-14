@@ -574,32 +574,43 @@ class FacebookService
 
     public function delete($post)
     {
+        return $this->deleteFromFacebook($post->post_id, $post->page, $post->id);
+    }
+
+    /**
+     * Delete a post from Facebook via API. Used by DeleteFacebookPostJob for background deletion.
+     *
+     * @param string $facebookPostId Facebook post ID (e.g. {page_id}_{post_id})
+     * @param Page $page Page model with access_token
+     * @param int|null $dbPostId Our Post ID for logging (may be null if post already deleted)
+     */
+    public function deleteFromFacebook(string $facebookPostId, Page $page, ?int $dbPostId = null): array
+    {
+        $logId = $dbPostId ?? $facebookPostId;
         try {
-            $page = $post->page;
-            $publish = $this->facebook->delete('/' . $post->post_id, [], $page->access_token);
-            $response = [
+            $publish = $this->facebook->delete('/' . $facebookPostId, [], $page->access_token);
+            $this->logService->logPostDeletion('facebook', $logId, 'success');
+            return [
                 "success" => true,
                 "data" => $publish
             ];
-            $this->logService->logPostDeletion('facebook', $post->id, 'success');
         } catch (FacebookResponseException $e) {
-            $error =  $e->getMessage();
-            $response = [
+            $error = $e->getMessage();
+            $this->logService->logPostDeletion('facebook', $logId, 'failed');
+            $this->logService->logApiError('facebook', '/delete', $error, ['post_id' => $logId]);
+            return [
                 "success" => false,
                 "message" => $error
             ];
-            $this->logService->logPostDeletion('facebook', $post->id, 'failed');
-            $this->logService->logApiError('facebook', '/delete', $error, ['post_id' => $post->id]);
         } catch (FacebookSDKException $e) {
-            $error =  $e->getMessage();
-            $response = [
+            $error = $e->getMessage();
+            $this->logService->logPostDeletion('facebook', $logId, 'failed');
+            $this->logService->logApiError('facebook', '/delete', $error, ['post_id' => $logId]);
+            return [
                 "success" => false,
                 "message" => $error
             ];
-            $this->logService->logPostDeletion('facebook', $post->id, 'failed');
-            $this->logService->logApiError('facebook', '/delete', $error, ['post_id' => $post->id]);
         }
-        return $response;
     }
 
     /**
