@@ -305,6 +305,8 @@
             return 'fab fa-facebook-f';
         }
 
+        var queuePostTextLimit = 120;
+
         function renderQueuePostCard(slot, post) {
             var isLinkPost = post.type === 'link';
             var title = (post.title || '').trim();
@@ -316,7 +318,7 @@
             var postId = post.id;
             var linkTitle = post.title || post.url || '';
             var linkUrl = post.url || '';
-            var linkDesc = post.description || post.title || '';
+            var linkDesc = (post.description || post.title || '').trim();
 
             var cardHtml = '<div class="queue-post-card' + (isLinkPost ? ' queue-post-card-link' : '') + '" data-post-id="' + postId + '">';
             cardHtml += '<div class="queue-post-card-inner">';
@@ -335,13 +337,41 @@
                     cardHtml += '<div class="queue-link-thumbnail"><img src="' + imgSrc + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>';
                 }
                 cardHtml += '<div class="queue-link-content">';
-                if (linkTitle) cardHtml += '<div class="queue-link-title">' + escapeHtml(linkTitle) + '</div>';
+                if (linkTitle) {
+                    var titleTrunc = linkTitle.length > queuePostTextLimit ? linkTitle.substring(0, queuePostTextLimit) + '...' : linkTitle;
+                    var titleFull = escapeHtml(linkTitle);
+                    var titleShort = escapeHtml(titleTrunc);
+                    if (linkTitle.length > queuePostTextLimit) {
+                        cardHtml += '<div class="queue-link-title queue-text-expandable" data-full="' + titleFull.replace(/"/g, '&quot;') + '" data-short="' + titleShort.replace(/"/g, '&quot;') + '">' + titleShort + '</div>';
+                        cardHtml += '<button type="button" class="queue-post-see-more-btn">See more</button>';
+                    } else {
+                        cardHtml += '<div class="queue-link-title">' + titleFull + '</div>';
+                    }
+                }
                 if (linkUrl) cardHtml += '<div class="queue-link-url"><a href="' + escapeHtml(linkUrl) + '" target="_blank" rel="noopener">' + escapeHtml(linkUrl) + '</a></div>';
-                if (linkDesc) cardHtml += '<div class="queue-link-desc">' + escapeHtml(linkDesc) + '</div>';
+                if (linkDesc) {
+                    var descTrunc = linkDesc.length > queuePostTextLimit ? linkDesc.substring(0, queuePostTextLimit) + '...' : linkDesc;
+                    var descFull = escapeHtml(linkDesc);
+                    var descShort = escapeHtml(descTrunc);
+                    if (linkDesc.length > queuePostTextLimit) {
+                        cardHtml += '<div class="queue-link-desc queue-text-expandable" data-full="' + descFull.replace(/"/g, '&quot;') + '" data-short="' + descShort.replace(/"/g, '&quot;') + '">' + descShort + '</div>';
+                        cardHtml += '<button type="button" class="queue-post-see-more-btn">See more</button>';
+                    } else {
+                        cardHtml += '<div class="queue-link-desc">' + descFull + '</div>';
+                    }
+                }
                 cardHtml += '</div></div>';
             } else {
                 if (title) {
-                    cardHtml += '<div class="queue-post-text">' + escapeHtml(title) + '</div>';
+                    var textTrunc = title.length > queuePostTextLimit ? title.substring(0, queuePostTextLimit) + '...' : title;
+                    var textFull = escapeHtml(title);
+                    var textShort = escapeHtml(textTrunc);
+                    if (title.length > queuePostTextLimit) {
+                        cardHtml += '<div class="queue-post-text-wrap"><div class="queue-post-text queue-text-expandable" data-full="' + textFull.replace(/"/g, '&quot;') + '" data-short="' + textShort.replace(/"/g, '&quot;') + '">' + textShort + '</div>';
+                        cardHtml += '<button type="button" class="queue-post-see-more-btn">See more</button></div>';
+                    } else {
+                        cardHtml += '<div class="queue-post-text">' + textFull + '</div>';
+                    }
                 }
                 if (imgSrc) {
                     cardHtml += '<div class="queue-post-image-wrap"><img src="' + imgSrc + '" alt="" class="queue-post-image" loading="lazy" onerror="this.style.display=\'none\'"></div>';
@@ -368,12 +398,17 @@
         }
 
         function renderQueueSlotRow(slot, dateLabel) {
-            if (slot.has_post && slot.post) {
+            var posts = slot.posts || (slot.post ? [slot.post] : []);
+            var postsHtml = '';
+            if (posts.length > 0) {
+                posts.forEach(function(post) {
+                    postsHtml += renderQueuePostCard(slot, post);
+                });
                 return '<div class="queue-timeslots-row queue-timeslots-row-has-post">' +
                     '<div class="queue-timeslots-time-col">' +
                     '<span class="queue-timeslots-time">' + slot.time_display + '</span>' +
                     '</div>' +
-                    '<div class="queue-timeslots-post-col">' + renderQueuePostCard(slot, slot.post) + '</div>' +
+                    '<div class="queue-timeslots-post-col queue-timeslots-posts-block">' + postsHtml + '</div>' +
                     '</div>';
             }
             return '<div class="queue-timeslots-row">' +
@@ -607,6 +642,21 @@
                 }
             });
         }
+
+        $(document).on('click', '.queue-post-see-more-btn', function() {
+            var $btn = $(this);
+            var $text = $btn.prev('.queue-text-expandable');
+            if (!$text.length) return;
+            var full = $text.attr('data-full');
+            var short = $text.attr('data-short');
+            if ($btn.text() === 'See more') {
+                $text.html(full);
+                $btn.text('See less');
+            } else {
+                $text.html(short);
+                $btn.text('See more');
+            }
+        });
 
         // Post comment modal: open on chat button click
         var currentCommentPostId = null;

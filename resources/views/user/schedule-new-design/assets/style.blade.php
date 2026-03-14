@@ -968,6 +968,16 @@
          min-width: 0;
      }
 
+     .queue-timeslots-posts-block {
+         display: flex;
+         flex-direction: column;
+         gap: 12px;
+     }
+
+     .queue-timeslots-posts-block .queue-post-card {
+         margin-bottom: 0;
+     }
+
      .queue-timeslots-new-btn {
          display: inline-flex;
          align-items: center;
@@ -1089,13 +1099,40 @@
          min-height: 60px;
      }
 
-     .queue-post-text {
+     .queue-post-text-wrap {
          flex: 1;
+         min-width: 0;
+     }
+
+     .queue-post-text {
          font-size: 14px;
          color: #495057;
          line-height: 1.5;
          white-space: pre-wrap;
          word-break: break-word;
+     }
+
+     .queue-post-see-more-btn {
+         margin-top: 6px;
+         padding: 0;
+         background: none;
+         border: none;
+         font-size: 13px;
+         font-weight: 600;
+         color: #0d6efd;
+         cursor: pointer;
+         transition: color 0.2s;
+     }
+
+     .queue-post-see-more-btn:hover {
+         color: #0a58ca;
+         text-decoration: underline;
+     }
+
+     .queue-link-title + .queue-post-see-more-btn,
+     .queue-link-desc + .queue-post-see-more-btn {
+         display: block;
+         margin-top: 4px;
      }
 
      .queue-post-image-wrap {

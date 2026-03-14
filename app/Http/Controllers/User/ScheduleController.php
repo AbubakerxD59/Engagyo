@@ -2038,7 +2038,11 @@ class  ScheduleController extends Controller
             $base->where('source', $soruce);
         }
 
-        $queue = (clone $base)->where('status', 0)->count();
+        $user = Auth::guard('user')->user();
+        $userTz = TimezoneService::getUserTimezone($user);
+        $nowUtc = Carbon::now($userTz)->setTimezone('UTC')->format('Y-m-d H:i:s');
+
+        $queue = (clone $base)->where('status', 0)->where('publish_date', '>=', $nowUtc)->count();
         $sent = (clone $base)->where('status', 1)->count();
 
         return response()->json(['queue' => $queue, 'sent' => $sent]);
@@ -2105,7 +2109,7 @@ class  ScheduleController extends Controller
         if ($source) {
             $postsQuery->where('source', $source);
         }
-        $existingPosts = $postsQuery->get()->keyBy(function ($post) use ($userTz) {
+        $existingPostsByKey = $postsQuery->get()->groupBy(function ($post) use ($userTz) {
             return Carbon::parse($post->publish_date, 'UTC')->setTimezone($userTz)->format('Y-m-d H:i');
         });
 
@@ -2139,14 +2143,13 @@ class  ScheduleController extends Controller
                 $slotNormalized = date('H:i', strtotime($slot));
                 $slotTime = Carbon::parse($dateStr . ' ' . $slotNormalized, $userTz);
 
-                if ($offset === 0) {
-                    // if ($offset === 0 && $slotTime->lt($now)) {
-                    // continue;
+                if ($date->isToday() && $slotTime->lt($now)) {
+                    continue;
                 }
 
                 $key = $slotTime->format('Y-m-d H:i');
-                $post = $existingPosts->get($key);
-                if ($post) {
+                $posts = $existingPostsByKey->get($key, collect());
+                if ($posts->isNotEmpty()) {
                     $placedKeys[$key] = true;
                 }
 
@@ -2154,25 +2157,24 @@ class  ScheduleController extends Controller
                     'time' => $slotTime->format('H:i'),
                     'time_display' => $slotTime->format('h:i A'),
                     'datetime_utc' => $slotTime->copy()->setTimezone('UTC')->format('Y-m-d H:i:s'),
-                    'has_post' => $post !== null,
-                    'post' => $post ? $formatPostForSlot($post) : null,
+                    'has_post' => $posts->isNotEmpty(),
+                    'posts' => $posts->map($formatPostForSlot)->values()->toArray(),
                 ];
             }
 
             // Generate virtual slots for posts that don't match any configured timeslot
-            foreach ($existingPosts as $key => $post) {
+            foreach ($existingPostsByKey as $key => $posts) {
                 if (str_starts_with($key, $dateStr . ' ') && !isset($placedKeys[$key])) {
                     $slotTime = Carbon::parse($key, $userTz);
-                    if ($offset === 0) {
-                        // if ($offset === 0 && $slotTime->lt($now)) {
-                        // continue;
+                    if ($date->isToday() && $slotTime->lt($now)) {
+                        continue;
                     }
                     $daySlots[] = [
                         'time' => $slotTime->format('H:i'),
                         'time_display' => $slotTime->format('h:i A'),
                         'datetime_utc' => $slotTime->copy()->setTimezone('UTC')->format('Y-m-d H:i:s'),
                         'has_post' => true,
-                        'post' => $formatPostForSlot($post),
+                        'posts' => $posts->map($formatPostForSlot)->values()->toArray(),
                     ];
                 }
             }
