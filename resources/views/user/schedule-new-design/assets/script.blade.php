@@ -1,6 +1,7 @@
 <script>
     $(document).ready(function() {
         var userTimezone = "{{ $userTimezoneName ?? 'UTC' }}";
+        var canAccessAnalytics = {{ isset($canAccessAnalytics) && $canAccessAnalytics ? 'true' : 'false' }};
 
         function formatInUserTimezone(date, options) {
             if (!date || isNaN(date.getTime())) return '';
@@ -210,6 +211,7 @@
 
         function getSentPostsSkeletonHtml() {
             var html = '<div class="sent-posts-skeleton">';
+            var statsSkeleton = canAccessAnalytics ? '<div class="sent-card-stats"><div class="skeleton-stat animate-pulse-slow"></div><div class="skeleton-stat animate-pulse-slow"></div><div class="skeleton-stat animate-pulse-slow"></div></div>' : '';
             for (var i = 0; i < 3; i++) {
                 html += '<div class="sent-post-row sent-skeleton-row">' +
                     '<div class="sent-post-time-col"><div class="skeleton-line skeleton-time animate-pulse-slow"></div><div class="skeleton-line skeleton-type animate-pulse-slow"></div></div>' +
@@ -218,7 +220,7 @@
                     '<div class="sent-card-account"><div class="skeleton-avatar animate-pulse-slow"></div><div class="skeleton-line skeleton-name animate-pulse-slow"></div></div>' +
                     '<div class="skeleton-line skeleton-title animate-pulse-slow"></div><div class="skeleton-line skeleton-title-short animate-pulse-slow"></div>' +
                     '</div><div class="skeleton-image animate-pulse-slow"></div></div>' +
-                    '<div class="sent-card-stats"><div class="skeleton-stat animate-pulse-slow"></div><div class="skeleton-stat animate-pulse-slow"></div><div class="skeleton-stat animate-pulse-slow"></div></div>' +
+                    statsSkeleton +
                     '</div></div></div>';
             }
             return html + '</div>';
@@ -2280,13 +2282,13 @@
                                 </div>
                                 ${imageHtml}
                             </div>
-                            <div class="sent-card-stats">
-                                <div class="sent-card-stat"><i class="far fa-thumbs-up"></i> <span class="stat-label">Likes</span> <strong>${reactions}</strong></div>
-                                <div class="sent-card-stat"><i class="far fa-comment"></i> <span class="stat-label">Comments</span> <strong>${comments}</strong></div>
-                                <div class="sent-card-stat"><i class="far fa-eye"></i> <span class="stat-label">Impressions</span> <strong>${impressions}</strong></div>
-                                <div class="sent-card-stat"><i class="fas fa-share-alt"></i> <span class="stat-label">Shares</span> <strong>${shares}</strong></div>
-                                <div class="sent-card-stat"><i class="fas fa-mouse-pointer"></i> <span class="stat-label">Clicks</span> <strong>${clicks}</strong></div>
-                            </div>
+                            ${canAccessAnalytics ? '<div class="sent-card-stats">' +
+                                '<div class="sent-card-stat"><i class="far fa-thumbs-up"></i> <span class="stat-label">Likes</span> <strong>' + reactions + '</strong></div>' +
+                                '<div class="sent-card-stat"><i class="far fa-comment"></i> <span class="stat-label">Comments</span> <strong>' + comments + '</strong></div>' +
+                                '<div class="sent-card-stat"><i class="far fa-eye"></i> <span class="stat-label">Impressions</span> <strong>' + impressions + '</strong></div>' +
+                                '<div class="sent-card-stat"><i class="fas fa-share-alt"></i> <span class="stat-label">Shares</span> <strong>' + shares + '</strong></div>' +
+                                '<div class="sent-card-stat"><i class="fas fa-mouse-pointer"></i> <span class="stat-label">Clicks</span> <strong>' + clicks + '</strong></div>' +
+                            '</div>' : ''}
                             <div class="sent-card-footer">
                                 <div class="sent-card-published-via">
                                     Published via <span class="sent-card-platform-icon facebook"><i class="fab fa-facebook-f"></i></span> Facebook

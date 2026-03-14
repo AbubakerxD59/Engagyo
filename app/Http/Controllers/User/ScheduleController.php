@@ -168,7 +168,8 @@ class  ScheduleController extends Controller
         $user = User::with("boards.pinterest", "pages.facebook", "tiktok", "timezone")->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
-        return view("user.schedule-new-design.index", compact("accounts", "userTimezoneName"));
+        $canAccessAnalytics = $user->canAccessMenu(8) && $user->hasMenuAccess('analytics');
+        return view("user.schedule-new-design.index", compact("accounts", "userTimezoneName", "canAccessAnalytics"));
     }
 
     /**
