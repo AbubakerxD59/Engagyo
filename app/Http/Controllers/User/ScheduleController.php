@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Enums\DraftEnum;
 use App\Http\Controllers\Controller;
+use App\Jobs\DeleteFacebookPostJob;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishPinterestPost;
 use App\Jobs\PublishTikTokPost;
@@ -1931,18 +1932,32 @@ class  ScheduleController extends Controller
     public function postDelete(Request $request)
     {
         try {
-            $post = Post::findOrFail($request->id);
-            $user = User::findOrFail($post->user_id);
-            // Decrement feature usage if this is a scheduled post and account belongs to user
-            if ($post->source === 'schedule' && $this->verifyPostAccountBelongsToUser($post, $user)) {
-                $user->decrementFeatureUsage('scheduled_posts_per_account', 1);
+            $post = Post::find($request->id);
+
+            if ($post) {
+                $user = User::findOrFail($post->user_id);
+                // Decrement feature usage if this is a scheduled post and account belongs to user
+                if ($post->source === 'schedule' && $this->verifyPostAccountBelongsToUser($post, $user)) {
+                    $user->decrementFeatureUsage('scheduled_posts_per_account', 1);
+                }
+
+                $post->photo()->delete();
+                PostService::delete($post->id);
+            } else {
+                // Post not in database - delete from Facebook page only
+                $facebookPostId = $request->facebook_post_id;
+                $pageId = $request->page_id;
+                if ($facebookPostId && $pageId) {
+                    $page = Page::where('id', $pageId)->where('user_id', Auth::guard('user')->id())->first();
+                    if ($page) {
+                        DeleteFacebookPostJob::dispatch($facebookPostId, (int) $pageId, null);
+                    }
+                }
             }
 
-            $post->photo()->delete();
-            PostService::delete($post->id);
             $response = [
                 "success" => true,
-                "message" => "Post delete Successfully!"
+                "message" => "Post deleted successfully!"
             ];
         } catch (Exception $e) {
             $response = [

@@ -2296,7 +2296,9 @@
             }
             var deletePostBtn = '';
             if (post.id) {
-                deletePostBtn = '<button type="button" class="sent-card-delete-btn" data-id="' + post.db_post_id + '" title="Delete"><i class="fas fa-trash"></i> Delete</button>';
+                var deleteDataAttrs = 'data-facebook-post-id="' + (post.id || '') + '" data-page-id="' + (post.page_db_id || '') + '"';
+                if (post.db_post_id) deleteDataAttrs += ' data-id="' + post.db_post_id + '"';
+                deletePostBtn = '<button type="button" class="sent-card-delete-btn" ' + deleteDataAttrs + ' title="Delete"><i class="fas fa-trash"></i> Delete</button>';
             }
 
             var ins = post.insights || {};
@@ -2635,12 +2637,16 @@
             if (confirm(
                     "Published post will be deleted from your account and Facebook. Do you wish to delete this post?")) {
                 var id = $(this).data('id');
+                var facebookPostId = $(this).data('facebook-post-id');
+                var pageId = $(this).data('page-id');
+                var reqData = {};
+                if (id) reqData.id = id;
+                if (facebookPostId) reqData.facebook_post_id = facebookPostId;
+                if (pageId) reqData.page_id = pageId;
                 $.ajax({
                     url: "{{ route('panel.schedule.post.delete') }}",
                     type: "GET",
-                    data: {
-                        id: id,
-                    },
+                    data: reqData,
                     success: function(response) {
                         if (response.success) {
                             reloadPosts();
