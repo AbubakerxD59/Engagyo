@@ -1360,29 +1360,36 @@
         }
 
         function processCreatePostPhotoVideo() {
+            var filesToProcess = createPostFiles.slice();
+            if (filesToProcess.length === 0) return;
+            disableActionButton();
+            processCreatePostFilesQueue(filesToProcess, 0);
+        }
+
+        function processCreatePostFilesQueue(filesArray, index) {
+            if (index >= filesArray.length) {
+                resetCreatePostArea();
+                enableActionButton();
+                return;
+            }
+            var file = filesArray[index];
             var content = $('#createPostEditorTextarea').val();
             var comment = getCreatePostCommentValue();
             var dt = getScheduleDateTime();
             var schedule_date = dt.date;
             var schedule_time = dt.time;
-            var hasVideo = createPostFiles.some(function(f) {
-                var ext = (f.name || '').split('.').pop().toLowerCase();
-                return ['mp4', 'mkv', 'mov', 'mpeg', 'webm'].indexOf(ext) !== -1;
-            });
+            var ext = (file.name || '').split('.').pop().toLowerCase();
+            var isVideo = ['mp4', 'mkv', 'mov', 'mpeg', 'webm'].indexOf(ext) !== -1;
             var formData = new FormData();
             formData.append("_token", "{{ csrf_token() }}");
             formData.append("content", content);
             formData.append("comment", comment);
             formData.append("link", 0);
-            formData.append("video", hasVideo ? 1 : 0);
+            formData.append("video", isVideo ? 1 : 0);
             formData.append("action", action_name);
             formData.append("schedule_date", schedule_date || '');
             formData.append("schedule_time", schedule_time || '');
-            formData.append("files", createPostFiles[0]);
-            if (createPostFiles.length > 1) {
-                toastr.info("Only the first file will be posted. Multiple files create separate posts.");
-            }
-            disableActionButton();
+            formData.append("files", file);
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",
                 type: "POST",
@@ -1391,12 +1398,12 @@
                 contentType: false,
                 success: function(response) {
                     if (response.success) {
-                        resetCreatePostArea();
                         toastr.success(response.message);
+                        processCreatePostFilesQueue(filesArray, index + 1);
                     } else {
                         toastr.error(response.message);
+                        enableActionButton();
                     }
-                    enableActionButton();
                 },
                 error: function() {
                     toastr.error("Failed to upload post.");
