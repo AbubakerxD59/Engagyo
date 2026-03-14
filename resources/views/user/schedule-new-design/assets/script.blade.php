@@ -28,6 +28,11 @@
         // global variables
         var action_name = '';
         var $createPostActiveButton = null;
+        var createPostFromTimeslot = false;
+        var createPostSlotDate = '';
+        var createPostSlotTime = '';
+        var createPostSlotDisplay = '';
+        var createPostSlotDisplayFooter = '';
         var current_file = 0;
         var is_link = 0;
         var is_video = 0;
@@ -399,7 +404,7 @@
             return div.innerHTML;
         }
 
-        function renderQueueSlotRow(slot, dateLabel) {
+        function renderQueueSlotRow(slot, day) {
             var posts = slot.posts || (slot.post ? [slot.post] : []);
             var postsHtml = '';
             if (posts.length > 0) {
@@ -413,11 +418,15 @@
                     '<div class="queue-timeslots-post-col queue-timeslots-posts-block">' + postsHtml + '</div>' +
                     '</div>';
             }
+            var slotDate = day.date || '';
+            var slotTime = slot.time || '';
+            var slotDisplay = (day.label || '') + ', ' + (day.date_display || '') + ' ' + (slot.time_display || '');
+            var slotDisplayFooter = (day.date_display || '') + ' ' + (slot.time_display || '');
             return '<div class="queue-timeslots-row">' +
                 '<div class="queue-timeslots-time-col">' +
                 '<span class="queue-timeslots-time">' + slot.time_display + '</span>' +
                 '</div>' +
-                '<div class="queue-timeslots-post-col"><button type="button" class="queue-timeslots-new-btn">+ New</button></div>' +
+                '<div class="queue-timeslots-post-col"><button type="button" class="queue-timeslots-new-btn" data-slot-date="' + slotDate + '" data-slot-time="' + slotTime + '" data-slot-display="' + escapeHtml(slotDisplay) + '" data-slot-display-footer="' + escapeHtml(slotDisplayFooter) + '">+ New</button></div>' +
                 '</div>';
         }
 
@@ -426,7 +435,7 @@
             timeline.forEach(function(day) {
                 html += '<div class="queue-timeslots-day-group"><h3 class="queue-timeslots-day-header">' + day.label + ', ' + day.date_display + '</h3>';
                 day.slots.forEach(function(slot) {
-                    html += renderQueueSlotRow(slot, day.label);
+                    html += renderQueueSlotRow(slot, day);
                 });
                 html += '</div>';
             });
@@ -839,8 +848,13 @@
             $('#createPostModal').modal('show');
         });
 
-        // Queue + New button: open Create Post modal
+        // Queue + New button: open Create Post modal in queue-from-timeslot mode
         $(document).on('click', '.queue-timeslots-new-btn', function() {
+            createPostFromTimeslot = true;
+            createPostSlotDate = $(this).data('slot-date') || '';
+            createPostSlotTime = $(this).data('slot-time') || '';
+            createPostSlotDisplay = $(this).data('slot-display') || '';
+            createPostSlotDisplayFooter = $(this).data('slot-display-footer') || '';
             $('#createPostModal').modal('show');
         });
 
@@ -891,7 +905,7 @@
                         onlyTiktok = false;
                     }
                 });
-                $('.create-post-draft-btn').toggle(onlyTiktok);
+                $('.create-post-draft-btn').toggle(!createPostFromTimeslot && onlyTiktok);
             } else {
                 $('#createPostEmptyState').show();
                 $('#createPostEditorWrap').hide();
@@ -1102,12 +1116,33 @@
         $('#createPostModal').on('show.bs.modal', function(e) {
             e.target.inert = false;
             fetchAccountsWithStatus();
+            if (createPostFromTimeslot) {
+                $('.create-post-segmented-btn[href="schedule"]').hide();
+                $('.create-post-segmented-btn[href="publish"]').hide();
+                $('.create-post-draft-btn').hide();
+                $('.create-post-segmented-btn[href="queue"]').show();
+                $('#createPostQueueTimeslotInfo').text('Queue for: ' + (createPostSlotDisplayFooter || createPostSlotDisplay || 'Selected timeslot')).show();
+            } else {
+                $('.create-post-segmented-btn[href="schedule"]').show();
+                $('.create-post-segmented-btn[href="queue"]').show();
+                $('.create-post-segmented-btn[href="publish"]').show();
+                $('#createPostQueueTimeslotInfo').hide();
+                updateCreatePostModalSelection();
+            }
         });
         $('#createPostModal').on('hide.bs.modal', function(e) {
             e.target.inert = true;
             $('#createPostScheduleDropdown').removeClass('is-open');
         });
         $('#createPostModal').on('hidden.bs.modal', function() {
+            createPostFromTimeslot = false;
+            createPostSlotDate = '';
+            createPostSlotTime = '';
+            createPostSlotDisplay = '';
+            createPostSlotDisplayFooter = '';
+            $('.create-post-segmented-btn[href="schedule"]').show();
+            $('.create-post-segmented-btn[href="queue"]').show();
+            $('.create-post-segmented-btn[href="publish"]').show();
             $('#createPostChannelsDropdown').removeClass('is-open');
             $('#createPostEditorTextarea').val('');
             $('#createPostComment').val('');
@@ -1384,6 +1419,9 @@
         }
 
         function getScheduleDateTime() {
+            if (createPostFromTimeslot && createPostSlotDate && createPostSlotTime) {
+                return { date: createPostSlotDate, time: createPostSlotTime };
+            }
             if ($('#createPostModal').hasClass('show') && action_name === 'schedule') {
                 var dt = getCreatePostScheduleDateTime();
                 return { date: dt.date, time: dt.time };
@@ -1399,6 +1437,7 @@
             var dt = getScheduleDateTime();
             var schedule_date = dt.date;
             var schedule_time = dt.time;
+            var effectiveAction = createPostFromTimeslot ? 'schedule' : action_name;
             if (!url) {
                 toastr.error("Invalid link preview.");
                 return;
@@ -1414,9 +1453,9 @@
                     "link": 1,
                     "url": url,
                     "image": image,
-                    "schedule_date": schedule_date,
-                    "schedule_time": schedule_time,
-                    "action": action_name,
+                    "schedule_date": effectiveAction === 'schedule' ? schedule_date : '',
+                    "schedule_time": effectiveAction === 'schedule' ? schedule_time : '',
+                    "action": effectiveAction,
                 },
                 success: function(response) {
                     if (response.success) {
@@ -1438,14 +1477,15 @@
             var content = $('#createPostEditorTextarea').val();
             var comment = getCreatePostCommentValue();
             var dt = getScheduleDateTime();
+            var effectiveAction = createPostFromTimeslot ? 'schedule' : action_name;
             var data = {
                 "_token": "{{ csrf_token() }}",
                 "content": content,
                 "comment": comment,
                 "link": 0,
-                "action": action_name
+                "action": effectiveAction
             };
-            if (action_name === 'schedule') {
+            if (effectiveAction === 'schedule') {
                 data.schedule_date = dt.date;
                 data.schedule_time = dt.time;
             }
@@ -1489,6 +1529,7 @@
             var dt = getScheduleDateTime();
             var schedule_date = dt.date;
             var schedule_time = dt.time;
+            var effectiveAction = createPostFromTimeslot ? 'schedule' : action_name;
             var ext = (file.name || '').split('.').pop().toLowerCase();
             var isVideo = ['mp4', 'mkv', 'mov', 'mpeg', 'webm'].indexOf(ext) !== -1;
             var formData = new FormData();
@@ -1497,9 +1538,9 @@
             formData.append("comment", comment);
             formData.append("link", 0);
             formData.append("video", isVideo ? 1 : 0);
-            formData.append("action", action_name);
-            formData.append("schedule_date", schedule_date || '');
-            formData.append("schedule_time", schedule_time || '');
+            formData.append("action", effectiveAction);
+            formData.append("schedule_date", effectiveAction === 'schedule' ? (schedule_date || '') : '');
+            formData.append("schedule_time", effectiveAction === 'schedule' ? (schedule_time || '') : '');
             formData.append("files", file);
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",

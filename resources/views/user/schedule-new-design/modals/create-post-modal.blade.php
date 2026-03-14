@@ -128,7 +128,9 @@
 
             {{-- Dark grey footer --}}
             <div class="create-post-modal-footer">
-                <div class="create-post-footer-left"></div>
+                <div class="create-post-footer-left">
+                    <span id="createPostQueueTimeslotInfo" class="create-post-queue-timeslot-info" style="display: none;"></span>
+                </div>
                 <div class="create-post-footer-right create-post-footer-actions-wrap">
                     <div class="create-post-segmented-buttons">
                         <button type="button"

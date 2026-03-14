@@ -4193,6 +4193,18 @@
          gap: 12px;
      }
 
+     .create-post-queue-timeslot-info {
+         display: inline-flex;
+         align-items: center;
+         padding: 8px 18px;
+         font-size: 13px;
+         font-weight: 500;
+         color: #1e40af;
+         background: #eff6ff;
+         border: 1px solid #bfdbfe;
+         border-radius: 24px;
+     }
+
      .create-post-checkbox-label {
          display: flex;
          align-items: center;
