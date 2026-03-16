@@ -25,41 +25,6 @@ Route::name("general.")->controller(GeneralController::class)->group(function ()
 Route::get('phpinif', function () {
     echo sys_get_temp_dir();
 });
-// Test route: publish a comment on a Facebook post
-Route::get('test/facebook-comment/{postId}', function ($postId) {
-    $post = Post::withoutGlobalScopes()->findOrFail($postId);
-
-    if ($post->social_type !== 'facebook') {
-        return response()->json(['error' => 'Post is not a Facebook post'], 400);
-    }
-
-    if (empty($post->post_id)) {
-        return response()->json(['error' => 'Post has no Facebook post ID (not published yet?)'], 400);
-    }
-
-    $page = $post->page;
-    $tokenResult = \App\Services\FacebookService::validateToken($page);
-
-    if (!$tokenResult['success']) {
-        return response()->json(['error' => $tokenResult['message']], 400);
-    }
-
-    $facebookService = new \App\Services\FacebookService();
-    $comment = 'This is a test comment from Engagyo at ' . now()->toDateTimeString();
-    $result = $facebookService->postComment($post->post_id, $tokenResult['access_token'], $comment);
-
-    return response()->json([
-        'post_id' => $post->post_id,
-        'comment' => $comment,
-        'result' => [
-            'success' => $result['success'],
-            'message' => $result['message'] ?? null,
-            'comment_id' => $result['success'] && isset($result['data'])
-                ? ($result['data']->getGraphNode()['id'] ?? null)
-                : null,
-        ],
-    ]);
-});
 
 // Admin Routes
 require __DIR__ . '/admin.php';

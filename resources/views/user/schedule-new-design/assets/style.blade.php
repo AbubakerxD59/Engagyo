@@ -3236,7 +3236,7 @@
 
      .create-post-modal .modal-dialog {
          width: 35vw;
-         max-width: 35vw;
+         max-width: 95vw;
          max-height: calc(100vh - 2rem);
          margin: auto;
          display: flex;
@@ -3492,7 +3492,7 @@
          width: 100%;
          height: 100%;
          border-radius: 8px;
-         overflow: visible;
+         overflow: hidden;
          position: relative;
          display: block;
      }
@@ -4590,6 +4590,132 @@
      }
 
      /* ========== RESPONSIVE ========== */
+
+     @media(max-width: 1622px) {
+         .create-post-modal .modal-dialog {
+             width: 45vw;
+         }
+     }
+
+     @media(max-width: 1260px) {
+         .create-post-modal .modal-dialog {
+             width: 52vw;
+         }
+     }
+
+     /* Laptop: 1024px and below */
+     @media (max-width: 1024px) {
+         .create-post-modal .modal-dialog {
+             width: 90vw;
+             max-width: 520px;
+         }
+
+         .create-post-modal-footer {
+             flex-wrap: wrap;
+             gap: 12px;
+             padding: 12px 16px;
+         }
+
+         .create-post-footer-left {
+             width: 100%;
+             order: 1;
+             justify-content: flex-start;
+         }
+
+         .create-post-footer-right {
+             width: 100%;
+             order: 2;
+             justify-content: flex-start;
+             flex-wrap: wrap;
+         }
+
+         .create-post-footer-actions-wrap {
+             width: 100%;
+         }
+
+         .create-post-segmented-buttons {
+             flex-wrap: wrap;
+             width: 100%;
+             border-radius: 12px;
+         }
+
+         .create-post-segmented-btn {
+             flex: 1 1 auto;
+             min-width: 90px;
+             padding: 10px 14px;
+             font-size: 12px;
+         }
+
+         .create-post-queue-timeslot-info {
+             font-size: 12px;
+             padding: 6px 14px;
+             max-width: 100%;
+             word-break: break-word;
+         }
+
+         .selected-account-header {
+             flex-wrap: wrap;
+             gap: 10px;
+         }
+
+         .selected-account-info {
+             flex: 1;
+             min-width: 0;
+         }
+
+         .selected-account-actions {
+             flex-shrink: 0;
+         }
+
+         .selected-account-action-btn span {
+             display: inline;
+         }
+
+         .posts-status-tabs {
+             width: 100%;
+         }
+
+         .queue-timeslots-section,
+         .posts-grid-section {
+             padding: 12px 16px;
+         }
+     }
+
+     /* Tablet: 768px and below */
+     @media (max-width: 768px) {
+         .create-post-modal .modal-dialog {
+             width: 95vw;
+             max-width: none;
+             margin: 1rem auto;
+             max-height: calc(100vh - 2rem);
+         }
+
+         .create-post-modal-body {
+             padding: 16px;
+         }
+
+         .create-post-channels-row {
+             margin-bottom: 12px;
+         }
+
+         .create-post-segmented-btn {
+             min-height: 44px;
+         }
+
+         .create-post-queue-timeslot-info {
+             font-size: 11px;
+             padding: 8px 12px;
+         }
+
+         .selected-account-sticky-wrap {
+             padding: 10px 12px;
+         }
+
+         .selected-account-name {
+             font-size: 14px;
+         }
+     }
+
      @media (max-width: 700px) {
          .queue-post-card-footer {
              flex-direction: column;
@@ -4609,11 +4735,6 @@
      @media (max-width: 768px) {
          .page-content {
              height: calc(100vh - 100px);
-         }
-
-         .queue-timeslots-section,
-         .posts-grid-section {
-             padding: 12px 16px;
          }
 
          .selected-account-action-btn {
@@ -4643,15 +4764,9 @@
              min-width: 30px;
              min-height: 30px;
          }
-
-         .create-post-modal .modal-dialog {
-             width: 95vw;
-             max-width: none;
-             margin: 1rem auto;
-             max-height: calc(100vh - 2rem);
-         }
      }
 
+     /* Mobile: 576px and below */
      @media (max-width: 576px) {
          .page-content {
              height: calc(100vh - 56px);
@@ -4690,8 +4805,23 @@
              margin-left: 0;
          }
 
+         .selected-account-header {
+             flex-direction: column;
+             align-items: flex-start;
+         }
+
          .selected-account-info {
              flex-wrap: wrap;
+             width: 100%;
+         }
+
+         .selected-account-actions {
+             width: 100%;
+         }
+
+         .selected-account-action-btn {
+             width: 100%;
+             justify-content: center;
          }
 
          .selected-account-name {
@@ -4702,32 +4832,73 @@
              grid-template-columns: 1fr;
          }
 
-         /* .create-post-modal .modal-dialog {
+         .create-post-modal .modal-dialog {
              width: 100%;
-             margin: 0;
-             max-height: 100vh;
-             border-radius: 0;
-         } */
+             margin: 0.5rem;
+             max-width: calc(100vw - 1rem);
+             max-height: calc(100vh - 1rem);
+         }
 
-         /* .create-post-modal-content {
-             border-radius: 0;
-         } */
+         .create-post-modal-body {
+             padding: 12px;
+             overflow-y: auto;
+             -webkit-overflow-scrolling: touch;
+         }
+
+         .create-post-modal-footer {
+             padding: 10px 12px;
+             gap: 10px;
+         }
 
          .create-post-segmented-buttons {
              flex-wrap: wrap;
              border-radius: 8px;
+             gap: 0;
          }
 
          .create-post-segmented-btn {
-             flex: 1 1 45%;
-             min-width: 120px;
+             flex: 1 1 100%;
+             min-width: 100%;
+             min-height: 44px;
+             padding: 12px 16px;
+             font-size: 14px;
+             border-right: none;
+             border-bottom: 1px solid #e5e7eb;
+         }
+
+         .create-post-segmented-btn:last-child {
+             border-bottom: none;
+         }
+
+         .create-post-queue-timeslot-info {
+             font-size: 11px;
+             padding: 8px 12px;
+             text-align: center;
+             width: 100%;
          }
 
          .create-post-schedule-dropdown {
              left: 0;
              right: 0;
              min-width: auto;
-             width: 100%;
+             width: calc(100% - 32px);
+             margin-left: 16px;
+             margin-right: 16px;
+         }
+
+         .create-post-editor-wrap {
+             max-height: 40vh;
+         }
+
+         .create-post-channels-dropdown-wrap {
+             flex-wrap: wrap;
+         }
+
+         .create-post-selected-channels {
+             max-width: 100%;
+             overflow-x: auto;
+             flex-wrap: nowrap;
+             -webkit-overflow-scrolling: touch;
          }
      }
 
@@ -4739,6 +4910,14 @@
 
          .accounts-sidebar.collapsed {
              width: 4rem;
+         }
+
+         .schedule-page-wrapper {
+             min-width: 0;
+         }
+
+         .schedule-main-content {
+             min-width: 0;
          }
      }
 
@@ -4754,6 +4933,10 @@
          .accounts-sidebar.collapsed {
              width: 3.5rem;
          }
+
+         .schedule-page-wrapper {
+             overflow-x: hidden;
+         }
      }
 
      @media (max-width: 1280px) {
@@ -4762,10 +4945,23 @@
          .posts-grid-section {
              padding: 16px 5%;
          }
+     }
 
+     /* Very small mobile (e.g. iPhone SE) */
+     @media (max-width: 375px) {
          .create-post-modal .modal-dialog {
-             width: 90vw;
-             max-width: 480px;
+             margin: 0.25rem;
+             max-width: calc(100vw - 0.5rem);
+         }
+
+         .create-post-segmented-btn {
+             font-size: 13px;
+             padding: 10px 12px;
+         }
+
+         .create-post-queue-timeslot-info {
+             font-size: 10px;
+             padding: 6px 10px;
          }
      }
 

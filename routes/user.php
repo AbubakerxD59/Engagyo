@@ -16,8 +16,13 @@ use App\Http\Controllers\User\TeamMemberController;
 use App\Http\Controllers\User\UrlTrackingController;
 use App\Http\Controllers\User\LinkShortenerController;
 use App\Http\Controllers\User\AnalyticsController;
+use App\Http\Controllers\User\TestPublishController;
 
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone", "redirect_if_admin", "team.menu"])->group(function () {
+    // Test route for publishing Facebook posts (displays payload, response, etc.)
+    Route::get("test/publish-facebook/{id}", [TestPublishController::class, 'publishFacebook'])
+        ->name("test.publish.facebook")
+        ->middleware(['feature:' . Feature::$features_list[1]]);
     // Schedule Routes
     Route::controller(ScheduleController::class)->middleware(['feature:' . Feature::$features_list[1]])->group(function () {
         Route::get("schedule", "index")->name("schedule");
