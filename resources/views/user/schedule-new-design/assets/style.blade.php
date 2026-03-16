@@ -4218,7 +4218,7 @@
         display: inline-flex;
         align-items: center;
         padding: 8px 18px;
-        font-size: 13px;
+        font-size: 11px;
         font-weight: 500;
         color: #1e40af;
         background: #eff6ff;
@@ -4286,7 +4286,7 @@
 
     .create-post-segmented-btn {
         padding: 8px 18px;
-        font-size: 13px;
+        font-size: 11px;
         font-weight: 500;
         color: #374151;
         background: #fff;

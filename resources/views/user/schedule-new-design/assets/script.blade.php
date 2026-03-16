@@ -404,6 +404,17 @@
             return div.innerHTML;
         }
 
+        function formatQueueForDisplay(dateStr, timeDisplay) {
+            if (!dateStr || !timeDisplay) return '';
+            var parts = dateStr.split('-');
+            if (parts.length !== 3) return (dateStr || '') + ' ' + (timeDisplay || '');
+            var day = parseInt(parts[2], 10);
+            var ord = (day === 1 || day === 21 || day === 31) ? 'st' : (day === 2 || day === 22) ? 'nd' : (day === 3 || day === 23) ? 'rd' : 'th';
+            var months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+            var month = months[parseInt(parts[1], 10) - 1] || '';
+            return day + ord + ' ' + month + ', ' + timeDisplay;
+        }
+
         function renderQueueSlotRow(slot, day) {
             var posts = slot.posts || (slot.post ? [slot.post] : []);
             var postsHtml = '';
@@ -421,7 +432,7 @@
             var slotDate = day.date || '';
             var slotTime = slot.time || '';
             var slotDisplay = (day.label || '') + ', ' + (day.date_display || '') + ' ' + (slot.time_display || '');
-            var slotDisplayFooter = (day.date_display || '') + ' ' + (slot.time_display || '');
+            var slotDisplayFooter = formatQueueForDisplay(slotDate, slot.time_display || '');
             return '<div class="queue-timeslots-row">' +
                 '<div class="queue-timeslots-time-col">' +
                 '<span class="queue-timeslots-time">' + slot.time_display + '</span>' +
@@ -1132,7 +1143,7 @@
                 $('.create-post-segmented-btn[href="queue"]').show();
                 $('.create-post-segmented-btn[href="publish"]').show();
                 $('.create-post-draft-btn').hide();
-                $('#createPostQueueTimeslotInfo').text('Queue for: ' + (createPostSlotDisplayFooter || createPostSlotDisplay || 'Selected timeslot')).show();
+                $('#createPostQueueTimeslotInfo').text((createPostSlotDisplayFooter || createPostSlotDisplay || 'Selected timeslot')).show();
             } else {
                 $('.create-post-segmented-btn[href="schedule"]').show();
                 $('.create-post-segmented-btn[href="queue"]').show();
