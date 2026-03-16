@@ -169,9 +169,41 @@ class  ScheduleController extends Controller
     {
         $user = User::with("boards.pinterest", "pages.facebook", "tiktok", "timezone")->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
+        $accounts = $this->sortAccountsByRecentUsage($accounts, $user->id);
         $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
         $canAccessAnalytics = $user->canAccessMenu(8) && $user->hasMenuAccess('analytics');
         return view("user.schedule-new-design.index", compact("accounts", "userTimezoneName", "canAccessAnalytics"));
+    }
+
+    /**
+     * Sort accounts for sidebar: frequently used (posts in recent days) first, then remaining by name ascending.
+     */
+    protected function sortAccountsByRecentUsage($accounts, $userId, $recentDays = 7)
+    {
+        $postCounts = Post::where('user_id', $userId)
+            ->where('social_type', 'facebook')
+            ->where('created_at', '>=', Carbon::now()->subDays($recentDays))
+            ->selectRaw('account_id, count(*) as post_count')
+            ->groupBy('account_id')
+            ->pluck('post_count', 'account_id')
+            ->toArray();
+
+        $facebook = $accounts->filter(fn ($a) => ($a->type ?? '') === 'facebook')->values();
+        $others = $accounts->filter(fn ($a) => ($a->type ?? '') !== 'facebook')->values();
+
+        $sortedFacebook = $facebook->sortByDesc(function ($account) use ($postCounts) {
+            $count = $postCounts[$account->id] ?? 0;
+            return $count;
+        })->values();
+
+        $withPosts = $sortedFacebook->filter(fn ($a) => ($postCounts[$a->id] ?? 0) > 0);
+        $withoutPosts = $sortedFacebook->filter(fn ($a) => ($postCounts[$a->id] ?? 0) === 0)
+            ->sortBy('name')
+            ->values();
+
+        $sortedFacebook = $withPosts->concat($withoutPosts);
+
+        return $sortedFacebook->concat($others);
     }
 
     /**

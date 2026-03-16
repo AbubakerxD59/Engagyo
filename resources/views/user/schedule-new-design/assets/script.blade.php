@@ -89,14 +89,58 @@
             }
         }
 
+        var SCHEDULE_BETA_STORAGE_KEY = 'scheduleBetaSelectedAccount';
+
+        function saveSelectedAccountToStorage() {
+            try {
+                var data;
+                if (isAllChannelsActive()) {
+                    data = { type: 'all' };
+                } else {
+                    var selected = getSelectedAccounts();
+                    if (selected.accountIds.length === 1) {
+                        data = { type: selected.accountTypes[0], id: String(selected.accountIds[0]) };
+                    } else {
+                        data = { type: 'all' };
+                    }
+                }
+                localStorage.setItem(SCHEDULE_BETA_STORAGE_KEY, JSON.stringify(data));
+            } catch (e) {}
+        }
+
+        function applyAccountSelectionFromStorage() {
+            try {
+                var raw = localStorage.getItem(SCHEDULE_BETA_STORAGE_KEY);
+                if (!raw) return false;
+                var data = JSON.parse(raw);
+                if (!data || !data.type) return false;
+                if (data.type === 'all') {
+                    $('.account-card').removeClass('active');
+                    $('.all-channels-card').addClass('active');
+                    $('.account-card:not(.all-channels-card)').addClass('active');
+                    return true;
+                }
+                var accountId = data.id;
+                if (!accountId) return false;
+                var $card = $('.account-card:not(.all-channels-card)[data-id="' + accountId + '"]');
+                if ($card.length === 0) return false;
+                $('.account-card').removeClass('active');
+                $card.addClass('active');
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+
         function applyAccountSelectionFromUrl() {
             var params = new URLSearchParams(window.location.search);
             var accountId = params.get('account_id');
-            if (!accountId) return;
+            if (!accountId) return false;
             var $card = $('.account-card:not(.all-channels-card)[data-id="' + accountId + '"]');
-            if ($card.length === 0) return;
+            if ($card.length === 0) return false;
             $('.account-card').removeClass('active');
             $card.addClass('active');
+            return true;
         }
 
         function updateSelectedAccountHeader() {
@@ -765,6 +809,7 @@
             $('.account-card:not(.all-channels-card)').addClass('active');
             updateSelectedAccountHeader();
             updateUrlFromAccountSelection();
+            saveSelectedAccountToStorage();
         });
 
         $(document).on("click", ".account-card:not(.all-channels-card)", function() {
@@ -774,6 +819,7 @@
             $card.addClass('active');
             updateSelectedAccountHeader();
             updateUrlFromAccountSelection();
+            saveSelectedAccountToStorage();
         });
 
         // Search icon click (collapsed state): expand sidebar and focus search
@@ -846,8 +892,12 @@
             $('#accountSearchInput').val('').trigger('input').focus();
         });
 
-        // Apply account selection from URL (e.g. ?account_id=123) before initial render
-        applyAccountSelectionFromUrl();
+        // Apply account selection: URL param takes precedence, else use saved selection from localStorage
+        if (applyAccountSelectionFromUrl()) {
+            saveSelectedAccountToStorage();
+        } else {
+            applyAccountSelectionFromStorage();
+        }
         // Show selected-account header on load when at least one account is selected
         updateSelectedAccountHeader();
 
