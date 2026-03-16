@@ -99,11 +99,6 @@
                                                     <span id="selected-account-header-name"
                                                         class="selected-account-name"></span>
                                                     <div class="selected-account-header-buttons">
-                                                        <button type="button" class="selected-account-header-settings-btn selected-account-header-icon-btn"
-                                                            id="selected-account-header-shuffle"
-                                                            aria-label="Shuffle queue posts" title="Shuffle queue">
-                                                            <i class="fas fa-random"></i>
-                                                        </button>
                                                         <button type="button" class="selected-account-header-settings-btn"
                                                             id="selected-account-header-settings"
                                                             aria-label="Queue settings for this account" title="Queue settings">
@@ -192,29 +187,6 @@
                             <i class="fas fa-save"></i> Save Comment
                         </button>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    {{-- Shuffle Queue Confirmation Modal --}}
-    <div class="modal fade" id="shuffleQueueModal" tabindex="-1" role="dialog" aria-labelledby="shuffleQueueModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="shuffleQueueModalLabel">Shuffle Queue</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <p>Are you sure you want to shuffle the pending posts?</p>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
-                    <button type="button" class="btn btn-primary" id="shuffleQueueConfirmBtn">
-                        <i class="fas fa-random"></i> Shuffle
-                    </button>
                 </div>
             </div>
         </div>

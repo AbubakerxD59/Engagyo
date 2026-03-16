@@ -45,10 +45,31 @@
                                 <div class="queue-settings-account-info">
                                     <span class="queue-settings-account-name">{{ $account->name }}</span>
                                     <span class="queue-settings-account-type">
-                                        {{ ucfirst($account->type) }}
+                                        @if ($account->type == 'facebook')
+                                            {{ $account->facebook?->username ?? 'Facebook' }}
+                                        @elseif($account->type == 'pinterest')
+                                            {{ $account->pinterest?->username ?? 'Pinterest' }}
+                                        @elseif($account->type == 'tiktok')
+                                            {{ $account->username ?? $account->display_name ?? 'TikTok' }}
+                                        @else
+                                            {{ ucfirst($account->type) }}
+                                        @endif
                                     </span>
                                 </div>
                             </div>
+                            @if ($account->type == 'facebook')
+                            <div class="queue-settings-shuffle">
+                                <label class="queue-settings-shuffle-label">
+                                    <i class="fas fa-random"></i> Daily shuffle
+                                </label>
+                                <label class="queue-settings-shuffle-switch">
+                                    <input type="checkbox" class="queue-settings-shuffle-input"
+                                        data-id="{{ $account->id }}" data-type="{{ $account->type }}"
+                                        {{ ($account->schedule_shuffle ?? 0) ? 'checked' : '' }}>
+                                    <span class="queue-settings-shuffle-slider"></span>
+                                </label>
+                            </div>
+                            @endif
                             <div class="queue-settings-hours">
                                 <label class="queue-settings-hours-label">
                                     <i class="far fa-clock"></i> Posting hours

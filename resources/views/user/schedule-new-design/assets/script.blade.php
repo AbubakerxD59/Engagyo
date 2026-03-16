@@ -1974,6 +1974,13 @@
                         originalQueueTimeslots[key] = originalValue;
                     }
                 });
+                $('.queue-settings-shuffle-input').each(function() {
+                    var $input = $(this);
+                    if ($input.closest('.queue-settings-item').is(':visible')) {
+                        var key = $input.data("type") + '_' + $input.data("id");
+                        originalScheduleShuffle[key] = $input.prop('checked') ? 1 : 0;
+                    }
+                });
             }, 300);
         });
 
@@ -1996,54 +2003,16 @@
             openQueueSettingsModal({ id: id, type: type, name: name });
         });
 
-        // Shuffle queue button – show confirmation, then shuffle pending posts
-        $(document).on('click', '#selected-account-header-shuffle', function() {
-            var $first = $('.account-card.active:not(.all-channels-card)').first();
-            if (!$first.length) return;
-            var accountId = $first.data('id');
-            var accountType = $first.data('type');
-            $('#shuffleQueueModal').data('accountId', accountId).data('accountType', accountType).modal('show');
-        });
-        $('#shuffleQueueConfirmBtn').on('click', function() {
-            var accountId = $('#shuffleQueueModal').data('accountId');
-            var accountType = $('#shuffleQueueModal').data('accountType');
-            if (!accountId || !accountType) return;
-            var $btn = $(this);
-            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Shuffling...');
-            $.ajax({
-                url: "{{ route('panel.schedule.queue.shuffle') }}",
-                type: "POST",
-                data: {
-                    _token: "{{ csrf_token() }}",
-                    account_id: accountId,
-                    account_type: accountType,
-                    source: 'schedule'
-                },
-                success: function(response) {
-                    $('#shuffleQueueModal').modal('hide');
-                    $btn.prop('disabled', false).html('<i class="fas fa-random"></i> Shuffle');
-                    if (response.success) {
-                        toastr.success(response.message);
-                        if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
-                            loadQueueTimeslotsSection();
-                        }
-                        loadPostsStatusCounts();
-                    } else {
-                        toastr.error(response.message || 'Failed to shuffle');
-                    }
-                },
-                error: function() {
-                    $btn.prop('disabled', false).html('<i class="fas fa-random"></i> Shuffle');
-                    toastr.error('Failed to shuffle queue');
-                }
-            });
-        });
-        $('#shuffleQueueModal').on('hidden.bs.modal', function() {
-            $('#shuffleQueueConfirmBtn').prop('disabled', false).html('<i class="fas fa-random"></i> Shuffle');
-        });
-        // Track original timeslots for queue settings modal
+        // Track original timeslots and schedule_shuffle for queue settings modal
         var originalQueueTimeslots = {};
+        var originalScheduleShuffle = {};
         var queueTimeslotsChanged = false;
+
+        // Track schedule shuffle toggle changes
+        $(document).on("change", ".queue-settings-shuffle-input", function() {
+            queueTimeslotsChanged = true;
+            $('#saveQueueSettings').show();
+        });
 
         // Track timeslot changes (don't update immediately)
         $(document).on("change", ".timeslot", function() {
@@ -2063,7 +2032,7 @@
             }
         });
 
-        // Check if queue timeslots have changed (only visible rows when modal is filtered)
+        // Check if queue timeslots or schedule_shuffle have changed (only visible rows when modal is filtered)
         function checkQueueTimeslotChanges() {
             queueTimeslotsChanged = false;
             $('.timeslot').each(function() {
@@ -2080,6 +2049,18 @@
                 }
             });
             if (!queueTimeslotsChanged) {
+                $('.queue-settings-shuffle-input').each(function() {
+                    var $input = $(this);
+                    if (!$input.closest('.queue-settings-item').is(':visible')) return;
+                    var key = $input.data("type") + '_' + $input.data("id");
+                    var currentVal = $input.prop('checked') ? 1 : 0;
+                    if ((originalScheduleShuffle[key] ?? 0) !== currentVal) {
+                        queueTimeslotsChanged = true;
+                        return false;
+                    }
+                });
+            }
+            if (!queueTimeslotsChanged) {
                 $('#saveQueueSettings').hide();
             }
         }
@@ -2094,11 +2075,12 @@
                 var timeslots = $select.val();
 
                 if (timeslots && timeslots.length > 0) {
-                    timeslotData.push({
-                        id: accountId,
-                        type: accountType,
-                        timeslots: timeslots
-                    });
+                    var item = { id: accountId, type: accountType, timeslots: timeslots };
+                    if (accountType === 'facebook') {
+                        var $shuffle = $('.queue-settings-shuffle-input[data-id="' + accountId + '"][data-type="facebook"]');
+                        item.schedule_shuffle = $shuffle.length && $shuffle.prop('checked') ? 1 : 0;
+                    }
+                    timeslotData.push(item);
                 }
             });
 
@@ -2128,7 +2110,7 @@
                         originalQueueTimeslots = {};
                         queueTimeslotsChanged = false;
                         $('#saveQueueSettings').hide();
-                        // Update original timeslots
+                        // Update original timeslots and schedule_shuffle
                         $('.timeslot').each(function() {
                             var $select = $(this);
                             var accountId = $select.data("id");
@@ -2137,6 +2119,11 @@
                             var currentValue = $select.val() ? $select.val().sort()
                                 .join(',') : '';
                             originalQueueTimeslots[key] = currentValue;
+                        });
+                        $('.queue-settings-shuffle-input').each(function() {
+                            var $input = $(this);
+                            var key = $input.data("type") + '_' + $input.data("id");
+                            originalScheduleShuffle[key] = $input.prop('checked') ? 1 : 0;
                         });
                         // Reload posts if needed
                         if (typeof reloadPosts === 'function') {

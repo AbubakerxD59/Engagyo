@@ -23,6 +23,7 @@ use App\Console\Commands\RunTikTokTests;
 use App\Console\Commands\CleanupTikTokTestPosts;
 use App\Console\Commands\PurgeOldPosts;
 use App\Console\Commands\PublishPendingCommentsCron;
+use App\Console\Commands\ScheduleShufflePosts;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -55,6 +56,7 @@ class Kernel extends ConsoleKernel
         SyncPagePosts::class, //insights:sync-posts
         PurgeOldPosts::class, //posts:purge-old
         PublishPendingCommentsCron::class, //facebook:publish-pending-comments
+        ScheduleShufflePosts::class, //schedule:shuffle
     ];
     /**
      * Define the application's command schedule.
@@ -89,6 +91,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('tiktok:cleanup-tests')->hourly();
         // Command to shuffle rss posts
         $schedule->command('app:shuffle-rss-posts')->dailyAt('01:00');
+        // Command to shuffle scheduled posts for pages with schedule_shuffle enabled
+        $schedule->command('schedule:shuffle')->dailyAt('02:00');
         // Command to sync page insights for all pages and durations (runs twice daily at 12:00 AM and 12:00 PM)
         $schedule->command('insights:sync-page')->dailyAt('00:00');
         $schedule->command('insights:sync-page')->dailyAt('12:00');

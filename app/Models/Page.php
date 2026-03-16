@@ -21,6 +21,7 @@ class Page extends Model
         "last_fetch",
         "shuffle",
         "schedule_status",
+        "schedule_shuffle",
         "url_shortener_enabled",
         "rss_paused",
         "access_token",

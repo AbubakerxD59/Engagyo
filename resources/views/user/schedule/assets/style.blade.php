@@ -1398,6 +1398,80 @@
         box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
     }
 
+    .queue-settings-modal-redesign .queue-settings-shuffle {
+        /* display: flex; */
+        /* align-items: center; */
+        justify-items: anchor-center;
+        text-align-last: center;
+        gap: 12px;
+        min-width: 140px;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-shuffle-label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.75rem;
+        font-weight: 600;
+        color: #6b7280;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        margin: 0;
+        white-space: nowrap;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-shuffle-label i {
+        font-size: 11px;
+        color: #9ca3af;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-shuffle-switch {
+        position: relative;
+        display: inline-block;
+        width: 44px;
+        height: 24px;
+        flex-shrink: 0;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-shuffle-input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-shuffle-slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: #d1d5db;
+        border-radius: 24px;
+        transition: 0.3s;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-shuffle-slider::before {
+        position: absolute;
+        content: "";
+        height: 18px;
+        width: 18px;
+        left: 3px;
+        bottom: 3px;
+        background-color: #fff;
+        border-radius: 50%;
+        transition: 0.3s;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+    }
+
+    .queue-settings-modal-redesign .queue-settings-shuffle-input:checked + .queue-settings-shuffle-slider {
+        background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    }
+
+    .queue-settings-modal-redesign .queue-settings-shuffle-input:checked + .queue-settings-shuffle-slider::before {
+        transform: translateX(20px);
+    }
+
     .queue-settings-modal-redesign .queue-settings-modal-footer {
         padding: 18px 28px;
         border-top: 1px solid #f0f0f0;
