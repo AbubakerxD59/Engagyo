@@ -3292,6 +3292,7 @@
     }
 
     .create-post-modal-body {
+        position: relative;
         padding: 20px 24px 24px;
         background: #fff;
         flex: 1;
@@ -3299,6 +3300,29 @@
         overflow: hidden;
         display: flex;
         flex-direction: column;
+    }
+
+    .create-post-body-close-btn {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: none;
+        color: #6b7280;
+        border-radius: 6px;
+        cursor: pointer;
+        transition: color 0.2s, background 0.2s;
+        z-index: 10;
+    }
+
+    .create-post-body-close-btn:hover {
+        color: #1f2937;
+        background: rgba(0, 0, 0, 0.05);
     }
 
     .create-post-channels-row {
@@ -4214,18 +4238,6 @@
         gap: 12px;
     }
 
-    .create-post-queue-timeslot-info {
-        display: inline-flex;
-        align-items: center;
-        padding: 8px 18px;
-        font-size: 11px;
-        font-weight: 500;
-        color: #1e40af;
-        background: #eff6ff;
-        border: 1px solid #bfdbfe;
-        border-radius: 24px;
-    }
-
     .create-post-checkbox-label {
         display: flex;
         align-items: center;
@@ -4286,8 +4298,8 @@
 
     .create-post-segmented-btn {
         padding: 8px 18px;
-        font-size: 11px;
-        font-weight: 600;
+        font-size: 13px;
+        font-weight: 500;
         color: #374151;
         background: #fff;
         border: none;

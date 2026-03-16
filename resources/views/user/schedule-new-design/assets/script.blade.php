@@ -1143,12 +1143,10 @@
                 $('.create-post-segmented-btn[href="queue"]').show();
                 $('.create-post-segmented-btn[href="publish"]').show();
                 $('.create-post-draft-btn').hide();
-                $('#createPostQueueTimeslotInfo').text((createPostSlotDisplayFooter || createPostSlotDisplay || 'Selected timeslot')).show();
             } else {
                 $('.create-post-segmented-btn[href="schedule"]').show();
                 $('.create-post-segmented-btn[href="queue"]').show();
                 $('.create-post-segmented-btn[href="publish"]').show();
-                $('#createPostQueueTimeslotInfo').hide();
                 updateCreatePostModalSelection();
             }
         });

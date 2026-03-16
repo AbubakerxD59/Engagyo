@@ -4,7 +4,7 @@
     <div class="modal-dialog modal-dialog-centered create-post-modal-dialog" role="document">
         <div class="modal-content create-post-modal-content">
             {{-- Dark grey header --}}
-            <div class="create-post-modal-header">
+            {{-- <div class="create-post-modal-header">
                 <div class="create-post-header-left">
                     <h5 class="create-post-modal-title" id="createPostModalLabel">Create Post</h5>
                 </div>
@@ -14,10 +14,14 @@
                         <i class="fas fa-times"></i>
                     </button>
                 </div>
-            </div>
+            </div> --}}
 
             {{-- White content area --}}
             <div class="create-post-modal-body">
+                <button type="button" class="create-post-body-close-btn create-post-close-btn"
+                    data-dismiss="modal" aria-label="Close">
+                    <i class="fas fa-times"></i>
+                </button>
                 {{-- Channel selection row --}}
                 <div class="create-post-channels-row">
                     <div class="create-post-channels-dropdown-wrap">
@@ -128,9 +132,7 @@
 
             {{-- Dark grey footer --}}
             <div class="create-post-modal-footer">
-                <div class="create-post-footer-left">
-                    <span id="createPostQueueTimeslotInfo" class="create-post-queue-timeslot-info" style="display: none;"></span>
-                </div>
+                <div class="create-post-footer-left"></div>
                 <div class="create-post-footer-right create-post-footer-actions-wrap">
                     <div class="create-post-segmented-buttons">
                         <button type="button"
