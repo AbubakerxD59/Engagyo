@@ -118,7 +118,7 @@
                                     class="create-post-comment-wrap create-post-comment-facebook"
                                     style="display: none;">
                                     <hr class="create-post-comment-hr">
-                                    <textarea class="create-post-comment-input" id="createPostComment" placeholder="Comment here!" rows="2"></textarea>
+                                    <textarea class="create-post-comment-input" id="createPostComment" placeholder="Comment here!" rows="1"></textarea>
                                 </div>
                             </div>
                         </div>
