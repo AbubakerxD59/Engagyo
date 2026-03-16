@@ -106,13 +106,13 @@
             var $tabs = $('#posts-status-tabs');
             var $avatarWrap = $('#selected-account-avatar-wrap');
             var $allchIcon = $('#selected-account-allch-icon');
-            var $settingsBtn = $('#selected-account-header-settings');
+            var $headerBtns = $('.selected-account-header-buttons');
 
             if ($allCh.hasClass('active')) {
                 $avatarWrap.hide();
                 $allchIcon.show();
                 $('#selected-account-header-name').text('All Channels');
-                $settingsBtn.hide();
+                $headerBtns.hide();
             } else if ($realActive.length === 1) {
                 var $first = $realActive.first();
                 var src = $first.find('.account-avatar img').attr('src') || '';
@@ -124,7 +124,7 @@
                 $('#selected-account-header-name').text(name);
                 var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok').addClass(type);
                 $badge.find('i').attr('class', 'fab fa-facebook-f');
-                $settingsBtn.show();
+                $headerBtns.show();
             } else if ($realActive.length > 1) {
                 var $first = $realActive.first();
                 var src = $first.find('.account-avatar img').attr('src') || '';
@@ -132,7 +132,7 @@
                 $avatarWrap.show();
                 $('#selected-account-header-img').attr('src', src);
                 $('#selected-account-header-name').text($realActive.length + ' Accounts');
-                $settingsBtn.hide();
+                $headerBtns.hide();
             } else {
                 $header.hide();
                 $tabs.hide();
@@ -349,7 +349,7 @@
                     var titleFull = escapeHtml(linkTitle);
                     var titleShort = escapeHtml(titleTrunc);
                     if (linkTitle.length > queuePostTextLimit) {
-                        cardHtml += '<div class="queue-link-title queue-text-expandable" data-full="' + titleFull.replace(/"/g, '&quot;') + '" data-short="' + titleShort.replace(/"/g, '&quot;') + '">' + titleShort + '</div>';
+                        cardHtml += '<div class="queue-link-title queue-text-expandable-wrap"><span class="queue-text-short">' + titleShort + '</span><span class="queue-text-full" style="display:none">' + titleFull + '</span></div>';
                         cardHtml += '<button type="button" class="queue-post-see-more-btn">See more</button>';
                     } else {
                         cardHtml += '<div class="queue-link-title">' + titleFull + '</div>';
@@ -361,7 +361,7 @@
                     var descFull = escapeHtml(linkDesc);
                     var descShort = escapeHtml(descTrunc);
                     if (linkDesc.length > queuePostTextLimit) {
-                        cardHtml += '<div class="queue-link-desc queue-text-expandable" data-full="' + descFull.replace(/"/g, '&quot;') + '" data-short="' + descShort.replace(/"/g, '&quot;') + '">' + descShort + '</div>';
+                        cardHtml += '<div class="queue-link-desc queue-text-expandable-wrap"><span class="queue-text-short">' + descShort + '</span><span class="queue-text-full" style="display:none">' + descFull + '</span></div>';
                         cardHtml += '<button type="button" class="queue-post-see-more-btn">See more</button>';
                     } else {
                         cardHtml += '<div class="queue-link-desc">' + descFull + '</div>';
@@ -374,7 +374,7 @@
                     var textFull = escapeHtml(title);
                     var textShort = escapeHtml(textTrunc);
                     if (title.length > queuePostTextLimit) {
-                        cardHtml += '<div class="queue-post-text-wrap"><div class="queue-post-text queue-text-expandable" data-full="' + textFull.replace(/"/g, '&quot;') + '" data-short="' + textShort.replace(/"/g, '&quot;') + '">' + textShort + '</div>';
+                        cardHtml += '<div class="queue-post-text-wrap"><div class="queue-post-text queue-text-expandable-wrap"><span class="queue-text-short">' + textShort + '</span><span class="queue-text-full" style="display:none">' + textFull + '</span></div>';
                         cardHtml += '<button type="button" class="queue-post-see-more-btn">See more</button></div>';
                     } else {
                         cardHtml += '<div class="queue-post-text">' + textFull + '</div>';
@@ -656,15 +656,17 @@
 
         $(document).on('click', '.queue-post-see-more-btn', function() {
             var $btn = $(this);
-            var $text = $btn.prev('.queue-text-expandable');
-            if (!$text.length) return;
-            var full = $text.attr('data-full');
-            var short = $text.attr('data-short');
+            var $wrap = $btn.prev('.queue-text-expandable-wrap');
+            if (!$wrap.length) return;
+            var $short = $wrap.find('.queue-text-short');
+            var $full = $wrap.find('.queue-text-full');
             if ($btn.text() === 'See more') {
-                $text.html(full);
+                $short.hide();
+                $full.show();
                 $btn.text('See less');
             } else {
-                $text.html(short);
+                $short.show();
+                $full.hide();
                 $btn.text('See more');
             }
         });
@@ -979,6 +981,15 @@
                             $(this).attr('data-schedule-status', status).prop('checked', status === 'active');
                         }
                     });
+                    if (createPostFromTimeslot) {
+                        var $sidebarActive = $('.account-card.active:not(.all-channels-card)');
+                        if ($sidebarActive.length === 1) {
+                            var accountId = $sidebarActive.first().data('id');
+                            var accountType = $sidebarActive.first().data('type');
+                            $('.channels-dropdown-checkbox').prop('checked', false);
+                            $('.channels-dropdown-checkbox[data-id="' + accountId + '"][data-type="' + accountType + '"]').prop('checked', true);
+                        }
+                    }
                     updateCreatePostModalSelection();
                 } else {
                     lastUsedAccountData = null;
@@ -1117,10 +1128,10 @@
             e.target.inert = false;
             fetchAccountsWithStatus();
             if (createPostFromTimeslot) {
-                $('.create-post-segmented-btn[href="schedule"]').hide();
-                $('.create-post-segmented-btn[href="publish"]').hide();
-                $('.create-post-draft-btn').hide();
+                $('.create-post-segmented-btn[href="schedule"]').show();
                 $('.create-post-segmented-btn[href="queue"]').show();
+                $('.create-post-segmented-btn[href="publish"]').show();
+                $('.create-post-draft-btn').hide();
                 $('#createPostQueueTimeslotInfo').text('Queue for: ' + (createPostSlotDisplayFooter || createPostSlotDisplay || 'Selected timeslot')).show();
             } else {
                 $('.create-post-segmented-btn[href="schedule"]').show();
@@ -1144,7 +1155,7 @@
             $('.create-post-segmented-btn[href="queue"]').show();
             $('.create-post-segmented-btn[href="publish"]').show();
             $('#createPostChannelsDropdown').removeClass('is-open');
-            $('#createPostEditorTextarea').val('');
+            $('#createPostEditorTextarea').val('').css('height', 'auto');
             $('#createPostComment').val('');
             $('#createPostFirstComment').val('');
             $('#createPostLinkPreview').empty();
@@ -1155,7 +1166,19 @@
         });
 
         $('#createPostModal').on('shown.bs.modal', function() {
-            syncChannelsDropdownFromSidebar();
+            if (createPostFromTimeslot) {
+                var $sidebarActive = $('.account-card.active:not(.all-channels-card)');
+                if ($sidebarActive.length === 1) {
+                    var accountId = $sidebarActive.first().data('id');
+                    var accountType = $sidebarActive.first().data('type');
+                    $('.channels-dropdown-checkbox').prop('checked', false);
+                    $('.channels-dropdown-checkbox[data-id="' + accountId + '"][data-type="' + accountType + '"]').prop('checked', true);
+                } else {
+                    syncChannelsDropdownFromSidebar();
+                }
+            } else {
+                syncChannelsDropdownFromSidebar();
+            }
             renderSelectedChannels();
         });
 
@@ -1242,8 +1265,15 @@
         createPostSetupDropZone($('#createPostEditorWrap'));
         createPostSetupDropZone($('#createPostUploadZone'));
 
-        // Create post: link preview when pasting URL
+        function autoResizeCreatePostTextarea() {
+            var el = document.getElementById('createPostEditorTextarea');
+            if (!el) return;
+            el.style.height = 'auto';
+            el.style.height = Math.max(120, el.scrollHeight) + 'px';
+        }
+
         $('#createPostEditorTextarea').on('input', function() {
+            autoResizeCreatePostTextarea();
             var value = $(this).val().trim();
             if (!value) {
                 $('#createPostLinkPreview').empty();
@@ -1276,7 +1306,10 @@
                             var html = '<div id="real-article" class="real-article-wrapper" style="opacity:1;visibility:visible;"><div class="content-col"><h5 class="link_title">' + (response.title || '').substring(0, 60) + '...</h5><p class="link_url">' + (response.link || '') + '</p></div><div class="image-col"><img id="link_image" src="' + response.image + '" alt="" loading="lazy"><button type="button" class="close-btn-placeholder">×</button></div></div>';
                             $container.html(html);
                             is_link = 1;
-                            if (response.title) $('#createPostEditorTextarea').val(response.title);
+                            if (response.title) {
+                                $('#createPostEditorTextarea').val(response.title);
+                                setTimeout(autoResizeCreatePostTextarea, 0);
+                            }
                         } else {
                             $container.html('<div style="padding: 1rem; color: #DC2626;">Error loading preview.</div>');
                         }
@@ -1437,7 +1470,7 @@
             var dt = getScheduleDateTime();
             var schedule_date = dt.date;
             var schedule_time = dt.time;
-            var effectiveAction = createPostFromTimeslot ? 'schedule' : action_name;
+            var effectiveAction = (createPostFromTimeslot && action_name === 'queue') ? 'schedule' : action_name;
             if (!url) {
                 toastr.error("Invalid link preview.");
                 return;
@@ -1477,7 +1510,7 @@
             var content = $('#createPostEditorTextarea').val();
             var comment = getCreatePostCommentValue();
             var dt = getScheduleDateTime();
-            var effectiveAction = createPostFromTimeslot ? 'schedule' : action_name;
+            var effectiveAction = (createPostFromTimeslot && action_name === 'queue') ? 'schedule' : action_name;
             var data = {
                 "_token": "{{ csrf_token() }}",
                 "content": content,
@@ -1529,7 +1562,7 @@
             var dt = getScheduleDateTime();
             var schedule_date = dt.date;
             var schedule_time = dt.time;
-            var effectiveAction = createPostFromTimeslot ? 'schedule' : action_name;
+            var effectiveAction = (createPostFromTimeslot && action_name === 'queue') ? 'schedule' : action_name;
             var ext = (file.name || '').split('.').pop().toLowerCase();
             var isVideo = ['mp4', 'mkv', 'mov', 'mpeg', 'webm'].indexOf(ext) !== -1;
             var formData = new FormData();
@@ -1902,6 +1935,52 @@
             var type = $first.data('type');
             var name = $first.find('.account-name').text().trim() || 'Account';
             openQueueSettingsModal({ id: id, type: type, name: name });
+        });
+
+        // Shuffle queue button – show confirmation, then shuffle pending posts
+        $(document).on('click', '#selected-account-header-shuffle', function() {
+            var $first = $('.account-card.active:not(.all-channels-card)').first();
+            if (!$first.length) return;
+            var accountId = $first.data('id');
+            var accountType = $first.data('type');
+            $('#shuffleQueueModal').data('accountId', accountId).data('accountType', accountType).modal('show');
+        });
+        $('#shuffleQueueConfirmBtn').on('click', function() {
+            var accountId = $('#shuffleQueueModal').data('accountId');
+            var accountType = $('#shuffleQueueModal').data('accountType');
+            if (!accountId || !accountType) return;
+            var $btn = $(this);
+            $btn.prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Shuffling...');
+            $.ajax({
+                url: "{{ route('panel.schedule.queue.shuffle') }}",
+                type: "POST",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    account_id: accountId,
+                    account_type: accountType,
+                    source: 'schedule'
+                },
+                success: function(response) {
+                    $('#shuffleQueueModal').modal('hide');
+                    $btn.prop('disabled', false).html('<i class="fas fa-random"></i> Shuffle');
+                    if (response.success) {
+                        toastr.success(response.message);
+                        if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
+                            loadQueueTimeslotsSection();
+                        }
+                        loadPostsStatusCounts();
+                    } else {
+                        toastr.error(response.message || 'Failed to shuffle');
+                    }
+                },
+                error: function() {
+                    $btn.prop('disabled', false).html('<i class="fas fa-random"></i> Shuffle');
+                    toastr.error('Failed to shuffle queue');
+                }
+            });
+        });
+        $('#shuffleQueueModal').on('hidden.bs.modal', function() {
+            $('#shuffleQueueConfirmBtn').prop('disabled', false).html('<i class="fas fa-random"></i> Shuffle');
         });
         // Track original timeslots for queue settings modal
         var originalQueueTimeslots = {};
@@ -2288,7 +2367,13 @@
 
             var message = post.message || post.story || '';
             var escapedMsg = $('<span>').text(message).html();
-            var truncMsg = escapedMsg.length > 140 ? escapedMsg.substring(0, 140) + '...' : escapedMsg;
+            var sentTextLimit = 140;
+            var isLongMsg = escapedMsg.length > sentTextLimit;
+            var truncMsg = isLongMsg ? escapedMsg.substring(0, sentTextLimit) + '...' : escapedMsg;
+            var fullMsg = escapedMsg;
+            var titleHtml = isLongMsg ?
+                '<p class="sent-card-title queue-text-expandable-wrap"><span class="queue-text-short">' + truncMsg + '</span><span class="queue-text-full" style="display:none">' + fullMsg + '</span></p><button type="button" class="queue-post-see-more-btn sent-see-more-btn">See more</button>' :
+                '<p class="sent-card-title">' + truncMsg + '</p>';
 
             var viewPostBtn = '';
             if (post.permalink_url) {
@@ -2319,7 +2404,7 @@
                                         </div>
                                         <span class="sent-card-account-name">${accountName}</span>
                                     </div>
-                                    <p class="sent-card-title">${truncMsg}</p>
+                                    ${titleHtml}
                                 </div>
                                 ${imageHtml}
                             </div>

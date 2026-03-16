@@ -696,6 +696,22 @@
          font-size: 14px;
      }
 
+     .selected-account-header-buttons {
+         display: inline-flex;
+         align-items: center;
+         gap: 4px;
+         margin-left: 4px;
+     }
+
+     .selected-account-header-icon-btn {
+         width: 28px;
+         height: 28px;
+     }
+
+     .selected-account-header-icon-btn i {
+         font-size: 13px;
+     }
+
      .selected-account-name {
          font-size: 15px;
          font-weight: 600;
@@ -1131,9 +1147,37 @@
      }
 
      .queue-link-title+.queue-post-see-more-btn,
-     .queue-link-desc+.queue-post-see-more-btn {
+     .queue-link-desc+.queue-post-see-more-btn,
+     .queue-text-expandable-wrap+.queue-post-see-more-btn,
+     .queue-post-text-wrap .queue-post-see-more-btn {
          display: block;
          margin-top: 4px;
+     }
+
+     .queue-text-expandable-wrap .queue-text-short,
+     .queue-text-expandable-wrap .queue-text-full {
+         display: block;
+         word-break: break-word;
+     }
+
+     .sent-see-more-btn {
+         margin-top: 4px;
+         padding: 0;
+         background: none;
+         border: none;
+         font-size: 12px;
+         font-weight: 600;
+         color: #0d6efd;
+         cursor: pointer;
+     }
+
+     .sent-see-more-btn:hover {
+         color: #0a58ca;
+         text-decoration: underline;
+     }
+
+     .sent-card-title.queue-text-expandable-wrap {
+         display: block;
      }
 
      .queue-post-image-wrap {
@@ -3772,7 +3816,8 @@
 
      .create-post-main-content.has-editor .create-post-editor-wrap {
          flex: 1;
-         min-height: stretch;
+         min-height: 0;
+         max-height: min(500px, 55vh);
      }
 
      .create-post-empty-state {
@@ -3791,13 +3836,13 @@
 
      .create-post-editor-wrap {
          width: 100%;
-         height: 100%;
+         flex: 1;
+         min-height: 0;
          display: flex;
-         justify-content: space-between;
          flex-direction: column;
          gap: 20px;
-         min-height: 0;
          overflow-y: auto;
+         max-height: 50vh;
      }
 
      .create-post-editor-textarea {
@@ -3812,6 +3857,8 @@
          border: none;
          outline: none;
          resize: none;
+         overflow-y: hidden;
+         overflow-x: hidden;
      }
 
      .create-post-editor-textarea::placeholder {

@@ -93,7 +93,7 @@
                     </div>
                     <div class="create-post-editor-wrap" id="createPostEditorWrap" style="display: none;">
                         <textarea class="create-post-editor-textarea" id="createPostEditorTextarea"
-                            placeholder="Paste your link or write something..." rows="6"></textarea>
+                            placeholder="Paste your link or write something..."></textarea>
                         <div class="create-post-editor-bottom">
                             <div id="createPostLinkPreview" class="create-post-link-preview"></div>
                             <input type="file" id="createPostFileInput"

@@ -28,6 +28,7 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class  ScheduleController extends Controller
 {
@@ -2216,6 +2217,47 @@ class  ScheduleController extends Controller
             'timeline' => $timeline,
             'has_more' => true,
             'next_offset' => $offset + $days,
+        ]);
+    }
+
+    public function shuffleQueue(Request $request)
+    {
+        $accountId = $request->input('account_id');
+        $accountType = $request->input('account_type') ?? $request->input('type');
+        $source = $request->input('source', 'schedule');
+
+        if (!$accountId || !$accountType) {
+            return response()->json(['success' => false, 'message' => 'Account required']);
+        }
+
+        $user = Auth::guard('user')->user();
+        $socialType = $accountType === 'pinterest' ? 'pinterest' : ($accountType === 'tiktok' ? 'tiktok' : 'facebook');
+
+        $posts = Post::where('user_id', $user->id)
+            ->where('account_id', $accountId)
+            ->where('social_type', 'like', "%{$socialType}%")
+            ->where('status', 0)
+            ->where('source', $source)
+            ->get();
+
+        if ($posts->count() < 2) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Need at least 2 pending posts to shuffle.',
+            ]);
+        }
+
+        $publishDates = $posts->pluck('publish_date')->shuffle()->values();
+
+        DB::transaction(function () use ($posts, $publishDates) {
+            foreach ($posts as $index => $post) {
+                $post->update(['publish_date' => $publishDates[$index] ?? $post->publish_date]);
+            }
+        });
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Queue shuffled successfully.',
         ]);
     }
 
