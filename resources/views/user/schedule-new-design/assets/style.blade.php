@@ -3785,7 +3785,7 @@
         background: #fff;
         border: 1px solid #e5e7eb;
         border-radius: 8px;
-        overflow: hidden;
+        overflow: auto;
     }
 
     .create-post-main-content.has-editor {
