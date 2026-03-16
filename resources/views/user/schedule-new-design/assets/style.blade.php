@@ -4287,7 +4287,7 @@
     .create-post-segmented-btn {
         padding: 8px 18px;
         font-size: 11px;
-        font-weight: 500;
+        font-weight: 600;
         color: #374151;
         background: #fff;
         border: none;
