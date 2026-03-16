@@ -13,7 +13,7 @@
                         </div>
                         <div class="card-tools">
                             <a href="{{ route('panel.schedule.new-design') }}" class="btn btn-sm btn-outline-primary mr-2">
-                                <i class="fas fa-paint-brush mr-1"></i> New Design
+                                <i class="fas fa-paint-brush mr-1"></i> Beta version
                             </a>
                             <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
                                 <i class="fas fa-minus"></i>
