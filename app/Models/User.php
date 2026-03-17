@@ -39,6 +39,7 @@ class User extends Authenticatable
         'package_id',
         'stripe_id',
         'url_shorten_platforms',
+        'schedule_selected_account',
     ];
 
     /**
@@ -62,6 +63,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'rss_filters' => 'array',
         'url_shorten_platforms' => 'array',
+        'schedule_selected_account' => 'array',
     ];
 
     protected $appends = ['full_name'];

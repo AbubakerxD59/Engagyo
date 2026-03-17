@@ -302,6 +302,40 @@ class  ScheduleController extends Controller
     }
 
     /**
+     * Get the user's saved schedule selected account from the database.
+     */
+    public function getSelectedAccount()
+    {
+        $user = Auth::guard('user')->user();
+        $data = $user->schedule_selected_account;
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ]);
+    }
+
+    /**
+     * Save the user's schedule selected account to the database.
+     */
+    public function saveSelectedAccount(Request $request)
+    {
+        $request->validate([
+            'type' => 'required|string|in:all,facebook,pinterest,tiktok',
+            'id' => 'nullable|string',
+        ]);
+        $user = Auth::guard('user')->user();
+        $data = [
+            'type' => $request->type,
+            'id' => $request->id,
+        ];
+        $user->update(['schedule_selected_account' => $data]);
+        return response()->json([
+            'success' => true,
+            'data' => $data,
+        ]);
+    }
+
+    /**
      * Summary of accountStatus
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse

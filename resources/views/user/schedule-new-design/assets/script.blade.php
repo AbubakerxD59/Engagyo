@@ -89,30 +89,8 @@
             }
         }
 
-        var SCHEDULE_BETA_STORAGE_KEY = 'scheduleBetaSelectedAccount';
-
-        function saveSelectedAccountToStorage() {
+        function applyAccountSelectionFromData(data) {
             try {
-                var data;
-                if (isAllChannelsActive()) {
-                    data = { type: 'all' };
-                } else {
-                    var selected = getSelectedAccounts();
-                    if (selected.accountIds.length === 1) {
-                        data = { type: selected.accountTypes[0], id: String(selected.accountIds[0]) };
-                    } else {
-                        data = { type: 'all' };
-                    }
-                }
-                localStorage.setItem(SCHEDULE_BETA_STORAGE_KEY, JSON.stringify(data));
-            } catch (e) {}
-        }
-
-        function applyAccountSelectionFromStorage() {
-            try {
-                var raw = localStorage.getItem(SCHEDULE_BETA_STORAGE_KEY);
-                if (!raw) return false;
-                var data = JSON.parse(raw);
                 if (!data || !data.type) return false;
                 if (data.type === 'all') {
                     $('.account-card').removeClass('active');
@@ -130,6 +108,23 @@
             } catch (e) {
                 return false;
             }
+        }
+
+        function saveSelectedAccountToDb() {
+            try {
+                var payload;
+                if (isAllChannelsActive()) {
+                    payload = { type: 'all', id: null, _token: "{{ csrf_token() }}" };
+                } else {
+                    var selected = getSelectedAccounts();
+                    if (selected.accountIds.length === 1) {
+                        payload = { type: selected.accountTypes[0], id: String(selected.accountIds[0]), _token: "{{ csrf_token() }}" };
+                    } else {
+                        payload = { type: 'all', id: null, _token: "{{ csrf_token() }}" };
+                    }
+                }
+                $.post("{{ route('panel.schedule.selected-account.save') }}", payload);
+            } catch (e) {}
         }
 
         function applyAccountSelectionFromUrl() {
@@ -899,7 +894,7 @@
             $('.account-card:not(.all-channels-card)').addClass('active');
             updateSelectedAccountHeader();
             updateUrlFromAccountSelection();
-            saveSelectedAccountToStorage();
+            saveSelectedAccountToDb();
         });
 
         $(document).on("click", ".account-card:not(.all-channels-card)", function() {
@@ -909,7 +904,7 @@
             $card.addClass('active');
             updateSelectedAccountHeader();
             updateUrlFromAccountSelection();
-            saveSelectedAccountToStorage();
+            saveSelectedAccountToDb();
         });
 
         // Search icon click (collapsed state): expand sidebar and focus search
@@ -982,14 +977,20 @@
             $('#accountSearchInput').val('').trigger('input').focus();
         });
 
-        // Apply account selection: URL param takes precedence, else use saved selection from localStorage
+        // Apply account selection: URL param takes precedence, else use saved selection from database
         if (applyAccountSelectionFromUrl()) {
-            saveSelectedAccountToStorage();
+            saveSelectedAccountToDb();
+            updateSelectedAccountHeader();
         } else {
-            applyAccountSelectionFromStorage();
+            $.get("{{ route('panel.schedule.selected-account') }}", function(res) {
+                if (res.success && res.data && applyAccountSelectionFromData(res.data)) {
+                    // selection applied from DB
+                }
+                updateSelectedAccountHeader();
+            }).fail(function() {
+                updateSelectedAccountHeader();
+            });
         }
-        // Show selected-account header on load when at least one account is selected
-        updateSelectedAccountHeader();
 
         // Header List view button (active state only; calendar removed)
         $(document).on('click', '.selected-account-view-list', function() {
