@@ -22,11 +22,6 @@ class PostService
         self::applyUtmCodesToData($data);
         self::applyLinkShorteningToData($data);
 
-        // Add +1 minute to publish_date before converting to UTC
-        $publishDate = new \DateTime($data['publish_date']);
-        $publishDate->modify('+1 minute');
-        $data['publish_date'] = $publishDate->format('Y-m-d H:i:s');
-
         $user = User::find($data['user_id']);
         $data['publish_date'] = TimezoneService::toUtc($data['publish_date'], $user);
 
