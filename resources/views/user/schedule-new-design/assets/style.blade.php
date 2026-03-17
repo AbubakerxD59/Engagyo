@@ -866,13 +866,21 @@
 
     /* --- Posts search bar (Queue & Sent tabs) --- */
     .posts-search-wrap {
-        padding: 5px 0;
+        flex: 1;
+        min-width: 0;
+        margin-left: 16px;
+    }
+
+    .posts-status-tabs .posts-search-wrap {
+        display: flex !important;
     }
 
     .posts-search-inner {
         position: relative;
         display: flex;
         align-items: center;
+        width: 100%;
+        max-width: 280px;
     }
 
     .posts-search-icon {
@@ -885,7 +893,8 @@
 
     .posts-search-input {
         width: 100%;
-        padding: 10px 36px 10px 40px;
+        padding: 5px 36px 5px 40px;
+        /* padding: 10px 36px 10px 40px; */
         border: 1px solid #e5e7eb;
         border-radius: 8px;
         font-size: 14px;

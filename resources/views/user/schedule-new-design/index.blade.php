@@ -117,7 +117,7 @@
 
                                             </div>
                                         </div>
-                                        {{-- Posts status tabs (Queue, Sent) --}}
+                                        {{-- Posts status tabs (Queue, Sent) + Search bar --}}
                                         <div id="posts-status-tabs" class="posts-status-tabs" style="display: none;">
                                             <button type="button" class="posts-status-tab is-active" data-tab="queue"
                                                 aria-selected="true">
@@ -129,17 +129,16 @@
                                                 <span class="posts-status-tab-label">Sent</span>
                                                 <span class="posts-status-tab-badge" data-count="sent">0</span>
                                             </button>
-                                        </div>
-                                        {{-- Search bar for Queue and Sent tabs --}}
-                                        <div id="posts-search-wrap" class="posts-search-wrap" style="display: none;">
-                                            <div class="posts-search-inner">
-                                                <i class="fas fa-search posts-search-icon"></i>
-                                                <input type="text" id="postsSearchInput" class="posts-search-input"
-                                                    placeholder="Search posts by title..." autocomplete="off">
-                                                <button type="button" id="postsSearchClear" class="posts-search-clear"
-                                                    aria-label="Clear search" style="display: none;">
-                                                    <i class="fas fa-times"></i>
-                                                </button>
+                                            <div id="posts-search-wrap" class="posts-search-wrap" style="display: none;">
+                                                <div class="posts-search-inner">
+                                                    <i class="fas fa-search posts-search-icon"></i>
+                                                    <input type="text" id="postsSearchInput" class="posts-search-input"
+                                                        placeholder="Search posts by title..." autocomplete="off">
+                                                    <button type="button" id="postsSearchClear" class="posts-search-clear"
+                                                        aria-label="Clear search" style="display: none;">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
