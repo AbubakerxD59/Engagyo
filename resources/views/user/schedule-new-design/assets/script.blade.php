@@ -180,17 +180,22 @@
             } else {
                 $header.hide();
                 $tabs.hide();
+                $('#posts-search-wrap').hide();
+                $('#postsSearchInput').val('');
+                postsSearchQuery = '';
+                $('#postsSearchClear').hide();
                 return;
             }
 
             $header.show();
             $tabs.show();
+            $('#posts-search-wrap').show();
             cachedSentPagePosts = null;
             loadPostsStatusCounts();
             if (currentPostStatusTab === 'queue') {
                 $('#queue-timeslots-section').show();
                 $('#postsGrid').hide();
-                loadQueueTimeslotsSection();
+                loadQueueTimeslotsSection(true);
             } else if (currentPostStatusTab === 'sent') {
                 $('#queue-timeslots-section').hide();
                 $('#postsGrid').show();
@@ -200,6 +205,7 @@
 
         var currentPostStatusTab = 'queue';
         var cachedSentPagePosts = null;
+        var postsSearchQuery = '';
 
         function parseCreatedTime(ct) {
             if (!ct) return null;
@@ -275,17 +281,27 @@
             return html + '</div>';
         }
 
+        function filterSentPostsByTitle(posts, query) {
+            if (!query || !query.trim()) return posts;
+            var q = query.trim().toLowerCase();
+            return posts.filter(function(post) {
+                var title = (post.message || post.story || post.title || '').toString().toLowerCase();
+                return title.indexOf(q) !== -1;
+            });
+        }
+
         function showSentPosts() {
             if (cachedSentPagePosts === null) {
                 $('#postsGrid').html(getSentPostsSkeletonHtml());
                 return;
             }
-            if (cachedSentPagePosts.length === 0) {
+            var postsToShow = filterSentPostsByTitle(cachedSentPagePosts, postsSearchQuery);
+            if (postsToShow.length === 0) {
                 sentPostsGroupedByDay = [];
-                $('#postsGrid').html('<div class="empty-state-box"><i class="far fa-folder-open"></i><p>No sent posts found.</p></div>');
+                $('#postsGrid').html('<div class="empty-state-box"><i class="far fa-folder-open"></i><p>' + (postsSearchQuery ? 'No sent posts match your search.' : 'No sent posts found.') + '</p></div>');
                 return;
             }
-            sentPostsGroupedByDay = buildSentPostsGroupedByDay(cachedSentPagePosts);
+            sentPostsGroupedByDay = buildSentPostsGroupedByDay(postsToShow);
             sentDayOffset = 0;
             if (sentPostsGroupedByDay.length === 0) {
                 $('#postsGrid').html('<div class="empty-state-box"><i class="far fa-folder-open"></i><p>No sent posts found.</p></div>');
@@ -342,6 +358,10 @@
         var queueLoadingMore = false;
         var queueBatchSize = 7;
         var queueHasMore = true;
+        var queueLoadRequestId = 0;
+        var queueSectionLoading = false;
+        var queueSectionDebounceTimer = null;
+        var QUEUE_SECTION_DEBOUNCE_MS = 250;
         var socialLogos = {
             facebook: "{{ social_logo('facebook') }}",
             pinterest: "{{ social_logo('pinterest') }}",
@@ -485,6 +505,24 @@
                 '</div>';
         }
 
+        function filterQueueTimelineByTitle(timeline, query) {
+            if (!query || !query.trim()) return timeline;
+            var q = query.trim().toLowerCase();
+            return timeline.map(function(day) {
+                var filteredSlots = day.slots.map(function(slot) {
+                    var posts = slot.posts || (slot.post ? [slot.post] : []);
+                    var matchingPosts = posts.filter(function(post) {
+                        var title = (post.title || post.description || post.url || '').toString().toLowerCase();
+                        return title.indexOf(q) !== -1;
+                    });
+                    if (matchingPosts.length === 0) return null;
+                    return { time: slot.time, time_display: slot.time_display, datetime_utc: slot.datetime_utc, has_post: true, posts: matchingPosts };
+                }).filter(Boolean);
+                if (filteredSlots.length === 0) return null;
+                return { date: day.date, label: day.label, date_display: day.date_display, slots: filteredSlots };
+            }).filter(Boolean);
+        }
+
         function renderQueueTimeline(timeline) {
             var html = '';
             timeline.forEach(function(day) {
@@ -513,19 +551,37 @@
             return html + '</div></div>';
         }
 
-        function loadQueueTimeslotsSection() {
+        function loadQueueTimeslotsSection(immediate) {
+            if (queueSectionDebounceTimer) {
+                clearTimeout(queueSectionDebounceTimer);
+                queueSectionDebounceTimer = null;
+            }
+            if (immediate) {
+                loadQueueTimeslotsSectionNow();
+                return;
+            }
+            queueSectionDebounceTimer = setTimeout(function() {
+                queueSectionDebounceTimer = null;
+                loadQueueTimeslotsSectionNow();
+            }, QUEUE_SECTION_DEBOUNCE_MS);
+        }
+
+        function loadQueueTimeslotsSectionNow() {
+            if (queueSectionLoading) return;
             var selectedAccounts = getSelectedAccounts();
             var $content = $('#queue-timeslots-content');
             var $empty = $('#queue-timeslots-empty');
             queueDayOffset = 0;
             queueTimelineData = [];
             queueHasMore = true;
+            var requestId = ++queueLoadRequestId;
             if (selectedAccounts.accountIds.length === 0) {
                 $content.empty().hide();
                 $empty.find('.queue-timeslots-empty-text').text('No queued posts found.');
                 $empty.show();
                 return;
             }
+            queueSectionLoading = true;
             var accountId = selectedAccounts.accountIds[0];
             var accountType = selectedAccounts.accountTypes[0];
             $content.html(getQueueSkeletonHtml()).show();
@@ -535,6 +591,8 @@
                 type: "GET",
                 data: { account_id: accountId, type: accountType, days: queueBatchSize, offset: 0, source: 'schedule' },
                 success: function(data) {
+                    queueSectionLoading = false;
+                    if (requestId !== queueLoadRequestId) return;
                     if (!data.success || !data.timeline || data.timeline.length === 0) {
                         $content.empty().hide();
                         $empty.find('.queue-timeslots-empty-text').text(data.message || 'No queued posts found.');
@@ -542,12 +600,23 @@
                         return;
                     }
                     queueTimelineData = data.timeline;
-                    queueDayOffset = data.timeline.length;
-                    queueHasMore = data.has_more;
-                    $content.html(renderQueueTimeline(data.timeline));
-                    bindQueuePostActions();
+                    queueDayOffset = (data.next_offset !== undefined) ? data.next_offset : data.timeline.length;
+                    queueHasMore = data.has_more !== false;
+                    var toRender = filterQueueTimelineByTitle(data.timeline, postsSearchQuery);
+                    $content.empty();
+                    if (toRender.length === 0 && postsSearchQuery) {
+                        $content.hide();
+                        $empty.find('.queue-timeslots-empty-text').text('No posts match your search.');
+                        $empty.show();
+                    } else {
+                        $content.html(renderQueueTimeline(toRender)).show();
+                        $empty.hide();
+                        bindQueuePostActions();
+                    }
                 },
                 error: function() {
+                    queueSectionLoading = false;
+                    if (requestId !== queueLoadRequestId) return;
                     $content.empty().hide();
                     $empty.find('.queue-timeslots-empty-text').text('Failed to load queue.');
                     $empty.show();
@@ -557,23 +626,28 @@
 
         function loadMoreQueueTimeline() {
             if (queueLoadingMore || !queueHasMore) return;
+            if (queueTimelineData.length <= 1) return;
             var selectedAccounts = getSelectedAccounts();
             if (selectedAccounts.accountIds.length === 0) return;
             queueLoadingMore = true;
             var accountId = selectedAccounts.accountIds[0];
             var accountType = selectedAccounts.accountTypes[0];
+            var currentOffset = queueDayOffset;
             $.ajax({
                 url: "{{ route('panel.schedule.queue.timeline') }}",
                 type: "GET",
-                data: { account_id: accountId, type: accountType, days: queueBatchSize, offset: queueDayOffset, source: 'schedule' },
+                data: { account_id: accountId, type: accountType, days: queueBatchSize, offset: currentOffset, source: 'schedule' },
                 success: function(data) {
                     queueLoadingMore = false;
                     if (data.success && data.timeline && data.timeline.length > 0) {
                         queueTimelineData = queueTimelineData.concat(data.timeline);
-                        queueDayOffset += data.timeline.length;
-                        queueHasMore = data.has_more;
-                        $('#queue-timeslots-content').append(renderQueueTimeline(data.timeline));
-                        bindQueuePostActions();
+                        queueDayOffset = (data.next_offset !== undefined) ? data.next_offset : (currentOffset + data.timeline.length);
+                        queueHasMore = (data.has_more !== false) && (data.timeline.length >= queueBatchSize);
+                        var toAppend = filterQueueTimelineByTitle(data.timeline, postsSearchQuery);
+                        if (toAppend.length > 0) {
+                            $('#queue-timeslots-content').append(renderQueueTimeline(toAppend));
+                            bindQueuePostActions();
+                        }
                     } else {
                         queueHasMore = false;
                     }
@@ -637,28 +711,9 @@
             var menuHtml = '<div class="queue-post-more-menu"><button type="button" class="queue-post-delete-btn" data-id="' + id + '"><i class="fas fa-trash mr-1"></i> Delete</button></div>';
             var $menuEl = $(menuHtml);
             $card.find('.queue-post-actions').append($menuEl);
-            $menuEl.on('click', function(e) { e.stopPropagation(); });
-            $menuEl.find('.queue-post-delete-btn').on('click', function(e) {
+            $menuEl.on('click', function(e) {
+                if ($(e.target).closest('.queue-post-delete-btn').length) return;
                 e.stopPropagation();
-                $('.queue-post-more-menu').remove();
-                var postId = $(this).data('id');
-                if (!postId || !confirm("Published post will be delete from Account! Do you wish to Delete this Post?")) return;
-                $.ajax({
-                    url: "{{ route('panel.schedule.post.delete') }}",
-                    type: "GET",
-                    data: { id: postId },
-                    success: function(response) {
-                        if (response.success) {
-                            toastr.success(response.message);
-                            if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
-                                loadQueueTimeslotsSection();
-                            }
-                            loadPostsStatusCounts();
-                        } else {
-                            toastr.error(response.message || 'Failed to delete');
-                        }
-                    }
-                });
             });
             $(document).one('click', function() {
                 $('.queue-post-more-menu').remove();
@@ -770,7 +825,8 @@
 
         $('#queue-timeslots-section').on('scroll', function() {
             var el = this;
-            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
+            var threshold = Math.max(400, el.clientHeight * 1.5);
+            if (el.scrollTop + el.clientHeight >= el.scrollHeight - threshold) {
                 loadMoreQueueTimeline();
             }
         });
@@ -783,6 +839,40 @@
             }
         });
 
+        function applyPostsSearch() {
+            if (currentPostStatusTab === 'queue') {
+                var $content = $('#queue-timeslots-content');
+                var $empty = $('#queue-timeslots-empty');
+                if (queueTimelineData.length === 0 && !queueSectionLoading) return;
+                var toRender = filterQueueTimelineByTitle(queueTimelineData, postsSearchQuery);
+                if (toRender.length === 0 && postsSearchQuery) {
+                    $content.hide();
+                    $empty.find('.queue-timeslots-empty-text').text('No posts match your search.');
+                    $empty.show();
+                } else if (queueTimelineData.length > 0) {
+                    $content.empty().html(renderQueueTimeline(toRender)).show();
+                    $empty.hide();
+                    bindQueuePostActions();
+                }
+            } else if (currentPostStatusTab === 'sent') {
+                showSentPosts();
+            }
+        }
+
+        // Posts search input
+        $(document).on('input', '#postsSearchInput', function() {
+            postsSearchQuery = $(this).val().trim();
+            $('#postsSearchClear').toggle(postsSearchQuery.length > 0);
+            applyPostsSearch();
+        });
+
+        $(document).on('click', '#postsSearchClear', function() {
+            $('#postsSearchInput').val('');
+            postsSearchQuery = '';
+            $(this).hide();
+            applyPostsSearch();
+        });
+
         // Posts status tab click
         $(document).on('click', '.posts-status-tab', function() {
             var tab = $(this).data('tab');
@@ -793,7 +883,7 @@
             if (tab === 'queue') {
                 $('#queue-timeslots-section').show();
                 $('#postsGrid').hide();
-                loadQueueTimeslotsSection();
+                loadQueueTimeslotsSection(true);
             } else if (tab === 'sent') {
                 $('#queue-timeslots-section').hide();
                 $('#postsGrid').show();
@@ -1033,24 +1123,28 @@
                         var key = item.type + '_' + item.id;
                         statusMap[key] = item.schedule_status;
                     });
+                    var sidebarSelectedKeys = [];
+                    if (createPostFromTimeslot) {
+                        $('.account-card.active:not(.all-channels-card)').each(function() {
+                            var id = $(this).data('id');
+                            var type = $(this).data('type') || 'facebook';
+                            if (id && type) sidebarSelectedKeys.push(type + '_' + id);
+                        });
+                    }
                     $('.channels-dropdown-checkbox').each(function() {
                         var id = $(this).data('id');
                         var type = $(this).data('type') || 'facebook';
                         var key = type + '_' + id;
                         var status = statusMap[key];
                         if (status !== undefined) {
-                            $(this).attr('data-schedule-status', status).prop('checked', status === 'active');
+                            $(this).attr('data-schedule-status', status);
+                            if (createPostFromTimeslot && sidebarSelectedKeys.length > 0) {
+                                $(this).prop('checked', sidebarSelectedKeys.indexOf(key) !== -1);
+                            } else {
+                                $(this).prop('checked', status === 'active');
+                            }
                         }
                     });
-                    if (createPostFromTimeslot) {
-                        var $sidebarActive = $('.account-card.active:not(.all-channels-card)');
-                        if ($sidebarActive.length === 1) {
-                            var accountId = $sidebarActive.first().data('id');
-                            var accountType = $sidebarActive.first().data('type');
-                            $('.channels-dropdown-checkbox').prop('checked', false);
-                            $('.channels-dropdown-checkbox[data-id="' + accountId + '"][data-type="' + accountType + '"]').prop('checked', true);
-                        }
-                    }
                     updateCreatePostModalSelection();
                 } else {
                     lastUsedAccountData = null;
@@ -1289,7 +1383,7 @@
             });
         }
 
-        $('#createPostUploadLink, #createPostUploadZone').on('click', function(e) {
+        $('#createPostUploadZone').on('click', function(e) {
             e.preventDefault();
             if ($(e.target).closest('.create-post-upload-preview-remove').length) return;
             $('#createPostFileInput').trigger('click');
@@ -1496,6 +1590,16 @@
             return $('.channels-dropdown-checkbox:checked').length > 0;
         }
 
+        function getCreatePostSelectedAccounts() {
+            var accounts = [];
+            $('.channels-dropdown-checkbox:checked').each(function() {
+                var id = $(this).data('id');
+                var type = $(this).data('type') || 'facebook';
+                if (id) accounts.push({ id: id, type: type });
+            });
+            return accounts;
+        }
+
         function getCreatePostCommentValue() {
             if ($('#createPostFirstCommentWrap').is(':visible')) {
                 return $('#createPostFirstComment').val() || '';
@@ -1534,21 +1638,26 @@
                 toastr.error("Invalid link preview.");
                 return;
             }
+            var selectedAccounts = getCreatePostSelectedAccounts();
+            var postData = {
+                "_token": "{{ csrf_token() }}",
+                "content": content,
+                "comment": comment,
+                "link": 1,
+                "url": url,
+                "image": image,
+                "schedule_date": effectiveAction === 'schedule' ? schedule_date : '',
+                "schedule_time": effectiveAction === 'schedule' ? schedule_time : '',
+                "action": effectiveAction,
+            };
+            if (selectedAccounts.length > 0) {
+                postData.account_ids = JSON.stringify(selectedAccounts);
+            }
             disableActionButton();
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",
                 type: "POST",
-                data: {
-                    "_token": "{{ csrf_token() }}",
-                    "content": content,
-                    "comment": comment,
-                    "link": 1,
-                    "url": url,
-                    "image": image,
-                    "schedule_date": effectiveAction === 'schedule' ? schedule_date : '',
-                    "schedule_time": effectiveAction === 'schedule' ? schedule_time : '',
-                    "action": effectiveAction,
-                },
+                data: postData,
                 success: function(response) {
                     if (response.success) {
                         resetCreatePostArea();
@@ -1580,6 +1689,10 @@
             if (effectiveAction === 'schedule') {
                 data.schedule_date = dt.date;
                 data.schedule_time = dt.time;
+            }
+            var selectedAccounts = getCreatePostSelectedAccounts();
+            if (selectedAccounts.length > 0) {
+                data.account_ids = JSON.stringify(selectedAccounts);
             }
             disableActionButton();
             $.ajax({
@@ -1634,6 +1747,10 @@
             formData.append("schedule_date", effectiveAction === 'schedule' ? (schedule_date || '') : '');
             formData.append("schedule_time", effectiveAction === 'schedule' ? (schedule_time || '') : '');
             formData.append("files", file);
+            var selectedAccounts = getCreatePostSelectedAccounts();
+            if (selectedAccounts.length > 0) {
+                formData.append("account_ids", JSON.stringify(selectedAccounts));
+            }
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",
                 type: "POST",
@@ -1801,9 +1918,6 @@
             $('#characterCount').text('');
             $('#article-container').empty();
             reloadPosts();
-            if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
-                loadQueueTimeslotsSection();
-            }
             loadPostsStatusCounts();
             enableActionButton();
         }
@@ -2125,13 +2239,8 @@
                             var key = $input.data("type") + '_' + $input.data("id");
                             originalScheduleShuffle[key] = $input.prop('checked') ? 1 : 0;
                         });
-                        // Reload posts if needed
                         if (typeof reloadPosts === 'function') {
                             reloadPosts();
-                        }
-                        // Refresh queue timeslots section when settings are saved
-                        if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
-                            loadQueueTimeslotsSection();
                         }
                     } else {
                         toastr.error(response.message);
@@ -2839,9 +2948,6 @@
                         if (response.success) {
                             modal.modal("hide");
                             reloadPosts();
-                            if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
-                                loadQueueTimeslotsSection();
-                            }
                             loadPostsStatusCounts();
                             toastr.success(response.message);
                         } else {

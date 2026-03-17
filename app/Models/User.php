@@ -309,6 +309,46 @@ class User extends Authenticatable
     }
 
     /**
+     * Get accounts for post creation. When account_ids are provided (e.g. from create post modal
+     * when user selected specific accounts), use those. Otherwise use getScheduledActiveAccounts().
+     *
+     * @param array|null $accountIds Array of ['id' => int, 'type' => string] (facebook|pinterest|tiktok)
+     * @return \Illuminate\Support\Collection
+     */
+    public function getAccountsForPostCreation(?array $accountIds = null)
+    {
+        if ($accountIds && count($accountIds) > 0) {
+            $accounts = collect();
+            foreach ($accountIds as $item) {
+                $id = $item['id'] ?? null;
+                $type = $item['type'] ?? 'facebook';
+                if (!$id) {
+                    continue;
+                }
+                if ($type === 'facebook') {
+                    $page = Page::with('facebook')->where('id', $id)->where('user_id', $this->id)->first();
+                    if ($page) {
+                        $accounts->push($page);
+                    }
+                } elseif ($type === 'pinterest') {
+                    $board = Board::with('pinterest')->where('id', $id)->where('user_id', $this->id)->first();
+                    if ($board) {
+                        $accounts->push($board);
+                    }
+                } elseif ($type === 'tiktok') {
+                    $tiktok = Tiktok::where('id', $id)->where('user_id', $this->id)->first();
+                    if ($tiktok) {
+                        $accounts->push($tiktok);
+                    }
+                }
+            }
+            return $accounts;
+        }
+
+        return $this->getScheduledActiveAccounts();
+    }
+
+    /**
      * Get the active user package
      * 
      * @return \App\Models\UserPackage The active user package

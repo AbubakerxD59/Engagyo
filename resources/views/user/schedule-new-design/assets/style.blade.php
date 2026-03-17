@@ -864,6 +864,64 @@
         color: #212529;
     }
 
+    /* --- Posts search bar (Queue & Sent tabs) --- */
+    .posts-search-wrap {
+        padding: 5px 0;
+    }
+
+    .posts-search-inner {
+        position: relative;
+        display: flex;
+        align-items: center;
+    }
+
+    .posts-search-icon {
+        position: absolute;
+        left: 12px;
+        color: #6b7280;
+        font-size: 14px;
+        pointer-events: none;
+    }
+
+    .posts-search-input {
+        width: 100%;
+        padding: 10px 36px 10px 40px;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        font-size: 14px;
+        color: #1a1a1a;
+        background: #fff;
+        transition: border-color 0.2s;
+    }
+
+    .posts-search-input::placeholder {
+        color: #9ca3af;
+    }
+
+    .posts-search-input:focus {
+        outline: none;
+        border-color: #0b4423;
+    }
+
+    .posts-search-clear {
+        position: absolute;
+        right: 8px;
+        padding: 6px;
+        border: none;
+        background: transparent;
+        color: #6b7280;
+        cursor: pointer;
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .posts-search-clear:hover {
+        color: #1a1a1a;
+        background: rgba(0, 0, 0, 0.06);
+    }
+
     /* --- Queue tab: timeslots section (light theme) --- */
     .queue-timeslots-section {
         flex: 1;

@@ -397,6 +397,30 @@ class  ScheduleController extends Controller
         }
         return response()->json($response);
     }
+
+    /**
+     * Resolve which accounts to use for post creation.
+     * When account_ids are provided in the request (from create post modal selection),
+     * use those. Otherwise use getScheduledActiveAccounts().
+     *
+     * @param Request $request
+     * @param User $user
+     * @return \Illuminate\Support\Collection
+     */
+    private function resolveAccountsForPost(Request $request, User $user)
+    {
+        $accountIds = $request->get('account_ids');
+        if ($accountIds) {
+            if (is_string($accountIds)) {
+                $accountIds = json_decode($accountIds, true);
+            }
+            if (is_array($accountIds) && count($accountIds) > 0) {
+                return $user->getAccountsForPostCreation($accountIds);
+            }
+        }
+        return $user->getScheduledActiveAccounts();
+    }
+
     /**
      * Publish Post
      * @param Request $request
@@ -406,8 +430,7 @@ class  ScheduleController extends Controller
     {
         try {
             $user = User::with("boards.pinterest", "pages.facebook")->findOrFail(Auth::guard('user')->id());
-            // get scheduled active
-            $accounts = $user->getScheduledActiveAccounts();
+            $accounts = $this->resolveAccountsForPost($request, $user);
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
             $file = $request->file("files") ? true : false;
@@ -632,8 +655,7 @@ class  ScheduleController extends Controller
     {
         try {
             $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->findOrFail(Auth::guard('user')->id());
-            // Get scheduled active accounts
-            $accounts = $user->getScheduledActiveAccounts();
+            $accounts = $this->resolveAccountsForPost($request, $user);
 
             // Filter accounts for draft-active platforms only
             $draftActivePlatforms = DraftEnum::getDraftActivePlatformValues();
@@ -761,8 +783,7 @@ class  ScheduleController extends Controller
     {
         try {
             $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->findOrFail(Auth::guard('user')->id());
-            // Get scheduled active accounts
-            $accounts = $user->getScheduledActiveAccounts();
+            $accounts = $this->resolveAccountsForPost($request, $user);
 
             // Filter accounts for draft-active platforms only
             $draftActivePlatforms = DraftEnum::getDraftActivePlatformValues();
@@ -879,8 +900,7 @@ class  ScheduleController extends Controller
     {
         try {
             $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
-            // get scheduled active
-            $accounts = $user->getScheduledActiveAccounts();
+            $accounts = $this->resolveAccountsForPost($request, $user);
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
             $file = $request->file("files") ? true : false;
@@ -1042,8 +1062,7 @@ class  ScheduleController extends Controller
     {
         try {
             $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
-            // get scheduled active
-            $accounts = $user->getScheduledActiveAccounts();
+            $accounts = $this->resolveAccountsForPost($request, $user);
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
             $schedule_date = $request->schedule_date;
@@ -1190,8 +1209,7 @@ class  ScheduleController extends Controller
     {
         try {
             $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
-            // get scheduled active
-            $accounts = $user->getScheduledActiveAccounts();
+            $accounts = $this->resolveAccountsForPost($request, $user);
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
             $url = $request->get("url") ?? null;
@@ -1348,8 +1366,7 @@ class  ScheduleController extends Controller
     {
         try {
             $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
-            // get scheduled active
-            $accounts = $user->getScheduledActiveAccounts();
+            $accounts = $this->resolveAccountsForPost($request, $user);
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
             $url = $request->get("url") ?? null;
@@ -1493,8 +1510,7 @@ class  ScheduleController extends Controller
     {
         try {
             $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
-            // get scheduled active
-            $accounts = $user->getScheduledActiveAccounts();
+            $accounts = $this->resolveAccountsForPost($request, $user);
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
             $schedule_date = $request->schedule_date;
