@@ -149,4 +149,71 @@ class PagePostsSyncService
 
         return ['synced' => $synced, 'failed' => $failed];
     }
+
+    /**
+     * Sync page posts with insights for a single page across all durations.
+     *
+     * @return array{success: bool, synced: int, failed: int}
+     */
+    public function syncPageForAllDurations(Page $page): array
+    {
+        $synced = 0;
+        $failed = 0;
+
+        foreach ($this->durations as $duration) {
+            try {
+                if ($this->syncPagePosts($page, $duration)) {
+                    $synced++;
+                } else {
+                    $failed++;
+                }
+            } catch (\Throwable $e) {
+                $failed++;
+                Log::warning('Page posts sync failed', [
+                    'page_id' => $page->id,
+                    'duration' => $duration,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return [
+            'success' => $failed === 0,
+            'synced' => $synced,
+            'failed' => $failed,
+        ];
+    }
+
+    /**
+     * Sync page posts with insights for a single page for full_year duration only.
+     * Used when user clicks "Refresh" for the selected account (Sent tab).
+     *
+     * @return array{success: bool, synced: int, failed: int}
+     */
+    public function syncPageForFullYear(Page $page): array
+    {
+        $synced = 0;
+        $failed = 0;
+
+        try {
+            if ($this->syncPagePosts($page, 'full_year')) {
+                $synced = 1;
+            } else {
+                $failed = 1;
+            }
+        } catch (\Throwable $e) {
+            $failed = 1;
+            Log::warning('Page posts sync failed', [
+                'page_id' => $page->id,
+                'duration' => 'full_year',
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        return [
+            'success' => $failed === 0,
+            'synced' => $synced,
+            'failed' => $failed,
+        ];
+    }
 }

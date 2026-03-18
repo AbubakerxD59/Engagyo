@@ -117,6 +117,12 @@
                                                             aria-label="Queue settings for this account" title="Queue settings">
                                                             <i class="fas fa-cog"></i>
                                                         </button>
+                                                        <button type="button" class="selected-account-header-refresh-btn"
+                                                            id="selected-account-header-refresh"
+                                                            aria-label="Refresh posts and insights" title="Refresh posts and insights">
+                                                            <i class="fas fa-sync-alt"></i>
+                                                        </button>
+                                                        <span class="selected-account-header-sync-msg" id="selected-account-header-sync-msg" style="display: none;" aria-live="polite">Posts and insights are being synced…</span>
                                                     </div>
                                                 </div>
                                             </div>

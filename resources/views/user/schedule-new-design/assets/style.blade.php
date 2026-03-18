@@ -696,6 +696,53 @@
         font-size: 14px;
     }
 
+    .selected-account-header-refresh-btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        border: none;
+        border-radius: 10px;
+        background: transparent;
+        color: #333;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+    }
+
+    .selected-account-header-refresh-btn:hover:not(:disabled) {
+        background: #e8e8e8;
+        border-radius: 10px;
+        color: #000;
+    }
+
+    .selected-account-header-refresh-btn i {
+        font-size: 14px;
+    }
+
+    .selected-account-header-refresh-btn.is-syncing {
+        color: #0d6efd;
+        background: #e7f1ff;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .selected-account-header-refresh-btn.is-syncing i {
+        animation: selected-account-refresh-spin 0.8s linear infinite;
+    }
+
+    @keyframes selected-account-refresh-spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+
+    .selected-account-header-sync-msg {
+        font-size: 13px;
+        color: #0d6efd;
+        white-space: nowrap;
+    }
+
     .selected-account-name {
         font-size: 15px;
         font-weight: 600;

@@ -2161,6 +2161,54 @@
             openQueueSettingsModal({ id: id, type: type, name: name });
         });
 
+        // Header refresh icon – sync posts and insights for the selected Facebook account
+        $(document).on('click', '#selected-account-header-refresh', function() {
+            var $btn = $('#selected-account-header-refresh');
+            var $msg = $('#selected-account-header-sync-msg');
+            var $first = $('.account-card.active:not(.all-channels-card)').first();
+            if (!$first.length || $('.account-card.active:not(.all-channels-card)').length !== 1) {
+                toastr.info('Please select a single account to refresh.');
+                return;
+            }
+            var id = $first.data('id');
+            var type = $first.data('type');
+            var name = $first.find('.account-name').text().trim() || 'Account';
+            if (type !== 'facebook') {
+                toastr.info('Posts and insights refresh is available for Facebook accounts only.');
+                return;
+            }
+            $btn.addClass('is-syncing').prop('disabled', true);
+            $msg.show();
+            $.ajax({
+                url: "{{ route('panel.schedule.refresh-page-posts') }}",
+                type: "POST",
+                data: {
+                    "_token": "{{ csrf_token() }}",
+                    "account_id": id,
+                    "type": type
+                },
+                success: function(res) {
+                    $btn.removeClass('is-syncing').prop('disabled', false);
+                    $msg.hide();
+                    if (res.success) {
+                        toastr.success(res.message || ('Posts and insights synced for ' + (res.account_name || name) + '.'));
+                        if (typeof loadSentPagePostsCached === 'function') {
+                            var selected = getSelectedAccounts();
+                            if (selected && selected.length) loadSentPagePostsCached(selected);
+                        }
+                    } else {
+                        toastr.warning(res.message || 'Sync completed with some failures.');
+                    }
+                },
+                error: function(xhr) {
+                    $btn.removeClass('is-syncing').prop('disabled', false);
+                    $msg.hide();
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to sync posts and insights.';
+                    toastr.error(msg);
+                }
+            });
+        });
+
         // Track original timeslots and schedule_shuffle for queue settings modal
         var originalQueueTimeslots = {};
         var originalScheduleShuffle = {};

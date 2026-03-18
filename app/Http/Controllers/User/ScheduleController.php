@@ -10,6 +10,7 @@ use App\Jobs\PublishPinterestPost;
 use App\Jobs\PublishTikTokPost;
 use App\Models\Board;
 use App\Models\Facebook;
+use App\Models\Notification;
 use App\Models\Page;
 use App\Models\PagePost;
 use App\Models\Pinterest;
@@ -19,6 +20,7 @@ use App\Models\Timeslot;
 use App\Models\User;
 use App\Services\FacebookService;
 use App\Services\FeatureUsageService;
+use App\Services\PagePostsSyncService;
 use App\Services\PinterestService;
 use App\Services\PostService;
 use App\Services\SocialMediaLogService;
@@ -2466,5 +2468,62 @@ class  ScheduleController extends Controller
             return $value->getTimestamp();
         }
         return 0;
+    }
+
+    /**
+     * Refresh posts and post insights for the selected Facebook account (page).
+     * Used by the schedule page "Refresh" button. Creates a success notification when done.
+     */
+    public function refreshPagePosts(Request $request, PagePostsSyncService $pagePostsSyncService)
+    {
+        $accountId = $request->input('account_id');
+        $type = $request->input('type', 'facebook');
+
+        if (empty($accountId) || $type !== 'facebook') {
+            return response()->json(['success' => false, 'message' => 'Please select a Facebook account.'], 400);
+        }
+
+        $user = Auth::user();
+        $page = Page::where('id', $accountId)->where('user_id', $user->id)->first();
+
+        if (!$page) {
+            return response()->json(['success' => false, 'message' => 'Account not found or access denied.'], 404);
+        }
+
+        $result = $pagePostsSyncService->syncPageForFullYear($page);
+
+        if ($result['success'] || $result['synced'] > 0) {
+            $accountName = $page->name ?? 'Facebook account';
+            $profileImage = $page->profile_image ?? null;
+            Notification::create([
+                'user_id' => $user->id,
+                'title' => 'Posts and insights synced',
+                'body' => [
+                    'type' => 'success',
+                    'message' => 'Posts and insights have been synced for ' . $accountName . '.',
+                    'social_type' => 'facebook',
+                    'account_image' => $profileImage,
+                    'account_name' => $accountName,
+                    'account_username' => $page->facebook?->username ?? '',
+                ],
+                'is_read' => false,
+                'is_system' => false,
+            ]);
+        }
+
+        if ($result['success']) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Posts and insights synced successfully.',
+                'account_name' => $page->name,
+            ]);
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'Sync completed with some failures.',
+            'synced' => $result['synced'],
+            'failed' => $result['failed'],
+        ], 422);
     }
 }
