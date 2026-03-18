@@ -990,7 +990,6 @@ class FacebookService
                                 if ($name && !empty($values)) {
                                     $first = reset($values);
                                     $val = $first['value'] ?? 0;
-                                    dd($values, $first, $val);
                                     if ($name === 'post_reactions_by_type_total' && is_array($val)) {
                                         $insights[$name] = (int) array_sum($val);
                                     } else {
@@ -1015,7 +1014,7 @@ class FacebookService
                     }
                 }
             }
-
+            dd($posts);
             // Batch 2: comments only (separate so insights batch failure doesn't affect comments)
             try {
                 $commentsBatch = [];
