@@ -369,4 +369,63 @@ class AnalyticsController extends Controller
 
         return view('user.analytics.test', compact('facebookPages', 'pageId', 'selectedPage', 'pageInsights', 'pagePosts', 'apiResponse', 'since', 'until'));
     }
+
+    /**
+     * Test route: fetch posts and insights for a page for last_7 days and display all data.
+     * Route: GET panel/test/page-insights/{page_id}
+     */
+    public function testPagePostsInsights(int $page_id)
+    {
+        $accounts = auth()->user()->getAccounts();
+        $facebookPages = $accounts->where('type', 'facebook')->values();
+
+        if (!$facebookPages->contains('id', $page_id)) {
+            abort(404, 'Page not found or you do not have access.');
+        }
+
+        $page = Page::find($page_id);
+        if (!$page || empty($page->page_id) || empty($page->access_token)) {
+            abort(404, 'Page not found or missing Facebook credentials.');
+        }
+
+        $tokenCheck = FacebookService::validateToken($page);
+        if (!$tokenCheck['success']) {
+            return view('user.analytics.test-page-insights', [
+                'page' => $page,
+                'since' => null,
+                'until' => null,
+                'pageInsights' => null,
+                'posts' => [],
+                'error' => 'Invalid or expired access token.',
+            ]);
+        }
+
+        $today = Carbon::today();
+        $since = $today->copy()->subDays(7)->format('Y-m-d');
+        $until = $today->format('Y-m-d');
+        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
+
+        $pageInsights = $this->facebookService->getPageInsightsWithComparison(
+            $page->page_id,
+            $accessToken,
+            $since,
+            $until
+        );
+
+        $posts = $this->facebookService->getPagePostsWithInsights(
+            $page->page_id,
+            $accessToken,
+            $since,
+            $until
+        );
+
+        return view('user.analytics.test-page-insights', [
+            'page' => $page,
+            'since' => $since,
+            'until' => $until,
+            'pageInsights' => $pageInsights,
+            'posts' => $posts,
+            'error' => null,
+        ]);
+    }
 }

@@ -14,6 +14,9 @@ class PagePostsSyncService
 
     protected array $durations = ['last_7', 'last_28', 'last_90', 'this_month', 'this_year'];
 
+    /** Keep only this many records per (page_id, duration); oldest beyond this are removed. */
+    protected int $maxRecordsPerDuration = 7;
+
     public function __construct(FacebookService $facebookService)
     {
         $this->facebookService = $facebookService;
@@ -80,7 +83,26 @@ class PagePostsSyncService
             ]
         );
 
+        $this->prunePagePosts($page->id, $duration);
+
         return true;
+    }
+
+    /**
+     * Keep only the latest maxRecordsPerDuration records per (page_id, duration); delete the rest.
+     */
+    protected function prunePagePosts(int $pageId, string $duration): void
+    {
+        $idsToKeep = PagePost::where('page_id', $pageId)
+            ->where('duration', $duration)
+            ->orderByDesc('synced_at')
+            ->limit($this->maxRecordsPerDuration)
+            ->pluck('id');
+
+        PagePost::where('page_id', $pageId)
+            ->where('duration', $duration)
+            ->whereNotIn('id', $idsToKeep)
+            ->delete();
     }
 
     /**
