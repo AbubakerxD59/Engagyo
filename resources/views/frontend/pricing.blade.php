@@ -106,7 +106,7 @@
                         Trusted by Agencies and Brands Worldwide
                     </h2>
                     <p>
-                        Adublishers is part of daily lives of thousands of social media marketers
+                        Engagyo is part of daily lives of thousands of social media marketers
                         <br class="d-none d-md-block">
                         and highly recoomended for it's capabilities.
                     </p>
