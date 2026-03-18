@@ -1730,6 +1730,13 @@
         gap: 6px;
     }
 
+    .sent-card-published-via-tooltip {
+        cursor: help;
+        text-decoration: underline;
+        text-decoration-style: dotted;
+        text-underline-offset: 2px;
+    }
+
     .sent-card-platform-icon {
         display: inline-flex;
         align-items: center;

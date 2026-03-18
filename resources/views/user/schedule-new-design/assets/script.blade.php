@@ -2647,6 +2647,16 @@
             var shares = post.shares ?? 0;
             var clicks = ins.post_clicks ?? '-';
 
+            var publishedViaHtml = '';
+            if (post.publisher_username) {
+                var pubUsername = $('<span>').text(post.publisher_username).html();
+                var pubEmailRaw = post.publisher_email || '';
+                var pubEmail = pubEmailRaw.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                publishedViaHtml = 'Published via <span class="sent-card-published-via-tooltip" title="' + pubEmail + '" data-tooltip="' + pubEmail + '">' + pubUsername + '</span>';
+            } else {
+                publishedViaHtml = 'Published via <span class="sent-card-platform-icon facebook"><i class="fab fa-facebook-f"></i></span> Facebook';
+            }
+
             return `
                 <div class="sent-post-row" data-post-id="${post.id || ''}" data-page-id="${post.page_db_id || ''}">
                     <div class="sent-post-time-col">
@@ -2676,9 +2686,7 @@
                                 '<div class="sent-card-stat"><i class="fas fa-mouse-pointer"></i> <span class="stat-label">Clicks</span> <strong>' + clicks + '</strong></div>' +
                             '</div>' : ''}
                             <div class="sent-card-footer">
-                                <div class="sent-card-published-via">
-                                    Published via <span class="sent-card-platform-icon facebook"><i class="fab fa-facebook-f"></i></span> Facebook
-                                </div>
+                                <div class="sent-card-published-via">${publishedViaHtml}</div>
                                 <div class="sent-card-footer-actions">
                                     ${viewPostBtn}
                                     ${deleteBtn}
