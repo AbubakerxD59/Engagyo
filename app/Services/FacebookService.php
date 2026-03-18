@@ -959,45 +959,33 @@ class FacebookService
         $offset = 0;
 
         foreach (array_chunk($posts, $batchSize) as $chunk) {
-            $batch = [];
-            foreach ($chunk as $post) {
-                $batch[] = [
-                    'method' => 'GET',
-                    'relative_url' => $post['id'] . '/insights?metric=' . $metrics . '&period=lifetime',
-                ];
-            }
-            foreach ($chunk as $post) {
-                $batch[] = [
-                    'method' => 'GET',
-                    'relative_url' => $post['id'] . '?fields=comments.limit(0).summary(true)',
-                ];
-            }
+            $n = count($chunk);
 
+            // Batch 1: insights only (smaller batch = more reliable in cron / less timeout risk)
             try {
-                $params = ['batch' => json_encode($batch)];
-                $response = $this->facebook->post('/', $params, $accessToken);
-                $responses = $response->getDecodedBody();
-
-                if (!is_array($responses)) {
-                    $offset += count($chunk);
-                    continue;
+                $insightsBatch = [];
+                foreach ($chunk as $post) {
+                    $insightsBatch[] = [
+                        'method' => 'GET',
+                        'relative_url' => $post['id'] . '/insights?metric=' . $metrics . '&period=lifetime',
+                    ];
                 }
-
-                $n = count($chunk);
+                $params = ['batch' => json_encode($insightsBatch)];
+                $response = $this->facebook->post('/', $params, $accessToken);
+                $insightsResponses = $response->getDecodedBody();
+                $insightsResponses = is_array($insightsResponses) ? array_values($insightsResponses) : [];
                 foreach ($chunk as $i => $post) {
                     $postIndex = $offset + $i;
                     if (!isset($posts[$postIndex])) {
                         continue;
                     }
-
-                    // Insights response at index i
-                    $insightsResp = $responses[$i] ?? null;
+                    $insightsResp = $insightsResponses[$i] ?? null;
                     $insights = [];
                     if ($insightsResp) {
                         $code = $insightsResp['code'] ?? 0;
                         $respBody = $insightsResp['body'] ?? '{}';
                         $data = is_string($respBody) ? json_decode($respBody, true) : $respBody;
-                        if ($code === 200 && isset($data['data'])) {
+                        if ($code === 200 && isset($data['data']) && is_array($data['data'])) {
                             foreach ($data['data'] as $metricNode) {
                                 $name = $metricNode['name'] ?? null;
                                 $values = $metricNode['values'] ?? [];
@@ -1014,14 +1002,45 @@ class FacebookService
                         }
                     }
                     $posts[$postIndex]['insights'] = $insights;
+                }
+            } catch (FacebookResponseException $e) {
+                for ($i = 0; $i < $n; $i++) {
+                    if (isset($posts[$offset + $i])) {
+                        $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
+                    }
+                }
+            } catch (FacebookSDKException $e) {
+                for ($i = 0; $i < $n; $i++) {
+                    if (isset($posts[$offset + $i])) {
+                        $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
+                    }
+                }
+            }
 
-                    // Comments response at index n + i (total comments for post)
-                    $commentsResp = $responses[$n + $i] ?? null;
+            // Batch 2: comments only (separate so insights batch failure doesn't affect comments)
+            try {
+                $commentsBatch = [];
+                foreach ($chunk as $post) {
+                    $commentsBatch[] = [
+                        'method' => 'GET',
+                        'relative_url' => $post['id'] . '?fields=comments.limit(0).summary(true)',
+                    ];
+                }
+                $params = ['batch' => json_encode($commentsBatch)];
+                $response = $this->facebook->post('/', $params, $accessToken);
+                $commentsResponses = $response->getDecodedBody();
+                $commentsResponses = is_array($commentsResponses) ? array_values($commentsResponses) : [];
+                foreach ($chunk as $i => $post) {
+                    $postIndex = $offset + $i;
+                    if (!isset($posts[$postIndex])) {
+                        continue;
+                    }
+                    $commentsResp = $commentsResponses[$i] ?? null;
                     if ($commentsResp) {
                         $code = $commentsResp['code'] ?? 0;
                         $respBody = $commentsResp['body'] ?? '{}';
                         $data = is_string($respBody) ? json_decode($respBody, true) : $respBody;
-                        if ($code === 200) {
+                        if ($code === 200 && is_array($data)) {
                             $posts[$postIndex]['post_id'] = $data['id'] ?? $posts[$postIndex]['id'];
                             if (isset($data['comments']['summary']['total_count'])) {
                                 $posts[$postIndex]['comments'] = (int) $data['comments']['summary']['total_count'];
@@ -1030,20 +1049,12 @@ class FacebookService
                     }
                 }
             } catch (FacebookResponseException $e) {
-                for ($i = 0; $i < count($chunk); $i++) {
-                    if (isset($posts[$offset + $i])) {
-                        $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
-                    }
-                }
+                // Keep comment count from feed
             } catch (FacebookSDKException $e) {
-                for ($i = 0; $i < count($chunk); $i++) {
-                    if (isset($posts[$offset + $i])) {
-                        $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
-                    }
-                }
+                // Keep comment count from feed
             }
 
-            $offset += count($chunk);
+            $offset += $n;
         }
 
         foreach ($posts as &$post) {

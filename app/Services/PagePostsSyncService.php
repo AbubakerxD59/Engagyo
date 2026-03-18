@@ -116,7 +116,9 @@ class PagePostsSyncService
      */
     public function syncAll(): array
     {
-        $pageIds = PageInsight::distinct()->pluck('page_id');
+        // $pageIds = PageInsight::distinct()->pluck('page_id');
+        // for test only
+        $pageIds = ['94'];
         $pages = Page::withoutGlobalScopes()
             ->whereIn('id', $pageIds)
             ->whereNotNull('page_id')
