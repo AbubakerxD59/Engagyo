@@ -864,11 +864,28 @@
         color: #212529;
     }
 
-    /* --- Posts search bar (Queue & Sent tabs) --- */
+    /* --- Posts search bar (Queue & Sent tabs): icon only by default, expands on click --- */
+    /* Matches design: rounded border (#DEE2E6), white bg, slate icon (#5A6268), gray placeholder */
     .posts-search-wrap {
-        flex: 1;
-        min-width: 0;
+        flex: 0 0 auto;
         margin-left: 16px;
+        width: 40px;
+        overflow: hidden;
+        border: 1px solid #DEE2E6;
+        border-radius: 10px;
+        background: #fff;
+        transition: width 0.25s ease, border-color 0.2s;
+        cursor: pointer;
+    }
+
+    .posts-search-wrap.is-expanded {
+        width: 280px;
+        max-width: 280px;
+        cursor: default;
+    }
+
+    .posts-search-wrap:focus-within {
+        border-color: #0b4423;
     }
 
     .posts-status-tabs .posts-search-wrap {
@@ -879,37 +896,35 @@
         position: relative;
         display: flex;
         align-items: center;
-        width: 100%;
-        max-width: 280px;
+        width: 280px;
+        min-width: 280px;
     }
 
     .posts-search-icon {
-        position: absolute;
-        left: 12px;
-        color: #6b7280;
+        flex-shrink: 0;
+        width: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #5A6268;
         font-size: 14px;
-        pointer-events: none;
+        cursor: pointer;
     }
 
     .posts-search-input {
-        width: 100%;
-        padding: 5px 36px 5px 40px;
-        /* padding: 10px 36px 10px 40px; */
-        border: 1px solid #e5e7eb;
-        border-radius: 8px;
+        flex: 1;
+        min-width: 0;
+        padding: 6px 36px 6px 8px;
+        border: none;
+        border-radius: 0;
         font-size: 14px;
         color: #1a1a1a;
-        background: #fff;
-        transition: border-color 0.2s;
+        background: transparent;
+        outline: none;
     }
 
     .posts-search-input::placeholder {
-        color: #9ca3af;
-    }
-
-    .posts-search-input:focus {
-        outline: none;
-        border-color: #0b4423;
+        color: #ADB5BD;
     }
 
     .posts-search-clear {
@@ -918,7 +933,7 @@
         padding: 6px;
         border: none;
         background: transparent;
-        color: #6b7280;
+        color: #5A6268;
         cursor: pointer;
         border-radius: 4px;
         display: flex;
@@ -2251,6 +2266,75 @@
         .queue-settings-modal-redesign .queue-settings-account-name {
             max-width: 140px;
         }
+    }
+
+    /* --- Queue settings modal skeleton --- */
+    .queue-settings-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 4px 0;
+    }
+
+    .queue-settings-skeleton-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        background: #f9fafb;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .queue-settings-skeleton-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        animation: queue-settings-skeleton-shimmer 1.5s infinite;
+        flex-shrink: 0;
+    }
+
+    .queue-settings-skeleton-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .queue-settings-skeleton-line {
+        height: 14px;
+        border-radius: 6px;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        animation: queue-settings-skeleton-shimmer 1.5s infinite;
+    }
+
+    .queue-settings-skeleton-name {
+        width: 70%;
+        max-width: 160px;
+    }
+
+    .queue-settings-skeleton-sub {
+        width: 50%;
+        max-width: 100px;
+    }
+
+    .queue-settings-skeleton-select {
+        width: 140px;
+        height: 38px;
+        border-radius: 10px;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        animation: queue-settings-skeleton-shimmer 1.5s infinite;
+        flex-shrink: 0;
+    }
+
+    @keyframes queue-settings-skeleton-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
     }
 
     /* --- Custom Skeleton Styling --- */

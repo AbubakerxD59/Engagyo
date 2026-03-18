@@ -32,8 +32,21 @@
                         </div>
                         <div class="accounts-container">
                             <div class="accounts-grid">
-                                {{-- All Channels (always present, selected by default) --}}
-                                <div class="account-card all-channels-card active" data-type="all" data-id="all">
+                                @php
+                                    $hasSelectedAccount = false;
+                                    $selectedAccountId = null;
+                                    $saved = $scheduleSelectedAccount ?? [];
+                                    if (!empty($saved['type']) && !empty($saved['id']) && ($saved['type'] ?? '') !== 'all') {
+                                        $sid = (string) $saved['id'];
+                                        $accountExists = $accounts->contains(fn($a) => (string) $a->id === $sid && ($a->type ?? '') === ($saved['type'] ?? ''));
+                                        if ($accountExists) {
+                                            $hasSelectedAccount = true;
+                                            $selectedAccountId = $sid;
+                                        }
+                                    }
+                                @endphp
+                                {{-- All Channels: active only when no specific account is saved --}}
+                                <div class="account-card all-channels-card {{ !$hasSelectedAccount ? 'active' : '' }}" data-type="all" data-id="all">
                                     <div class="account-card-inner">
                                         <div class="account-avatar">
                                             <div class="all-channels-icon">
@@ -47,7 +60,7 @@
                                 </div>
                                 @foreach ($accounts as $account)
                                     @if ($account->type == 'facebook')
-                                        <div class="account-card active" data-type="{{ $account->type }}"
+                                        <div class="account-card {{ ($hasSelectedAccount && $selectedAccountId == (string) $account->id) ? 'active' : (!$hasSelectedAccount ? 'active' : '') }}" data-type="{{ $account->type }}"
                                             data-id="{{ $account->id }}">
                                             <div class="account-card-inner">
                                                 <div class="account-avatar">
@@ -131,7 +144,7 @@
                                             </button>
                                             <div id="posts-search-wrap" class="posts-search-wrap" style="display: none;">
                                                 <div class="posts-search-inner">
-                                                    <i class="fas fa-search posts-search-icon"></i>
+                                                    <span class="posts-search-icon"><i class="fas fa-search"></i></span>
                                                     <input type="text" id="postsSearchInput" class="posts-search-input"
                                                         placeholder="Search posts by title..." autocomplete="off">
                                                     <button type="button" id="postsSearchClear" class="posts-search-clear"

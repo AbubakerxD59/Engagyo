@@ -172,7 +172,8 @@ class  ScheduleController extends Controller
         $accounts = $this->sortAccountsByRecentUsage($accounts, $user->id);
         $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
         $canAccessAnalytics = $user->canAccessMenu(8) && $user->hasMenuAccess('analytics');
-        return view("user.schedule-new-design.index", compact("accounts", "userTimezoneName", "canAccessAnalytics"));
+        $scheduleSelectedAccount = $user->schedule_selected_account;
+        return view("user.schedule-new-design.index", compact("accounts", "userTimezoneName", "canAccessAnalytics", "scheduleSelectedAccount"));
     }
 
     /**
@@ -1679,6 +1680,17 @@ class  ScheduleController extends Controller
         ];
         return response()->json($response);
     }
+
+    public function getQueueSettings(Request $request)
+    {
+        $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->find(Auth::guard('user')->id());
+        $accounts = $user->getAccounts();
+        $view = view("user.schedule.partials.queue-settings-list", compact("accounts"));
+        return response()->json([
+            "success" => true,
+            "data" => $view->render()
+        ]);
+    }
     public function timeslotSetting(Request $request)
     {
         $user = Auth::guard('user')->user();
@@ -1731,6 +1743,59 @@ class  ScheduleController extends Controller
         return response()->json($response);
     }
 
+    /**
+     * Update shuffle status via route. Accepts account_id and schedule_shuffle (0 or 1).
+     * Only handles shuffle - nothing else.
+     */
+    public function updateShuffleStatus(Request $request)
+    {
+        $request->validate([
+            'account_id' => 'required|integer',
+            'schedule_shuffle' => 'required|integer|in:0,1',
+        ]);
+
+        $user = Auth::guard('user')->user();
+        $page = Page::where('id', $request->account_id)
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $this->updateScheduleShuffleStatus($page, (int) $request->schedule_shuffle, $user);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Shuffle status updated successfully.',
+        ]);
+    }
+
+    /**
+     * Update schedule shuffle status and shuffle posts when enabled.
+     * Only handles shuffle - nothing else.
+     */
+    private function updateScheduleShuffleStatus(Page $page, int $scheduleShuffle, User $user): void
+    {
+        $page->update(['schedule_shuffle' => $scheduleShuffle]);
+
+        if ($scheduleShuffle !== 1) {
+            return;
+        }
+
+        $postsToShuffle = Post::where('user_id', $user->id)
+            ->where('account_id', $page->id)
+            ->where('social_type', 'like', '%facebook%')
+            ->where('status', 0)
+            ->where('source', 'schedule')
+            ->get();
+
+        if ($postsToShuffle->count() >= 2) {
+            $publishDates = $postsToShuffle->pluck('publish_date')->shuffle()->values();
+            DB::transaction(function () use ($postsToShuffle, $publishDates) {
+                foreach ($postsToShuffle as $index => $post) {
+                    $post->update(['publish_date' => $publishDates[$index] ?? $post->publish_date]);
+                }
+            });
+        }
+    }
+
     public function saveTimeslotSettings(Request $request)
     {
         $user = Auth::guard('user')->user();
@@ -1760,8 +1825,6 @@ class  ScheduleController extends Controller
                     $account = Page::with("timeslots")->where("id", $id)->first();
                     if ($account) {
                         $accountId = $account->id;
-                        $scheduleShuffle = isset($item['schedule_shuffle']) ? (int) $item['schedule_shuffle'] : 0;
-                        $account->update(['schedule_shuffle' => $scheduleShuffle]);
                     }
                 } else if ($type == "pinterest") {
                     $account = Board::with("timeslots")->where("id", $id)->first();

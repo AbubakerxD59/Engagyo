@@ -854,7 +854,17 @@
             }
         }
 
-        // Posts search input
+        // Posts search – click icon to expand; click icon again to collapse
+        $(document).on('click', '.posts-search-icon', function(e) {
+            e.preventDefault();
+            var $wrap = $('#posts-search-wrap');
+            if ($wrap.hasClass('is-expanded')) {
+                $wrap.removeClass('is-expanded');
+            } else {
+                $wrap.addClass('is-expanded');
+            }
+        });
+
         $(document).on('input', '#postsSearchInput', function() {
             postsSearchQuery = $(this).val().trim();
             $('#postsSearchClear').toggle(postsSearchQuery.length > 0);
@@ -2052,16 +2062,41 @@
             } else {
                 modal.removeData('filterAccount');
             }
-            modal.modal("toggle");
 
+            // Show skeleton, hide content
+            $('#queue-settings-skeleton').show();
+            $('#queue-settings-list-wrap').hide();
+            $('#queue-settings-list').empty();
             originalQueueTimeslots = {};
             queueTimeslotsChanged = false;
             $('#saveQueueSettings').hide();
+
+            modal.modal("toggle");
+
+            $.ajax({
+                url: "{{ route('panel.schedule.queue-settings') }}",
+                type: "GET",
+                success: function(response) {
+                    $('#queue-settings-skeleton').hide();
+                    if (response.success && response.data) {
+                        $('#queue-settings-list').html(response.data);
+                        $('#queue-settings-list-wrap').show();
+                        applyQueueSettingsFilterAndInit();
+                    } else {
+                        $('#queue-settings-list-wrap').show();
+                        $('#queue-settings-list').html('<div class="text-danger py-3">Failed to load queue settings.</div>');
+                    }
+                },
+                error: function() {
+                    $('#queue-settings-skeleton').hide();
+                    $('#queue-settings-list-wrap').show();
+                    $('#queue-settings-list').html('<div class="text-danger py-3">Failed to load queue settings. Please try again.</div>');
+                }
+            });
         }
 
-        // Apply filter when modal is shown: show only one account's row if filterAccount is set
-        $('.settings-modal').off('shown.bs.modal').on('shown.bs.modal', function() {
-            var modal = $(this);
+        function applyQueueSettingsFilterAndInit() {
+            var modal = $('.settings-modal');
             var filter = modal.data('filterAccount');
             var $rows = modal.find('.queue-settings-item');
 
@@ -2076,6 +2111,14 @@
             } else {
                 $rows.show();
                 modal.find('.queue-settings-modal-title').text('Queue settings');
+            }
+
+            if (typeof $.fn.select2 !== 'undefined') {
+                modal.find('.timeslot').each(function() {
+                    if (!$(this).hasClass('select2-hidden-accessible')) {
+                        $(this).select2({ closeOnSelect: false, width: '100%' });
+                    }
+                });
             }
 
             setTimeout(function() {
@@ -2097,7 +2140,7 @@
                     }
                 });
             }, 300);
-        });
+        }
 
         $('.settings-modal').on('hidden.bs.modal', function() {
             $(this).removeData('filterAccount');
@@ -2123,10 +2166,35 @@
         var originalScheduleShuffle = {};
         var queueTimeslotsChanged = false;
 
-        // Track schedule shuffle toggle changes
+        // Shuffle toggle: update immediately via AJAX (no Save Changes button)
         $(document).on("change", ".queue-settings-shuffle-input", function() {
-            queueTimeslotsChanged = true;
-            $('#saveQueueSettings').show();
+            var $input = $(this);
+            if ($input.data("type") !== 'facebook') return;
+            var accountId = $input.data("id");
+            var scheduleShuffle = $input.prop('checked') ? 1 : 0;
+            var token = "{{ csrf_token() }}";
+            originalScheduleShuffle[$input.data("type") + '_' + accountId] = scheduleShuffle;
+            $.ajax({
+                url: "{{ route('panel.schedule.shuffle-status') }}",
+                type: "POST",
+                data: {
+                    "_token": token,
+                    "account_id": accountId,
+                    "schedule_shuffle": scheduleShuffle
+                },
+                success: function(response) {
+                    if (response.success) {
+                        toastr.success('Shuffle status updated.');
+                        if (typeof reloadPosts === 'function') reloadPosts();
+                    } else {
+                        toastr.error(response.message || 'Failed to update shuffle.');
+                    }
+                },
+                error: function() {
+                    toastr.error('Failed to update shuffle status.');
+                    $input.prop('checked', scheduleShuffle === 0);
+                }
+            });
         });
 
         // Track timeslot changes (don't update immediately)
@@ -2147,7 +2215,7 @@
             }
         });
 
-        // Check if queue timeslots or schedule_shuffle have changed (only visible rows when modal is filtered)
+        // Check if queue timeslots have changed (only visible rows when modal is filtered). Shuffle is updated on change, not via Save.
         function checkQueueTimeslotChanges() {
             queueTimeslotsChanged = false;
             $('.timeslot').each(function() {
@@ -2164,23 +2232,11 @@
                 }
             });
             if (!queueTimeslotsChanged) {
-                $('.queue-settings-shuffle-input').each(function() {
-                    var $input = $(this);
-                    if (!$input.closest('.queue-settings-item').is(':visible')) return;
-                    var key = $input.data("type") + '_' + $input.data("id");
-                    var currentVal = $input.prop('checked') ? 1 : 0;
-                    if ((originalScheduleShuffle[key] ?? 0) !== currentVal) {
-                        queueTimeslotsChanged = true;
-                        return false;
-                    }
-                });
-            }
-            if (!queueTimeslotsChanged) {
                 $('#saveQueueSettings').hide();
             }
         }
 
-        // Save queue settings
+        // Save queue settings (timeslots only; shuffle is updated on change)
         $(document).on('click', '#saveQueueSettings', function() {
             var timeslotData = [];
             $('.timeslot').each(function() {
@@ -2190,12 +2246,7 @@
                 var timeslots = $select.val();
 
                 if (timeslots && timeslots.length > 0) {
-                    var item = { id: accountId, type: accountType, timeslots: timeslots };
-                    if (accountType === 'facebook') {
-                        var $shuffle = $('.queue-settings-shuffle-input[data-id="' + accountId + '"][data-type="facebook"]');
-                        item.schedule_shuffle = $shuffle.length && $shuffle.prop('checked') ? 1 : 0;
-                    }
-                    timeslotData.push(item);
+                    timeslotData.push({ id: accountId, type: accountType, timeslots: timeslots });
                 }
             });
 
@@ -2217,33 +2268,11 @@
                     "timeslot_data": timeslotData,
                 },
                 success: function(response) {
-                    $saveBtn.prop('disabled', false).html(
-                        '<i class="fas fa-save mr-1"></i> Save Changes');
                     if (response.success) {
-                        toastr.success(response.message);
-                        // Reset tracking
-                        originalQueueTimeslots = {};
-                        queueTimeslotsChanged = false;
-                        $('#saveQueueSettings').hide();
-                        // Update original timeslots and schedule_shuffle
-                        $('.timeslot').each(function() {
-                            var $select = $(this);
-                            var accountId = $select.data("id");
-                            var accountType = $select.data("type");
-                            var key = accountType + '_' + accountId;
-                            var currentValue = $select.val() ? $select.val().sort()
-                                .join(',') : '';
-                            originalQueueTimeslots[key] = currentValue;
-                        });
-                        $('.queue-settings-shuffle-input').each(function() {
-                            var $input = $(this);
-                            var key = $input.data("type") + '_' + $input.data("id");
-                            originalScheduleShuffle[key] = $input.prop('checked') ? 1 : 0;
-                        });
-                        if (typeof reloadPosts === 'function') {
-                            reloadPosts();
-                        }
+                        finishQueueSettingsSave($saveBtn);
                     } else {
+                        $saveBtn.prop('disabled', false).html(
+                            '<i class="fas fa-save mr-1"></i> Save Changes');
                         toastr.error(response.message);
                     }
                 },
@@ -2254,6 +2283,32 @@
                 }
             });
         });
+
+        function finishQueueSettingsSave($saveBtn) {
+            $saveBtn.prop('disabled', false).html(
+                '<i class="fas fa-save mr-1"></i> Save Changes');
+            toastr.success('Queue settings saved successfully.');
+            originalQueueTimeslots = {};
+            queueTimeslotsChanged = false;
+            $('#saveQueueSettings').hide();
+            $('.timeslot').each(function() {
+                var $select = $(this);
+                var accountId = $select.data("id");
+                var accountType = $select.data("type");
+                var key = accountType + '_' + accountId;
+                var currentValue = $select.val() ? $select.val().sort()
+                    .join(',') : '';
+                originalQueueTimeslots[key] = currentValue;
+            });
+            $('.queue-settings-shuffle-input').each(function() {
+                var $input = $(this);
+                var key = $input.data("type") + '_' + $input.data("id");
+                originalScheduleShuffle[key] = $input.prop('checked') ? 1 : 0;
+            });
+            if (typeof reloadPosts === 'function') {
+                reloadPosts();
+            }
+        }
         // link loading and preview
         const container = $('#article-container');
 

@@ -495,52 +495,58 @@
             $('.schedule_btn').attr("disabled", false);
             $('.schedule-modal').modal("hide");
         };
-        // settings modal
+        // settings modal – show skeleton, fetch queue settings
         $('.setting_btn').on("click", function() {
             var modal = $('.settings-modal');
-            modal.find(".modal-body").empty();
-            modal.modal("toggle");
-
-            // Reset tracking when modal opens
+            $('#queue-settings-skeleton').show();
+            $('#queue-settings-list-wrap').hide();
+            $('#queue-settings-list').empty();
             originalQueueTimeslots = {};
             queueTimeslotsChanged = false;
             $('#saveQueueSettings').hide();
+            modal.modal("toggle");
 
-            // Store original timeslots and schedule_shuffle after modal is shown and select2 is initialized
-            modal.off('shown.bs.modal').on('shown.bs.modal', function() {
-                setTimeout(function() {
-                    $('.timeslot').each(function() {
-                        var $select = $(this);
-                        var accountId = $select.data("id");
-                        var accountType = $select.data("type");
-                        var key = accountType + '_' + accountId;
-                        var originalValue = $select.val() ? $select.val().sort()
-                            .join(',') : '';
-                        originalQueueTimeslots[key] = originalValue;
-                    });
-                    $('.queue-settings-shuffle-input').each(function() {
-                        var $input = $(this);
-                        var key = $input.data("type") + '_' + $input.data("id");
-                        originalScheduleShuffle[key] = $input.prop('checked') ? 1 : 0;
-                    });
-                }, 300);
+            $.ajax({
+                url: "{{ route('panel.schedule.queue-settings') }}",
+                type: "GET",
+                success: function(response) {
+                    $('#queue-settings-skeleton').hide();
+                    if (response.success && response.data) {
+                        $('#queue-settings-list').html(response.data);
+                        $('#queue-settings-list-wrap').show();
+                        if (typeof $.fn.select2 !== 'undefined') {
+                            modal.find('.timeslot').each(function() {
+                                if (!$(this).hasClass('select2-hidden-accessible')) {
+                                    $(this).select2({ closeOnSelect: false, width: '100%' });
+                                }
+                            });
+                        }
+                        setTimeout(function() {
+                            $('.timeslot').each(function() {
+                                var $select = $(this);
+                                var accountId = $select.data("id");
+                                var accountType = $select.data("type");
+                                var key = accountType + '_' + accountId;
+                                var originalValue = $select.val() ? $select.val().sort().join(',') : '';
+                                originalQueueTimeslots[key] = originalValue;
+                            });
+                            $('.queue-settings-shuffle-input').each(function() {
+                                var $input = $(this);
+                                var key = $input.data("type") + '_' + $input.data("id");
+                                originalScheduleShuffle[key] = $input.prop('checked') ? 1 : 0;
+                            });
+                        }, 300);
+                    } else {
+                        $('#queue-settings-list-wrap').show();
+                        $('#queue-settings-list').html('<div class="text-danger py-3">Failed to load queue settings.</div>');
+                    }
+                },
+                error: function() {
+                    $('#queue-settings-skeleton').hide();
+                    $('#queue-settings-list-wrap').show();
+                    $('#queue-settings-list').html('<div class="text-danger py-3">Failed to load queue settings. Please try again.</div>');
+                }
             });
-
-            // $.ajax({
-            //     url: "{{ route('panel.schedule.get.setting') }}",
-            //     type: "GET",
-            //     success: function(response) {
-            //         if (response.success) {
-            //             modal.find(".modal-body").html(response.data);
-            //             // select2
-            //             $('.select2').select2({
-            //                 closeOnSelect: false
-            //             });
-            //         } else {
-            //             toastr.error("Something went Wrong!");
-            //         }
-            //     }
-            // });
         });
         // Track original timeslots and schedule_shuffle for queue settings modal
         var originalQueueTimeslots = {};

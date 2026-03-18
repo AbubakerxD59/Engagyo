@@ -1549,4 +1549,73 @@
             max-width: 140px;
         }
     }
+
+    /* Queue settings modal skeleton */
+    .queue-settings-skeleton {
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        padding: 4px 0;
+    }
+
+    .queue-settings-skeleton-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px;
+        background: #f9fafb;
+        border-radius: 12px;
+        border: 1px solid #e5e7eb;
+    }
+
+    .queue-settings-skeleton-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        animation: queue-settings-skeleton-shimmer 1.5s infinite;
+        flex-shrink: 0;
+    }
+
+    .queue-settings-skeleton-info {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        min-width: 0;
+    }
+
+    .queue-settings-skeleton-line {
+        height: 14px;
+        border-radius: 6px;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        animation: queue-settings-skeleton-shimmer 1.5s infinite;
+    }
+
+    .queue-settings-skeleton-name {
+        width: 70%;
+        max-width: 160px;
+    }
+
+    .queue-settings-skeleton-sub {
+        width: 50%;
+        max-width: 100px;
+    }
+
+    .queue-settings-skeleton-select {
+        width: 140px;
+        height: 38px;
+        border-radius: 10px;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        animation: queue-settings-skeleton-shimmer 1.5s infinite;
+        flex-shrink: 0;
+    }
+
+    @keyframes queue-settings-skeleton-shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
 </style>

@@ -31,8 +31,10 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
             Route::get("account/status", "accountStatus")->name("account.status");
             Route::post("process/post", "processPost")->name("process.post");
             Route::get("get/setting", "getSetting")->name("get.setting");
+            Route::get("queue-settings", "getQueueSettings")->name("queue-settings");
             Route::post("timeslot/setting", "timeslotSetting")->name("timeslot.setting");
             Route::post("timeslot/setting/save", "saveTimeslotSettings")->name("timeslot.setting.save");
+            Route::post("shuffle-status", "updateShuffleStatus")->name("shuffle-status");
             Route::get("posts/listing", "postsListing")->name("posts.listing");
             Route::get("posts/status-counts", "postsStatusCounts")->name("posts.status.counts");
             Route::get("posts/sent-page-posts", "getPageSentPosts")->name("posts.sent.page");
