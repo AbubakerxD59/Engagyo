@@ -1054,19 +1054,11 @@ class FacebookService
 
             $offset += $n;
         }
-        dd($posts);
+
         foreach ($posts as &$post) {
             $insights = $post['insights'] ?? [];
             $clicks = (int) ($insights['post_clicks'] ?? 0);
             $reactions = (int) ($insights['post_reactions_by_type_total'] ?? 0);
-            if ($isSentTab) {
-                $impressions = (int) ($insights['post_impressions'] ?? 0);
-                $insights = [
-                    'post_clicks' => $clicks,
-                    'post_reactions' => $reactions,
-                    'post_impressions' => $impressions,
-                ];
-            } else {
                 $impressions = (int) ($insights['post_media_view'] ?? 0);
                 $reach = (int) ($insights['post_media_view'] ?? 0);
                 $insights['post_clicks'] = $clicks;
@@ -1077,9 +1069,9 @@ class FacebookService
                     ? round((($clicks + $reactions) / $impressions) * 100, 2)
                     : 0;
                 unset($insights['post_media_view'], $insights['post_impressions_unique'], $insights['post_reactions_by_type_total']);
-            }
             $post['insights'] = $insights;
         }
+        dd($posts);
         unset($post);
 
         return $posts;
