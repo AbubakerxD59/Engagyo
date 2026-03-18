@@ -2638,6 +2638,7 @@
             if (post.permalink_url) {
                 viewPostBtn = '<a href="' + post.permalink_url + '" target="_blank" class="sent-card-view-btn"><i class="fas fa-external-link-alt"></i> View Post</a>';
             }
+            console.log(post);
 
             var ins = post.insights || {};
             console.log(post.insights);
