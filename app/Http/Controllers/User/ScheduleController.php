@@ -2491,7 +2491,6 @@ class  ScheduleController extends Controller
         }
 
         $result = $pagePostsSyncService->syncPageForFullYear($page);
-        dd($result);
 
 
         if ($result['success'] || $result['synced'] > 0) {
