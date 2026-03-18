@@ -952,9 +952,7 @@ class FacebookService
         }
 
         $isSentTab = ($insightsPreset === 'sent_tab');
-        $metrics = $isSentTab
-            ? 'post_clicks,post_reactions_by_type_total,post_impressions'
-            : 'post_clicks,post_reactions_by_type_total,post_media_view,post_impressions_unique';
+        $metrics = 'post_clicks,post_reactions_by_type_total,post_media_view,post_impressions_unique';
         $batchSize = 25;
         $offset = 0;
 
@@ -987,6 +985,7 @@ class FacebookService
                         $data = is_string($respBody) ? json_decode($respBody, true) : $respBody;
                         if ($code === 200 && isset($data['data']) && is_array($data['data'])) {
                             foreach ($data['data'] as $metricNode) {
+                                dd($metricNode);
                                 $name = $metricNode['name'] ?? null;
                                 $values = $metricNode['values'] ?? [];
                                 if ($name && !empty($values)) {
