@@ -1014,7 +1014,7 @@ class FacebookService
                     }
                 }
             }
-            dd($posts);
+
             // Batch 2: comments only (separate so insights batch failure doesn't affect comments)
             try {
                 $commentsBatch = [];
@@ -1054,7 +1054,7 @@ class FacebookService
 
             $offset += $n;
         }
-
+        dd($posts);
         foreach ($posts as &$post) {
             $insights = $post['insights'] ?? [];
             $clicks = (int) ($insights['post_clicks'] ?? 0);
