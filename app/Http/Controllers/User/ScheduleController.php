@@ -2439,6 +2439,7 @@ class  ScheduleController extends Controller
         $facebookService = new FacebookService();
         $insightsPreset = $duration === 'full_year' ? 'sent_tab' : 'default';
         $posts = $facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until, $insightsPreset);
+        dd($posts);
 
         PagePost::updateOrCreate(
             [
@@ -2491,6 +2492,7 @@ class  ScheduleController extends Controller
         }
 
         $result = $pagePostsSyncService->syncPageForFullYear($page);
+
 
         if ($result['success'] || $result['synced'] > 0) {
             $accountName = $page->name ?? 'Facebook account';

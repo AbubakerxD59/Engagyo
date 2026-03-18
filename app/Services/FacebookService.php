@@ -1071,7 +1071,6 @@ class FacebookService
                 unset($insights['post_media_view'], $insights['post_impressions_unique'], $insights['post_reactions_by_type_total']);
             $post['insights'] = $insights;
         }
-        dd($posts);
         unset($post);
 
         return $posts;
