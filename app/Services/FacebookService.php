@@ -906,8 +906,10 @@ class FacebookService
                     }
                 }
 
+                $postId = $node->getField('id');
                 $post = [
-                    'id' => $node->getField('id'),
+                    'id' => $postId,
+                    'post_id' => $postId,
                     'message' => $node->getField('message'),
                     'created_time' => $node->getField('created_time'),
                     'full_picture' => $node->getField('full_picture'),
@@ -966,6 +968,12 @@ class FacebookService
                     'relative_url' => $post['id'] . '/insights?metric=' . $metrics . '&period=lifetime',
                 ];
             }
+            foreach ($chunk as $post) {
+                $batch[] = [
+                    'method' => 'GET',
+                    'relative_url' => $post['id'] . '?fields=comments.limit(0).summary(true)',
+                ];
+            }
 
             try {
                 $params = ['batch' => json_encode($batch)];
@@ -977,33 +985,51 @@ class FacebookService
                     continue;
                 }
 
-                foreach ($responses as $i => $batchResponse) {
+                $n = count($chunk);
+                foreach ($chunk as $i => $post) {
                     $postIndex = $offset + $i;
                     if (!isset($posts[$postIndex])) {
                         continue;
                     }
-                    $code = $batchResponse['code'] ?? 0;
-                    $respBody = $batchResponse['body'] ?? '{}';
-                    $data = is_string($respBody) ? json_decode($respBody, true) : $respBody;
-                    $insights = [];
 
-                    if ($code === 200 && isset($data['data'])) {
-                        foreach ($data['data'] as $metricNode) {
-                            $name = $metricNode['name'] ?? null;
-                            $values = $metricNode['values'] ?? [];
-                            if ($name && !empty($values)) {
-                                $first = reset($values);
-                                $val = $first['value'] ?? 0;
-                                if ($name === 'post_reactions_by_type_total' && is_array($val)) {
-                                    $insights[$name] = (int) array_sum($val);
-                                } else {
-                                    $insights[$name] = is_numeric($val) ? (int) $val : 0;
+                    // Insights response at index i
+                    $insightsResp = $responses[$i] ?? null;
+                    $insights = [];
+                    if ($insightsResp) {
+                        $code = $insightsResp['code'] ?? 0;
+                        $respBody = $insightsResp['body'] ?? '{}';
+                        $data = is_string($respBody) ? json_decode($respBody, true) : $respBody;
+                        if ($code === 200 && isset($data['data'])) {
+                            foreach ($data['data'] as $metricNode) {
+                                $name = $metricNode['name'] ?? null;
+                                $values = $metricNode['values'] ?? [];
+                                if ($name && !empty($values)) {
+                                    $first = reset($values);
+                                    $val = $first['value'] ?? 0;
+                                    if ($name === 'post_reactions_by_type_total' && is_array($val)) {
+                                        $insights[$name] = (int) array_sum($val);
+                                    } else {
+                                        $insights[$name] = is_numeric($val) ? (int) $val : 0;
+                                    }
                                 }
                             }
                         }
                     }
-
                     $posts[$postIndex]['insights'] = $insights;
+
+                    // Comments response at index n + i (total comments for post)
+                    $commentsResp = $responses[$n + $i] ?? null;
+                    if ($commentsResp) {
+                        $code = $commentsResp['code'] ?? 0;
+                        $respBody = $commentsResp['body'] ?? '{}';
+                        $data = is_string($respBody) ? json_decode($respBody, true) : $respBody;
+                        if ($code === 200) {
+                            $posts[$postIndex]['post_id'] = $data['id'] ?? $posts[$postIndex]['id'];
+                            if (isset($data['comments']['summary']['total_count'])) {
+                                $posts[$postIndex]['comments'] = (int) $data['comments']['summary']['total_count'];
+                            }
+                        }
+                    }
                 }
             } catch (FacebookResponseException $e) {
                 for ($i = 0; $i < count($chunk); $i++) {
