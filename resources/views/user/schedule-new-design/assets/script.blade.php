@@ -1785,8 +1785,8 @@
         }
 
         function resetCreatePostArea() {
-            $('#createPostEditorTextarea').val('');
-            $('#createPostComment').val('');
+            $('#createPostEditorTextarea').val('').css('height', 'auto');
+            $('#createPostComment').val('').attr('rows', 1).css({ height: '', minHeight: '', maxHeight: '' });
             $('#createPostFirstComment').val('');
             $('#createPostLinkPreview').empty();
             createPostFiles = [];
