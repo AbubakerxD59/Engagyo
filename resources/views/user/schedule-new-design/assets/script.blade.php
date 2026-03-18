@@ -2640,6 +2640,7 @@
             }
 
             var ins = post.insights || {};
+            console.log(post.insights);
             var reactions = ins.post_reactions ?? 0;
             var comments = post.comments ?? 0;
             var impressions = ins.post_impressions ?? '-';
