@@ -2379,12 +2379,14 @@ class  ScheduleController extends Controller
             return response()->json(['success' => false, 'message' => 'No pages found', 'posts' => []]);
         }
 
-        $since = now()->subDays(28)->format('Y-m-d');
+        // Sent tab (beta): full_year only — since = 1 year ago, until = today
         $until = now()->format('Y-m-d');
+        $since = now()->subYear()->format('Y-m-d');
+        $duration = 'full_year';
 
         $allPosts = [];
         foreach ($pages as $page) {
-            $posts = $this->fetchPagePostsFromStore($page, $since, $until);
+            $posts = $this->fetchPagePostsFromStore($page, $since, $until, $duration);
             if (!$posts) {
                 continue;
             }
@@ -2411,7 +2413,7 @@ class  ScheduleController extends Controller
         return response()->json(['success' => true, 'posts' => $allPosts]);
     }
 
-    private function fetchPagePostsFromStore(Page $page, string $since, string $until): ?array
+    private function fetchPagePostsFromStore(Page $page, string $since, string $until, string $duration = 'full_year'): ?array
     {
         if (empty($page->page_id) || empty($page->access_token)) {
             return null;
@@ -2433,7 +2435,8 @@ class  ScheduleController extends Controller
 
         $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
         $facebookService = new FacebookService();
-        $posts = $facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until);
+        $insightsPreset = $duration === 'full_year' ? 'sent_tab' : 'default';
+        $posts = $facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until, $insightsPreset);
 
         PagePost::updateOrCreate(
             [
@@ -2442,7 +2445,7 @@ class  ScheduleController extends Controller
                 'until' => $until,
             ],
             [
-                'duration' => 'last_28',
+                'duration' => $duration,
                 'posts' => $posts,
                 'synced_at' => now(),
             ]

@@ -6,7 +6,6 @@ use App\Models\Page;
 use App\Models\Post;
 use App\Models\Notification;
 use Facebook\Facebook;
-use Illuminate\Support\Facades\Storage;
 use Facebook\Exceptions\FacebookSDKException;
 use Facebook\Exceptions\FacebookResponseException;
 use App\Classes\FacebookSDK\LaravelSessionPersistentDataHandler;
@@ -942,22 +941,21 @@ class FacebookService
      * @param string $accessToken Page access token
      * @param string|null $since Start date Y-m-d
      * @param string|null $until End date Y-m-d
+     * @param string $insightsPreset 'default' = full metrics; 'sent_tab' = only likes, comments, shares, impressions, clicks (for full_year / sent tab)
      * @return array Posts with insights merged
      */
-    public function getPagePostsWithInsights(string $pageId, string $accessToken, ?string $since = null, ?string $until = null): array
+    public function getPagePostsWithInsights(string $pageId, string $accessToken, ?string $since = null, ?string $until = null, string $insightsPreset = 'default'): array
     {
         $posts = $this->getPageFeed($pageId, $accessToken, $since, $until);
         if (empty($posts)) {
             return [];
         }
 
-        $metrics = 'post_clicks,post_reactions_by_type_total,post_media_view,post_impressions_unique';
-        // post_clicks are post clicks
-        // post_reactions_by_type_total will give you the total number of reactions for each type, sum them to show total reactions
-        // post_media_view will give you the total number of impressions
-        // post_impressions_unique will give you the unique number of impressions
-        // engagement rate will be calculated as (post_clicks + post_reactions_by_type_total) / post_media_view
-        $batchSize = 50;
+        $isSentTab = ($insightsPreset === 'sent_tab');
+        $metrics = $isSentTab
+            ? 'post_clicks,post_reactions_by_type_total,post_impressions'
+            : 'post_clicks,post_reactions_by_type_total,post_media_view,post_impressions_unique';
+        $batchSize = 25;
         $offset = 0;
 
         foreach (array_chunk($posts, $batchSize) as $chunk) {
@@ -1052,21 +1050,25 @@ class FacebookService
             $insights = $post['insights'] ?? [];
             $clicks = (int) ($insights['post_clicks'] ?? 0);
             $reactions = (int) ($insights['post_reactions_by_type_total'] ?? 0);
-            $impressions = (int) ($insights['post_media_view'] ?? 0);
-            $reach = (int) ($insights['post_media_view'] ?? 0);
-
-            $insights['post_clicks'] = $clicks;
-            $insights['post_reactions'] = $reactions;
-            $insights['post_impressions'] = $impressions;
-            $insights['post_reach'] = $reach;
-
-            $insights['post_engagement_rate'] = $impressions > 0
-                ? round((($clicks + $reactions) / $impressions) * 100, 2)
-                : 0;
-
-            unset($insights['post_media_view']);
-            unset($insights['post_impressions_unique']);
-            unset($insights['post_reactions_by_type_total']);
+            if ($isSentTab) {
+                $impressions = (int) ($insights['post_impressions'] ?? 0);
+                $insights = [
+                    'post_clicks' => $clicks,
+                    'post_reactions' => $reactions,
+                    'post_impressions' => $impressions,
+                ];
+            } else {
+                $impressions = (int) ($insights['post_media_view'] ?? 0);
+                $reach = (int) ($insights['post_media_view'] ?? 0);
+                $insights['post_clicks'] = $clicks;
+                $insights['post_reactions'] = $reactions;
+                $insights['post_impressions'] = $impressions;
+                $insights['post_reach'] = $reach;
+                $insights['post_engagement_rate'] = $impressions > 0
+                    ? round((($clicks + $reactions) / $impressions) * 100, 2)
+                    : 0;
+                unset($insights['post_media_view'], $insights['post_impressions_unique'], $insights['post_reactions_by_type_total']);
+            }
             $post['insights'] = $insights;
         }
         unset($post);
