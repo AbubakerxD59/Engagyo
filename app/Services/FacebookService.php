@@ -985,12 +985,12 @@ class FacebookService
                         $data = is_string($respBody) ? json_decode($respBody, true) : $respBody;
                         if ($code === 200 && isset($data['data']) && is_array($data['data'])) {
                             foreach ($data['data'] as $metricNode) {
-                                dd($metricNode);
                                 $name = $metricNode['name'] ?? null;
                                 $values = $metricNode['values'] ?? [];
                                 if ($name && !empty($values)) {
                                     $first = reset($values);
                                     $val = $first['value'] ?? 0;
+                                    dd($valus, $first, $val);
                                     if ($name === 'post_reactions_by_type_total' && is_array($val)) {
                                         $insights[$name] = (int) array_sum($val);
                                     } else {
