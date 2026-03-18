@@ -2398,8 +2398,6 @@ class  ScheduleController extends Controller
                 $post['account_profile'] = $page->profile_image;
                 $post['social_type'] = 'facebook';
                 $post['page_db_id'] = $page->id;
-                $ourPost = Post::where('post_id', $post['id'] ?? null)->where('account_id', $page->id)->first();
-                $post['db_post_id'] = $ourPost?->id;
             }
             unset($post);
 
@@ -2526,5 +2524,46 @@ class  ScheduleController extends Controller
             'synced' => $result['synced'],
             'failed' => $result['failed'],
         ], 422);
+    }
+
+    /**
+     * Delete a sent post from Facebook and from DB if we have it.
+     * Expects: id = Facebook post id, page_id = our Page (account) id.
+     */
+    public function deleteSentPost(Request $request)
+    {
+        $postId = $request->input('id'); // Facebook post id
+        $pageId = $request->input('page_id');
+
+        if (empty($postId) || empty($pageId)) {
+            return response()->json(['success' => false, 'message' => 'Post id and page id are required.'], 400);
+        }
+
+        $user = Auth::user();
+        $page = Page::where('id', $pageId)->where('user_id', $user->id)->first();
+
+        if (!$page) {
+            return response()->json(['success' => false, 'message' => 'Account not found or access denied.'], 404);
+        }
+
+        $result = $this->facebookService->deleteFromFacebook($postId, $page, null);
+
+        if (!$result['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $result['message'] ?? 'Failed to delete post from Facebook.',
+            ], 422);
+        }
+
+        $ourPost = Post::where('post_id', $postId)->where('account_id', $page->id)->first();
+        if ($ourPost) {
+            if ($ourPost->user_id && $this->verifyPostAccountBelongsToUser($ourPost, User::find($ourPost->user_id))) {
+                User::find($ourPost->user_id)?->decrementFeatureUsage('scheduled_posts_per_account', 1);
+            }
+            $ourPost->photo()->delete();
+            $ourPost->delete();
+        }
+
+        return response()->json(['success' => true, 'message' => 'Post deleted successfully.']);
     }
 }

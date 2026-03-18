@@ -1796,10 +1796,16 @@
         transition: all 0.15s;
     }
 
-    .sent-card-delete-btn:hover {
+    .sent-card-delete-btn:hover:not(:disabled) {
         background: #fef2f2;
         border-color: #f87171;
         color: #b91c1c;
+    }
+
+    .sent-card-delete-btn:disabled,
+    .sent-card-delete-btn.is-deleting {
+        opacity: 0.7;
+        cursor: not-allowed;
     }
 
     /* 3-dot menu (shared) */

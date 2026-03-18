@@ -2638,10 +2638,9 @@
             if (post.permalink_url) {
                 viewPostBtn = '<a href="' + post.permalink_url + '" target="_blank" class="sent-card-view-btn"><i class="fas fa-external-link-alt"></i> View Post</a>';
             }
-            console.log(post);
+            var deleteBtn = '<button type="button" class="sent-card-delete-btn" data-post-id="' + (post.id || '') + '" data-page-id="' + (post.page_db_id || '') + '" title="Delete post"><i class="fas fa-trash-alt"></i> Delete</button>';
 
             var ins = post.insights || {};
-            console.log(post.insights);
             var reactions = ins.post_reactions ?? 0;
             var comments = post.comments ?? 0;
             var impressions = ins.post_impressions ?? '-';
@@ -2649,7 +2648,7 @@
             var clicks = ins.post_clicks ?? '-';
 
             return `
-                <div class="sent-post-row">
+                <div class="sent-post-row" data-post-id="${post.id || ''}" data-page-id="${post.page_db_id || ''}">
                     <div class="sent-post-time-col">
                         <span class="sent-post-time">${timePart}</span>
                         ${sourceLabel}
@@ -2682,6 +2681,7 @@
                                 </div>
                                 <div class="sent-card-footer-actions">
                                     ${viewPostBtn}
+                                    ${deleteBtn}
                                 </div>
                             </div>
                         </div>
@@ -2858,6 +2858,41 @@
         });
         $(document).on('click', function() {
             $('.sent-post-menu-wrap.open').removeClass('open');
+        });
+
+        // Sent post Delete button – delete from Facebook and DB
+        $(document).on('click', '.sent-card-delete-btn', function() {
+            var $btn = $(this);
+            var postId = $btn.data('post-id');
+            var pageId = $btn.data('page-id');
+            if (!postId || !pageId) {
+                toastr.error('Cannot delete: missing post or account info.');
+                return;
+            }
+            if (!confirm('Delete this post from Facebook? This cannot be undone.')) return;
+            $btn.prop('disabled', true).addClass('is-deleting');
+            $.ajax({
+                url: "{{ route('panel.schedule.delete-sent-post') }}",
+                type: "POST",
+                data: {
+                    "_token": "{{ csrf_token() }}",
+                    "id": postId,
+                    "page_id": pageId
+                },
+                success: function() {
+                    var $row = $btn.closest('.sent-post-row');
+                    $row.fadeOut(200, function() { $(this).remove(); });
+                    toastr.success('Post deleted successfully.');
+                    var $tab = $('#posts-status-tabs [data-count="sent"]');
+                    var n = parseInt($tab.text(), 10) || 0;
+                    if (n > 0) $tab.text(n - 1);
+                },
+                error: function(xhr) {
+                    $btn.prop('disabled', false).removeClass('is-deleting');
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to delete post.';
+                    toastr.error(msg);
+                }
+            });
         });
 
         // Pagination click

@@ -39,6 +39,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
             Route::get("posts/status-counts", "postsStatusCounts")->name("posts.status.counts");
             Route::get("posts/sent-page-posts", "getPageSentPosts")->name("posts.sent.page");
             Route::post("refresh-page-posts", "refreshPagePosts")->name("refresh-page-posts");
+            Route::post("delete-sent-post", "deleteSentPost")->name("delete-sent-post");
             Route::get("queue-timeline", "getQueueTimeline")->name("queue.timeline");
             Route::get("last-used-account", "getLastUsedAccount")->name("last-used-account");
             Route::get("accounts-with-status", "getAccountsWithStatus")->name("accounts-with-status");
