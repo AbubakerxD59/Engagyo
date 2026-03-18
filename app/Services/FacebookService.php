@@ -990,7 +990,7 @@ class FacebookService
                                 if ($name && !empty($values)) {
                                     $first = reset($values);
                                     $val = $first['value'] ?? 0;
-                                    dd($valus, $first, $val);
+                                    dd($values, $first, $val);
                                     if ($name === 'post_reactions_by_type_total' && is_array($val)) {
                                         $insights[$name] = (int) array_sum($val);
                                     } else {
