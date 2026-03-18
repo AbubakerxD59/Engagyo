@@ -38,8 +38,8 @@ class UserController extends Controller
      */
     public function create()
     {
-        // Get roles with 'web' guard (matching User model's guard)
-        $roles = Role::where('guard_name', 'web')->get();
+        // Get roles with 'user' guard (matching User model's guard)
+        $roles = Role::where('guard_name', 'user')->get();
         $packages = Package::where('is_active', true)->orderBy('sort_order')->get();
         return view('admin.users.add', compact('roles', 'packages'));
     }
@@ -116,7 +116,7 @@ class UserController extends Controller
                         'assigned_at' => now(),
                         'expires_at' => $expiresAt,
                     ]);
-                    
+
                     // Sync user usage with new package limits
                     try {
                         Artisan::call('usage:sync', ['--user_id' => $user->id]);
@@ -176,8 +176,8 @@ class UserController extends Controller
             'posts',
             'apiKeys',
         ])->find($id);
-        // Get roles with 'web' guard (matching User model's guard)
-        $roles = Role::where('guard_name', 'web')->get();
+        // Get roles with 'user' guard (matching User model's guard)
+        $roles = Role::where('guard_name', 'user')->get();
         $packages = Package::where('is_active', true)->orderBy('sort_order')->get();
         return view('admin.users.edit', compact('roles', 'user', 'packages'));
     }
@@ -196,12 +196,12 @@ class UserController extends Controller
             'package_id' => 'nullable|exists:packages,id',
             'full_access' => 'nullable|boolean',
         ]);
-            $user = User::find($id);
+        $user = User::find($id);
         if (!empty($user)) {
             // Track if package is being changed
             $oldPackageId = $user->package_id;
             $packageChanged = false;
-            
+
             $data = [
                 'first_name' => $request->first_name,
                 'last_name' => $request->last_name,
@@ -265,7 +265,7 @@ class UserController extends Controller
                         'assigned_at' => now(),
                         'expires_at' => $expiresAt,
                     ]);
-                    
+
                     // Sync user usage with new package limits
                     try {
                         Artisan::call('usage:sync', ['--user_id' => $user->id]);
@@ -285,7 +285,7 @@ class UserController extends Controller
                 UserPackage::where('user_id', $user->id)
                     ->where('is_active', true)
                     ->update(['is_active' => false]);
-                    
+
                 // Sync user usage when package is removed
                 if ($packageChanged) {
                     try {
