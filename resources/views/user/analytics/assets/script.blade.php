@@ -237,13 +237,13 @@
             }
 
             function formatPostDateParts(createdTime) {
-                var val = createdTime && (typeof createdTime === 'object' ? createdTime.date : createdTime);
-                if (!val) return {
-                    time: '',
-                    date: ''
-                };
-                var d = new Date(val);
-                if (isNaN(d.getTime())) return {
+                var d = null;
+                if (createdTime instanceof Date) {
+                    d = createdTime;
+                } else if (createdTime) {
+                    d = parseCreatedTime(createdTime);
+                }
+                if (!d || isNaN(d.getTime())) return {
                     time: '',
                     date: ''
                 };
@@ -315,10 +315,10 @@
                 filtered.sort(function(a, b) {
                     var va, vb;
                     if (sortBy === 'created_time') {
-                        var aTime = a.created_time && (a.created_time.date || a.created_time);
-                        var bTime = b.created_time && (b.created_time.date || b.created_time);
-                        va = new Date(aTime || 0).getTime();
-                        vb = new Date(bTime || 0).getTime();
+                        var aDate = parseCreatedTime(a.created_time);
+                        var bDate = parseCreatedTime(b.created_time);
+                        va = aDate && !isNaN(aDate.getTime()) ? aDate.getTime() : 0;
+                        vb = bDate && !isNaN(bDate.getTime()) ? bDate.getTime() : 0;
                     } else {
                         va = parseInt((a.insights || {})[sortBy], 10) || 0;
                         vb = parseInt((b.insights || {})[sortBy], 10) || 0;
@@ -363,13 +363,9 @@
                     var msg = escapeHtml(rawMsg.substring(0, 200));
                     if (rawMsg.length > 200) msg += '...';
                     var ct = parseCreatedTime(post.created_time);
-                    var timePart = '';
-                    if (ct && !isNaN(ct.getTime())) {
-                        timePart = formatInUserTimezone(ct, { hour: '2-digit', minute: '2-digit', hour12: true });
-                    }
                     var created = formatPostDateParts(ct);
                     var createdHtml = created.time ?
-                        '<span class="analytics-post-time">' + timePart + '</span><span class="analytics-post-day">' + escapeHtml(created.date) + '</span>' :
+                        '<span class="analytics-post-time">' + escapeHtml(created.time) + '</span><span class="analytics-post-day">' + escapeHtml(created.date) + '</span>' :
                         '<span class="analytics-post-day">-</span>';
                     var img = post.full_picture ? '<img src="' + escapeHtml(post.full_picture) +
                         '" alt="" class="analytics-post-thumb" loading="lazy">' :
