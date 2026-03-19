@@ -888,41 +888,54 @@ class FacebookService
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
 
-            foreach ($graphEdge as $node) {
-                $sharesRaw = $node->getField('shares');
-                $shares = is_object($sharesRaw) && method_exists($sharesRaw, 'getField')
-                    ? (int) ($sharesRaw->getField('count') ?? 0)
-                    : (is_array($sharesRaw) ? (int) ($sharesRaw['count'] ?? 0) : (int) ($sharesRaw ?? 0));
+            while ($graphEdge) {
+                foreach ($graphEdge as $node) {
+                    $sharesRaw = $node->getField('shares');
+                    $shares = is_object($sharesRaw) && method_exists($sharesRaw, 'getField')
+                        ? (int) ($sharesRaw->getField('count') ?? 0)
+                        : (is_array($sharesRaw) ? (int) ($sharesRaw['count'] ?? 0) : (int) ($sharesRaw ?? 0));
 
-                $commentsRaw = $node->getField('comments');
-                $comments = 0;
-                if ($commentsRaw) {
-                    if (is_object($commentsRaw) && method_exists($commentsRaw, 'getField')) {
-                        $summary = $commentsRaw->getField('summary');
-                        $comments = is_object($summary) ? (int) ($summary->getField('total_count') ?? 0) : (is_array($summary) ? (int) ($summary['total_count'] ?? 0) : 0);
-                    } elseif (is_array($commentsRaw) && isset($commentsRaw['summary']['total_count'])) {
-                        $comments = (int) $commentsRaw['summary']['total_count'];
+                    $commentsRaw = $node->getField('comments');
+                    $comments = 0;
+                    if ($commentsRaw) {
+                        if (is_object($commentsRaw) && method_exists($commentsRaw, 'getField')) {
+                            $summary = $commentsRaw->getField('summary');
+                            $comments = is_object($summary) ? (int) ($summary->getField('total_count') ?? 0) : (is_array($summary) ? (int) ($summary['total_count'] ?? 0) : 0);
+                        } elseif (is_array($commentsRaw) && isset($commentsRaw['summary']['total_count'])) {
+                            $comments = (int) $commentsRaw['summary']['total_count'];
+                        }
                     }
+
+                    $postId = $node->getField('id');
+                    $post = [
+                        'id' => $postId,
+                        'post_id' => $postId,
+                        'message' => $node->getField('message'),
+                        'created_time' => $node->getField('created_time'),
+                        'full_picture' => $node->getField('full_picture'),
+                        'icon' => $node->getField('icon'),
+                        'is_popular' => $node->getField('is_popular'),
+                        'permalink_url' => $node->getField('permalink_url'),
+                        'shares' => $shares,
+                        'comments' => $comments,
+                        'status_type' => $node->getField('status_type'),
+                        'story' => $node->getField('story'),
+                        'type' => $node->getField('type'),
+                        'insights' => [],
+                    ];
+                    $posts[] = $post;
                 }
 
-                $postId = $node->getField('id');
-                $post = [
-                    'id' => $postId,
-                    'post_id' => $postId,
-                    'message' => $node->getField('message'),
-                    'created_time' => $node->getField('created_time'),
-                    'full_picture' => $node->getField('full_picture'),
-                    'icon' => $node->getField('icon'),
-                    'is_popular' => $node->getField('is_popular'),
-                    'permalink_url' => $node->getField('permalink_url'),
-                    'shares' => $shares,
-                    'comments' => $comments,
-                    'status_type' => $node->getField('status_type'),
-                    'story' => $node->getField('story'),
-                    'type' => $node->getField('type'),
-                    'insights' => [],
-                ];
-                $posts[] = $post;
+                // Continue pagination until Facebook has no more pages in this since/until range.
+                try {
+                    $nextEdge = $this->facebook->next($graphEdge);
+                } catch (FacebookResponseException|FacebookSDKException $e) {
+                    $nextEdge = null;
+                }
+                if (!$nextEdge) {
+                    break;
+                }
+                $graphEdge = $nextEdge;
             }
         } catch (FacebookResponseException $e) {
             return [];
