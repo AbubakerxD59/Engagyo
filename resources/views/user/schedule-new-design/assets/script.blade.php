@@ -2613,7 +2613,9 @@
             }
 
             var statusType = post.status_type || '';
-            var sourceLabel = statusType ? '<span class="sent-post-source"><i class="fas fa-layer-group"></i> ' + statusType.replace(/_/g, ' ') + '</span>' : '';
+            // Commented out per new design request: hide sent post source label.
+            // var sourceLabel = statusType ? '<span class="sent-post-source"><i class="fas fa-layer-group"></i> ' + statusType.replace(/_/g, ' ') + '</span>' : '';
+            var sourceLabel = '';
 
             var profileImg = post.account_profile || '';
             var socialLogo = "{{ social_logo('facebook') }}";

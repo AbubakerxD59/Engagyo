@@ -12,9 +12,7 @@
             var currentPostsSortBy = 'created_time';
             var currentPostsSortOrder = 'desc';
             var isLoadingAnalytics = false;
-            var userTimezone = (Intl && Intl.DateTimeFormat && Intl.DateTimeFormat().resolvedOptions) ?
-                (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC') :
-                'UTC';
+            var userTimezone = "{{ $userTimezoneName ?? 'UTC' }}";
 
             function formatInUserTimezone(date, options) {
                 if (!date || isNaN(date.getTime())) return '';
