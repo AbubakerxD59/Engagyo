@@ -2399,7 +2399,7 @@ class  ScheduleController extends Controller
                 $post['account_profile'] = $page->profile_image;
                 $post['social_type'] = 'facebook';
                 $post['page_db_id'] = $page->id;
-                $ourPost = Post::where('post_id', $post['id'] ?? null)->where('account_id', $page->id)->with('user')->first();
+                $ourPost = Post::where('post_id', $post['id'] ?? null)->with('user')->first();
                 if ($ourPost) {
                     $post['db_post_id'] = $ourPost->id;
                     if ($ourPost->user) {
