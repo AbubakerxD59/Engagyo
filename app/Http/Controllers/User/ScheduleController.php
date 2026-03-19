@@ -2395,7 +2395,6 @@ class  ScheduleController extends Controller
             $cacheKey = $this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
             $posts = Cache::get($cacheKey);
             if ($posts === null) {
-                dd($cacheKey, $page, 'here');
                 $posts = $this->fetchPagePostsFromStore($page, $since, $until, $duration);
                 if ($posts !== null) {
                     Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
