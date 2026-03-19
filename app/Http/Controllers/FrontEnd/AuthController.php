@@ -102,8 +102,6 @@ class AuthController extends Controller
             $request->validated();
             $username = UsernameService::generate($request->email);
             $user = $this->user->create([
-                "first_name" => $request->first_name,
-                "last_name" => $request->last_name,
                 "username" => $username,
                 "email" => $request->email,
                 "password" => $request->password,

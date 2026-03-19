@@ -355,10 +355,14 @@
                     var rawMsg = post.message || post.story || '';
                     var msg = escapeHtml(rawMsg.substring(0, 200));
                     if (rawMsg.length > 200) msg += '...';
-                    var createdTimeVal = post.created_time && (post.created_time.date || post.created_time);
-                    var created = formatPostDateParts(createdTimeVal);
+                    var ct = parseCreatedTime(post.created_time);
+                    var timePart = '';
+                    if (ct && !isNaN(ct.getTime())) {
+                        timePart = formatInUserTimezone(ct, { hour: '2-digit', minute: '2-digit', hour12: true });
+                    }
+                    var created = formatPostDateParts(ct);
                     var createdHtml = created.time ?
-                        '<span class="analytics-post-time">' + escapeHtml(created.time) + '</span><span class="analytics-post-day">' + escapeHtml(created.date) + '</span>' :
+                        '<span class="analytics-post-time">' + timePart + '</span><span class="analytics-post-day">' + escapeHtml(created.date) + '</span>' :
                         '<span class="analytics-post-day">-</span>';
                     var img = post.full_picture ? '<img src="' + escapeHtml(post.full_picture) +
                         '" alt="" class="analytics-post-thumb" loading="lazy">' :

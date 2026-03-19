@@ -138,6 +138,14 @@
             return true;
         }
 
+        function selectFirstConnectedAccount() {
+            var $firstCard = $('.account-card:not(.all-channels-card)').first();
+            if ($firstCard.length === 0) return false;
+            $('.account-card').removeClass('active');
+            $firstCard.addClass('active');
+            return true;
+        }
+
         function updateSelectedAccountHeader() {
             var $allCh = $('.all-channels-card');
             var $realActive = $('.account-card.active:not(.all-channels-card)');
@@ -993,8 +1001,15 @@
             updateSelectedAccountHeader();
         } else {
             $.get("{{ route('panel.schedule.selected-account') }}", function(res) {
-                if (res.success && res.data && applyAccountSelectionFromData(res.data)) {
-                    // selection applied from DB
+                var appliedFromDb = false;
+                if (res.success && res.data) {
+                    appliedFromDb = applyAccountSelectionFromData(res.data);
+                }
+                // Fresh account case: no saved selection in DB -> select first connected account by default.
+                if (!appliedFromDb) {
+                    if (selectFirstConnectedAccount()) {
+                        saveSelectedAccountToDb();
+                    }
                 }
                 updateSelectedAccountHeader();
             }).fail(function() {
