@@ -6,12 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Page;
 use App\Models\PageInsight;
 use App\Models\PagePost;
+use App\Models\User;
 use App\Services\FacebookService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Cache;
 
 class AnalyticsController extends Controller
 {
+    private const POSTS_CACHE_TTL_HOURS = 3;
+
     /**
      * Resolve date range from duration preset or custom since/until.
      * Returns [since, until] as Y-m-d strings.
@@ -80,7 +84,8 @@ class AnalyticsController extends Controller
      */
     public function data(Request $request)
     {
-        $accounts = auth()->user()->getAccounts();
+        $user = User::find(auth()->id());
+        $accounts = $user->getAccounts();
         $facebookPages = $accounts->where('type', 'facebook')->values();
 
         [$since, $until] = $this->resolveDateRange($request);
@@ -171,6 +176,12 @@ class AnalyticsController extends Controller
         }
 
         $duration = request()->query('duration', 'last_28');
+        $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $page->id, $duration, $since, $until);
+
+        $cachedPosts = Cache::get($cacheKey);
+        if ($cachedPosts !== null) {
+            return $cachedPosts;
+        }
 
         $stored = PagePost::where('page_id', $page->id)
             ->where('since', $since)
@@ -178,6 +189,7 @@ class AnalyticsController extends Controller
             ->first();
 
         if ($stored && $stored->posts !== null) {
+            Cache::put($cacheKey, $stored->posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
             return $stored->posts;
         }
 
@@ -202,7 +214,27 @@ class AnalyticsController extends Controller
             ]
         );
 
+        Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+
         return $posts;
+    }
+
+    private function analyticsPostsCacheKey(int $userId, int $pageId, string $duration, ?string $since, ?string $until): string
+    {
+        return implode(':', [
+            'analytics_posts',
+            'v1',
+            'user',
+            $userId,
+            'page',
+            $pageId,
+            'duration',
+            $duration,
+            'since',
+            (string) ($since ?? ''),
+            'until',
+            (string) ($until ?? ''),
+        ]);
     }
 
     /**
@@ -343,7 +375,8 @@ class AnalyticsController extends Controller
      */
     public function testPageInsights(Request $request)
     {
-        $accounts = auth()->user()->getAccounts();
+        $user = User::find(auth()->id());
+        $accounts = $user->getAccounts();
         $facebookPages = $accounts->where('type', 'facebook')->values();
 
         [$since, $until] = $this->resolveDateRange($request);
@@ -381,7 +414,8 @@ class AnalyticsController extends Controller
      */
     public function testPagePostsInsights(int $page_id)
     {
-        $accounts = auth()->user()->getAccounts();
+        $user = User::find(auth()->id());
+        $accounts = $user->getAccounts();
         $facebookPages = $accounts->where('type', 'facebook')->values();
 
         if (!$facebookPages->contains('id', $page_id)) {

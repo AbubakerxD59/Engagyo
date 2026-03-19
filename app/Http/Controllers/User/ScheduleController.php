@@ -31,10 +31,13 @@ use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 
 class  ScheduleController extends Controller
 {
+    private const POSTS_CACHE_TTL_HOURS = 3;
+
     protected $facebookService;
     protected $pinterestService;
     protected $tiktokService;
@@ -255,11 +258,10 @@ class  ScheduleController extends Controller
      */
     public function getAccountsWithStatus()
     {
-        $userId = Auth::guard('user')->id();
-        $user = Auth::guard('user')->user();
+        $user = User::find(Auth::guard('user')->id());
         $accountsStatus = collect();
 
-        $user->pages()->get(['id', 'schedule_status'])->each(function ($page) use ($accountsStatus) {
+        $user->pages()->get(['id', 'schedule_status'])->each(function ($page) use ($accountsStatus) {   
             $accountsStatus->push([
                 'id' => $page->id,
                 'type' => 'facebook',
@@ -282,7 +284,7 @@ class  ScheduleController extends Controller
         });
 
         $account = null;
-        $post = Post::where('user_id', $userId)
+        $post = Post::where('user_id', $user->id)
             ->where('social_type', 'facebook')
             ->orderBy('created_at', 'desc')
             ->first();
@@ -327,7 +329,7 @@ class  ScheduleController extends Controller
             'type' => 'required|string|in:all,facebook,pinterest,tiktok',
             'id' => 'nullable|string',
         ]);
-        $user = Auth::guard('user')->user();
+        $user = User::find(Auth::guard('user')->id());
         $data = [
             'type' => $request->type,
             'id' => $request->id,
@@ -2372,6 +2374,7 @@ class  ScheduleController extends Controller
 
     public function getPageSentPosts(Request $request)
     {
+        $userId = (int) Auth::id();
         $accountIds = (array) $request->input('account_id', []);
         if (empty($accountIds)) {
             return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
@@ -2389,7 +2392,14 @@ class  ScheduleController extends Controller
 
         $allPosts = [];
         foreach ($pages as $page) {
-            $posts = $this->fetchPagePostsFromStore($page, $since, $until, $duration);
+            $cacheKey = $this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
+            $posts = Cache::get($cacheKey);
+            if ($posts === null) {
+                $posts = $this->fetchPagePostsFromStore($page, $since, $until, $duration);
+                if ($posts !== null) {
+                    Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+                }
+            }
             if (!$posts) {
                 continue;
             }
@@ -2420,6 +2430,24 @@ class  ScheduleController extends Controller
         });
 
         return response()->json(['success' => true, 'posts' => $allPosts]);
+    }
+
+    private function sentPostsCacheKey(int $userId, int $pageId, string $duration, ?string $since, ?string $until): string
+    {
+        return implode(':', [
+            'schedule_sent_posts',
+            'v1',
+            'user',
+            $userId,
+            'page',
+            $pageId,
+            'duration',
+            $duration,
+            'since',
+            (string) ($since ?? ''),
+            'until',
+            (string) ($until ?? ''),
+        ]);
     }
 
     private function fetchPagePostsFromStore(Page $page, string $since, string $until, string $duration = 'full_year'): ?array

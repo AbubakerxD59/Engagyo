@@ -6,10 +6,13 @@ use App\Models\Page;
 use App\Models\PageInsight;
 use App\Models\PagePost;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 
 class PagePostsSyncService
 {
+    private const POSTS_CACHE_TTL_HOURS = 3;
+
     protected FacebookService $facebookService;
 
     protected array $durations = ['last_7', 'last_28', 'last_90', 'this_month', 'this_year', 'full_year'];
@@ -89,9 +92,69 @@ class PagePostsSyncService
             ]
         );
 
+        $this->refreshPostsCaches($page, $duration, $since, $until, $posts);
         $this->prunePagePosts($page->id, $duration);
 
         return true;
+    }
+
+    /**
+     * Refresh sent/analytics posts cache for the given user-page-duration window.
+     */
+    protected function refreshPostsCaches(Page $page, string $duration, string $since, string $until, array $posts): void
+    {
+        $userId = (int) ($page->user_id ?? 0);
+        if ($userId <= 0) {
+            return;
+        }
+
+        $ttl = now()->addHours(self::POSTS_CACHE_TTL_HOURS);
+
+        $analyticsKey = $this->analyticsPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
+        Cache::forget($analyticsKey);
+        Cache::put($analyticsKey, $posts, $ttl);
+
+        if ($duration === 'full_year') {
+            $sentKey = $this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
+            Cache::forget($sentKey);
+            Cache::put($sentKey, $posts, $ttl);
+        }
+    }
+
+    protected function analyticsPostsCacheKey(int $userId, int $pageId, string $duration, ?string $since, ?string $until): string
+    {
+        return implode(':', [
+            'analytics_posts',
+            'v1',
+            'user',
+            $userId,
+            'page',
+            $pageId,
+            'duration',
+            $duration,
+            'since',
+            (string) ($since ?? ''),
+            'until',
+            (string) ($until ?? ''),
+        ]);
+    }
+
+    protected function sentPostsCacheKey(int $userId, int $pageId, string $duration, ?string $since, ?string $until): string
+    {
+        return implode(':', [
+            'schedule_sent_posts',
+            'v1',
+            'user',
+            $userId,
+            'page',
+            $pageId,
+            'duration',
+            $duration,
+            'since',
+            (string) ($since ?? ''),
+            'until',
+            (string) ($until ?? ''),
+        ]);
     }
 
     /**
