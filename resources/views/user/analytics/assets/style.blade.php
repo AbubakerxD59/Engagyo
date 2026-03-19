@@ -19,7 +19,7 @@
         border: 1px solid #dee2e6;
         border-radius: 8px;
         overflow: hidden;
-        height: 520px;
+        height: 85vh;
         display: flex;
         flex-direction: column;
     }
