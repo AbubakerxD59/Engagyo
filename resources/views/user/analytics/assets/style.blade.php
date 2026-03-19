@@ -546,8 +546,24 @@
     }
 
     .analytics-post-date {
-        font-size: 0.85rem;
-        color: #6c757d;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 0.65rem !important;
+    }
+
+    .analytics-post-time {
+        font-size: 13px;
+        font-weight: 700;
+        color: #111827;
+        font-variant-numeric: tabular-nums;
+        line-height: 1.3;
+    }
+
+    .analytics-post-day {
+        font-size: 11.5px;
+        color: #9ca3af;
+        line-height: 1.3;
     }
 
     .analytics-post-message {

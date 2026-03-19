@@ -224,22 +224,31 @@
                 return div.innerHTML;
             }
 
-            function formatPostDate(createdTime) {
+            function formatPostDateParts(createdTime) {
                 var val = createdTime && (typeof createdTime === 'object' ? createdTime.date : createdTime);
-                if (!val) return '';
+                if (!val) return {
+                    time: '',
+                    date: ''
+                };
                 var d = new Date(val);
-                if (isNaN(d.getTime())) return '';
+                if (isNaN(d.getTime())) return {
+                    time: '',
+                    date: ''
+                };
                 var datePart = d.toLocaleDateString('en-US', {
                     month: 'long',
                     day: 'numeric',
                     year: 'numeric'
                 });
                 var timePart = d.toLocaleTimeString('en-US', {
-                    hour: 'numeric',
+                    hour: '2-digit',
                     minute: '2-digit',
                     hour12: true
-                }).toLowerCase().replace(/\s/g, '');
-                return datePart + ' ' + timePart;
+                });
+                return {
+                    time: timePart,
+                    date: datePart
+                };
             }
 
             var postInsightLabels = {
@@ -335,7 +344,10 @@
                     var msg = escapeHtml(rawMsg.substring(0, 200));
                     if (rawMsg.length > 200) msg += '...';
                     var createdTimeVal = post.created_time && (post.created_time.date || post.created_time);
-                    var created = formatPostDate(createdTimeVal);
+                    var created = formatPostDateParts(createdTimeVal);
+                    var createdHtml = created.time ?
+                        '<span class="analytics-post-time">' + escapeHtml(created.time) + '</span><span class="analytics-post-day">' + escapeHtml(created.date) + '</span>' :
+                        '<span class="analytics-post-day">-</span>';
                     var img = post.full_picture ? '<img src="' + escapeHtml(post.full_picture) +
                         '" alt="" class="analytics-post-thumb" loading="lazy">' :
                         '<div class="analytics-post-thumb-placeholder"><i class="fas fa-image text-muted"></i></div>';
@@ -376,8 +388,7 @@
                         '<div class="analytics-post-card-inner">' +
                         '<div class="analytics-post-thumb-wrap">' + img + '</div>' +
                         '<div class="analytics-post-content">' +
-                        '<p class="analytics-post-date text-muted mb-2"><i class="far fa-clock mr-1"></i>' +
-                        created + '</p>' +
+                        '<p class="analytics-post-date mb-2">' + createdHtml + '</p>' +
                         '<p class="analytics-post-message mb-3">' + (msg ||
                         '<em class="text-muted"></em>') + '</p>' +
                         '<div class="analytics-post-insights-wrap mb-3">' + insightHtml + '</div>' +
