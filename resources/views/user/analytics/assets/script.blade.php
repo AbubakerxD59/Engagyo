@@ -13,6 +13,7 @@
             var currentPostsSortOrder = 'desc';
             var isLoadingAnalytics = false;
             var userTimezone = "{{ $userTimezoneName ?? 'UTC' }}";
+            console.log(userTimezone);
 
             function formatInUserTimezone(date, options) {
                 if (!date || isNaN(date.getTime())) return '';

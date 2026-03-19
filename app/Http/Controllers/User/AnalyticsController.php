@@ -58,8 +58,13 @@ class AnalyticsController extends Controller
      */
     public function index(Request $request)
     {
-        $accounts = auth()->user()->getAccounts();
+        $user = \App\Models\User::with('timezone')->find(auth()->id());
+        if (!$user) {
+            abort(403);
+        }
+        $accounts = $user->getAccounts();
         $facebookPages = $accounts->where('type', 'facebook')->values();
+        $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
 
         $today = Carbon::today();
         $since = $today->copy()->subDays(28)->format('Y-m-d');
@@ -67,7 +72,7 @@ class AnalyticsController extends Controller
         $duration = 'last_28';
 
         $selectedPage = null;
-        return view('user.analytics.index', compact('facebookPages', 'selectedPage', 'since', 'until', 'duration'));
+        return view('user.analytics.index', compact('facebookPages', 'selectedPage', 'since', 'until', 'duration', 'userTimezoneName'));
     }
 
     /**
