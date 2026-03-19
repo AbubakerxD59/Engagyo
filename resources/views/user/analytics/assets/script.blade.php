@@ -12,6 +12,20 @@
             var currentPostsSortBy = 'created_time';
             var currentPostsSortOrder = 'desc';
             var isLoadingAnalytics = false;
+            var userTimezone = (Intl && Intl.DateTimeFormat && Intl.DateTimeFormat().resolvedOptions) ?
+                (Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC') :
+                'UTC';
+
+            function formatInUserTimezone(date, options) {
+                if (!date || isNaN(date.getTime())) return '';
+                try {
+                    return new Intl.DateTimeFormat('en-US', Object.assign({
+                        timeZone: userTimezone
+                    }, options || {})).format(date);
+                } catch (e) {
+                    return new Intl.DateTimeFormat('en-US', options || {}).format(date);
+                }
+            }
 
             function formatMetric(val) {
                 return (val !== null && val !== undefined && !isNaN(val)) ? parseInt(val).toLocaleString() : 'N/A';
@@ -235,12 +249,12 @@
                     time: '',
                     date: ''
                 };
-                var datePart = d.toLocaleDateString('en-US', {
+                var datePart = formatInUserTimezone(d, {
                     month: 'long',
                     day: 'numeric',
                     year: 'numeric'
                 });
-                var timePart = d.toLocaleTimeString('en-US', {
+                var timePart = formatInUserTimezone(d, {
                     hour: '2-digit',
                     minute: '2-digit',
                     hour12: true
