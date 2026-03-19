@@ -2404,12 +2404,29 @@ class  ScheduleController extends Controller
                 continue;
             }
 
+            // Avoid N+1 queries: preload our matching posts for this page response.
+            $postIds = collect($posts)
+                ->pluck('id')
+                ->filter()
+                ->map(fn($id) => (string) $id)
+                ->unique()
+                ->values()
+                ->all();
+
+            $ourPostsByExternalId = empty($postIds)
+                ? collect()
+                : Post::where('user_id', $userId)
+                    ->whereIn('post_id', $postIds)
+                    ->with('user')
+                    ->get()
+                    ->keyBy(fn($p) => (string) $p->post_id);
+
             foreach ($posts as &$post) {
                 $post['account_name'] = $page->name;
                 $post['account_profile'] = $page->profile_image;
                 $post['social_type'] = 'facebook';
                 $post['page_db_id'] = $page->id;
-                $ourPost = Post::where('post_id', $post['id'] ?? null)->with('user')->first();
+                $ourPost = $ourPostsByExternalId->get((string) ($post['id'] ?? ''));
                 if ($ourPost) {
                     $post['db_post_id'] = $ourPost->id;
                     if ($ourPost->user) {
