@@ -282,6 +282,13 @@
                 { key: 'created_time', label: 'Date' }
             ];
 
+            function parseCreatedTime(ct) {
+                if (!ct) return null;
+                if (typeof ct === 'string') return new Date(ct);
+                if (typeof ct === 'object' && ct.date) return new Date(ct.date.replace(' ', 'T') + 'Z');
+                return null;
+            }
+
             function renderPostsList(posts, since, until, searchQuery, sortBy, sortOrder) {
                 searchQuery = (searchQuery || '').trim().toLowerCase();
                 sortBy = sortBy || 'created_time';
