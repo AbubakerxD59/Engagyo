@@ -12,6 +12,7 @@
             var currentPostsSortBy = 'created_time';
             var currentPostsSortOrder = 'desc';
             var isLoadingAnalytics = false;
+            var analyticsRequest = null;
             var userTimezone = "{{ $userTimezoneName ?? 'UTC' }}";
 
             function formatInUserTimezone(date, options) {
@@ -481,6 +482,9 @@
             }
 
             function loadAnalytics(pageId, duration, since, until) {
+                if (analyticsRequest && analyticsRequest.readyState !== 4) {
+                    analyticsRequest.abort();
+                }
                 currentPageId = pageId || currentPageId;
                 currentDuration = duration || currentDuration;
                 currentSince = since || currentSince;
@@ -500,9 +504,10 @@
                     params.since = currentSince;
                     params.until = currentUntil || new Date().toISOString().split('T')[0];
                 }
-                $.get(analyticsUrl, params)
+                analyticsRequest = $.get(analyticsUrl, params)
                     .always(function() {
                         isLoadingAnalytics = false;
+                        analyticsRequest = null;
                     })
                     .done(function(res) {
                         if (!res.success) {
@@ -544,7 +549,8 @@
                             }
                         }
                     })
-                    .fail(function() {
+                    .fail(function(xhr, textStatus) {
+                        if (textStatus === 'abort') return;
                         $content.html(renderEmptyState(!!currentPageId));
                         if (typeof toastr !== 'undefined') toastr.error('Failed to load analytics.');
                     });

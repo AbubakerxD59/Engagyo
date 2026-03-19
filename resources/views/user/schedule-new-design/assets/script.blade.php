@@ -209,6 +209,9 @@
         var currentPostStatusTab = 'queue';
         var cachedSentPagePosts = null;
         var postsSearchQuery = '';
+        var postsStatusRequest = null;
+        var sentPostsRequest = null;
+        var queueSectionRequest = null;
 
         function parseCreatedTime(ct) {
             if (!ct) return null;
@@ -220,7 +223,10 @@
         function loadPostsStatusCounts() {
             var selectedAccounts = getSelectedAccounts();
             if (selectedAccounts.accountIds.length === 0) return;
-            $.ajax({
+            if (postsStatusRequest && postsStatusRequest.readyState !== 4) {
+                postsStatusRequest.abort();
+            }
+            postsStatusRequest = $.ajax({
                 url: "{{ route('panel.schedule.posts.status.counts') }}",
                 type: "GET",
                 data: {
@@ -229,6 +235,9 @@
                 },
                 success: function(data) {
                     $('#posts-status-tabs [data-count="queue"]').text(data.queue);
+                },
+                complete: function() {
+                    postsStatusRequest = null;
                 }
             });
             loadSentPagePostsCached(selectedAccounts);
@@ -236,7 +245,10 @@
 
         function loadSentPagePostsCached(selectedAccounts) {
             cachedSentPagePosts = null;
-            $.ajax({
+            if (sentPostsRequest && sentPostsRequest.readyState !== 4) {
+                sentPostsRequest.abort();
+            }
+            sentPostsRequest = $.ajax({
                 url: "{{ route('panel.schedule.posts.sent.page') }}",
                 type: "GET",
                 data: { account_id: selectedAccounts.accountIds },
@@ -252,12 +264,16 @@
                         showSentPosts();
                     }
                 },
-                error: function() {
+                error: function(xhr, textStatus) {
+                    if (textStatus === 'abort') return;
                     cachedSentPagePosts = [];
                     $('#posts-status-tabs [data-count="sent"]').text(0);
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
                     }
+                },
+                complete: function() {
+                    sentPostsRequest = null;
                 }
             });
         }
@@ -589,7 +605,10 @@
             var accountType = selectedAccounts.accountTypes[0];
             $content.html(getQueueSkeletonHtml()).show();
             $empty.hide();
-            $.ajax({
+            if (queueSectionRequest && queueSectionRequest.readyState !== 4) {
+                queueSectionRequest.abort();
+            }
+            queueSectionRequest = $.ajax({
                 url: "{{ route('panel.schedule.queue.timeline') }}",
                 type: "GET",
                 data: { account_id: accountId, type: accountType, days: queueBatchSize, offset: 0, source: 'schedule' },
@@ -617,12 +636,19 @@
                         bindQueuePostActions();
                     }
                 },
-                error: function() {
+                error: function(xhr, textStatus) {
+                    if (textStatus === 'abort') {
+                        queueSectionLoading = false;
+                        return;
+                    }
                     queueSectionLoading = false;
                     if (requestId !== queueLoadRequestId) return;
                     $content.empty().hide();
                     $empty.find('.queue-timeslots-empty-text').text('Failed to load queue.');
                     $empty.show();
+                },
+                complete: function() {
+                    queueSectionRequest = null;
                 }
             });
         }
