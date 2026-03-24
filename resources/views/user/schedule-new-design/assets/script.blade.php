@@ -282,7 +282,10 @@
                 },
                 success: function(data) {
                     $('#posts-status-tabs [data-count="queue"]').text(data.queue);
-                    $('#posts-status-tabs [data-count="sent"]').text(data.sent);
+                    // Sent count for Facebook timeline comes from sent-page-posts API (posts.length), not DB counts.
+                    if (!shouldUseFacebookSentPageTimeline()) {
+                        $('#posts-status-tabs [data-count="sent"]').text(data.sent);
+                    }
                 },
                 complete: function() {
                     postsStatusRequest = null;
@@ -312,11 +315,9 @@
                 type: "GET",
                 data: { account_id: selectedAccounts.accountIds },
                 success: function(response) {
-                    if (response.success && response.posts) {
-                        cachedSentPagePosts = response.posts;
-                    } else {
-                        cachedSentPagePosts = [];
-                    }
+                    var posts = (response.success && response.posts) ? response.posts : [];
+                    cachedSentPagePosts = posts;
+                    $('#posts-status-tabs [data-count="sent"]').text(posts.length);
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
                     }
@@ -324,6 +325,7 @@
                 error: function(xhr, textStatus) {
                     if (textStatus === 'abort') return;
                     cachedSentPagePosts = [];
+                    $('#posts-status-tabs [data-count="sent"]').text(0);
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
                     }
