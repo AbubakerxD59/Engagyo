@@ -305,9 +305,8 @@
                 loadSentPagePostsCached(selectedAccounts);
             } else {
                 cachedSentPagePosts = null;
-                if (currentPostStatusTab === 'sent') {
-                    loadPosts(1);
-                }
+                // Do not call loadPosts() here: loadPosts success already invokes loadPostsStatusCounts(),
+                // and calling loadPosts from here caused an infinite loop on Pinterest Sent (and blocked rendering).
             }
         }
 
