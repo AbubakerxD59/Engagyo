@@ -70,7 +70,7 @@ class FacebookController extends Controller
                 $expires_in = $tokenMeta["data"]->getField("data_access_expires_at") ?? null;
             }
         } catch (\Exception $e) {
-            // Fall back to Facebook SDK flow (for callback from FacebookService getLoginUrl)
+            // Fall back to Facebook SDK token exchange if Socialite fails on callback
             $getAccessToken = $this->facebookService->getAccessToken();
             if (!$getAccessToken["success"]) {
                 $errorMessage = $getAccessToken["message"] ?? "Failed to get access token from Facebook.";

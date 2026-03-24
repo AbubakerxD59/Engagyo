@@ -16,7 +16,6 @@ class FacebookService
     private $facebook;
     private $post;
     private $helper;
-    private $scopes;
     private $response = "Post Published Successfully!";
     private $logService;
 
@@ -153,20 +152,8 @@ class FacebookService
             'persistent_data_handler' => new LaravelSessionPersistentDataHandler()
         ]);
         $this->helper = $this->facebook->getRedirectLoginHelper();
-        $this->scopes = [
-            'email',
-            'public_profile',
-            'pages_show_list',
-        ];
         $this->post = new Post();
         $this->logService = new SocialMediaLogService();
-    }
-
-    public function getLoginUrl()
-    {
-        $config_id = ['config_id' => env("FACEBOOK_CONFIG_ID")];
-        $url = $this->helper->getLoginUrl(route("facebook.callback"), $this->scopes);
-        return $url;
     }
 
     public function getAccessToken()
