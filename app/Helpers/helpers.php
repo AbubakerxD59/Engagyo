@@ -267,9 +267,7 @@ function removeFile($file)
     $filePath = $file;
     if (Storage::disk('public')->exists($filePath)) {
         Storage::disk('public')->delete($filePath);
-        dd('File ' . $file . ' successfully deleted.');
     }
-    dd('File ' . $file . ' not found.');
 }
 function check_permission($permission)
 {
