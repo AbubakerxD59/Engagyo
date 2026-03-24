@@ -20,20 +20,15 @@ class FacebookService
     private $response = "Post Published Successfully!";
     private $logService;
 
-    /**
-     * Create a success notification
-     */
     private function successNotification($userId, $title, $message, $post = null)
     {
         $body = ['type' => 'success', 'message' => $message];
 
-        // Add account information if post is provided
         if ($post) {
             $post->loadMissing(['page.facebook']);
             $accountImage = null;
             $socialType = 'facebook';
 
-            // Get account image from page
             if ($post->page) {
                 if (!empty($post->page->profile_image)) {
                     $accountImage = $post->page->profile_image;
@@ -57,20 +52,15 @@ class FacebookService
         ]);
     }
 
-    /**
-     * Create an error notification
-     */
     private function errorNotification($userId, $title, $message, $post = null)
     {
         $body = ['type' => 'error', 'message' => $message];
 
-        // Add account information if post is provided
         if ($post) {
             $post->loadMissing(['page.facebook']);
             $accountImage = null;
             $socialType = 'facebook';
 
-            // Get account image from page
             if ($post->page) {
                 if (!empty($post->page->profile_image)) {
                     $accountImage = $post->page->profile_image;
@@ -95,13 +85,9 @@ class FacebookService
     }
 
     /**
-     * Handle post publish result - update post in database and create notification
-     * This centralizes the logic for updating posts and creating notifications after publishing
-     * 
-     * @param Post $post The post model instance
-     * @param array $response The response from Facebook API
-     * @param string $postType The type of post (link, photo, video, content)
-     * @return void
+     * @param Post $post
+     * @param array $response
+     * @param string $postType link|photo|video|content|quote
      */
     private function handlePostPublishResult(Post $post, array $response, string $postType = 'post')
     {
@@ -117,11 +103,9 @@ class FacebookService
         $typeLabelCapitalized = ucfirst($typeLabel);
 
         if ($response["success"]) {
-            // Extract post_id from Facebook response
             $graphNode = $response["data"]->getGraphNode();
             $post_id = $graphNode['id'];
 
-            // Update post in database
             $post->update([
                 "post_id" => $post_id,
                 "status" => 1,
@@ -133,7 +117,6 @@ class FacebookService
                 ]),
             ]);
 
-            // Create success notification
             $this->successNotification(
                 $post->user_id,
                 "Post Published",
@@ -141,10 +124,8 @@ class FacebookService
                 $post
             );
         } else {
-            // Handle failure case
             $errorMessage = $response["message"] ?? "Failed to publish {$typeLabel} to Facebook.";
 
-            // Update post in database with error status
             $post->update([
                 "status" => -1,
                 "published_at" => date('Y-m-d H:i:s'),
@@ -154,7 +135,6 @@ class FacebookService
                 ])
             ]);
 
-            // Create error notification
             $this->errorNotification(
                 $post->user_id,
                 "Post Publishing Failed",
@@ -173,27 +153,10 @@ class FacebookService
             'persistent_data_handler' => new LaravelSessionPersistentDataHandler()
         ]);
         $this->helper = $this->facebook->getRedirectLoginHelper();
-        // $this->scopes = [
-        //     "business_management",
-        //     "email",
-        //     "pages_manage_engagement",
-        //     "pages_manage_metadata",
-        //     "pages_manage_posts",
-        //     "pages_read_engagement",
-        //     "pages_read_user_content",
-        //     "pages_show_list",
-        //     "public_profile",
-        //     "read_insights",
-        // ];
         $this->scopes = [
             'email',
             'public_profile',
             'pages_show_list',
-            // 'pages_manage_engagement',
-            // 'pages_manage_metadata',
-            // 'pages_manage_posts',
-            // 'pages_read_engagement',
-            // 'pages_read_user_content',
         ];
         $this->post = new Post();
         $this->logService = new SocialMediaLogService();
@@ -224,14 +187,12 @@ class FacebookService
                 ],
             ];
         } catch (FacebookResponseException $e) {
-            // When Graph returns an error
             $error = $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => $error,
             ];
         } catch (FacebookSDKException $e) {
-            // When validation fails or other local issues
             $error = $e->getMessage();
             $response = [
                 "success" => false,
@@ -250,14 +211,12 @@ class FacebookService
                 "data" => $tokenMetadata,
             ];
         } catch (FacebookResponseException $e) {
-            // When Graph returns an error
             $error = $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => $error,
             ];
         } catch (FacebookSDKException $e) {
-            // When validation fails or other local issues
             $error = $e->getMessage();
             $response = [
                 "success" => false,
@@ -270,7 +229,6 @@ class FacebookService
     public function refreshAccessToken($access_token, $page_id)
     {
         try {
-            // Find the page first
             $page = Page::find($page_id);
 
             if (!$page) {
@@ -282,7 +240,6 @@ class FacebookService
 
             $getOAuth2Client = $this->facebook->getOAuth2Client();
 
-            // Try to get a long-lived access token
             $longLivedToken = $getOAuth2Client->getLongLivedAccessToken($access_token);
 
             if (!$longLivedToken) {
@@ -292,10 +249,8 @@ class FacebookService
                 ];
             }
 
-            // Debug the new token to get metadata
             $tokenMetadata = $getOAuth2Client->debugToken($longLivedToken);
 
-            // Check if token is valid
             if (!$tokenMetadata->getIsValid()) {
                 return [
                     "success" => false,
@@ -305,10 +260,8 @@ class FacebookService
 
             $newAccessToken = $longLivedToken->getValue();
 
-            // Get expiration time
             $expiresAt = $tokenMetadata->getField("data_access_expires_at");
 
-            // Update the page with new token
             $page->update([
                 "access_token" => $newAccessToken,
                 "expires_in" => $expiresAt,
@@ -323,7 +276,6 @@ class FacebookService
             ];
             $this->logService->logTokenRefresh('facebook', $page_id, 'success', 'Token refreshed successfully');
         } catch (FacebookResponseException $e) {
-            // When Graph returns an error
             $error = $e->getMessage();
             $response = [
                 "success" => false,
@@ -331,7 +283,6 @@ class FacebookService
             ];
             $this->logService->logTokenRefresh('facebook', $page_id, 'failed', $error);
         } catch (FacebookSDKException $e) {
-            // When validation fails or other local issues
             $error = $e->getMessage();
             $response = [
                 "success" => false,
@@ -339,7 +290,6 @@ class FacebookService
             ];
             $this->logService->logTokenRefresh('facebook', $page_id, 'failed', $error);
         } catch (\Exception $e) {
-            // Catch any other unexpected errors
             $error = $e->getMessage();
             $response = [
                 "success" => false,
@@ -539,9 +489,7 @@ class FacebookService
             $this->logService->logApiError('facebook', '/videos', $error, ['post_id' => $id, 'account_id' => $post_row->account_id ?? null]);
         }
         $this->handlePostPublishResult($post_row, $response, 'video');
-        // Remove video from S3 if API failed and post source is not "test"
         if ($post_row->source !== 'test' && !empty($post_row->video)) {
-            // removeFromS3($post_row->video);
             removeFile($post_row->video);
         }
         return $response;
@@ -577,11 +525,7 @@ class FacebookService
     }
 
     /**
-     * Delete a post from Facebook via API. Used by DeleteFacebookPostJob for background deletion.
-     *
-     * @param string $facebookPostId Facebook post ID (e.g. {page_id}_{post_id})
-     * @param Page $page Page model with access_token
-     * @param int|null $dbPostId Our Post ID for logging (may be null if post already deleted)
+     * @param string $facebookPostId Graph post id (e.g. {page_id}_{post_id})
      */
     public function deleteFromFacebook(string $facebookPostId, Page $page, ?int $dbPostId = null): array
     {
@@ -613,12 +557,8 @@ class FacebookService
     }
 
     /**
-     * Get post insights (impressions, reach, engaged users) from Facebook Graph API.
-     *
-     * @param string $postId Facebook post ID (e.g. {page_id}_{post_id})
-     * @param string $accessToken Page access token with read_insights permission
-     * @param array $metrics Metrics to fetch (default: post_impressions, post_impressions_unique, post_engaged_users)
-     * @return array Parsed metrics or empty array on error. Keys: impressions, reach, engaged_users
+     * @param array $metrics Default: post_impressions, post_impressions_unique, post_engaged_users
+     * @return array impressions, reach, engaged_users
      */
     public function getPostInsights($postId, $accessToken, $metrics = ['post_impressions', 'post_impressions_unique', 'post_engaged_users'])
     {
@@ -659,7 +599,6 @@ class FacebookService
                 }
             }
         } catch (FacebookResponseException $e) {
-            // Insights may be unavailable for pages with < 100 likes, or token lacks read_insights
             return $result;
         } catch (FacebookSDKException $e) {
             return $result;
@@ -669,14 +608,7 @@ class FacebookService
     }
 
     /**
-     * Get page-level insights (followers, reach, video views, engagements).
-     * Some metrics may be deprecated by Meta - returns null for unavailable.
-     *
-     * @param string $pageId Facebook page ID (graph ID, not DB id)
-     * @param string $accessToken Page access token with read_insights permission
-     * @param string|null $since Start date Y-m-d (default: 28 days ago)
-     * @param string|null $until End date Y-m-d (default: today)
-     * @return array Keys: followers, reach, video_views, engagements
+     * @return array followers, reach, video_views, engagements, *_by_day
      */
     public function getPageInsights($pageId, $accessToken, ?string $since = null, ?string $until = null)
     {
@@ -698,8 +630,6 @@ class FacebookService
         $until = $until ?: date('Y-m-d');
         $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
-        // Metrics per https://developers.facebook.com/docs/graph-api/reference/v25.0/insights
-        // post_clicks_by_type requires period=lifetime, fetched separately
         $metrics = [
             'page_follows',
             'page_total_media_view_unique',
@@ -792,10 +722,7 @@ class FacebookService
     }
 
     /**
-     * Get page insights with comparison to previous period.
-     * Returns current metrics plus comparison data (percent change, direction) for each metric.
-     *
-     * @return array Current insights with 'comparison' key: { metric => { change: float, direction: 'up'|'down'|null } }
+     * @return array getPageInsights shape plus 'comparison' per metric
      */
     public function getPageInsightsWithComparison($pageId, $accessToken, ?string $since = null, ?string $until = null): array
     {
@@ -855,15 +782,7 @@ class FacebookService
     }
 
     /**
-     * Get page feed (posts) from Facebook Graph API.
-     * Fetches all posts by the page in the given date range.
-     *
-     * @param string $pageId Facebook page ID (graph ID)
-     * @param string $accessToken Page access token
-     * @param string|null $since Start date Y-m-d
-     * @param string|null $until End date Y-m-d
-     * @param int $limit Max posts per request (default 100)
-     * @return array List of post objects with id, message, created_time, full_picture, icon, is_popular, permalink_url, shares, status_type, story, type, insights
+     * Page /feed; first page only, limit capped at 100.
      */
     public function getPageFeed(string $pageId, string $accessToken, ?string $since = null, ?string $until = null, int $limit = 100): array
     {
@@ -888,7 +807,7 @@ class FacebookService
             $response = $this->facebook->get($endpoint, $accessToken);
             $graphEdge = $response->getGraphEdge();
 
-            while ($graphEdge) {
+            if ($graphEdge) {
                 foreach ($graphEdge as $node) {
                     $sharesRaw = $node->getField('shares');
                     $shares = is_object($sharesRaw) && method_exists($sharesRaw, 'getField')
@@ -925,17 +844,6 @@ class FacebookService
                     ];
                     $posts[] = $post;
                 }
-
-                // Continue pagination until Facebook has no more pages in this since/until range.
-                try {
-                    $nextEdge = $this->facebook->next($graphEdge);
-                } catch (FacebookResponseException|FacebookSDKException $e) {
-                    $nextEdge = null;
-                }
-                if (!$nextEdge) {
-                    break;
-                }
-                $graphEdge = $nextEdge;
             }
         } catch (FacebookResponseException $e) {
             return [];
@@ -947,15 +855,7 @@ class FacebookService
     }
 
     /**
-     * Get page posts with insights. Fetches feed then enriches each post with insights.
-     * Uses batch API for post insights when possible (up to 50 per batch).
-     *
-     * @param string $pageId Facebook page ID
-     * @param string $accessToken Page access token
-     * @param string|null $since Start date Y-m-d
-     * @param string|null $until End date Y-m-d
-     * @param string $insightsPreset 'default' = full metrics; 'sent_tab' = only likes, comments, shares, impressions, clicks (for full_year / sent tab)
-     * @return array Posts with insights merged
+     * @param string $insightsPreset default|sent_tab (same metrics; normalization below)
      */
     public function getPagePostsWithInsights(string $pageId, string $accessToken, ?string $since = null, ?string $until = null, string $insightsPreset = 'default'): array
     {
@@ -964,7 +864,6 @@ class FacebookService
             return [];
         }
 
-        $isSentTab = ($insightsPreset === 'sent_tab');
         $metrics = 'post_clicks,post_reactions_by_type_total,post_media_view,post_impressions_unique';
         $batchSize = 25;
         $offset = 0;
@@ -972,7 +871,6 @@ class FacebookService
         foreach (array_chunk($posts, $batchSize) as $chunk) {
             $n = count($chunk);
 
-            // Batch 1: insights only (smaller batch = more reliable in cron / less timeout risk)
             try {
                 $insightsBatch = [];
                 foreach ($chunk as $post) {
@@ -1014,13 +912,7 @@ class FacebookService
                     }
                     $posts[$postIndex]['insights'] = $insights;
                 }
-            } catch (FacebookResponseException $e) {
-                for ($i = 0; $i < $n; $i++) {
-                    if (isset($posts[$offset + $i])) {
-                        $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
-                    }
-                }
-            } catch (FacebookSDKException $e) {
+            } catch (FacebookResponseException|FacebookSDKException $e) {
                 for ($i = 0; $i < $n; $i++) {
                     if (isset($posts[$offset + $i])) {
                         $posts[$offset + $i]['insights'] = $posts[$offset + $i]['insights'] ?? [];
@@ -1028,7 +920,6 @@ class FacebookService
                 }
             }
 
-            // Batch 2: comments only (separate so insights batch failure doesn't affect comments)
             try {
                 $commentsBatch = [];
                 foreach ($chunk as $post) {
@@ -1059,10 +950,7 @@ class FacebookService
                         }
                     }
                 }
-            } catch (FacebookResponseException $e) {
-                // Keep comment count from feed
-            } catch (FacebookSDKException $e) {
-                // Keep comment count from feed
+            } catch (FacebookResponseException|FacebookSDKException $e) {
             }
 
             $offset += $n;
@@ -1092,7 +980,6 @@ class FacebookService
     public static function validateToken($account)
     {
         try {
-            // Check if account exists
             if (!$account) {
                 return [
                     "success" => false,
@@ -1100,7 +987,6 @@ class FacebookService
                 ];
             }
 
-            // Check if access token exists
             if (empty($account->access_token)) {
                 return [
                     "success" => false,
@@ -1111,7 +997,6 @@ class FacebookService
             $access_token = $account->access_token;
             $response = ["success" => true, "access_token" => $access_token];
 
-            // If token is expired or invalid, try to refresh it
             if (!$account->validToken()) {
 
                 $service = new FacebookService();
