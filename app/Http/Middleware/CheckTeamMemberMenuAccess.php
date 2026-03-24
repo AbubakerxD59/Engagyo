@@ -104,6 +104,7 @@ class CheckTeamMemberMenuAccess
                     'panel.schedule.timeslot.setting',
                     'panel.schedule.timeslot.setting.save',
                     'panel.schedule.posts.listing',
+                    'panel.schedule.posts.pinterest.sent',
                     'panel.schedule.post.delete',
                     'panel.schedule.post.edit',
                     'panel.schedule.post.update',

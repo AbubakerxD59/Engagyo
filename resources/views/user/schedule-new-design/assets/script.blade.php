@@ -233,6 +233,8 @@
         function refreshSentTabView() {
             if (shouldUseFacebookSentPageTimeline()) {
                 showSentPosts();
+            } else if (isPinterestOnlySelection()) {
+                showSentPosts();
             } else {
                 loadPosts(1);
             }
@@ -243,6 +245,7 @@
         var postsSearchQuery = '';
         var postsStatusRequest = null;
         var sentPostsRequest = null;
+        var pinterestSentRequest = null;
         var queueSectionRequest = null;
         var publishSentRefreshTimer = null;
 
@@ -292,8 +295,8 @@
                 },
                 success: function(data) {
                     $('#posts-status-tabs [data-count="queue"]').text(data.queue);
-                    // Sent count for Facebook timeline comes from sent-page-posts API (posts.length), not DB counts.
-                    if (!shouldUseFacebookSentPageTimeline()) {
+                    // Sent badge from listing APIs for Facebook timeline + Pinterest sent; otherwise DB counts.
+                    if (!shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection()) {
                         $('#posts-status-tabs [data-count="sent"]').text(data.sent);
                     }
                 },
@@ -303,10 +306,10 @@
             });
             if (shouldUseFacebookSentPageTimeline()) {
                 loadSentPagePostsCached(selectedAccounts);
+            } else if (isPinterestOnlySelection()) {
+                loadPinterestSentPagePostsCached(selectedAccounts);
             } else {
                 cachedSentPagePosts = null;
-                // Do not call loadPosts() here: loadPosts success already invokes loadPostsStatusCounts(),
-                // and calling loadPosts from here caused an infinite loop on Pinterest Sent (and blocked rendering).
             }
         }
 
@@ -341,6 +344,40 @@
                 },
                 complete: function() {
                     sentPostsRequest = null;
+                }
+            });
+        }
+
+        function loadPinterestSentPagePostsCached(selectedAccounts) {
+            if (!isPinterestOnlySelection()) {
+                return;
+            }
+            cachedSentPagePosts = null;
+            if (pinterestSentRequest && pinterestSentRequest.readyState !== 4) {
+                pinterestSentRequest.abort();
+            }
+            pinterestSentRequest = $.ajax({
+                url: "{{ route('panel.schedule.posts.pinterest.sent') }}",
+                type: "GET",
+                data: { account_id: selectedAccounts.accountIds },
+                success: function(response) {
+                    var posts = (response.success && response.posts) ? response.posts : [];
+                    cachedSentPagePosts = posts;
+                    $('#posts-status-tabs [data-count="sent"]').text(posts.length);
+                    if (currentPostStatusTab === 'sent') {
+                        showSentPosts();
+                    }
+                },
+                error: function(xhr, textStatus) {
+                    if (textStatus === 'abort') return;
+                    cachedSentPagePosts = [];
+                    $('#posts-status-tabs [data-count="sent"]').text(0);
+                    if (currentPostStatusTab === 'sent') {
+                        showSentPosts();
+                    }
+                },
+                complete: function() {
+                    pinterestSentRequest = null;
                 }
             });
         }
@@ -2625,8 +2662,6 @@
         var currentPage = 1;
         var perPage = 9;
         var totalPosts = 0;
-        /** True when last listing request asked server for all Pinterest sent rows (no pagination). */
-        var lastPostsListingWasPinterestSentAll = false;
 
         function loadPosts(page = 1) {
             currentPage = page;
@@ -2635,9 +2670,13 @@
                 sentDayOffset = 0;
             }
 
-            lastPostsListingWasPinterestSentAll = (currentPostStatusTab === 'sent' && isPinterestOnlySelection());
-            var requestStart = lastPostsListingWasPinterestSentAll ? 0 : (page - 1) * perPage;
-            var requestLength = lastPostsListingWasPinterestSentAll ? 1 : perPage;
+            if (currentPostStatusTab === 'sent' && isPinterestOnlySelection()) {
+                loadPinterestSentPagePostsCached(getSelectedAccounts());
+                return;
+            }
+
+            var requestStart = (page - 1) * perPage;
+            var requestLength = perPage;
 
             $('#postsGrid').html(`
                 <div class="loading-state text-center py-5" style="grid-column: 1/-1;">
@@ -2673,7 +2712,7 @@
                     post_type: $("#filter_post_type").val(),
                     status: getStatusFilterValue(),
                     post_status_tab: currentPostStatusTab,
-                    sent_load_all: lastPostsListingWasPinterestSentAll ? 1 : 0
+                    sent_load_all: 0
                 },
                 success: function(response) {
                     totalPosts = response.iTotalDisplayRecords;
@@ -2749,17 +2788,21 @@
             }
 
             var statusType = post.status_type || '';
-            // Commented out per new design request: hide sent post source label.
-            // var sourceLabel = statusType ? '<span class="sent-post-source"><i class="fas fa-layer-group"></i> ' + statusType.replace(/_/g, ' ') + '</span>' : '';
             var sourceLabel = '';
 
+            var st = (post.social_type || 'facebook').toLowerCase();
+            if (st.indexOf('pinterest') !== -1) st = 'pinterest';
+            else if (st.indexOf('tiktok') !== -1) st = 'tiktok';
+            else st = 'facebook';
+
             var profileImg = post.account_profile || '';
-            var socialLogo = "{{ social_logo('facebook') }}";
-            var accountName = post.account_name || 'Facebook Page';
+            var socialLogo = socialLogos[st] || socialLogos.facebook;
+            var accountName = post.account_name || (st === 'pinterest' ? 'Pinterest board' : 'Facebook Page');
 
             var imageHtml = '';
             if (post.full_picture) {
-                imageHtml = '<div class="sent-card-image"><img src="' + post.full_picture + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>';
+                var picSrc = $('<span>').text(post.full_picture).html();
+                imageHtml = '<div class="sent-card-image"><img src="' + picSrc + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>';
             }
 
             var message = post.message || post.story || '';
@@ -2774,9 +2817,12 @@
 
             var viewPostBtn = '';
             if (post.permalink_url) {
-                viewPostBtn = '<a href="' + post.permalink_url + '" target="_blank" class="sent-card-view-btn"><i class="fas fa-external-link-alt"></i> View Post</a>';
+                var perm = $('<span>').text(post.permalink_url).html();
+                var viewLabel = st === 'pinterest' ? 'View Pin' : 'View Post';
+                viewPostBtn = '<a href="' + perm + '" target="_blank" rel="noopener noreferrer" class="sent-card-view-btn"><i class="fas fa-external-link-alt"></i> ' + viewLabel + '</a>';
             }
-            var deleteBtn = '<button type="button" class="sent-card-delete-btn" data-post-id="' + (post.id || '') + '" data-page-id="' + (post.page_db_id || '') + '" title="Delete post"><i class="fas fa-trash-alt"></i> Delete</button>';
+            var dbPostId = post.db_post_id || '';
+            var deleteBtn = '<button type="button" class="sent-card-delete-btn" data-post-id="' + (post.id || '') + '" data-page-id="' + (post.page_db_id || '') + '" data-db-post-id="' + dbPostId + '" data-social-type="' + st + '" title="Delete post"><i class="fas fa-trash-alt"></i> Delete</button>';
 
             var ins = post.insights || {};
             var reactions = ins.post_reactions ?? 0;
@@ -2791,12 +2837,16 @@
                 var pubEmailRaw = post.publisher_email || '';
                 var pubEmail = pubEmailRaw.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/'/g, '&#39;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 publishedViaHtml = 'Published via <span class="sent-card-published-via-tooltip" title="' + pubEmail + '" data-tooltip="' + pubEmail + '">' + pubUsername + '</span>';
+            } else if (st === 'pinterest') {
+                publishedViaHtml = 'Published via <span class="sent-card-platform-icon pinterest"><i class="fab fa-pinterest-p"></i></span> Pinterest';
             } else {
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon facebook"><i class="fab fa-facebook-f"></i></span> Facebook';
             }
 
+            var badgeIcon = st === 'pinterest' ? 'fab fa-pinterest-p' : (st === 'tiktok' ? 'fab fa-tiktok' : 'fab fa-facebook-f');
+
             return `
-                <div class="sent-post-row" data-post-id="${post.id || ''}" data-page-id="${post.page_db_id || ''}">
+                <div class="sent-post-row" data-post-id="${post.id || ''}" data-page-id="${post.page_db_id || ''}" data-db-post-id="${dbPostId}" data-social-type="${st}">
                     <div class="sent-post-time-col">
                         <span class="sent-post-time">${timePart}</span>
                         ${sourceLabel}
@@ -2808,9 +2858,9 @@
                                     <div class="sent-card-account">
                                         <div class="sent-card-avatar-wrap">
                                             <img src="${profileImg}" class="sent-card-avatar" onerror="this.onerror=null;this.src='${socialLogo}';" loading="lazy">
-                                            <span class="sent-card-platform-badge facebook"><i class="fab fa-facebook-f"></i></span>
+                                            <span class="sent-card-platform-badge ${st}"><i class="${badgeIcon}"></i></span>
                                         </div>
-                                        <span class="sent-card-account-name">${accountName}</span>
+                                        <span class="sent-card-account-name">${$('<span>').text(accountName).html()}</span>
                                     </div>
                                     ${titleHtml}
                                 </div>
@@ -2931,17 +2981,6 @@
 
         // Render pagination
         function renderPagination() {
-            if (lastPostsListingWasPinterestSentAll && currentPostStatusTab === 'sent') {
-                if (totalPosts === 0) {
-                    $('.pagination-info').html('');
-                    $('.pagination').html('');
-                    return;
-                }
-                $('.pagination-info').html('Showing all ' + totalPosts + ' sent posts');
-                $('.pagination').html('');
-                return;
-            }
-
             var totalPages = Math.ceil(totalPosts / perPage);
             var start = (currentPage - 1) * perPage + 1;
             var end = Math.min(currentPage * perPage, totalPosts);
@@ -3017,11 +3056,47 @@
             $('.sent-post-menu-wrap.open').removeClass('open');
         });
 
-        // Sent post Delete button – delete from Facebook and DB
+        // Sent post Delete – Facebook uses Graph + job; Pinterest uses schedule post delete (DB + platform).
         $(document).on('click', '.sent-card-delete-btn', function() {
             var $btn = $(this);
+            var social = ($btn.data('social-type') || 'facebook').toLowerCase();
+            var dbPostId = $btn.data('db-post-id');
             var postId = $btn.data('post-id');
             var pageId = $btn.data('page-id');
+
+            if (social === 'pinterest') {
+                if (!dbPostId) {
+                    toastr.error('Cannot delete: missing post info.');
+                    return;
+                }
+                if (!confirm('Delete this Pin from Pinterest and from the app? This cannot be undone.')) return;
+                $btn.prop('disabled', true).addClass('is-deleting');
+                $.ajax({
+                    url: "{{ route('panel.schedule.post.delete') }}",
+                    type: "GET",
+                    data: { id: dbPostId },
+                    success: function(response) {
+                        if (response.success) {
+                            var $row = $btn.closest('.sent-post-row');
+                            $row.fadeOut(200, function() { $(this).remove(); });
+                            toastr.success(response.message || 'Post deleted successfully.');
+                            var $tab = $('#posts-status-tabs [data-count="sent"]');
+                            var n = parseInt($tab.text(), 10) || 0;
+                            if (n > 0) $tab.text(n - 1);
+                        } else {
+                            $btn.prop('disabled', false).removeClass('is-deleting');
+                            toastr.error(response.message || 'Failed to delete post.');
+                        }
+                    },
+                    error: function(xhr) {
+                        $btn.prop('disabled', false).removeClass('is-deleting');
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to delete post.';
+                        toastr.error(msg);
+                    }
+                });
+                return;
+            }
+
             if (!postId || !pageId) {
                 toastr.error('Cannot delete: missing post or account info.');
                 return;
@@ -3123,6 +3198,9 @@
                 if (shouldUseFacebookSentPageTimeline()) {
                     cachedSentPagePosts = null;
                     loadSentPagePostsCached(getSelectedAccounts());
+                } else if (isPinterestOnlySelection()) {
+                    cachedSentPagePosts = null;
+                    loadPinterestSentPagePostsCached(getSelectedAccounts());
                 } else {
                     loadPosts(1);
                 }

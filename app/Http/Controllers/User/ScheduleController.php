@@ -2601,6 +2601,103 @@ class  ScheduleController extends Controller
     }
 
     /**
+     * Pinterest Sent tab: all published schedule pins for selected boards, same card shape as Facebook sent API.
+     */
+    public function getPinterestSentPosts(Request $request)
+    {
+        $userId = (int) Auth::id();
+        $accountIds = (array) $request->input('account_id', []);
+        if (empty($accountIds)) {
+            return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
+        }
+
+        $boards = Board::whereIn('id', $accountIds)->where('user_id', $userId)->get();
+        if ($boards->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No boards found', 'posts' => []]);
+        }
+
+        $boardIds = $boards->pluck('id')->all();
+        $boardsById = $boards->keyBy('id');
+
+        $dbPosts = Post::query()
+            ->where('user_id', $userId)
+            ->where('social_type', 'like', '%pinterest%')
+            ->whereIn('account_id', $boardIds)
+            ->where('status', 1)
+            ->whereNotNull('published_at')
+            ->where('source', 'schedule')
+            ->with('user', 'board.pinterest')
+            ->orderByDesc('published_at')
+            ->get();
+
+        $allPosts = [];
+        foreach ($dbPosts as $dbPost) {
+            $board = $boardsById->get($dbPost->account_id) ?? $dbPost->board;
+            if (!$board) {
+                continue;
+            }
+            $allPosts[] = $this->sentTabPostFromPinterestRecord($dbPost, $board);
+        }
+
+        return response()->json(['success' => true, 'posts' => $allPosts]);
+    }
+
+    /**
+     * Minimal Sent-tab payload from a published Pinterest Post row (metrics zeroed; same keys as Facebook sent cards).
+     */
+    private function sentTabPostFromPinterestRecord(Post $dbPost, Board $board): array
+    {
+        $published = Carbon::parse($dbPost->published_at);
+        $createdTime = $published->toIso8601String();
+
+        $fullPicture = '';
+        if (!empty($dbPost->image)) {
+            $img = $dbPost->image;
+            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                $fullPicture = $img;
+            } else {
+                $fullPicture = fetchFromS3($img);
+            }
+        }
+
+        $pinId = $dbPost->post_id ? (string) $dbPost->post_id : '';
+        $permalink = $pinId !== ''
+            ? 'https://www.pinterest.com/pin/' . rawurlencode($pinId) . '/'
+            : null;
+
+        $profileImage = $board->pinterest?->profile_image ?? '';
+
+        $payload = [
+            'id' => $pinId !== '' ? $pinId : ('db-' . $dbPost->id),
+            'created_time' => $createdTime,
+            'message' => (string) ($dbPost->title ?? ''),
+            'story' => '',
+            'full_picture' => $fullPicture,
+            'permalink_url' => $permalink,
+            'account_name' => $board->name,
+            'account_profile' => $profileImage,
+            'social_type' => 'pinterest',
+            'page_db_id' => $board->id,
+            'db_post_id' => $dbPost->id,
+            'insights' => [
+                'post_reactions' => 0,
+                'post_impressions' => 0,
+                'post_clicks' => 0,
+            ],
+            'comments' => 0,
+            'shares' => 0,
+            'from_local_db' => true,
+        ];
+
+        if ($dbPost->user) {
+            $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
+            $payload['publisher_email'] = $dbPost->user->email ?? '';
+        }
+
+        return $payload;
+    }
+
+    /**
      * Minimal Sent-tab payload from a published Post row (metrics zeroed until Graph sync / insights fetch).
      */
     private function sentFacebookPostFromLocalRecord(Post $dbPost, Page $page): array
