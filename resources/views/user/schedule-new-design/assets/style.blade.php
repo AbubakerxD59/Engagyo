@@ -4291,6 +4291,46 @@
         background: #f0fdf4;
     }
 
+    .create-post-facebook-format-wrap {
+        width: 100%;
+        margin-top: 12px;
+        padding: 10px 12px;
+        border-radius: 8px;
+        background: #f3f4f6;
+        border: 1px solid #e5e7eb;
+    }
+
+    .create-post-facebook-format-label {
+        display: block;
+        font-size: 12px;
+        font-weight: 600;
+        color: #6b7280;
+        margin-bottom: 8px;
+    }
+
+    .create-post-facebook-format-radios {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 16px;
+        align-items: center;
+    }
+
+    .create-post-format-option {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        margin: 0;
+        font-size: 14px;
+        color: #374151;
+        cursor: pointer;
+        font-weight: 500;
+    }
+
+    .create-post-format-option input {
+        margin: 0;
+        cursor: pointer;
+    }
+
     .create-post-upload-previews {
         display: flex;
         flex-wrap: wrap;

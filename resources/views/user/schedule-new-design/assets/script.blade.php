@@ -1119,6 +1119,38 @@
                 $('.create-post-draft-btn').hide();
             }
             renderLastUsed();
+            updateCreatePostFacebookFormatRow();
+        }
+
+        function createPostHasFacebookChannelSelected() {
+            var found = false;
+            $('.channels-dropdown-checkbox:checked').each(function() {
+                if (($(this).data('type') || '') === 'facebook') {
+                    found = true;
+                    return false;
+                }
+            });
+            return found;
+        }
+
+        function createPostHasVideoInQueue() {
+            var vids = ['mp4', 'mkv', 'mov', 'mpeg', 'webm'];
+            for (var i = 0; i < createPostFiles.length; i++) {
+                var ext = (createPostFiles[i].name || '').split('.').pop().toLowerCase();
+                if (vids.indexOf(ext) !== -1) return true;
+            }
+            return false;
+        }
+
+        function updateCreatePostFacebookFormatRow() {
+            var show = createPostHasFacebookChannelSelected() && createPostHasVideoInQueue() && !is_link;
+            var $wrap = $('#createPostFacebookFormatWrap');
+            if (show) {
+                $wrap.show();
+            } else {
+                $wrap.hide();
+                $('#createPostFormatPost').prop('checked', true);
+            }
         }
 
         function renderLastUsed() {
@@ -1413,6 +1445,7 @@
                 toastr.success((allowed.length === 1 ? '1 file' : allowed.length + ' files') + ' added');
             }
             if (rejected > 0) toastr.error('Some files were not supported. Allowed: ' + createPostAllowedExtensions.join(', '));
+            updateCreatePostFacebookFormatRow();
         }
 
         function renderCreatePostUploadPreviews() {
@@ -1451,6 +1484,7 @@
             var idx = parseInt($(this).data('idx'), 10);
             createPostFiles.splice(idx, 1);
             renderCreatePostUploadPreviews();
+            updateCreatePostFacebookFormatRow();
         });
 
         function createPostSetupDropZone($el) {
@@ -1483,6 +1517,7 @@
             if (!value) {
                 $('#createPostLinkPreview').empty();
                 is_link = 0;
+                updateCreatePostFacebookFormatRow();
                 return;
             }
             is_link = 0;
@@ -1492,6 +1527,7 @@
             } else {
                 $('#createPostLinkPreview').empty();
             }
+            updateCreatePostFacebookFormatRow();
         });
 
         function createPostFetchFromLink(link) {
@@ -1518,12 +1554,15 @@
                         } else {
                             $container.html('<div style="padding: 1rem; color: #DC2626;">Error loading preview.</div>');
                         }
+                        updateCreatePostFacebookFormatRow();
                     } else {
                         $container.html('<div style="padding: 1rem; color: #DC2626;">' + (response.message || 'Error') + '</div>');
+                        updateCreatePostFacebookFormatRow();
                     }
                 },
                 error: function() {
                     $container.html('<div style="padding: 1rem; color: #DC2626;">Error loading preview.</div>');
+                    updateCreatePostFacebookFormatRow();
                 }
             });
         }
@@ -1532,6 +1571,7 @@
             $('#createPostLinkPreview').empty();
             $('#createPostEditorTextarea').val('');
             is_link = 0;
+            updateCreatePostFacebookFormatRow();
         });
 
         // publish/queue/schedule post
@@ -1799,6 +1839,8 @@
             formData.append("schedule_date", effectiveAction === 'schedule' ? (schedule_date || '') : '');
             formData.append("schedule_time", effectiveAction === 'schedule' ? (schedule_time || '') : '');
             formData.append("files", file);
+            var fbFormat = ($('input[name="create_post_facebook_format"]:checked').val() || 'post');
+            formData.append("facebook_content_format", isVideo ? fbFormat : 'post');
             var selectedAccounts = getCreatePostSelectedAccounts();
             if (selectedAccounts.length > 0) {
                 formData.append("account_ids", JSON.stringify(selectedAccounts));
@@ -1836,6 +1878,8 @@
             is_link = 0;
             is_video = 0;
             current_file = 0;
+            $('#createPostFormatPost').prop('checked', true);
+            $('#createPostFacebookFormatWrap').hide();
             $('#createPostScheduleDropdown').removeClass('is-open');
             if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
                 loadQueueTimeslotsSection();

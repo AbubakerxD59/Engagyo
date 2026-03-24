@@ -95,6 +95,7 @@ class FacebookService
             'link' => 'link',
             'photo' => 'photo',
             'video' => 'video',
+            'reel' => 'reel',
             'content' => 'post',
             'quote' => 'quote',
         ];

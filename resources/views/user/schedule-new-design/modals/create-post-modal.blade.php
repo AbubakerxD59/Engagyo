@@ -18,8 +18,8 @@
 
             {{-- White content area --}}
             <div class="create-post-modal-body">
-                <button type="button" class="create-post-body-close-btn create-post-close-btn"
-                    data-dismiss="modal" aria-label="Close">
+                <button type="button" class="create-post-body-close-btn create-post-close-btn" data-dismiss="modal"
+                    aria-label="Close">
                     <i class="fas fa-times"></i>
                 </button>
                 {{-- Channel selection row --}}
@@ -103,6 +103,11 @@
                             <input type="file" id="createPostFileInput"
                                 accept="image/jpeg,image/jpg,image/png,image/bmp,image/gif,image/tiff,image/webp,video/mp4,video/x-matroska,video/quicktime,video/mpeg,video/webm"
                                 multiple hidden>
+                            <div class="create-post-emoji-trigger-wrap">
+                                <button type="button" class="create-post-action-btn" id="createPostEmojiBtn"
+                                    title="Emoji" aria-label="Emoji"><i class="far fa-smile"></i></button>
+                                <div class="create-post-emoji-picker-wrap" id="createPostEmojiPickerWrap"></div>
+                            </div>
                             <div class="create-post-upload-zone" id="createPostUploadZone">
                                 <div class="create-post-upload-previews" id="createPostUploadPreviews"></div>
                                 <div class="create-post-upload-prompt" id="createPostUploadPrompt">
@@ -112,12 +117,23 @@
                                             file</span></p>
                                 </div>
                             </div>
-                            <div class="create-post-editor-actions">
-                                <div class="create-post-emoji-trigger-wrap">
-                                    <button type="button" class="create-post-action-btn" id="createPostEmojiBtn"
-                                        title="Emoji" aria-label="Emoji"><i class="far fa-smile"></i></button>
-                                    <div class="create-post-emoji-picker-wrap" id="createPostEmojiPickerWrap"></div>
+                            <div class="create-post-facebook-format-wrap" id="createPostFacebookFormatWrap"
+                                style="display: none;" role="group" aria-label="Facebook video format">
+                                <span class="create-post-facebook-format-label">Facebook (video)</span>
+                                <div class="create-post-facebook-format-radios">
+                                    <label class="create-post-format-option">
+                                        <input type="radio" name="create_post_facebook_format"
+                                            id="createPostFormatPost" value="post" checked>
+                                        <span>Post</span>
+                                    </label>
+                                    <label class="create-post-format-option">
+                                        <input type="radio" name="create_post_facebook_format"
+                                            id="createPostFormatReel" value="reel">
+                                        <span>Reel</span>
+                                    </label>
                                 </div>
+                            </div>
+                            <div class="create-post-editor-actions">
                                 <div id="createPostCommentWrap"
                                     class="create-post-comment-wrap create-post-comment-facebook"
                                     style="display: none;">

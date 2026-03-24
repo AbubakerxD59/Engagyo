@@ -464,6 +464,14 @@ class  ScheduleController extends Controller
     }
 
     /**
+     * Facebook video format from create-post modal: "post" (feed video) or "reel".
+     */
+    private function facebookVideoTypeFromRequest(Request $request): string
+    {
+        return $request->input('facebook_content_format') === 'reel' ? 'reel' : 'video';
+    }
+
+    /**
      * Publish Post
      * @param Request $request
      * @return array
@@ -506,7 +514,7 @@ class  ScheduleController extends Controller
                     Facebook::where("id", $account->fb_id)->firstOrFail();
                     // store in db
                     if ($file) {
-                        $type = !empty($image) ?  "photo" : "video";
+                        $type = !empty($image) ? "photo" : $this->facebookVideoTypeFromRequest($request);
                     } else {
                         $type = "content_only";
                     }
@@ -999,7 +1007,7 @@ class  ScheduleController extends Controller
                         $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots, $user);
                         // store in db
                         if ($file) {
-                            $type = !empty($image) ?  "photo" : "video";
+                            $type = !empty($image) ? "photo" : $this->facebookVideoTypeFromRequest($request);
                         } else {
                             $type = "content_only";
                         }
@@ -1151,7 +1159,7 @@ class  ScheduleController extends Controller
                     Facebook::where("id", $account->fb_id)->firstOrFail();
                     // store in db
                     if ($file) {
-                        $type = !empty($image) ?  "photo" : "video";
+                        $type = !empty($image) ? "photo" : $this->facebookVideoTypeFromRequest($request);
                     } else {
                         $type = "content_only";
                     }
