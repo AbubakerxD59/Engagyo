@@ -2127,6 +2127,19 @@ class  ScheduleController extends Controller
         }
     }
 
+    /**
+     * Listing filter is exactly one platform: Pinterest (used to allow full sent list without pagination).
+     */
+    private function requestIsPinterestOnlyListingTypes(Request $request): bool
+    {
+        $types = array_values(array_filter(
+            (array) $request->input('type', []),
+            fn ($t) => $t !== null && $t !== ''
+        ));
+
+        return count($types) === 1 && (string) $types[0] === 'pinterest';
+    }
+
     public function postsListing(Request $request)
     {
         $data = $request->all();
@@ -2154,11 +2167,23 @@ class  ScheduleController extends Controller
         }
 
         $totalRecordswithFilter = clone $posts;
-        $posts = $posts->offset(intval($data['start']))->limit(intval($data['length']));
 
         $sortDir = ($tab === 'sent' || $tab === 'failed') ? 'desc' : 'asc';
         $sortCol = ($tab === 'sent') ? 'published_at' : 'publish_date';
-        $posts = $posts->orderBy($sortCol, $sortDir)->get();
+
+        $loadAllPinterestSent = $request->boolean('sent_load_all')
+            && $tab === 'sent'
+            && $this->requestIsPinterestOnlyListingTypes($request);
+
+        if ($loadAllPinterestSent) {
+            $posts = (clone $totalRecordswithFilter)->orderBy($sortCol, $sortDir)->get();
+        } else {
+            $posts = (clone $totalRecordswithFilter)
+                ->offset(intval($data['start'] ?? 0))
+                ->limit(intval($data['length'] ?? 9))
+                ->orderBy($sortCol, $sortDir)
+                ->get();
+        }
 
         $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "account_name", "account_profile", "published_at_formatted", "facebook_post_url"]);
         $response = [

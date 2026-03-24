@@ -220,6 +220,16 @@
             return true;
         }
 
+        /** Selected accounts are all Pinterest boards (used for sent-tab full DB load). */
+        function isPinterestOnlySelection() {
+            var selected = getSelectedAccounts();
+            if (selected.accountIds.length === 0) return false;
+            for (var i = 0; i < selected.accountTypes.length; i++) {
+                if (selected.accountTypes[i] !== 'pinterest') return false;
+            }
+            return true;
+        }
+
         function refreshSentTabView() {
             if (shouldUseFacebookSentPageTimeline()) {
                 showSentPosts();
@@ -2616,6 +2626,8 @@
         var currentPage = 1;
         var perPage = 9;
         var totalPosts = 0;
+        /** True when last listing request asked server for all Pinterest sent rows (no pagination). */
+        var lastPostsListingWasPinterestSentAll = false;
 
         function loadPosts(page = 1) {
             currentPage = page;
@@ -2623,6 +2635,10 @@
                 sentPostsGroupedByDay = [];
                 sentDayOffset = 0;
             }
+
+            lastPostsListingWasPinterestSentAll = (currentPostStatusTab === 'sent' && isPinterestOnlySelection());
+            var requestStart = lastPostsListingWasPinterestSentAll ? 0 : (page - 1) * perPage;
+            var requestLength = lastPostsListingWasPinterestSentAll ? 1 : perPage;
 
             $('#postsGrid').html(`
                 <div class="loading-state text-center py-5" style="grid-column: 1/-1;">
@@ -2651,13 +2667,14 @@
                 type: "GET",
                 data: {
                     draw: 1,
-                    start: (page - 1) * perPage,
-                    length: perPage,
+                    start: requestStart,
+                    length: requestLength,
                     account_id: selectedAccounts.accountIds,
                     type: selectedAccounts.accountTypes,
                     post_type: $("#filter_post_type").val(),
                     status: getStatusFilterValue(),
                     post_status_tab: currentPostStatusTab,
+                    sent_load_all: lastPostsListingWasPinterestSentAll ? 1 : 0
                 },
                 success: function(response) {
                     totalPosts = response.iTotalDisplayRecords;
@@ -2915,6 +2932,17 @@
 
         // Render pagination
         function renderPagination() {
+            if (lastPostsListingWasPinterestSentAll && currentPostStatusTab === 'sent') {
+                if (totalPosts === 0) {
+                    $('.pagination-info').html('');
+                    $('.pagination').html('');
+                    return;
+                }
+                $('.pagination-info').html('Showing all ' + totalPosts + ' sent posts');
+                $('.pagination').html('');
+                return;
+            }
+
             var totalPages = Math.ceil(totalPosts / perPage);
             var start = (currentPage - 1) * perPage + 1;
             var end = Math.min(currentPage * perPage, totalPosts);
