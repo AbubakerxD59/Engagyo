@@ -3224,11 +3224,16 @@
                             lastNotificationCount = currentCount;
                             return;
                         }
-                        // If notification count increased, refresh queue tab and status counts
+                        // New notification: refresh queue timeline, tab badges, and sent data (FB/Pinterest caches via loadPostsStatusCounts; mixed sent listing when Sent tab is active).
                         if (currentCount > lastNotificationCount) {
-                            reloadPosts();
                             if (typeof loadPostsStatusCounts === 'function') {
                                 loadPostsStatusCounts();
+                            }
+                            if (typeof loadQueueTimeslotsSection === 'function') {
+                                loadQueueTimeslotsSection(true);
+                            }
+                            if (currentPostStatusTab === 'sent' && !shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection()) {
+                                loadPosts(1);
                             }
                         }
                         lastNotificationCount = currentCount;
