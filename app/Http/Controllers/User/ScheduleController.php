@@ -2401,6 +2401,8 @@ class  ScheduleController extends Controller
         $duration = 'full_year';
 
         $allPosts = [];
+        $graphPostIds = [];
+
         foreach ($pages as $page) {
             $cacheKey = $this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
             $posts = Cache::get($cacheKey);
@@ -2410,8 +2412,8 @@ class  ScheduleController extends Controller
                     Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
                 }
             }
-            if (!$posts) {
-                continue;
+            if (!is_array($posts)) {
+                $posts = [];
             }
 
             // Avoid N+1 queries: preload our matching posts for this page response.
@@ -2447,7 +2449,43 @@ class  ScheduleController extends Controller
             }
             unset($post);
 
+            foreach ($posts as $p) {
+                if (!empty($p['id'])) {
+                    $graphPostIds[(string) $p['id']] = true;
+                }
+            }
+
             $allPosts = array_merge($allPosts, $posts);
+        }
+
+        // Posts published via the app but not yet present in PagePost / Graph cache: show from DB with zeroed metrics.
+        $sinceStart = Carbon::parse($since)->startOfDay();
+        $untilEnd = Carbon::parse($until)->endOfDay();
+        $pageIds = $pages->pluck('id')->all();
+        $pagesById = $pages->keyBy('id');
+
+        $dbSentPosts = Post::query()
+            ->where('user_id', $userId)
+            ->where('social_type', 'facebook')
+            ->whereIn('account_id', $pageIds)
+            ->where('status', 1)
+            ->whereNotNull('post_id')
+            ->whereNotNull('published_at')
+            ->whereBetween('published_at', [$sinceStart, $untilEnd])
+            ->with('user', 'page')
+            ->get();
+
+        foreach ($dbSentPosts as $dbPost) {
+            $extId = (string) $dbPost->post_id;
+            if ($extId === '' || isset($graphPostIds[$extId])) {
+                continue;
+            }
+            $page = $pagesById->get($dbPost->account_id);
+            if (!$page) {
+                continue;
+            }
+            $graphPostIds[$extId] = true;
+            $allPosts[] = $this->sentFacebookPostFromLocalRecord($dbPost, $page);
         }
 
         usort($allPosts, function ($a, $b) {
@@ -2457,6 +2495,54 @@ class  ScheduleController extends Controller
         });
 
         return response()->json(['success' => true, 'posts' => $allPosts]);
+    }
+
+    /**
+     * Minimal Sent-tab payload from a published Post row (metrics zeroed until Graph sync / insights fetch).
+     */
+    private function sentFacebookPostFromLocalRecord(Post $dbPost, Page $page): array
+    {
+        $published = Carbon::parse($dbPost->published_at);
+        $createdTime = $published->toIso8601String();
+
+        $fullPicture = '';
+        if (!empty($dbPost->image)) {
+            $img = $dbPost->image;
+            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                $fullPicture = $img;
+            } else {
+                $fullPicture = fetchFromS3($img);
+            }
+        }
+
+        $payload = [
+            'id' => $dbPost->post_id,
+            'created_time' => $createdTime,
+            'message' => (string) ($dbPost->title ?? ''),
+            'story' => '',
+            'full_picture' => $fullPicture,
+            'permalink_url' => $dbPost->facebook_post_url,
+            'account_name' => $page->name,
+            'account_profile' => $page->profile_image,
+            'social_type' => 'facebook',
+            'page_db_id' => $page->id,
+            'db_post_id' => $dbPost->id,
+            'insights' => [
+                'post_reactions' => 0,
+                'post_impressions' => 0,
+                'post_clicks' => 0,
+            ],
+            'comments' => 0,
+            'shares' => 0,
+            'from_local_db' => true,
+        ];
+
+        if ($dbPost->user) {
+            $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
+            $payload['publisher_email'] = $dbPost->user->email ?? '';
+        }
+
+        return $payload;
     }
 
     private function sentPostsCacheKey(int $userId, int $pageId, string $duration, ?string $since, ?string $until): string

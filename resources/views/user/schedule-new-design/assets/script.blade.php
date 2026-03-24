@@ -212,6 +212,31 @@
         var postsStatusRequest = null;
         var sentPostsRequest = null;
         var queueSectionRequest = null;
+        var publishSentRefreshTimer = null;
+
+        /** After async Facebook publish job completes, Sent tab can show the post from DB; poll briefly so it appears without a manual refresh. */
+        function scheduleSentTabRefreshAfterPublish() {
+            if (publishSentRefreshTimer) {
+                clearInterval(publishSentRefreshTimer);
+                publishSentRefreshTimer = null;
+            }
+            var attempts = 0;
+            var maxAttempts = 20;
+            publishSentRefreshTimer = setInterval(function() {
+                attempts++;
+                var selected = getSelectedAccounts();
+                if (selected.accountIds.length) {
+                    loadPostsStatusCounts();
+                    if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
+                        loadQueueTimeslotsSection();
+                    }
+                }
+                if (attempts >= maxAttempts) {
+                    clearInterval(publishSentRefreshTimer);
+                    publishSentRefreshTimer = null;
+                }
+            }, 2000);
+        }
 
         function parseCreatedTime(ct) {
             if (!ct) return null;
@@ -722,6 +747,7 @@
                             loadQueueTimeslotsSection();
                         }
                         loadPostsStatusCounts();
+                        scheduleSentTabRefreshAfterPublish();
                     } else {
                         toastr.error(response.message || 'Failed to publish');
                     }
@@ -3159,6 +3185,8 @@
                         if (response.success) {
                             reloadPosts();
                             toastr.success(response.message);
+                            loadPostsStatusCounts();
+                            scheduleSentTabRefreshAfterPublish();
                         } else {
                             toastr.error(response.message);
                         }
