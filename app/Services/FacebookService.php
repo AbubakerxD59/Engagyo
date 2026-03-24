@@ -10,6 +10,7 @@ use Facebook\Exceptions\FacebookSDKException;
 use Facebook\Exceptions\FacebookResponseException;
 use App\Classes\FacebookSDK\LaravelSessionPersistentDataHandler;
 use App\Services\SocialMediaLogService;
+use Illuminate\Support\Facades\Http;
 
 class FacebookService
 {
@@ -480,6 +481,243 @@ class FacebookService
             removeFile($post_row->video);
         }
         return $response;
+    }
+
+    /**
+     * Publish a Facebook Page Reel via Video API: start session → rupload (file_url) → finish.
+     *
+     * @param  array  $postData  file_url (required public HTTPS URL), description?, title?
+     * @return array{success: bool, message?: string, data?: array}
+     */
+    public function reel(int $id, string $access_token, array $postData): array
+    {
+        $post_row = Post::with('page.facebook')->findOrFail($id);
+        $page_id = $post_row->page ? $post_row->page->page_id : null;
+
+        if (empty($page_id)) {
+            $this->handleReelPublishFailure($post_row, 'Facebook page not found for this post.');
+            return ['success' => false, 'message' => 'Facebook page not found for this post.'];
+        }
+
+        $fileUrl = $postData['file_url'] ?? null;
+        if (empty($fileUrl)) {
+            $this->handleReelPublishFailure($post_row, 'Missing file_url for reel (public video URL required).');
+            return ['success' => false, 'message' => 'Missing file_url for reel (public video URL required).'];
+        }
+
+        $graphBase = $this->graphBaseUrl();
+        $startUrl = "{$graphBase}/{$page_id}/video_reels?access_token=" . urlencode($access_token);
+
+        $startResp = Http::asJson()
+            ->acceptJson()
+            ->timeout(120)
+            ->post($startUrl, [
+                'upload_phase' => 'start',
+            ]);
+
+        if (! $startResp->successful()) {
+            $msg = $this->formatHttpGraphError($startResp);
+            $this->logService->logApiError('facebook', '/video_reels', $msg, ['post_id' => $id, 'phase' => 'start', 'page_id' => $page_id]);
+            $this->handleReelPublishFailure($post_row, $msg);
+
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $start = $startResp->json();
+        if (! empty($start['error'])) {
+            $msg = $start['error']['message'] ?? json_encode($start['error']);
+            $this->logService->logApiError('facebook', '/video_reels', $msg, ['post_id' => $id, 'phase' => 'start']);
+            $this->handleReelPublishFailure($post_row, $msg);
+
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $video_id = $start['video_id'] ?? null;
+        $upload_url = $start['upload_url'] ?? null;
+        if (! $video_id || ! $upload_url) {
+            $msg = 'Invalid Facebook video_reels start response (missing video_id or upload_url).';
+            $this->logService->logApiError('facebook', '/video_reels', $msg, ['post_id' => $id, 'body' => $startResp->body()]);
+            $this->handleReelPublishFailure($post_row, $msg);
+
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $rupload = Http::withHeaders([
+            'Authorization' => 'OAuth ' . $access_token,
+            'file_url' => $fileUrl,
+        ])
+            ->timeout(600)
+            ->post($upload_url);
+
+        if (! $rupload->successful()) {
+            $msg = 'Reel rupload failed: ' . ($rupload->body() ?: $rupload->reason());
+            $this->logService->logApiError('facebook', 'rupload.facebook.com', $msg, ['post_id' => $id, 'video_id' => $video_id]);
+            $this->handleReelPublishFailure($post_row, $msg);
+
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $ruploadJson = $rupload->json();
+        if (! ($ruploadJson['success'] ?? false)) {
+            $msg = 'Reel upload did not complete: ' . $rupload->body();
+            $this->logService->logApiError('facebook', 'rupload.facebook.com', $msg, ['post_id' => $id, 'video_id' => $video_id]);
+            $this->handleReelPublishFailure($post_row, $msg);
+
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $this->waitForVideoUploadPhaseComplete($graphBase, $video_id, $access_token);
+
+        $finishPayload = [
+            'access_token' => $access_token,
+            'upload_phase' => 'finish',
+            'video_id' => $video_id,
+            'video_state' => 'PUBLISHED',
+        ];
+        if (! empty($postData['description'])) {
+            $finishPayload['description'] = $postData['description'];
+        }
+        if (! empty($postData['title'])) {
+            $finishPayload['title'] = $postData['title'];
+        }
+
+        $finishResp = Http::asForm()
+            ->acceptJson()
+            ->timeout(120)
+            ->post("{$graphBase}/{$page_id}/video_reels", $finishPayload);
+
+        if (! $finishResp->successful()) {
+            $msg = $this->formatHttpGraphError($finishResp);
+            $this->logService->logApiError('facebook', '/video_reels', $msg, ['post_id' => $id, 'phase' => 'finish', 'video_id' => $video_id]);
+            $this->handleReelPublishFailure($post_row, $msg);
+
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $finish = $finishResp->json();
+        if (! empty($finish['error'])) {
+            $msg = $finish['error']['message'] ?? json_encode($finish['error']);
+            $this->handleReelPublishFailure($post_row, $msg);
+            $this->logService->logApiError('facebook', '/video_reels', $msg, ['post_id' => $id, 'phase' => 'finish']);
+
+            return ['success' => false, 'message' => $msg];
+        }
+
+        if (! ($finish['success'] ?? false)) {
+            $msg = 'Facebook reel publish finish was not successful: ' . $finishResp->body();
+            $this->handleReelPublishFailure($post_row, $msg);
+
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $fbPostId = isset($finish['post_id']) ? (string) $finish['post_id'] : (string) $video_id;
+
+        $this->logService->logPost('facebook', 'reel', $id, ['account_id' => $post_row->account_id, 'page_id' => $page_id], 'success');
+        $this->handleReelPublishSuccess($post_row, $fbPostId, (string) $video_id, $finish);
+
+        if ($post_row->source !== 'test' && ! empty($post_row->video)) {
+            removeFile($post_row->video);
+        }
+
+        return [
+            'success' => true,
+            'data' => [
+                'post_id' => $fbPostId,
+                'video_id' => (string) $video_id,
+                'raw' => $finish,
+            ],
+        ];
+    }
+
+    private function graphBaseUrl(): string
+    {
+        $v = (string) env('FACEBOOK_GRAPH_VERSION', 'v21.0');
+        $v = ltrim($v, '/');
+
+        return 'https://graph.facebook.com/' . $v;
+    }
+
+    /**
+     * @param  \Illuminate\Http\Client\Response  $response
+     */
+    private function formatHttpGraphError($response): string
+    {
+        $json = $response->json();
+        if (is_array($json) && ! empty($json['error']['message'])) {
+            return (string) $json['error']['message'];
+        }
+
+        $body = $response->body();
+
+        return $body !== '' ? $body : ('HTTP ' . $response->status());
+    }
+
+    private function waitForVideoUploadPhaseComplete(string $graphBase, string $video_id, string $access_token): void
+    {
+        for ($i = 0; $i < 60; $i++) {
+            $r = Http::acceptJson()
+                ->timeout(30)
+                ->get("{$graphBase}/{$video_id}", [
+                    'fields' => 'status',
+                    'access_token' => $access_token,
+                ]);
+
+            if (! $r->successful()) {
+                return;
+            }
+
+            $uploadStatus = $r->json('status.uploading_phase.status');
+            if ($uploadStatus === 'complete') {
+                return;
+            }
+            if ($uploadStatus === 'error') {
+                return;
+            }
+
+            usleep(500000);
+        }
+    }
+
+    private function handleReelPublishSuccess(Post $post, string $postId, string $videoId, array $finish): void
+    {
+        $post->update([
+            'post_id' => $postId,
+            'status' => 1,
+            'published_at' => date('Y-m-d H:i:s'),
+            'response' => json_encode([
+                'success' => true,
+                'post_id' => $postId,
+                'video_id' => $videoId,
+                'message' => 'Reel published successfully to Facebook',
+                'raw' => $finish,
+            ]),
+        ]);
+
+        $this->successNotification(
+            $post->user_id,
+            'Post Published',
+            'Your Facebook reel has been published successfully.',
+            $post
+        );
+    }
+
+    private function handleReelPublishFailure(Post $post, string $message): void
+    {
+        $post->update([
+            'status' => -1,
+            'published_at' => date('Y-m-d H:i:s'),
+            'response' => json_encode([
+                'success' => false,
+                'error' => $message,
+            ]),
+        ]);
+
+        $this->errorNotification(
+            $post->user_id,
+            'Post Publishing Failed',
+            'Failed to publish Facebook reel. ' . $message,
+            $post
+        );
     }
 
     public function postComment($post_id, $access_token, $comment)

@@ -203,6 +203,17 @@ class PostService
                 $postData["description"] = $post->title;
             }
         }
+        if ($post->type == "reel") {
+            $postData = [
+                'file_url' => $post->video_key ?: $post->video,
+            ];
+            if (! empty($post->title)) {
+                $postData['description'] = $post->title;
+            }
+            if (! empty($post->description)) {
+                $postData['title'] = $post->description;
+            }
+        }
         if ($post->type == "link") {
             $postData = array(
                 'link' => $post->url

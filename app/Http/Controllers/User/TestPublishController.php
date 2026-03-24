@@ -138,6 +138,9 @@ class TestPublishController extends Controller
             case 'video':
                 $publishResponse = $facebookService->video($post->id, $accessToken, $payload);
                 break;
+            case 'reel':
+                $publishResponse = $facebookService->reel($post->id, $accessToken, $payload);
+                break;
             default:
                 return view('user.test-publish-facebook', [
                     'steps' => array_merge($steps, [[
@@ -158,15 +161,21 @@ class TestPublishController extends Controller
         ];
 
         if ($publishResponse['success'] && isset($publishResponse['data'])) {
-            try {
-                $graphNode = $publishResponse['data']->getGraphNode();
-                $responseData['graph_node'] = is_array($graphNode) ? $graphNode : (array) $graphNode;
-                $responseData['post_id'] = $responseData['graph_node']['id'] ?? null;
-            } catch (\Exception $e) {
-                $responseData['raw'] = method_exists($publishResponse['data'], 'getDecodedBody')
-                    ? ($publishResponse['data']->getDecodedBody() ?? [])
-                    : [];
-                $responseData['error'] = $e->getMessage();
+            if (is_array($publishResponse['data'])) {
+                $responseData['post_id'] = $publishResponse['data']['post_id'] ?? null;
+                $responseData['video_id'] = $publishResponse['data']['video_id'] ?? null;
+                $responseData['raw'] = $publishResponse['data']['raw'] ?? $publishResponse['data'];
+            } else {
+                try {
+                    $graphNode = $publishResponse['data']->getGraphNode();
+                    $responseData['graph_node'] = is_array($graphNode) ? $graphNode : (array) $graphNode;
+                    $responseData['post_id'] = $responseData['graph_node']['id'] ?? null;
+                } catch (\Exception $e) {
+                    $responseData['raw'] = method_exists($publishResponse['data'], 'getDecodedBody')
+                        ? ($publishResponse['data']->getDecodedBody() ?? [])
+                        : [];
+                    $responseData['error'] = $e->getMessage();
+                }
             }
         }
 
@@ -178,7 +187,7 @@ class TestPublishController extends Controller
         ];
 
         // Step 6: Comment (if post has comment and publish succeeded)
-        if ($publishResponse['success'] && !empty($post->comment) && $post->type !== 'video') {
+        if ($publishResponse['success'] && !empty($post->comment) && !in_array($post->type, ['video', 'reel'], true)) {
             $postId = $responseData['post_id'] ?? null;
             if ($postId) {
                 $commentResponse = $facebookService->postComment($postId, $accessToken, $post->comment);
@@ -214,6 +223,7 @@ class TestPublishController extends Controller
             'link', 'content_only' => $post->type === 'link' ? "/{$pageId}/feed" : '/me/feed',
             'photo' => "/{$pageId}/photos",
             'video' => "/{$pageId}/videos",
+            'reel' => "/{$pageId}/video_reels (+ rupload.facebook.com)",
             default => 'unknown',
         };
     }
@@ -225,6 +235,7 @@ class TestPublishController extends Controller
             'content_only' => 'contentOnly',
             'photo' => 'photo',
             'video' => 'video',
+            'reel' => 'reel',
             default => 'unknown',
         };
     }

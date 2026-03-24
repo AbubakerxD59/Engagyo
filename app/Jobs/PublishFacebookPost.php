@@ -40,6 +40,7 @@ class PublishFacebookPost implements ShouldQueue
     public function handle(): void
     {
         $facebookService = new facebookService();
+        $publish_response = ['success' => false, 'message' => 'Unknown or unsupported Facebook post type.'];
         if ($this->type == "link") {
             $publish_response = $facebookService->createLink($this->id, $this->access_token, $this->data);
         } elseif ($this->type == "content_only") {
@@ -48,8 +49,10 @@ class PublishFacebookPost implements ShouldQueue
             $publish_response = $facebookService->photo($this->id, $this->access_token, $this->data);
         } elseif ($this->type == "video") {
             $publish_response = $facebookService->video($this->id, $this->access_token, $this->data);
+        } elseif ($this->type == "reel") {
+            $publish_response = $facebookService->reel($this->id, $this->access_token, $this->data);
         }
-        if ($publish_response["success"] && $this->type != "video") {
+        if ($publish_response["success"] && ! in_array($this->type, ["video", "reel"], true)) {
             $post_id = $publish_response["data"]->getGraphNode() ? $publish_response["data"]->getGraphNode()["id"] : null;
             if ($post_id && !empty($this->comment)) {
                 $commentResponse = $facebookService->postComment($post_id, $this->access_token, $this->comment);
