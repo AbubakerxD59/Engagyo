@@ -26,7 +26,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
     // Schedule Routes
     Route::controller(ScheduleController::class)->middleware(['feature:' . Feature::$features_list[1]])->group(function () {
         Route::get("schedule", "index")->name("schedule");
-        Route::get("schedule/new-design", "newDesign")->name("schedule.new-design");
+        // Route::get("schedule/new-design", "newDesign")->name("schedule.new-design");
         Route::controller(ScheduleController::class)->prefix("schedule/")->name("schedule.")->group(function () {
             Route::get("account/status", "accountStatus")->name("account.status");
             Route::post("process/post", "processPost")->name("process.post");

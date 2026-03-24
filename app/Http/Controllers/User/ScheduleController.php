@@ -163,15 +163,17 @@ class  ScheduleController extends Controller
             'remaining' => $limit - $totalAfterAdding,
         ];
     }
-    public function index()
-    {
-        $user = User::with("boards.pinterest", "pages.facebook", "tiktok", "timezone")->find(Auth::guard('user')->id());
-        $accounts = $user->getAccounts();
-        $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
-        return view("user.schedule.index", compact("accounts", "userTimezoneName"));
-    }
+    // old design code
+    // public function index()
+    // {
+    //     $user = User::with("boards.pinterest", "pages.facebook", "tiktok", "timezone")->find(Auth::guard('user')->id());
+    //     $accounts = $user->getAccounts();
+    //     $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
+    //     return view("user.schedule.index", compact("accounts", "userTimezoneName"));
+    // }
 
-    public function newDesign()
+    // new design code
+    public function index()
     {
         $user = User::with("boards.pinterest", "pages.facebook", "tiktok", "timezone")->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
