@@ -100,7 +100,8 @@
                 }
                 var accountId = data.id;
                 if (!accountId) return false;
-                var $card = $('.account-card:not(.all-channels-card)[data-id="' + accountId + '"]');
+                var accType = data.type || 'facebook';
+                var $card = $('.account-card:not(.all-channels-card)[data-id="' + accountId + '"][data-type="' + accType + '"]');
                 if ($card.length === 0) return false;
                 $('.account-card').removeClass('active');
                 $card.addClass('active');
@@ -170,7 +171,10 @@
                 $('#selected-account-header-img').attr('src', src).attr('alt', name);
                 $('#selected-account-header-name').text(name);
                 var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok').addClass(type);
-                $badge.find('i').attr('class', 'fab fa-facebook-f');
+                var headerIconClass = 'fab fa-facebook-f';
+                if (type === 'pinterest') headerIconClass = 'fab fa-pinterest-p';
+                else if (type === 'tiktok') headerIconClass = 'fab fa-tiktok';
+                $badge.find('i').attr('class', headerIconClass);
                 $headerBtns.show();
             } else if ($realActive.length > 1) {
                 var $first = $realActive.first();
@@ -202,7 +206,25 @@
             } else if (currentPostStatusTab === 'sent') {
                 $('#queue-timeslots-section').hide();
                 $('#postsGrid').show();
+                refreshSentTabView();
+            }
+        }
+
+        /** Facebook-only: Sent tab uses Page/Graph timeline + insights. Pinterest (or mixed) uses posts listing. */
+        function shouldUseFacebookSentPageTimeline() {
+            var selected = getSelectedAccounts();
+            if (selected.accountIds.length === 0) return false;
+            for (var i = 0; i < selected.accountTypes.length; i++) {
+                if (selected.accountTypes[i] !== 'facebook') return false;
+            }
+            return true;
+        }
+
+        function refreshSentTabView() {
+            if (shouldUseFacebookSentPageTimeline()) {
                 showSentPosts();
+            } else {
+                loadPosts(1);
             }
         }
 
@@ -260,15 +282,27 @@
                 },
                 success: function(data) {
                     $('#posts-status-tabs [data-count="queue"]').text(data.queue);
+                    $('#posts-status-tabs [data-count="sent"]').text(data.sent);
                 },
                 complete: function() {
                     postsStatusRequest = null;
                 }
             });
-            loadSentPagePostsCached(selectedAccounts);
+            if (shouldUseFacebookSentPageTimeline()) {
+                loadSentPagePostsCached(selectedAccounts);
+            } else {
+                cachedSentPagePosts = null;
+                if (currentPostStatusTab === 'sent') {
+                    loadPosts(1);
+                }
+            }
         }
 
         function loadSentPagePostsCached(selectedAccounts) {
+            if (!shouldUseFacebookSentPageTimeline()) {
+                cachedSentPagePosts = null;
+                return;
+            }
             cachedSentPagePosts = null;
             if (sentPostsRequest && sentPostsRequest.readyState !== 4) {
                 sentPostsRequest.abort();
@@ -280,10 +314,8 @@
                 success: function(response) {
                     if (response.success && response.posts) {
                         cachedSentPagePosts = response.posts;
-                        $('#posts-status-tabs [data-count="sent"]').text(response.posts.length);
                     } else {
                         cachedSentPagePosts = [];
-                        $('#posts-status-tabs [data-count="sent"]').text(0);
                     }
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
@@ -292,7 +324,6 @@
                 error: function(xhr, textStatus) {
                     if (textStatus === 'abort') return;
                     cachedSentPagePosts = [];
-                    $('#posts-status-tabs [data-count="sent"]').text(0);
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
                     }
@@ -439,7 +470,7 @@
             cardHtml += '<div class="queue-post-card-inner">';
             cardHtml += '<div class="queue-post-card-header">';
             cardHtml += '<div class="queue-post-account">';
-            cardHtml += '<div class="queue-post-avatar-wrap"><img src="' + profileSrc + '" class="queue-post-avatar" loading="lazy" onerror="this.onerror=null;this.src=\'' + socialLogos.facebook + '\';">';
+            cardHtml += '<div class="queue-post-avatar-wrap"><img src="' + profileSrc + '" class="queue-post-avatar" loading="lazy" onerror="this.onerror=null;this.src=\'' + socialLogos[post.social_type] + '\';">';
             cardHtml += '<span class="queue-post-platform-badge ' + (post.social_type || 'facebook').toLowerCase().replace(/ /g, '-') + '"><i class="' + iconClass + '"></i></span></div>';
             cardHtml += '<span class="queue-post-account-name">' + escapeHtml(accountName) + '</span>';
             cardHtml += '</div>';
@@ -910,7 +941,7 @@
                     bindQueuePostActions();
                 }
             } else if (currentPostStatusTab === 'sent') {
-                showSentPosts();
+                refreshSentTabView();
             }
         }
 
@@ -952,7 +983,7 @@
             } else if (tab === 'sent') {
                 $('#queue-timeslots-section').hide();
                 $('#postsGrid').show();
-                showSentPosts();
+                refreshSentTabView();
             }
         });
 
@@ -1186,9 +1217,10 @@
             if (checkedCount > 0) return;
             var acc = lastUsedAccountData;
             if (!acc || !acc.id) return;
-            var $item = $('.channels-dropdown-checkbox[data-id="' + acc.id + '"]').closest('.channels-dropdown-item');
+            var accType = acc.type || 'facebook';
+            var $item = $('.channels-dropdown-checkbox[data-id="' + acc.id + '"][data-type="' + accType + '"]').closest('.channels-dropdown-item');
             if (!$item.length) return;
-            var type = $item.data('type') || acc.type || 'facebook';
+            var type = $item.data('type') || accType;
             var src = acc.profile_image || $item.find('.channels-dropdown-item-avatar img').attr('src') || '';
             var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}" };
             var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok' };
@@ -1199,17 +1231,26 @@
                 '<img src="' + src + '" alt="" onerror="this.onerror=null; this.src=\'' + logo + '\';">' +
                 '<span class="create-post-last-used-badge ' + type + '"><i class="' + icon + '"></i></span>' +
                 '</span>';
-            $container.html(html).attr('data-id', acc.id).show();
+            $container.html(html).attr('data-id', acc.id).attr('data-type', accType).show();
         }
 
         function fetchLastUsedAccount() {
             $.get("{{ route('panel.schedule.last-used-account') }}", function(response) {
                 if (response.success) {
                     lastUsedAccountData = response.account || null;
-                    var accountsStatus = response.accounts_status || {};
+                    var accountsStatusList = response.accounts_status || [];
+                    var statusMap = {};
+                    if (Array.isArray(accountsStatusList)) {
+                        accountsStatusList.forEach(function(item) {
+                            var key = item.type + '_' + item.id;
+                            statusMap[key] = item.schedule_status;
+                        });
+                    }
                     $('.channels-dropdown-checkbox').each(function() {
                         var id = $(this).data('id');
-                        var status = accountsStatus[id];
+                        var type = $(this).data('type') || 'facebook';
+                        var key = type + '_' + id;
+                        var status = statusMap[key];
                         if (status !== undefined) {
                             $(this).attr('data-schedule-status', status).prop('checked', status === 'active');
                         }
@@ -1267,8 +1308,8 @@
         $(document).on('click', '.create-post-selected-channel-chip-remove', function(e) {
             e.stopPropagation();
             var id = $(this).data('id');
-            var type = $(this).closest('.create-post-selected-channel-chip').data('type');
-            var $cb = $('.channels-dropdown-checkbox[data-id="' + id + '"]');
+            var type = $(this).closest('.create-post-selected-channel-chip').data('type') || 'facebook';
+            var $cb = $('.channels-dropdown-checkbox[data-id="' + id + '"][data-type="' + type + '"]');
             if ($cb.length) {
                 $cb.prop('checked', false);
                 updateAccountScheduleStatus(id, false, true, type);
@@ -1279,13 +1320,13 @@
         $(document).on('click', '#createPostLastUsed', function(e) {
             e.stopPropagation();
             var id = $(this).attr('data-id');
+            var accType = $(this).attr('data-type') || 'facebook';
             if (!id) return;
-            var $cb = $('.channels-dropdown-checkbox[data-id="' + id + '"]');
+            var $cb = $('.channels-dropdown-checkbox[data-id="' + id + '"][data-type="' + accType + '"]');
             if ($cb.length) {
-                var type = $cb.data('type') || 'facebook';
                 $cb.prop('checked', true);
                 lastUsedAccountId = id;
-                updateAccountScheduleStatus(id, true, false, type);
+                updateAccountScheduleStatus(id, true, false, accType);
                 updateCreatePostModalSelection();
             }
         });
@@ -1316,7 +1357,13 @@
 
         function updateAccountScheduleStatus(accountId, isChecked, showToast, accountType) {
             showToast = showToast !== false;
-            var type = accountType || $('.channels-dropdown-checkbox[data-id="' + accountId + '"]').data('type') || 'facebook';
+            var type = accountType || 'facebook';
+            var $cbForType = accountType
+                ? $('.channels-dropdown-checkbox[data-id="' + accountId + '"][data-type="' + accountType + '"]')
+                : $('.channels-dropdown-checkbox[data-id="' + accountId + '"]').first();
+            if (!accountType && $cbForType.length) {
+                type = $cbForType.data('type') || 'facebook';
+            }
             $.ajax({
                 url: "{{ route('panel.schedule.account.status') }}",
                 type: "GET",
@@ -1328,7 +1375,10 @@
                 success: function(response) {
                     if (response.success) {
                         var status = isChecked ? 'active' : 'inactive';
-                        $('.channels-dropdown-checkbox[data-id="' + accountId + '"]').attr('data-schedule-status', status);
+                        var $targets = accountType
+                            ? $('.channels-dropdown-checkbox[data-id="' + accountId + '"][data-type="' + accountType + '"]')
+                            : $('.channels-dropdown-checkbox[data-id="' + accountId + '"]');
+                        $targets.attr('data-schedule-status', status);
                     }
                     if (showToast) {
                         if (response.success) {
@@ -1346,8 +1396,9 @@
 
         $(document).on('change', '.channels-dropdown-checkbox', function() {
             var id = $(this).data('id');
+            var chType = $(this).data('type') || 'facebook';
             var isChecked = $(this).is(':checked');
-            if (id) updateAccountScheduleStatus(id, isChecked);
+            if (id) updateAccountScheduleStatus(id, isChecked, true, chType);
             if (isChecked) lastUsedAccountId = id;
             updateCreatePostModalSelection();
         });
@@ -2566,6 +2617,10 @@
 
         function loadPosts(page = 1) {
             currentPage = page;
+            if (currentPostStatusTab === 'sent' && !shouldUseFacebookSentPageTimeline()) {
+                sentPostsGroupedByDay = [];
+                sentDayOffset = 0;
+            }
 
             $('#postsGrid').html(`
                 <div class="loading-state text-center py-5" style="grid-column: 1/-1;">
@@ -3036,8 +3091,12 @@
             if (currentPostStatusTab === 'queue') {
                 if (typeof loadQueueTimeslotsSection === 'function') loadQueueTimeslotsSection();
             } else if (currentPostStatusTab === 'sent') {
-                cachedSentPagePosts = null;
-                loadSentPagePostsCached(getSelectedAccounts());
+                if (shouldUseFacebookSentPageTimeline()) {
+                    cachedSentPagePosts = null;
+                    loadSentPagePostsCached(getSelectedAccounts());
+                } else {
+                    loadPosts(1);
+                }
             }
         }
 

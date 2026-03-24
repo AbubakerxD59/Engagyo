@@ -60,7 +60,7 @@
                                 </div>
                                 @foreach ($accounts as $account)
                                     @if ($account->type == 'facebook')
-                                        <div class="account-card {{ ($hasSelectedAccount && $selectedAccountId == (string) $account->id) ? 'active' : (!$hasSelectedAccount ? 'active' : '') }}" data-type="{{ $account->type }}"
+                                        <div class="account-card {{ ($hasSelectedAccount && $selectedAccountId == (string) $account->id && ($saved['type'] ?? '') === 'facebook') ? 'active' : (!$hasSelectedAccount ? 'active' : '') }}" data-type="{{ $account->type }}"
                                             data-id="{{ $account->id }}">
                                             <div class="account-card-inner">
                                                 <div class="account-avatar">
@@ -75,6 +75,28 @@
                                                     <span class="account-name">{{ Str::limit($account->name, 18) }}</span>
                                                     <span
                                                         class="account-username">{{ Str::limit($account->facebook?->username, 15) }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @elseif ($account->type == 'pinterest')
+                                        @php
+                                            $pinProfile = $account->pinterest?->profile_image ?? '';
+                                            $pinUsername = $account->pinterest?->username ?? '';
+                                        @endphp
+                                        <div class="account-card {{ ($hasSelectedAccount && $selectedAccountId == (string) $account->id && ($saved['type'] ?? '') === 'pinterest') ? 'active' : (!$hasSelectedAccount ? 'active' : '') }}" data-type="pinterest"
+                                            data-id="{{ $account->id }}">
+                                            <div class="account-card-inner">
+                                                <div class="account-avatar">
+                                                    <img src="{{ $pinProfile }}"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';"
+                                                        loading="lazy" alt="">
+                                                    <span class="platform-badge pinterest">
+                                                        <i class="fab fa-pinterest-p"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-details">
+                                                    <span class="account-name">{{ Str::limit($account->name, 18) }}</span>
+                                                    <span class="account-username">{{ Str::limit($pinUsername, 15) }}</span>
                                                 </div>
                                             </div>
                                         </div>

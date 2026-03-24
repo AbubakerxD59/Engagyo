@@ -51,11 +51,8 @@
                                     @if ($type === 'facebook')
                                         @php
                                             $name = $account->name ?? '';
-                                            $username =
-                                                $account->facebook?->username ??
-                                                ($account->pinterest?->username ?? ($account->username ?? ''));
-                                            $profileImg =
-                                                $account->profile_image ?? ($account->pinterest?->profile_image ?? '');
+                                            $username = $account->facebook?->username ?? '';
+                                            $profileImg = $account->profile_image ?? '';
                                             $tooltip = $name . ($username ? ' - ' . $username : '');
                                         @endphp
                                         <div class="channels-dropdown-item" data-id="{{ $account->id }}"
@@ -67,7 +64,34 @@
                                                     onerror="this.onerror=null; this.src='{{ social_logo($type) }}';"
                                                     loading="lazy" alt="">
                                                 <span class="channels-dropdown-item-badge {{ $type }}"><i
-                                                        class="{{ $type === 'facebook' ? 'fab fa-facebook-f' : ($type === 'pinterest' ? 'fab fa-pinterest-p' : 'fab fa-tiktok') }}"></i></span>
+                                                        class="fab fa-facebook-f"></i></span>
+                                            </div>
+                                            <span class="channels-dropdown-item-name">{{ $name }}</span>
+                                            <label class="channels-dropdown-item-checkbox">
+                                                <input type="checkbox" class="channels-dropdown-checkbox"
+                                                    data-id="{{ $account->id }}" data-type="{{ $type }}"
+                                                    data-schedule-status="{{ $account->schedule_status ?? 'inactive' }}">
+                                                <span class="channels-dropdown-checkbox-icon"><i
+                                                        class="fas fa-check"></i></span>
+                                            </label>
+                                        </div>
+                                    @elseif ($type === 'pinterest')
+                                        @php
+                                            $name = $account->name ?? '';
+                                            $username = $account->pinterest?->username ?? '';
+                                            $profileImg = $account->pinterest?->profile_image ?? '';
+                                            $tooltip = $name . ($username ? ' - ' . $username : '');
+                                        @endphp
+                                        <div class="channels-dropdown-item" data-id="{{ $account->id }}"
+                                            data-type="{{ $type }}"
+                                            data-name="{{ Str::lower($name . ' ' . $username) }}"
+                                            data-tooltip="{{ $tooltip }}">
+                                            <div class="channels-dropdown-item-avatar">
+                                                <img src="{{ $profileImg }}"
+                                                    onerror="this.onerror=null; this.src='{{ social_logo('pinterest') }}';"
+                                                    loading="lazy" alt="">
+                                                <span class="channels-dropdown-item-badge pinterest"><i
+                                                        class="fab fa-pinterest-p"></i></span>
                                             </div>
                                             <span class="channels-dropdown-item-name">{{ $name }}</span>
                                             <label class="channels-dropdown-item-checkbox">

@@ -189,30 +189,45 @@ class  ScheduleController extends Controller
      */
     protected function sortAccountsByRecentUsage($accounts, $userId, $recentDays = 7)
     {
-        $postCounts = Post::where('user_id', $userId)
-            ->where('social_type', 'facebook')
+        $countRows = Post::where('user_id', $userId)
             ->where('created_at', '>=', Carbon::now()->subDays($recentDays))
-            ->selectRaw('account_id, count(*) as post_count')
-            ->groupBy('account_id')
-            ->pluck('post_count', 'account_id')
-            ->toArray();
+            ->selectRaw('account_id, social_type, count(*) as post_count')
+            ->groupBy('account_id', 'social_type')
+            ->get();
 
-        $facebook = $accounts->filter(fn ($a) => ($a->type ?? '') === 'facebook')->values();
-        $others = $accounts->filter(fn ($a) => ($a->type ?? '') !== 'facebook')->values();
+        $postCounts = [];
+        foreach ($countRows as $row) {
+            $key = (string) $row->social_type . '_' . (int) $row->account_id;
+            $postCounts[$key] = (int) $row->post_count;
+        }
 
-        $sortedFacebook = $facebook->sortByDesc(function ($account) use ($postCounts) {
-            $count = $postCounts[$account->id] ?? 0;
-            return $count;
-        })->values();
+        $sortSegment = function ($segment) use ($postCounts) {
+            $segment = $segment->values();
+            $sorted = $segment->sortByDesc(function ($account) use ($postCounts) {
+                $key = ($account->type ?? '') . '_' . (int) $account->id;
 
-        $withPosts = $sortedFacebook->filter(fn ($a) => ($postCounts[$a->id] ?? 0) > 0);
-        $withoutPosts = $sortedFacebook->filter(fn ($a) => ($postCounts[$a->id] ?? 0) === 0)
-            ->sortBy('name')
-            ->values();
+                return $postCounts[$key] ?? 0;
+            })->values();
 
-        $sortedFacebook = $withPosts->concat($withoutPosts);
+            $withPosts = $sorted->filter(function ($a) use ($postCounts) {
+                $key = ($a->type ?? '') . '_' . (int) $a->id;
 
-        return $sortedFacebook->concat($others);
+                return ($postCounts[$key] ?? 0) > 0;
+            });
+            $withoutPosts = $sorted->filter(function ($a) use ($postCounts) {
+                $key = ($a->type ?? '') . '_' . (int) $a->id;
+
+                return ($postCounts[$key] ?? 0) === 0;
+            })->sortBy('name')->values();
+
+            return $withPosts->concat($withoutPosts);
+        };
+
+        $facebook = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'facebook'));
+        $pinterest = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'pinterest'));
+        $tiktok = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'tiktok'));
+
+        return $facebook->concat($pinterest)->concat($tiktok);
     }
 
     /**
@@ -222,35 +237,76 @@ class  ScheduleController extends Controller
     public function getLastUsedAccount()
     {
         $userId = Auth::guard('user')->id();
+        $user = User::find($userId);
         $post = Post::where('user_id', $userId)
-            ->where('social_type', 'facebook')
             ->orderBy('created_at', 'desc')
             ->first();
 
         $account = null;
         if ($post) {
-            $page = Page::with('facebook')->find($post->account_id);
-            if ($page) {
-                $account = [
-                    'id' => $page->id,
-                    'type' => 'facebook',
-                    'name' => $page->name,
-                    'profile_image' => $page->profile_image,
-                ];
+            $st = $post->social_type ?? '';
+            if (str_contains($st, 'facebook')) {
+                $page = Page::with('facebook')->find($post->account_id);
+                if ($page) {
+                    $account = [
+                        'id' => $page->id,
+                        'type' => 'facebook',
+                        'name' => $page->name,
+                        'profile_image' => $page->profile_image,
+                    ];
+                }
+            } elseif (str_contains($st, 'pinterest')) {
+                $board = Board::with('pinterest')->find($post->account_id);
+                if ($board) {
+                    $account = [
+                        'id' => $board->id,
+                        'type' => 'pinterest',
+                        'name' => $board->name,
+                        'profile_image' => $board->pinterest?->profile_image ?? '',
+                    ];
+                }
+            } elseif (str_contains($st, 'tiktok')) {
+                $tiktok = Tiktok::find($post->account_id);
+                if ($tiktok) {
+                    $account = [
+                        'id' => $tiktok->id,
+                        'type' => 'tiktok',
+                        'name' => $tiktok->display_name ?? $tiktok->username,
+                        'profile_image' => $tiktok->profile_image ?? '',
+                    ];
+                }
             }
         }
 
-        $accountsStatus = Page::where('user_id', $userId)
-            ->get(['id', 'schedule_status'])
-            ->mapWithKeys(function ($page) {
-                return [$page->id => $page->schedule_status ?? 'inactive'];
-            })
-            ->toArray();
+        $accountsStatus = collect();
+        if ($user) {
+            $user->pages()->get(['id', 'schedule_status'])->each(function ($page) use ($accountsStatus) {
+                $accountsStatus->push([
+                    'id' => $page->id,
+                    'type' => 'facebook',
+                    'schedule_status' => $page->schedule_status ?? 'inactive',
+                ]);
+            });
+            $user->boards()->get(['id', 'schedule_status'])->each(function ($board) use ($accountsStatus) {
+                $accountsStatus->push([
+                    'id' => $board->id,
+                    'type' => 'pinterest',
+                    'schedule_status' => $board->schedule_status ?? 'inactive',
+                ]);
+            });
+            $user->tiktok()->get(['id', 'schedule_status'])->each(function ($tiktokRow) use ($accountsStatus) {
+                $accountsStatus->push([
+                    'id' => $tiktokRow->id,
+                    'type' => 'tiktok',
+                    'schedule_status' => $tiktokRow->schedule_status ?? 'inactive',
+                ]);
+            });
+        }
 
         return response()->json([
             'success' => true,
             'account' => $account,
-            'accounts_status' => $accountsStatus,
+            'accounts_status' => $accountsStatus->toArray(),
         ]);
     }
 
@@ -287,18 +343,40 @@ class  ScheduleController extends Controller
 
         $account = null;
         $post = Post::where('user_id', $user->id)
-            ->where('social_type', 'facebook')
             ->orderBy('created_at', 'desc')
             ->first();
         if ($post) {
-            $page = Page::with('facebook')->find($post->account_id);
-            if ($page) {
-                $account = [
-                    'id' => $page->id,
-                    'type' => 'facebook',
-                    'name' => $page->name,
-                    'profile_image' => $page->profile_image,
-                ];
+            $st = $post->social_type ?? '';
+            if (str_contains($st, 'facebook')) {
+                $page = Page::with('facebook')->find($post->account_id);
+                if ($page) {
+                    $account = [
+                        'id' => $page->id,
+                        'type' => 'facebook',
+                        'name' => $page->name,
+                        'profile_image' => $page->profile_image,
+                    ];
+                }
+            } elseif (str_contains($st, 'pinterest')) {
+                $board = Board::with('pinterest')->find($post->account_id);
+                if ($board) {
+                    $account = [
+                        'id' => $board->id,
+                        'type' => 'pinterest',
+                        'name' => $board->name,
+                        'profile_image' => $board->pinterest?->profile_image ?? '',
+                    ];
+                }
+            } elseif (str_contains($st, 'tiktok')) {
+                $tiktokRow = Tiktok::find($post->account_id);
+                if ($tiktokRow) {
+                    $account = [
+                        'id' => $tiktokRow->id,
+                        'type' => 'tiktok',
+                        'name' => $tiktokRow->display_name ?? $tiktokRow->username,
+                        'profile_image' => $tiktokRow->profile_image ?? '',
+                    ];
+                }
             }
         }
 
