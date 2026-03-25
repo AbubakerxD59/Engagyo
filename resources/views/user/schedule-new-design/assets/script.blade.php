@@ -1198,17 +1198,6 @@
                 $('#createPostEmptyState').hide();
                 $('#createPostEditorWrap').show();
                 $('#createPostMainContent').addClass('has-editor');
-                var hasNonFacebook = false;
-                $('.channels-dropdown-checkbox:checked').each(function() {
-                    if ($(this).data('type') === 'pinterest' || $(this).data('type') === 'tiktok') {
-                        hasNonFacebook = true;
-                    }
-                });
-                if (hasNonFacebook) {
-                    $('#createPostCommentWrap').hide();
-                } else {
-                    $('#createPostCommentWrap').show();
-                }
                 var onlyTiktok = true;
                 $('.channels-dropdown-checkbox:checked').each(function() {
                     if ($(this).data('type') !== 'tiktok') {
@@ -1225,6 +1214,7 @@
             }
             renderLastUsed();
             updateCreatePostFacebookFormatRow();
+            updateCreatePostTextareasVisibility();
         }
 
         function createPostHasFacebookChannelSelected() {
@@ -1236,6 +1226,19 @@
                 }
             });
             return found;
+        }
+
+        function createPostHasOnlyFacebookChannelsSelected() {
+            var checked = $('.channels-dropdown-checkbox:checked');
+            if (checked.length === 0) return false;
+            var onlyFacebook = true;
+            checked.each(function() {
+                if (($(this).data('type') || '') !== 'facebook') {
+                    onlyFacebook = false;
+                    return false;
+                }
+            });
+            return onlyFacebook;
         }
 
         function createPostHasVideoInQueue() {
@@ -1254,7 +1257,7 @@
         function updateCreatePostFacebookFormatRow() {
             var hasVideo = createPostHasVideoInQueue();
             var hasImage = createPostHasImageInQueue();
-            var show = createPostHasFacebookChannelSelected() && (hasVideo || hasImage) && !is_link;
+            var show = createPostHasOnlyFacebookChannelsSelected() && (hasVideo || hasImage) && !is_link;
             var $wrap = $('#createPostFacebookFormatWrap');
             var $reelOption = $('#createPostFormatReel').closest('.create-post-format-option');
             if (show) {
@@ -1273,7 +1276,41 @@
                 $reelOption.show();
                 $('#createPostFormatPost').prop('checked', true);
             }
+            updateCreatePostTextareasVisibility();
         }
+
+        function updateCreatePostTextareasVisibility() {
+            var checkedCount = $('.channels-dropdown-checkbox:checked').length;
+            if (checkedCount === 0) {
+                $('#createPostCommentWrap').hide();
+                $('#createPostEditorTextarea').show();
+                return;
+            }
+
+            var fbFormatVisible = $('#createPostFacebookFormatWrap').is(':visible');
+            var fbFormat = ($('input[name="create_post_facebook_format"]:checked').val() || 'post');
+            var isStory = fbFormatVisible && fbFormat === 'story';
+
+            // Comment textarea should show only for "post" format.
+            if (fbFormatVisible && fbFormat === 'post') {
+                $('#createPostCommentWrap').show();
+            } else {
+                $('#createPostCommentWrap').hide();
+            }
+
+            // Story hides caption/content textarea; only upload area remains visible.
+            if (isStory) {
+                $('#createPostEditorTextarea').hide();
+                $('#createPostEmojiBtn').hide();
+            } else {
+                $('#createPostEditorTextarea').show();
+                $('#createPostEmojiBtn').show();
+            }
+        }
+
+        $(document).on('change', 'input[name="create_post_facebook_format"]', function() {
+            updateCreatePostTextareasVisibility();
+        });
 
         function renderLastUsed() {
             var $container = $('#createPostLastUsed');
