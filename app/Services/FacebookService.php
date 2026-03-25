@@ -491,50 +491,175 @@ class FacebookService
         $page_id = $post_row->page ? $post_row->page->page_id : null;
 
         if (empty($page_id)) {
-            $response = ['success' => false, 'message' => 'Facebook page not found for this post.'];
-            $this->handlePostPublishResult($post_row, $response, 'story');
-            return $response;
+            $msg = 'Facebook page not found for this post.';
+            $this->handleStoryPublishFailure($post_row, $msg);
+            return ['success' => false, 'message' => $msg];
         }
 
         $mediaKind = (string) ($postData['media_kind'] ?? '');
         $isPhotoStory = $mediaKind === 'photo' || !empty($postData['photo_url']);
-        $endpoint = $isPhotoStory ? "/{$page_id}/photo_stories" : "/{$page_id}/video_stories";
-        $payload = [];
 
         if ($isPhotoStory) {
-            $payload['photo_url'] = $postData['photo_url'] ?? null;
-        } else {
-            $payload['video_url'] = $postData['video_url'] ?? null;
-        }
-        if (!empty($postData['caption'])) {
-            $payload['caption'] = $postData['caption'];
-        }
+            $photoUrl = $postData['photo_url'] ?? null;
+            if (empty($photoUrl)) {
+                $msg = 'Story media URL is missing.';
+                $this->handleStoryPublishFailure($post_row, $msg);
+                return ['success' => false, 'message' => $msg];
+            }
 
-        if (($isPhotoStory && empty($payload['photo_url'])) || (!$isPhotoStory && empty($payload['video_url']))) {
-            $response = ['success' => false, 'message' => 'Story media URL is missing.'];
-            $this->handlePostPublishResult($post_row, $response, 'story');
-            return $response;
-        }
+            $uploadResp = Http::asForm()
+                ->acceptJson()
+                ->timeout(120)
+                ->post("{$this->graphBaseUrl()}/{$page_id}/photos", [
+                    'access_token' => $access_token,
+                    'url' => $photoUrl,
+                    'published' => 'false',
+                ]);
 
-        try {
-            $publish = $this->facebook->post($endpoint, $payload, $access_token);
-            $response = [
+            if (! $uploadResp->successful()) {
+                $msg = $this->formatHttpGraphError($uploadResp);
+                $this->logService->logApiError('facebook', '/photos', $msg, ['post_id' => $id, 'page_id' => $page_id]);
+                $this->handleStoryPublishFailure($post_row, $msg);
+                return ['success' => false, 'message' => $msg];
+            }
+
+            $uploadJson = $uploadResp->json();
+            $photoId = $uploadJson['id'] ?? null;
+            if (! $photoId) {
+                $msg = 'Invalid /photos response for story (missing photo id).';
+                $this->handleStoryPublishFailure($post_row, $msg);
+                return ['success' => false, 'message' => $msg];
+            }
+
+            $publishResp = Http::asForm()
+                ->acceptJson()
+                ->timeout(120)
+                ->post("{$this->graphBaseUrl()}/{$page_id}/photo_stories", [
+                    'access_token' => $access_token,
+                    'photo_id' => $photoId,
+                ]);
+
+            if (! $publishResp->successful()) {
+                $msg = $this->formatHttpGraphError($publishResp);
+                $this->logService->logApiError('facebook', '/photo_stories', $msg, ['post_id' => $id, 'page_id' => $page_id, 'photo_id' => $photoId]);
+                $this->handleStoryPublishFailure($post_row, $msg);
+                return ['success' => false, 'message' => $msg];
+            }
+
+            $published = $publishResp->json();
+            if (! ($published['success'] ?? false) || empty($published['post_id'])) {
+                $msg = 'Facebook photo story publish was not successful: ' . $publishResp->body();
+                $this->handleStoryPublishFailure($post_row, $msg);
+                return ['success' => false, 'message' => $msg];
+            }
+
+            $storyPostId = (string) $published['post_id'];
+            $this->logService->logPost('facebook', 'story', $id, ['account_id' => $post_row->account_id, 'page_id' => $page_id, 'photo_id' => $photoId], 'success');
+            $this->handleStoryPublishSuccess($post_row, $storyPostId, ['photo_id' => (string) $photoId, 'raw' => $published]);
+
+            return [
                 'success' => true,
-                'data' => $publish,
+                'data' => [
+                    'post_id' => $storyPostId,
+                    'photo_id' => (string) $photoId,
+                    'raw' => $published,
+                ],
             ];
-            $this->logService->logPost('facebook', 'story', $id, ['account_id' => $post_row->account_id, 'page_id' => $page_id], 'success');
-        } catch (FacebookResponseException $e) {
-            $error = $e->getMessage();
-            $response = ['success' => false, 'message' => $error];
-            $this->logService->logApiError('facebook', $endpoint, $error, ['post_id' => $id, 'page_id' => $page_id]);
-        } catch (FacebookSDKException $e) {
-            $error = $e->getMessage();
-            $response = ['success' => false, 'message' => $error];
-            $this->logService->logApiError('facebook', $endpoint, $error, ['post_id' => $id, 'page_id' => $page_id]);
         }
 
-        $this->handlePostPublishResult($post_row, $response, 'story');
-        return $response;
+        $videoUrl = $postData['video_url'] ?? null;
+        if (empty($videoUrl)) {
+            $msg = 'Story media URL is missing.';
+            $this->handleStoryPublishFailure($post_row, $msg);
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $graphBase = $this->graphBaseUrl();
+        $startResp = Http::asJson()
+            ->acceptJson()
+            ->timeout(120)
+            ->post("{$graphBase}/{$page_id}/video_stories?access_token=" . urlencode($access_token), [
+                'upload_phase' => 'start',
+            ]);
+
+        if (! $startResp->successful()) {
+            $msg = $this->formatHttpGraphError($startResp);
+            $this->logService->logApiError('facebook', '/video_stories', $msg, ['post_id' => $id, 'phase' => 'start', 'page_id' => $page_id]);
+            $this->handleStoryPublishFailure($post_row, $msg);
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $start = $startResp->json();
+        $videoId = $start['video_id'] ?? null;
+        $uploadUrl = $start['upload_url'] ?? null;
+        if (! $videoId || ! $uploadUrl) {
+            $msg = 'Invalid /video_stories start response (missing video_id or upload_url).';
+            $this->handleStoryPublishFailure($post_row, $msg);
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $rupload = Http::withHeaders([
+            'Authorization' => 'OAuth ' . $access_token,
+            'file_url' => $videoUrl,
+        ])
+            ->timeout(600)
+            ->post($uploadUrl);
+
+        if (! $rupload->successful()) {
+            $msg = 'Story video rupload failed: ' . ($rupload->body() ?: $rupload->reason());
+            $this->logService->logApiError('facebook', 'rupload.facebook.com', $msg, ['post_id' => $id, 'video_id' => $videoId]);
+            $this->handleStoryPublishFailure($post_row, $msg);
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $ruploadJson = $rupload->json();
+        if (! ($ruploadJson['success'] ?? false)) {
+            $msg = 'Story video upload did not complete: ' . $rupload->body();
+            $this->handleStoryPublishFailure($post_row, $msg);
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $this->waitForVideoUploadPhaseComplete($graphBase, (string) $videoId, $access_token);
+
+        $finishResp = Http::asForm()
+            ->acceptJson()
+            ->timeout(120)
+            ->post("{$graphBase}/{$page_id}/video_stories", [
+                'access_token' => $access_token,
+                'upload_phase' => 'finish',
+                'video_id' => $videoId,
+            ]);
+
+        if (! $finishResp->successful()) {
+            $msg = $this->formatHttpGraphError($finishResp);
+            $this->logService->logApiError('facebook', '/video_stories', $msg, ['post_id' => $id, 'phase' => 'finish', 'video_id' => $videoId]);
+            $this->handleStoryPublishFailure($post_row, $msg);
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $finish = $finishResp->json();
+        if (! ($finish['success'] ?? false) || empty($finish['post_id'])) {
+            $msg = 'Facebook video story publish finish was not successful: ' . $finishResp->body();
+            $this->handleStoryPublishFailure($post_row, $msg);
+            return ['success' => false, 'message' => $msg];
+        }
+
+        $storyPostId = (string) $finish['post_id'];
+        $this->logService->logPost('facebook', 'story', $id, ['account_id' => $post_row->account_id, 'page_id' => $page_id, 'video_id' => $videoId], 'success');
+        $this->handleStoryPublishSuccess($post_row, $storyPostId, ['video_id' => (string) $videoId, 'raw' => $finish]);
+
+        if ($post_row->source !== 'test' && ! empty($post_row->video)) {
+            removeFile($post_row->video);
+        }
+
+        return [
+            'success' => true,
+            'data' => [
+                'post_id' => $storyPostId,
+                'video_id' => (string) $videoId,
+                'raw' => $finish,
+            ],
+        ];
     }
 
     /**
@@ -770,6 +895,46 @@ class FacebookService
             $post->user_id,
             'Post Publishing Failed',
             'Failed to publish Facebook reel. ' . $message,
+            $post
+        );
+    }
+
+    private function handleStoryPublishSuccess(Post $post, string $postId, array $meta = []): void
+    {
+        $post->update([
+            'post_id' => $postId,
+            'status' => 1,
+            'published_at' => date('Y-m-d H:i:s'),
+            'response' => json_encode(array_merge([
+                'success' => true,
+                'post_id' => $postId,
+                'message' => 'Story published successfully to Facebook',
+            ], $meta)),
+        ]);
+
+        $this->successNotification(
+            $post->user_id,
+            'Post Published',
+            'Your Facebook story has been published successfully.',
+            $post
+        );
+    }
+
+    private function handleStoryPublishFailure(Post $post, string $message): void
+    {
+        $post->update([
+            'status' => -1,
+            'published_at' => date('Y-m-d H:i:s'),
+            'response' => json_encode([
+                'success' => false,
+                'error' => $message,
+            ]),
+        ]);
+
+        $this->errorNotification(
+            $post->user_id,
+            'Post Publishing Failed',
+            'Failed to publish Facebook story. ' . $message,
             $post
         );
     }
