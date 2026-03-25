@@ -1247,13 +1247,30 @@
             return false;
         }
 
+        function createPostHasImageInQueue() {
+            return createPostFiles.length > 0 && !createPostHasVideoInQueue();
+        }
+
         function updateCreatePostFacebookFormatRow() {
-            var show = createPostHasFacebookChannelSelected() && createPostHasVideoInQueue() && !is_link;
+            var hasVideo = createPostHasVideoInQueue();
+            var hasImage = createPostHasImageInQueue();
+            var show = createPostHasFacebookChannelSelected() && (hasVideo || hasImage) && !is_link;
             var $wrap = $('#createPostFacebookFormatWrap');
+            var $reelOption = $('#createPostFormatReel').closest('.create-post-format-option');
             if (show) {
                 $wrap.show();
+                // Reels are video-only. For image posts keep Post/Story.
+                if (hasVideo) {
+                    $reelOption.show();
+                } else {
+                    $reelOption.hide();
+                    if ($('#createPostFormatReel').is(':checked')) {
+                        $('#createPostFormatPost').prop('checked', true);
+                    }
+                }
             } else {
                 $wrap.hide();
+                $reelOption.show();
                 $('#createPostFormatPost').prop('checked', true);
             }
         }
@@ -1965,7 +1982,15 @@
             formData.append("schedule_time", effectiveAction === 'schedule' ? (schedule_time || '') : '');
             formData.append("files", file);
             var fbFormat = ($('input[name="create_post_facebook_format"]:checked').val() || 'post');
-            formData.append("facebook_content_format", isVideo ? fbFormat : 'post');
+            var isImageOnly = files.length > 0 && !isVideo;
+            // Image posts support post/story; video posts support post/reel/story.
+            var facebookContentFormat = 'post';
+            if (isVideo) {
+                facebookContentFormat = fbFormat;
+            } else if (isImageOnly) {
+                facebookContentFormat = (fbFormat === 'story') ? 'story' : 'post';
+            }
+            formData.append("facebook_content_format", facebookContentFormat);
             var selectedAccounts = getCreatePostSelectedAccounts();
             if (selectedAccounts.length > 0) {
                 formData.append("account_ids", JSON.stringify(selectedAccounts));

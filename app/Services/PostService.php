@@ -214,6 +214,20 @@ class PostService
                 $postData['title'] = $post->description;
             }
         }
+        if ($post->type == "story") {
+            $hasImage = !empty($post->image);
+            $postData = [
+                'media_kind' => $hasImage ? 'photo' : 'video',
+            ];
+            if ($hasImage) {
+                $postData['photo_url'] = $post->image;
+            } else {
+                $postData['video_url'] = $post->video_key ?: $post->video;
+            }
+            if (!empty($post->title)) {
+                $postData['caption'] = $post->title;
+            }
+        }
         if ($post->type == "link") {
             $postData = array(
                 'link' => $post->url

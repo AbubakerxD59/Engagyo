@@ -87,7 +87,7 @@ class FacebookService
     /**
      * @param Post $post
      * @param array $response
-     * @param string $postType link|photo|video|content|quote
+     * @param string $postType link|photo|video|reel|story|content|quote
      */
     private function handlePostPublishResult(Post $post, array $response, string $postType = 'post')
     {
@@ -96,6 +96,7 @@ class FacebookService
             'photo' => 'photo',
             'video' => 'video',
             'reel' => 'reel',
+            'story' => 'story',
             'content' => 'post',
             'quote' => 'quote',
         ];
@@ -481,6 +482,58 @@ class FacebookService
         if ($post_row->source !== 'test' && !empty($post_row->video)) {
             removeFile($post_row->video);
         }
+        return $response;
+    }
+
+    public function story(int $id, string $access_token, array $postData): array
+    {
+        $post_row = Post::with('page.facebook')->findOrFail($id);
+        $page_id = $post_row->page ? $post_row->page->page_id : null;
+
+        if (empty($page_id)) {
+            $response = ['success' => false, 'message' => 'Facebook page not found for this post.'];
+            $this->handlePostPublishResult($post_row, $response, 'story');
+            return $response;
+        }
+
+        $mediaKind = (string) ($postData['media_kind'] ?? '');
+        $isPhotoStory = $mediaKind === 'photo' || !empty($postData['photo_url']);
+        $endpoint = $isPhotoStory ? "/{$page_id}/photo_stories" : "/{$page_id}/video_stories";
+        $payload = [];
+
+        if ($isPhotoStory) {
+            $payload['photo_url'] = $postData['photo_url'] ?? null;
+        } else {
+            $payload['video_url'] = $postData['video_url'] ?? null;
+        }
+        if (!empty($postData['caption'])) {
+            $payload['caption'] = $postData['caption'];
+        }
+
+        if (($isPhotoStory && empty($payload['photo_url'])) || (!$isPhotoStory && empty($payload['video_url']))) {
+            $response = ['success' => false, 'message' => 'Story media URL is missing.'];
+            $this->handlePostPublishResult($post_row, $response, 'story');
+            return $response;
+        }
+
+        try {
+            $publish = $this->facebook->post($endpoint, $payload, $access_token);
+            $response = [
+                'success' => true,
+                'data' => $publish,
+            ];
+            $this->logService->logPost('facebook', 'story', $id, ['account_id' => $post_row->account_id, 'page_id' => $page_id], 'success');
+        } catch (FacebookResponseException $e) {
+            $error = $e->getMessage();
+            $response = ['success' => false, 'message' => $error];
+            $this->logService->logApiError('facebook', $endpoint, $error, ['post_id' => $id, 'page_id' => $page_id]);
+        } catch (FacebookSDKException $e) {
+            $error = $e->getMessage();
+            $response = ['success' => false, 'message' => $error];
+            $this->logService->logApiError('facebook', $endpoint, $error, ['post_id' => $id, 'page_id' => $page_id]);
+        }
+
+        $this->handlePostPublishResult($post_row, $response, 'story');
         return $response;
     }
 

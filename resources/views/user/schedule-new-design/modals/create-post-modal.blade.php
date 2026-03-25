@@ -142,8 +142,8 @@
                                 </div>
                             </div>
                             <div class="create-post-facebook-format-wrap" id="createPostFacebookFormatWrap"
-                                style="display: none;" role="group" aria-label="Facebook video format">
-                                <span class="create-post-facebook-format-label">Facebook (video)</span>
+                                style="display: none;" role="group" aria-label="Facebook content format">
+                                <span class="create-post-facebook-format-label">Facebook format</span>
                                 <div class="create-post-facebook-format-radios">
                                     <label class="create-post-format-option">
                                         <input type="radio" name="create_post_facebook_format"
@@ -154,6 +154,11 @@
                                         <input type="radio" name="create_post_facebook_format"
                                             id="createPostFormatReel" value="reel">
                                         <span>Reel</span>
+                                    </label>
+                                    <label class="create-post-format-option">
+                                        <input type="radio" name="create_post_facebook_format"
+                                            id="createPostFormatStory" value="story">
+                                        <span>Story</span>
                                     </label>
                                 </div>
                             </div>

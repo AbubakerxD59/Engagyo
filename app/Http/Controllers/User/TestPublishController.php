@@ -141,6 +141,9 @@ class TestPublishController extends Controller
             case 'reel':
                 $publishResponse = $facebookService->reel($post->id, $accessToken, $payload);
                 break;
+            case 'story':
+                $publishResponse = $facebookService->story($post->id, $accessToken, $payload);
+                break;
             default:
                 return view('user.test-publish-facebook', [
                     'steps' => array_merge($steps, [[
@@ -187,7 +190,7 @@ class TestPublishController extends Controller
         ];
 
         // Step 6: Comment (if post has comment and publish succeeded)
-        if ($publishResponse['success'] && !empty($post->comment) && !in_array($post->type, ['video', 'reel'], true)) {
+        if ($publishResponse['success'] && !empty($post->comment) && !in_array($post->type, ['video', 'reel', 'story'], true)) {
             $postId = $responseData['post_id'] ?? null;
             if ($postId) {
                 $commentResponse = $facebookService->postComment($postId, $accessToken, $post->comment);
@@ -224,6 +227,7 @@ class TestPublishController extends Controller
             'photo' => "/{$pageId}/photos",
             'video' => "/{$pageId}/videos",
             'reel' => "/{$pageId}/video_reels (+ rupload.facebook.com)",
+            'story' => "/{$pageId}/photo_stories or /{$pageId}/video_stories",
             default => 'unknown',
         };
     }
@@ -236,6 +240,7 @@ class TestPublishController extends Controller
             'photo' => 'photo',
             'video' => 'video',
             'reel' => 'reel',
+            'story' => 'story',
             default => 'unknown',
         };
     }

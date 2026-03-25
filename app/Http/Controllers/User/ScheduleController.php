@@ -542,11 +542,21 @@ class  ScheduleController extends Controller
     }
 
     /**
-     * Facebook video format from create-post modal: "post" (feed video) or "reel".
+     * Facebook media format from create-post modal.
+     * - image: post|story
+     * - video: post|reel|story
      */
-    private function facebookVideoTypeFromRequest(Request $request): string
+    private function facebookMediaTypeFromRequest(Request $request, bool $hasImage): string
     {
-        return $request->input('facebook_content_format') === 'reel' ? 'reel' : 'video';
+        $format = (string) $request->input('facebook_content_format', 'post');
+        if ($format === 'story') {
+            return 'story';
+        }
+        if ($hasImage) {
+            return 'photo';
+        }
+
+        return $format === 'reel' ? 'reel' : 'video';
     }
 
     /**
@@ -592,7 +602,7 @@ class  ScheduleController extends Controller
                     Facebook::where("id", $account->fb_id)->firstOrFail();
                     // store in db
                     if ($file) {
-                        $type = !empty($image) ? "photo" : $this->facebookVideoTypeFromRequest($request);
+                        $type = $this->facebookMediaTypeFromRequest($request, !empty($image));
                     } else {
                         $type = "content_only";
                     }
@@ -1085,7 +1095,7 @@ class  ScheduleController extends Controller
                         $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots, $user);
                         // store in db
                         if ($file) {
-                            $type = !empty($image) ? "photo" : $this->facebookVideoTypeFromRequest($request);
+                            $type = $this->facebookMediaTypeFromRequest($request, !empty($image));
                         } else {
                             $type = "content_only";
                         }
@@ -1237,7 +1247,7 @@ class  ScheduleController extends Controller
                     Facebook::where("id", $account->fb_id)->firstOrFail();
                     // store in db
                     if ($file) {
-                        $type = !empty($image) ? "photo" : $this->facebookVideoTypeFromRequest($request);
+                        $type = $this->facebookMediaTypeFromRequest($request, !empty($image));
                     } else {
                         $type = "content_only";
                     }
