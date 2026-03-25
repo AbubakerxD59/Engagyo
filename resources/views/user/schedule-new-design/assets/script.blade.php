@@ -1601,6 +1601,8 @@
         // Create post editor: file upload (drag & drop, click) - extensions from schedule dropZone
         var createPostFiles = [];
         var createPostObjectUrls = [];
+        var createPostUploadStates = {};
+        var createPostUploadSeq = 0;
         var createPostAllowedExtensions = ['jpg', 'jpeg', 'png', 'bmp', 'gif', 'tiff', 'webp', 'mp4', 'mkv', 'mov', 'mpeg', 'webm'];
 
         function createPostIsFileAllowed(file) {
@@ -1617,6 +1619,15 @@
             var allowed = Array.from(files || []).filter(createPostIsFileAllowed);
             var rejected = files.length - allowed.length;
             if (allowed.length) {
+                allowed.forEach(function(file) {
+                    if (!file.__uploadId) {
+                        file.__uploadId = ++createPostUploadSeq;
+                    }
+                    createPostUploadStates[file.__uploadId] = {
+                        status: 'idle',
+                        progress: 0,
+                    };
+                });
                 createPostFiles = createPostFiles.concat(allowed);
                 renderCreatePostUploadPreviews();
                 $('#createPostLinkPreview').empty();
@@ -1632,19 +1643,58 @@
             var $container = $('#createPostUploadPreviews');
             $container.empty();
             createPostFiles.forEach(function(file, idx) {
+                var uploadId = file.__uploadId || (++createPostUploadSeq);
+                file.__uploadId = uploadId;
                 var ext = (file.name || '').split('.').pop().toLowerCase();
                 var isVideo = ['mp4', 'mkv', 'mov', 'mpeg', 'webm'].indexOf(ext) !== -1;
                 var url = URL.createObjectURL(file);
                 createPostObjectUrls.push(url);
-                var $preview = $('<div class="create-post-upload-preview" data-idx="' + idx + '">');
+                var state = createPostUploadStates[uploadId] || { status: 'idle', progress: 0 };
+                var $preview = $('<div class="create-post-upload-preview" data-idx="' + idx + '" data-upload-id="' + uploadId + '">');
                 if (isVideo) {
                     $preview.append($('<video>').attr('src', url).attr('muted', 'true').attr('playsinline', 'true'));
+                    $preview.append('<div class="create-post-video-upload-state">' +
+                        '<div class="create-post-video-upload-progress"><span class="create-post-video-upload-progress-fill" style="width:' + (state.progress || 0) + '%"></span></div>' +
+                        '<div class="create-post-video-upload-percent">' + (state.progress || 0) + '%</div>' +
+                        '</div>');
+                    if (state.status === 'uploading') {
+                        $preview.addClass('is-video-uploading');
+                    } else if (state.status === 'uploaded') {
+                        $preview.addClass('is-video-uploaded');
+                    }
                 } else {
                     $preview.append($('<img>').attr('src', url));
+                    // Photo upload loader uses the same progress elements/classes as video.
+                    $preview.append('<div class="create-post-video-upload-state">' +
+                        '<div class="create-post-video-upload-progress"><span class="create-post-video-upload-progress-fill" style="width:' + (state.progress || 0) + '%"></span></div>' +
+                        '<div class="create-post-video-upload-percent">' + (state.progress || 0) + '%</div>' +
+                        '</div>');
+                    if (state.status === 'uploading') {
+                        $preview.addClass('is-video-uploading');
+                    } else if (state.status === 'uploaded') {
+                        $preview.addClass('is-video-uploaded');
+                    }
                 }
                 $preview.append('<button type="button" class="create-post-upload-preview-remove" data-idx="' + idx + '" aria-label="Remove"><i class="fas fa-times"></i></button>');
                 $container.append($preview);
             });
+        }
+
+        function updateCreatePostVideoUploadUi(uploadId, progress, status) {
+            var $preview = $('.create-post-upload-preview[data-upload-id="' + uploadId + '"]');
+            if (!$preview.length) return;
+            if (typeof progress === 'number') {
+                var p = Math.max(0, Math.min(100, Math.round(progress)));
+                $preview.find('.create-post-video-upload-progress-fill').css('width', p + '%');
+                $preview.find('.create-post-video-upload-percent').text(p + '%');
+            }
+            if (status === 'uploading') {
+                $preview.addClass('is-video-uploading').removeClass('is-video-uploaded');
+            } else if (status === 'uploaded') {
+                $preview.removeClass('is-video-uploading').addClass('is-video-uploaded');
+                $preview.find('.create-post-video-upload-percent').text('Uploaded');
+                $preview.find('.create-post-video-upload-progress-fill').css('width', '100%');
+            }
         }
 
         $('#createPostUploadZone').on('click', function(e) {
@@ -1661,6 +1711,10 @@
         $(document).on('click', '.create-post-upload-preview-remove', function(e) {
             e.stopPropagation();
             var idx = parseInt($(this).data('idx'), 10);
+            var file = createPostFiles[idx];
+            if (file && file.__uploadId) {
+                delete createPostUploadStates[file.__uploadId];
+            }
             createPostFiles.splice(idx, 1);
             renderCreatePostUploadPreviews();
             updateCreatePostFacebookFormatRow();
@@ -2018,6 +2072,7 @@
             formData.append("schedule_date", effectiveAction === 'schedule' ? (schedule_date || '') : '');
             formData.append("schedule_time", effectiveAction === 'schedule' ? (schedule_time || '') : '');
             formData.append("files", file);
+            var uploadId = file.__uploadId || null;
             var fbFormat = ($('input[name="create_post_facebook_format"]:checked').val() || 'post');
             var isImageOnly = !isVideo;
             // Image posts support post/story; video posts support post/reel/story.
@@ -2032,22 +2087,50 @@
             if (selectedAccounts.length > 0) {
                 formData.append("account_ids", JSON.stringify(selectedAccounts));
             }
+            if (uploadId) {
+                createPostUploadStates[uploadId] = { status: 'uploading', progress: 0 };
+                updateCreatePostVideoUploadUi(uploadId, 0, 'uploading');
+            }
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",
                 type: "POST",
                 data: formData,
                 processData: false,
                 contentType: false,
+                xhr: function() {
+                    var xhr = $.ajaxSettings.xhr();
+                    if (xhr.upload && uploadId) {
+                        xhr.upload.addEventListener('progress', function(evt) {
+                            if (!evt.lengthComputable) return;
+                            var progress = (evt.loaded / evt.total) * 100;
+                            createPostUploadStates[uploadId] = { status: 'uploading', progress: progress };
+                            updateCreatePostVideoUploadUi(uploadId, progress, 'uploading');
+                        });
+                    }
+                    return xhr;
+                },
                 success: function(response) {
                     if (response.success) {
+                        if (uploadId) {
+                            createPostUploadStates[uploadId] = { status: 'uploaded', progress: 100 };
+                            updateCreatePostVideoUploadUi(uploadId, 100, 'uploaded');
+                        }
                         toastr.success(response.message);
                         processCreatePostFilesQueue(filesArray, index + 1);
                     } else {
+                        if (uploadId) {
+                            createPostUploadStates[uploadId] = { status: 'idle', progress: 0 };
+                            updateCreatePostVideoUploadUi(uploadId, 0, 'idle');
+                        }
                         toastr.error(response.message);
                         enableActionButton();
                     }
                 },
                 error: function() {
+                    if (uploadId) {
+                        createPostUploadStates[uploadId] = { status: 'idle', progress: 0 };
+                        updateCreatePostVideoUploadUi(uploadId, 0, 'idle');
+                    }
                     toastr.error("Failed to upload post.");
                     enableActionButton();
                 }
@@ -2062,6 +2145,7 @@
             createPostFiles = [];
             createPostRevokeUrls();
             $('#createPostUploadPreviews').empty();
+            createPostUploadStates = {};
             is_link = 0;
             is_video = 0;
             current_file = 0;

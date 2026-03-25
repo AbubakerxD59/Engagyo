@@ -4367,6 +4367,46 @@
         display: block;
     }
 
+    .create-post-video-upload-state {
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: 8px;
+        background: rgba(15, 23, 42, 0.82);
+        border-radius: 8px;
+        padding: 6px 8px;
+        z-index: 2;
+    }
+
+    .create-post-video-upload-progress {
+        width: 100%;
+        height: 6px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.25);
+        overflow: hidden;
+    }
+
+    .create-post-video-upload-progress-fill {
+        display: block;
+        width: 0;
+        height: 100%;
+        border-radius: 999px;
+        background: linear-gradient(90deg, #3B82F6, #60A5FA);
+        transition: width 120ms linear;
+    }
+
+    .create-post-video-upload-percent {
+        margin-top: 4px;
+        font-size: 11px;
+        color: #FFFFFF;
+        text-align: right;
+        font-weight: 600;
+    }
+
+    .create-post-upload-preview.is-video-uploaded .create-post-video-upload-state {
+        background: rgba(5, 150, 105, 0.88);
+    }
+
     .create-post-upload-preview .create-post-upload-preview-icon {
         width: 100%;
         height: 100%;
