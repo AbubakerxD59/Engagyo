@@ -1982,7 +1982,7 @@
             formData.append("schedule_time", effectiveAction === 'schedule' ? (schedule_time || '') : '');
             formData.append("files", file);
             var fbFormat = ($('input[name="create_post_facebook_format"]:checked').val() || 'post');
-            var isImageOnly = files.length > 0 && !isVideo;
+            var isImageOnly = !isVideo;
             // Image posts support post/story; video posts support post/reel/story.
             var facebookContentFormat = 'post';
             if (isVideo) {
