@@ -2140,6 +2140,14 @@ class  ScheduleController extends Controller
         return count($types) === 1 && (string) $types[0] === 'pinterest';
     }
 
+    /**
+     * Sent-tab window for rows sourced from posts table.
+     */
+    private function sentPostsRecentCutoffUtc(): Carbon
+    {
+        return Carbon::now('UTC')->subHours(3);
+    }
+
     public function postsListing(Request $request)
     {
         $data = $request->all();
@@ -2158,6 +2166,7 @@ class  ScheduleController extends Controller
         $tab = $request->input('post_status_tab');
         if ($tab === 'sent') {
             $posts = $posts->where("status", 1);
+            $posts = $posts->where('published_at', '>=', $this->sentPostsRecentCutoffUtc());
         } elseif ($tab === 'failed') {
             $posts = $posts->where("status", -1);
         } elseif ($tab === 'queue') {
@@ -2574,6 +2583,7 @@ class  ScheduleController extends Controller
             ->where('status', 1)
             ->whereNotNull('post_id')
             ->whereNotNull('published_at')
+            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
             ->whereBetween('published_at', [$sinceStart, $untilEnd])
             ->with('user', 'page')
             ->get();
@@ -2625,6 +2635,7 @@ class  ScheduleController extends Controller
             ->whereIn('account_id', $boardIds)
             ->where('status', 1)
             ->whereNotNull('published_at')
+            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
             ->where('source', 'schedule')
             ->with('user', 'board.pinterest')
             ->orderByDesc('published_at')
