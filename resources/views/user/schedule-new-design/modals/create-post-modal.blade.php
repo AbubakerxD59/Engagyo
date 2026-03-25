@@ -120,29 +120,33 @@
                             post.</p>
                     </div>
                     <div class="create-post-editor-wrap" id="createPostEditorWrap" style="display: none;">
-                        <div class="create-post-facebook-format-wrap" id="createPostFacebookFormatWrap"
-                            style="display: none;" role="group" aria-label="Facebook content format">
-                            <span class="create-post-facebook-format-label">Facebook format</span>
-                            <div class="create-post-facebook-format-radios">
-                                <label class="create-post-format-option">
-                                    <input type="radio" name="create_post_facebook_format"
-                                        id="createPostFormatPost" value="post" checked>
-                                    <span>Post</span>
-                                </label>
-                                <label class="create-post-format-option">
-                                    <input type="radio" name="create_post_facebook_format"
-                                        id="createPostFormatReel" value="reel">
-                                    <span>Reel</span>
-                                </label>
-                                <label class="create-post-format-option">
-                                    <input type="radio" name="create_post_facebook_format"
-                                        id="createPostFormatStory" value="story">
-                                    <span>Story</span>
-                                </label>
+                        <div>
+                            <div class="create-post-facebook-format-wrap" id="createPostFacebookFormatWrap"
+                                style="display: none;" role="group" aria-label="Facebook content format">
+                                <div class="create-post-facebook-format-bar">
+                                    <span class="create-post-facebook-format-facebook-icon" aria-hidden="true"><i class="fab fa-facebook-f"></i></span>
+                                    <div class="create-post-facebook-format-radios">
+                                    <label class="create-post-format-option">
+                                        <input type="radio" name="create_post_facebook_format"
+                                            id="createPostFormatPost" value="post" checked>
+                                        <span>Post</span>
+                                    </label>
+                                    <label class="create-post-format-option">
+                                        <input type="radio" name="create_post_facebook_format"
+                                            id="createPostFormatReel" value="reel">
+                                        <span>Reel</span>
+                                    </label>
+                                    <label class="create-post-format-option">
+                                        <input type="radio" name="create_post_facebook_format"
+                                            id="createPostFormatStory" value="story">
+                                        <span>Story</span>
+                                    </label>
+                                    </div>
+                                </div>
                             </div>
+                            <textarea class="create-post-editor-textarea" id="createPostEditorTextarea"
+                                placeholder="Paste your link or write something..."></textarea>
                         </div>
-                        <textarea class="create-post-editor-textarea" id="createPostEditorTextarea"
-                            placeholder="Paste your link or write something..."></textarea>
                         <div class="create-post-editor-bottom">
                             <div id="createPostLinkPreview" class="create-post-link-preview"></div>
                             <input type="file" id="createPostFileInput"

@@ -1257,7 +1257,8 @@
         function updateCreatePostFacebookFormatRow() {
             var hasVideo = createPostHasVideoInQueue();
             var hasImage = createPostHasImageInQueue();
-            var show = createPostHasOnlyFacebookChannelsSelected() && (hasVideo || hasImage) && !is_link;
+            // Always show the format selector when only Facebook channels are selected.
+            var show = createPostHasOnlyFacebookChannelsSelected() && !is_link;
             var $wrap = $('#createPostFacebookFormatWrap');
             var $reelOption = $('#createPostFormatReel').closest('.create-post-format-option');
             if (show) {

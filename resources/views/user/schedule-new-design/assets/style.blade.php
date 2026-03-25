@@ -733,8 +733,13 @@
     }
 
     @keyframes selected-account-refresh-spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+        from {
+            transform: rotate(0deg);
+        }
+
+        to {
+            transform: rotate(360deg);
+        }
     }
 
     .selected-account-header-sync-msg {
@@ -2393,8 +2398,13 @@
     }
 
     @keyframes queue-settings-skeleton-shimmer {
-        0% { background-position: 200% 0; }
-        100% { background-position: -200% 0; }
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
     }
 
     /* --- Custom Skeleton Styling --- */
@@ -4293,26 +4303,43 @@
 
     .create-post-facebook-format-wrap {
         width: 100%;
-        margin-top: 12px;
-        padding: 10px 12px;
+        margin-block: 12px;
+        /* padding: 10px 12px;
         border-radius: 8px;
         background: #f3f4f6;
-        border: 1px solid #e5e7eb;
+        border: 1px solid #e5e7eb; */
+        display: block;
     }
 
     .create-post-facebook-format-label {
-        display: block;
-        font-size: 12px;
-        font-weight: 600;
-        color: #6b7280;
-        margin-bottom: 8px;
+        display: none;
+    }
+
+    .create-post-facebook-format-bar {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .create-post-facebook-format-facebook-icon {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        background: #1877F2;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-size: 14px;
+        flex-shrink: 0;
     }
 
     .create-post-facebook-format-radios {
         display: flex;
-        flex-wrap: wrap;
-        gap: 16px;
+        flex-wrap: nowrap;
+        gap: 18px;
         align-items: center;
+        justify-content: flex-start;
     }
 
     .create-post-format-option {
@@ -4324,11 +4351,35 @@
         color: #374151;
         cursor: pointer;
         font-weight: 500;
+        user-select: none;
     }
 
     .create-post-format-option input {
-        margin: 0;
-        cursor: pointer;
+        display: none;
+    }
+
+    .create-post-format-option span {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    .create-post-format-option span::before {
+        content: '';
+        width: 14px;
+        height: 14px;
+        border-radius: 999px;
+        border: 2px solid #9ca3af;
+        background: #ffffff;
+        box-sizing: border-box;
+        display: inline-block;
+        flex-shrink: 0;
+    }
+
+    .create-post-format-option input:checked+span::before {
+        border-color: #22c55e;
+        background: #22c55e;
+        box-shadow: inset 0 0 0 3px #f3f4f6;
     }
 
     .create-post-upload-previews {
@@ -4345,8 +4396,8 @@
 
     .create-post-upload-preview {
         position: relative;
-        width: 64px;
-        height: 64px;
+        width: 100px;
+        height: 100PX;
         border-radius: 6px;
         overflow: hidden;
         flex-shrink: 0;
