@@ -131,8 +131,12 @@
                                                     <span></span><span></span><span></span><span></span>
                                                 </div>
                                                 <div class="selected-account-text">
-                                                    <span id="selected-account-header-name"
-                                                        class="selected-account-name"></span>
+                                                    <div class="selected-account-name-wrap">
+                                                        <span id="selected-account-header-name"
+                                                            class="selected-account-name"></span>
+                                                        <span id="selected-account-header-parent-name"
+                                                            class="selected-account-tagline" style="display:none;"></span>
+                                                    </div>
                                                     <div class="selected-account-header-buttons">
                                                         <button type="button" class="selected-account-header-settings-btn"
                                                             id="selected-account-header-settings"

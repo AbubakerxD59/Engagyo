@@ -755,6 +755,12 @@
         line-height: 1.3;
     }
 
+    .selected-account-name-wrap {
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+    }
+
     .selected-account-tagline {
         font-size: 13px;
         color: #333;

@@ -155,21 +155,29 @@
             var $avatarWrap = $('#selected-account-avatar-wrap');
             var $allchIcon = $('#selected-account-allch-icon');
             var $headerBtns = $('.selected-account-header-buttons');
+            var $parentName = $('#selected-account-header-parent-name');
 
             if ($allCh.hasClass('active')) {
                 $avatarWrap.hide();
                 $allchIcon.show();
                 $('#selected-account-header-name').text('All Channels');
+                $parentName.hide();
                 $headerBtns.hide();
             } else if ($realActive.length === 1) {
                 var $first = $realActive.first();
                 var src = $first.find('.account-avatar img').attr('src') || '';
                 var name = $first.find('.account-name').text().trim() || 'Account';
+                var parent = $first.find('.account-username').text().trim();
                 var type = ($first.data('type') || 'facebook').toLowerCase();
                 $allchIcon.hide();
                 $avatarWrap.show();
                 $('#selected-account-header-img').attr('src', src).attr('alt', name);
                 $('#selected-account-header-name').text(name);
+                if (parent) {
+                    $parentName.text(parent).show();
+                } else {
+                    $parentName.hide();
+                }
                 var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok').addClass(type);
                 var headerIconClass = 'fab fa-facebook-f';
                 if (type === 'pinterest') headerIconClass = 'fab fa-pinterest-p';
@@ -183,6 +191,7 @@
                 $avatarWrap.show();
                 $('#selected-account-header-img').attr('src', src);
                 $('#selected-account-header-name').text($realActive.length + ' Accounts');
+                $parentName.hide();
                 $headerBtns.hide();
             } else {
                 $header.hide();
@@ -191,6 +200,7 @@
                 $('#postsSearchInput').val('');
                 postsSearchQuery = '';
                 $('#postsSearchClear').hide();
+                $parentName.hide();
                 return;
             }
 
