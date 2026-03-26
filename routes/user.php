@@ -19,9 +19,15 @@ use App\Http\Controllers\User\AnalyticsController;
 use App\Http\Controllers\User\TestPublishController;
 
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone", "redirect_if_admin", "team.menu"])->group(function () {
-    // Test route for publishing Facebook posts (displays payload, response, etc.)
+    // Test routes for publishing Facebook posts (displays payload, response, etc.)
     Route::get("test/publish-facebook/{id}", [TestPublishController::class, 'publishFacebook'])
         ->name("test.publish.facebook")
+        ->middleware(['feature:' . Feature::$features_list[1]]);
+    Route::get("test/story-upload", [TestPublishController::class, 'showStoryUploadForm'])
+        ->name("test.story-upload")
+        ->middleware(['feature:' . Feature::$features_list[1]]);
+    Route::post("test/story-upload", [TestPublishController::class, 'handleStoryUpload'])
+        ->name("test.story-upload.post")
         ->middleware(['feature:' . Feature::$features_list[1]]);
     // Schedule Routes
     Route::controller(ScheduleController::class)->middleware(['feature:' . Feature::$features_list[1]])->group(function () {

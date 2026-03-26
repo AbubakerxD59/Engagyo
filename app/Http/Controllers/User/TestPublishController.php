@@ -4,6 +4,7 @@ namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
 use App\Models\Post;
+use App\Models\Page;
 use App\Services\FacebookService;
 use App\Services\PostService;
 use Illuminate\Http\Request;
@@ -243,5 +244,71 @@ class TestPublishController extends Controller
             'story' => 'story',
             default => 'unknown',
         };
+    }
+
+    /**
+     * Show a simple form to upload a file and test publishing it as a Facebook Story.
+     * Route: GET /panel/test/story-upload
+     */
+    public function showStoryUploadForm()
+    {
+        $user = Auth::guard('user')->user();
+        $pages = Page::where('user_id', $user->id)->get();
+
+        return view('user.test-story-upload', [
+            'pages' => $pages,
+        ]);
+    }
+
+    /**
+     * Handle the story test upload: create a temporary Post of type "story" and
+     * redirect to the existing publishFacebook test route to display all steps.
+     * Route: POST /panel/test/story-upload
+     */
+    public function handleStoryUpload(Request $request)
+    {
+        $user = Auth::guard('user')->user();
+
+        $validated = $request->validate([
+            'page_id' => 'required|integer|exists:pages,id',
+            'file' => 'required|file|mimetypes:image/jpeg,image/png,image/gif,image/webp,video/mp4,video/x-matroska,video/quicktime,video/mpeg,video/webm',
+            'caption' => 'nullable|string|max:1000',
+        ]);
+
+        $page = Page::where('id', $validated['page_id'])
+            ->where('user_id', $user->id)
+            ->firstOrFail();
+
+        $file = $request->file('file');
+        $ext = strtolower($file->getClientOriginalExtension());
+        $isVideo = in_array($ext, ['mp4', 'mkv', 'mov', 'mpeg', 'webm'], true);
+
+        $image = null;
+        $video = null;
+        if ($isVideo) {
+            // Use the same helper as schedule flow for uploading videos
+            $video = saveToS3($file);
+        } else {
+            // Use the same helper as schedule flow for images
+            $image = saveImage($file);
+        }
+
+        $data = [
+            'user_id' => $user->id,
+            'account_id' => $page->id,
+            'social_type' => 'facebook',
+            'type' => 'story',
+            'source' => 'test',
+            'title' => $validated['caption'] ?? null,
+            'comment' => null,
+            'image' => $image,
+            'video' => $video,
+            'status' => 0,
+            'publish_date' => now()->format('Y-m-d H:i:s'),
+        ];
+
+        $post = PostService::create($data);
+
+        return redirect()->route('panel.test.publish.facebook', ['id' => $post->id]);
     }
 }
