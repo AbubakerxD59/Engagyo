@@ -217,7 +217,7 @@ class PostService
         if ($post->type == "story") {
             $hasVideo = !empty($post->video_key) || !empty($post->video);
             $postData = [
-                'media_kind' => $hasVideo ? 'photo' : 'video',
+                'media_kind' => $hasVideo ? 'video' : 'photo',
             ];
 
             if (!$hasVideo) {
