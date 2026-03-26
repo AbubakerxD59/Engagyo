@@ -219,11 +219,23 @@ class PostService
             $postData = [
                 'media_kind' => $hasImage ? 'photo' : 'video',
             ];
+
             if ($hasImage) {
-                $postData['photo_url'] = $post->image;
+                // Ensure photo_url is an absolute URL for Facebook API
+                $photo = $post->image;
+                if (!empty($photo) && !str_starts_with($photo, 'http')) {
+                    $photo = fetchFromS3($photo);
+                }
+                $postData['photo_url'] = $photo;
             } else {
-                $postData['video_url'] = $post->video_key ?: $post->video;
+                // Ensure video_url is an absolute URL (prefer S3 key accessor, fallback to raw video field)
+                $videoUrl = $post->video_key ?: $post->video;
+                if (!empty($videoUrl) && !str_starts_with($videoUrl, 'http')) {
+                    $videoUrl = fetchFromS3($videoUrl);
+                }
+                $postData['video_url'] = $videoUrl;
             }
+
             if (!empty($post->title)) {
                 $postData['caption'] = $post->title;
             }
