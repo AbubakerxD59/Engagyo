@@ -489,6 +489,7 @@
         var queueTimelineData = [];
         var queueDayOffset = 0;
         var queueLoadingMore = false;
+        var queueInitialBatchSize = 15;
         var queueBatchSize = 7;
         var queueHasMore = true;
         var queueLoadRequestId = 0;
@@ -725,7 +726,7 @@
             queueSectionRequest = $.ajax({
                 url: "{{ route('panel.schedule.queue.timeline') }}",
                 type: "GET",
-                data: { account_id: accountId, type: accountType, days: queueBatchSize, offset: 0, source: 'schedule' },
+                data: { account_id: accountId, type: accountType, days: queueInitialBatchSize, offset: 0, source: 'schedule' },
                 success: function(data) {
                     queueSectionLoading = false;
                     if (requestId !== queueLoadRequestId) return;
