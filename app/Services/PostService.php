@@ -215,12 +215,12 @@ class PostService
             }
         }
         if ($post->type == "story") {
-            $hasImage = !empty($post->image);
+            $hasVideo = !empty($post->video_key) || !empty($post->video);
             $postData = [
-                'media_kind' => $hasImage ? 'photo' : 'video',
+                'media_kind' => $hasVideo ? 'photo' : 'video',
             ];
 
-            if ($hasImage) {
+            if (!$hasVideo) {
                 // Ensure photo_url is an absolute URL for Facebook API
                 $photo = $post->image;
                 if (!empty($photo) && !str_starts_with($photo, 'http')) {
