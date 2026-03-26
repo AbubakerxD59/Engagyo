@@ -2160,8 +2160,8 @@
             is_link = 0;
             is_video = 0;
             current_file = 0;
-            $('#createPostFormatPost').prop('checked', true);
-            $('#createPostFacebookFormatWrap').hide();
+            // Preserve selected Facebook format across resets; just recalculate row visibility.
+            updateCreatePostFacebookFormatRow();
             $('#createPostScheduleDropdown').removeClass('is-open');
             if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
                 loadQueueTimeslotsSection();
