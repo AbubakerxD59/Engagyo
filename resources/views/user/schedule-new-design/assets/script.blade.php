@@ -617,12 +617,27 @@
             var posts = slot.posts || (slot.post ? [slot.post] : []);
             var postsHtml = '';
             if (posts.length > 0) {
+                // Show Reel/Story badge(s) under the time column for this timeslot row.
+                var formatTypes = [];
+                posts.forEach(function(post) {
+                    if (post && post.type === 'reel' && formatTypes.indexOf('reel') === -1) formatTypes.push('reel');
+                    if (post && post.type === 'story' && formatTypes.indexOf('story') === -1) formatTypes.push('story');
+                });
+                var formatBadgesHtml = '';
+                if (formatTypes.length > 0) {
+                    formatBadgesHtml = '<div class="queue-timeslots-format-badges">' +
+                        formatTypes.map(function(t) {
+                            return '<span class="queue-post-format-badge ' + t + '">' + (t === 'reel' ? 'Reel' : 'Story') + '</span>';
+                        }).join('') +
+                        '</div>';
+                }
                 posts.forEach(function(post) {
                     postsHtml += renderQueuePostCard(slot, post);
                 });
                 return '<div class="queue-timeslots-row queue-timeslots-row-has-post">' +
                     '<div class="queue-timeslots-time-col">' +
                     '<span class="queue-timeslots-time">' + slot.time_display + '</span>' +
+                    formatBadgesHtml +
                     '</div>' +
                     '<div class="queue-timeslots-post-col queue-timeslots-posts-block">' + postsHtml + '</div>' +
                     '</div>';

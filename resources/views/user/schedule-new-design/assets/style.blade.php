@@ -1207,6 +1207,40 @@
         background: #000;
     }
 
+    .queue-post-format-badge {
+        position: static;
+        bottom: auto;
+        left: auto;
+        right: auto;
+        top: auto;
+        padding: 2px 6px;
+        border-radius: 12px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: 700;
+        color: #fff;
+        border: 2px solid #fff;
+        white-space: nowrap;
+        line-height: 1;
+    }
+
+    .queue-timeslots-format-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 4px;
+    }
+
+    .queue-post-format-badge.reel {
+        background: #e11d48;
+    }
+
+    .queue-post-format-badge.story {
+        background: #f59e0b;
+    }
+
     .queue-post-account-name {
         font-weight: 600;
         font-size: 14px;
