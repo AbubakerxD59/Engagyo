@@ -653,11 +653,23 @@ class  ScheduleController extends Controller
                 if ($account->type == "facebook") {
 
                     Facebook::where("id", $account->fb_id)->firstOrFail();
+
+                    // Validate token once per account
+                    $tokenResponse = FacebookService::validateToken($account);
+                    if (!$tokenResponse['success']) {
+                        return [
+                            "success" => false,
+                            "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
+                        ];
+                    }
+                    $access_token = $tokenResponse['access_token'];
+
                     if ($file) {
                         $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
                     } else {
                         $types = ["content_only"];
                     }
+
                     foreach ($types as $type) {
                         $data = [
                             "user_id" => $user->id,
@@ -679,20 +691,10 @@ class  ScheduleController extends Controller
                         }
 
                         $this->logService->logPost('facebook', $type, $post->id, ['action' => 'publish'], 'pending');
-                    }
 
-                    // Use validateToken for proper error handling
-                    $tokenResponse = FacebookService::validateToken($account);
-                    if (!$tokenResponse['success']) {
-                        $this->logService->logPost('facebook', $type, $post->id, ['action' => 'publish'], 'failed');
-                        return array(
-                            "success" => false,
-                            "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
-                        );
+                        $postData = PostService::postTypeBody($post);
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $post->comment);
                     }
-                    $access_token = $tokenResponse['access_token'];
-                    $postData = PostService::postTypeBody($post);
-                    PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $post->comment);
                 }
                 if ($account->type == "pinterest") {
                     $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
