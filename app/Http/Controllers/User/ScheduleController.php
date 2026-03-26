@@ -2741,6 +2741,9 @@ class  ScheduleController extends Controller
             'created_time' => $createdTime,
             'message' => (string) ($dbPost->title ?? ''),
             'story' => '',
+            // Used by the UI to show Reel/Story badges in the Sent tab.
+            // Expected values from scheduled Facebook posts: post/photo, video, reel, story, etc.
+            'type' => (string) ($dbPost->type ?? ''),
             'full_picture' => $fullPicture,
             'permalink_url' => $dbPost->facebook_post_url,
             'account_name' => $page->name,

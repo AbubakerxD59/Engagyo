@@ -2968,6 +2968,15 @@
             else if (st.indexOf('tiktok') !== -1) st = 'tiktok';
             else st = 'facebook';
 
+            // Reel/Story badge in the Sent UI (Facebook feed payload includes `type`).
+            var formatBadgesHtml = '';
+            var postType = (post.type || '').toString().toLowerCase();
+            if (postType === 'reel') {
+                formatBadgesHtml = '<div class="sent-post-format-badges"><span class="queue-post-format-badge reel">Reel</span></div>';
+            } else if (postType === 'story') {
+                formatBadgesHtml = '<div class="sent-post-format-badges"><span class="queue-post-format-badge story">Story</span></div>';
+            }
+
             var profileImg = post.account_profile || '';
             var socialLogo = socialLogos[st] || socialLogos.facebook;
             var accountName = post.account_name || (st === 'pinterest' ? 'Pinterest board' : 'Facebook Page');
@@ -3023,6 +3032,7 @@
                     <div class="sent-post-time-col">
                         <span class="sent-post-time">${timePart}</span>
                         ${sourceLabel}
+                        ${formatBadgesHtml}
                     </div>
                     <div class="sent-post-card-col">
                         <div class="sent-card">

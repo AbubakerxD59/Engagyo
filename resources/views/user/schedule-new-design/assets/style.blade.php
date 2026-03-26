@@ -1233,6 +1233,13 @@
         margin-top: 4px;
     }
 
+    .sent-post-format-badges {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 4px;
+    }
+
     .queue-post-format-badge.reel {
         background: #e11d48;
     }
