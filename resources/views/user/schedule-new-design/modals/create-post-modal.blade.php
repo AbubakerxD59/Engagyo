@@ -124,23 +124,41 @@
                             <div class="create-post-facebook-format-wrap" id="createPostFacebookFormatWrap"
                                 style="display: none;" role="group" aria-label="Facebook content format">
                                 <div class="create-post-facebook-format-bar">
-                                    <span class="create-post-facebook-format-facebook-icon" aria-hidden="true"><i class="fab fa-facebook-f"></i></span>
+                                    <span class="create-post-facebook-format-facebook-icon" aria-hidden="true"><i
+                                            class="fab fa-facebook-f"></i></span>
                                     <div class="create-post-facebook-format-radios">
-                                    <label class="create-post-format-option">
-                                        <input type="radio" name="create_post_facebook_format"
-                                            id="createPostFormatPost" value="post" checked>
-                                        <span>Post</span>
-                                    </label>
-                                    <label class="create-post-format-option">
-                                        <input type="radio" name="create_post_facebook_format"
-                                            id="createPostFormatReel" value="reel">
-                                        <span>Reel</span>
-                                    </label>
-                                    <label class="create-post-format-option">
-                                        <input type="radio" name="create_post_facebook_format"
-                                            id="createPostFormatStory" value="story">
-                                        <span>Story</span>
-                                    </label>
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_facebook_formats[]"
+                                                id="createPostFormatPost" value="post" checked>
+                                            <span>Post</span>
+                                        </label>
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_facebook_formats[]"
+                                                id="createPostFormatReel" value="reel">
+                                            <span>Reel</span>
+                                        </label>
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_facebook_formats[]"
+                                                id="createPostFormatStory" value="story">
+                                            <span>Story</span>
+                                        </label>
+                                    </div>
+                                    <div class="create-post-format-help-wrap" id="createPostFormatHelpWrap">
+                                        <button type="button" class="create-post-format-help-btn"
+                                            id="createPostFormatHelpBtn">
+                                            <i class="far fa-question-circle"></i>
+                                        </button>
+                                        <div class="create-post-format-help-popover" role="tooltip"
+                                            aria-hidden="true">
+                                            <ul class="create-post-format-help-list">
+                                                <li><strong>Files</strong>: Image / Video files.
+                                                </li>
+                                                <li><strong>Post</strong>: Caption + Files + optional first comment.
+                                                </li>
+                                                <li><strong>Reel</strong>: Caption + Files only.</li>
+                                                <li><strong>Story</strong>: Files only.</li>
+                                            </ul>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

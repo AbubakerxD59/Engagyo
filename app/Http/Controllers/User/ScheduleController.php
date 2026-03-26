@@ -542,21 +542,60 @@ class  ScheduleController extends Controller
     }
 
     /**
-     * Facebook media format from create-post modal.
-     * - image: post|story
-     * - video: post|reel|story
+     * Facebook media formats from create-post modal.
+     * Input (from JS): facebook_content_formats = JSON array of "post" | "reel" | "story"
+     * - image: post -> photo, story -> story
+     * - video: post -> video, reel -> reel, story -> story
+     *
+     * Returns an array of concrete post types: ["photo","story"] etc.
      */
-    private function facebookMediaTypeFromRequest(Request $request, bool $hasImage): string
+    private function facebookMediaTypesFromRequest(Request $request, bool $hasImage): array
     {
-        $format = (string) $request->input('facebook_content_format', 'post');
-        if ($format === 'story') {
-            return 'story';
-        }
-        if ($hasImage) {
-            return 'photo';
+        $raw = $request->input('facebook_content_formats');
+        $selected = [];
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $selected = $decoded;
+            }
+        } elseif (is_array($raw)) {
+            $selected = $raw;
         }
 
-        return $format === 'reel' ? 'reel' : 'video';
+        // Fallback to a single 'post' if nothing is selected.
+        if (empty($selected)) {
+            $selected = ['post'];
+        }
+
+        $selected = array_values(array_unique(array_map('strval', $selected)));
+        $types = [];
+        foreach ($selected as $format) {
+            $format = strtolower(trim($format));
+            if ($format === 'story') {
+                $types[] = 'story';
+                continue;
+            }
+            if ($format === 'reel') {
+                // Only valid for video posts
+                if (!$hasImage) {
+                    $types[] = 'reel';
+                }
+                continue;
+            }
+            // 'post' fallback
+            if ($hasImage) {
+                $types[] = 'photo';
+            } else {
+                $types[] = 'video';
+            }
+        }
+
+        // Ensure at least one sane default
+        if (empty($types)) {
+            $types[] = $hasImage ? 'photo' : 'video';
+        }
+
+        return array_values(array_unique($types));
     }
 
     /**
@@ -581,8 +620,22 @@ class  ScheduleController extends Controller
                     $image = saveImage($request->file("files"));
                 }
             }
-            // Count total posts to be created
-            $totalPostsToCreate = count($accounts);
+            // Count total posts to be created (one per selected format per Facebook account)
+            $totalPostsToCreate = 0;
+            foreach ($accounts as $account) {
+                if ($account->type == "facebook") {
+                    if ($file) {
+                        $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
+                        $totalPostsToCreate += count($types);
+                    } else {
+                        $totalPostsToCreate++;
+                    }
+                } elseif ($account->type == "pinterest" && $file) {
+                    $totalPostsToCreate++;
+                } elseif ($account->type == "tiktok" && $file) {
+                    $totalPostsToCreate++;
+                }
+            }
             
             // Check scheduled posts limit before creating any posts
             /** @var User $user */
@@ -600,34 +653,33 @@ class  ScheduleController extends Controller
                 if ($account->type == "facebook") {
 
                     Facebook::where("id", $account->fb_id)->firstOrFail();
-                    // store in db
                     if ($file) {
-                        $type = $this->facebookMediaTypeFromRequest($request, !empty($image));
+                        $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
                     } else {
-                        $type = "content_only";
+                        $types = ["content_only"];
                     }
-                    $data = [
-                        "user_id" => $user->id,
-                        "account_id" => $account->id,
-                        "social_type" => "facebook",
-                        "type" => $type,
-                        "source" => $this->source,
-                        "title" => $content,
-                        "comment" => $comment,
-                        "image" => $image,
-                        "video" => $video,
-                        "status" => 0,
-                        "publish_date" => $publishDateNow,
-                    ];
-                    $post = PostService::create($data);
+                    foreach ($types as $type) {
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "facebook",
+                            "type" => $type,
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "video" => $video,
+                            "status" => 0,
+                            "publish_date" => $publishDateNow,
+                        ];
+                        $post = PostService::create($data);
 
-                    // Verify account belongs to user before incrementing
-                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
-                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        }
+
+                        $this->logService->logPost('facebook', $type, $post->id, ['action' => 'publish'], 'pending');
                     }
-
-                    // Log post creation
-                    $this->logService->logPost('facebook', $type, $post->id, ['action' => 'publish'], 'pending');
 
                     // Use validateToken for proper error handling
                     $tokenResponse = FacebookService::validateToken($account);
@@ -1067,7 +1119,12 @@ class  ScheduleController extends Controller
             foreach ($accounts as $account) {
                 if (count($account->timeslots) > 0) {
                     if ($account->type == "facebook") {
-                        $postsToCreate++;
+                        if ($file) {
+                            $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
+                            $postsToCreate += count($types);
+                        } else {
+                            $postsToCreate++;
+                        }
                     } elseif ($account->type == "pinterest" && $file) {
                         $postsToCreate++;
                     } elseif ($account->type == "tiktok" && $file) {
@@ -1093,32 +1150,31 @@ class  ScheduleController extends Controller
                     if ($account->type == "facebook") {
                         Facebook::where("id", $account->fb_id)->firstOrFail();
                         $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots, $user);
-                        // store in db
                         if ($file) {
-                            $type = $this->facebookMediaTypeFromRequest($request, !empty($image));
+                            $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
                         } else {
-                            $type = "content_only";
+                            $types = ["content_only"];
                         }
-                        $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "facebook",
-                            "type" => $type,
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "image" => $image,
-                            "video" => $video,
-                            "status" => 0,
-                            "publish_date" => $nextTime,
-                        ];
-                        $post = PostService::create($data);
-                        // Verify account belongs to user before incrementing
-                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
-                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        foreach ($types as $type) {
+                            $data = [
+                                "user_id" => $user->id,
+                                "account_id" => $account->id,
+                                "social_type" => "facebook",
+                                "type" => $type,
+                                "source" => $this->source,
+                                "title" => $content,
+                                "comment" => $comment,
+                                "image" => $image,
+                                "video" => $video,
+                                "status" => 0,
+                                "publish_date" => $nextTime,
+                            ];
+                            $post = PostService::create($data);
+                            if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                                $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                            }
+                            $this->logService->logQueuedPost('facebook', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                         }
-                        // Log queued post
-                        $this->logService->logQueuedPost('facebook', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                     }
                     if ($account->type == "pinterest") {
                         Pinterest::where("id", $account->pin_id)->firstOrFail();
@@ -1217,11 +1273,16 @@ class  ScheduleController extends Controller
                 }
             }
 
-            // Count how many posts will be created
+            // Count how many posts will be created (one per selected format per Facebook account)
             $postsToCreate = 0;
             foreach ($accounts as $account) {
                 if ($account->type == "facebook") {
-                    $postsToCreate++;
+                    if ($file) {
+                        $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
+                        $postsToCreate += count($types);
+                    } else {
+                        $postsToCreate++;
+                    }
                 } elseif ($account->type == "pinterest" && $file) {
                     $postsToCreate++;
                 } elseif ($account->type == "tiktok" && $file) {
@@ -1245,33 +1306,32 @@ class  ScheduleController extends Controller
                 $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
                 if ($account->type == "facebook") {
                     Facebook::where("id", $account->fb_id)->firstOrFail();
-                    // store in db
                     if ($file) {
-                        $type = $this->facebookMediaTypeFromRequest($request, !empty($image));
+                        $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
                     } else {
-                        $type = "content_only";
+                        $types = ["content_only"];
                     }
-                    $data = [
-                        "user_id" => $user->id,
-                        "account_id" => $account->id,
-                        "social_type" => "facebook",
-                        "type" => $type,
-                        "source" => $this->source,
-                        "title" => $content,
-                        "comment" => $comment,
-                        "image" => $image,
-                        "video" => $video,
-                        "status" => 0,
-                        "publish_date" => $scheduleDateTime,
-                        "scheduled" => 1
-                    ];
-                    $post = PostService::create($data);
-                    // Verify account belongs to user before incrementing
-                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
-                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    foreach ($types as $type) {
+                        $data = [
+                            "user_id" => $user->id,
+                            "account_id" => $account->id,
+                            "social_type" => "facebook",
+                            "type" => $type,
+                            "source" => $this->source,
+                            "title" => $content,
+                            "comment" => $comment,
+                            "image" => $image,
+                            "video" => $video,
+                            "status" => 0,
+                            "publish_date" => $scheduleDateTime,
+                            "scheduled" => 1
+                        ];
+                        $post = PostService::create($data);
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        }
+                        $this->logService->logScheduledPost('facebook', $post->id, $scheduleDateTime, ['type' => $type]);
                     }
-                    // Log scheduled post
-                    $this->logService->logScheduledPost('facebook', $post->id, $scheduleDateTime, ['type' => $type]);
                 }
                 if ($account->type == "pinterest") {
                     Pinterest::where("id", $account->pin_id)->firstOrFail();

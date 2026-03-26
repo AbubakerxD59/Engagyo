@@ -128,6 +128,22 @@
             } catch (e) {}
         }
 
+        // Toggle Facebook format help popover (Post / Reel / Story)
+        $(document).on('click', '#createPostFormatHelpBtn', function(e) {
+            e.stopPropagation();
+            $('#createPostFormatHelpWrap').toggleClass('open');
+            var isOpen = $('#createPostFormatHelpWrap').hasClass('open');
+            $('#createPostFormatHelpWrap .create-post-format-help-popover').attr('aria-hidden', isOpen ? 'false' : 'true');
+        });
+
+        // Close help popover when clicking outside
+        $(document).on('click', function() {
+            if ($('#createPostFormatHelpWrap').hasClass('open')) {
+                $('#createPostFormatHelpWrap').removeClass('open');
+                $('#createPostFormatHelpWrap .create-post-format-help-popover').attr('aria-hidden', 'true');
+            }
+        });
+
         function applyAccountSelectionFromUrl() {
             var params = new URLSearchParams(window.location.search);
             var accountId = params.get('account_id');
@@ -1294,14 +1310,18 @@
                     $reelOption.show();
                 } else {
                     $reelOption.hide();
+                    // If Reel was selected but no video is present, unselect it and ensure Post remains selected.
                     if ($('#createPostFormatReel').is(':checked')) {
+                        $('#createPostFormatReel').prop('checked', false);
                         $('#createPostFormatPost').prop('checked', true);
                     }
                 }
             } else {
                 $wrap.hide();
                 $reelOption.show();
+                // Reset to Post only when the row is hidden.
                 $('#createPostFormatPost').prop('checked', true);
+                $('#createPostFormatReel, #createPostFormatStory').prop('checked', false);
             }
             updateCreatePostTextareasVisibility();
         }
@@ -1315,18 +1335,29 @@
             }
 
             var fbFormatVisible = $('#createPostFacebookFormatWrap').is(':visible');
-            var fbFormat = ($('input[name="create_post_facebook_format"]:checked').val() || 'post');
-            var isStory = fbFormatVisible && fbFormat === 'story';
+            var selectedFormats = $('input[name="create_post_facebook_formats[]"]:checked').map(function() {
+                return $(this).val();
+            }).get();
 
-            // Comment textarea should show only for "post" format.
-            if (fbFormatVisible && fbFormat === 'post') {
+            if (!fbFormatVisible || selectedFormats.length === 0) {
+                $('#createPostCommentWrap').hide();
+                $('#createPostEditorTextarea').show();
+                $('#createPostEmojiBtn').show();
+                return;
+            }
+
+            var hasPostFormat = selectedFormats.indexOf('post') !== -1;
+            var hasStoryFormat = selectedFormats.indexOf('story') !== -1;
+
+            // Comment textarea should show if "post" format is among the selections.
+            if (hasPostFormat) {
                 $('#createPostCommentWrap').show();
             } else {
                 $('#createPostCommentWrap').hide();
             }
 
-            // Story hides caption/content textarea; only upload area remains visible.
-            if (isStory) {
+            // If Story is selected without Post, hide caption/content textarea; only upload area remains visible.
+            if (hasStoryFormat && !hasPostFormat) {
                 $('#createPostEditorTextarea').hide();
                 $('#createPostEmojiBtn').hide();
             } else {
@@ -1335,7 +1366,7 @@
             }
         }
 
-        $(document).on('change', 'input[name="create_post_facebook_format"]', function() {
+        $(document).on('change', 'input[name="create_post_facebook_formats[]"]', function() {
             updateCreatePostTextareasVisibility();
         });
 
@@ -2100,16 +2131,12 @@
             formData.append("schedule_time", effectiveAction === 'schedule' ? (schedule_time || '') : '');
             formData.append("files", file);
             var uploadId = file.__uploadId || null;
-            var fbFormat = ($('input[name="create_post_facebook_format"]:checked').val() || 'post');
-            var isImageOnly = !isVideo;
-            // Image posts support post/story; video posts support post/reel/story.
-            var facebookContentFormat = 'post';
-            if (isVideo) {
-                facebookContentFormat = fbFormat;
-            } else if (isImageOnly) {
-                facebookContentFormat = (fbFormat === 'story') ? 'story' : 'post';
-            }
-            formData.append("facebook_content_format", facebookContentFormat);
+            var fbFormats = $('input[name="create_post_facebook_formats[]"]:checked').map(function() {
+                return $(this).val();
+            }).get();
+            // Always send the selected formats array; backend will map to concrete media types
+            // depending on whether the file is image or video.
+            formData.append("facebook_content_formats", JSON.stringify(fbFormats));
             var selectedAccounts = getCreatePostSelectedAccounts();
             if (selectedAccounts.length > 0) {
                 formData.append("account_ids", JSON.stringify(selectedAccounts));

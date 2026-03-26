@@ -4429,6 +4429,77 @@
         box-shadow: inset 0 0 0 3px #f3f4f6;
     }
 
+    .create-post-format-help-wrap {
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        flex-shrink: 0;
+    }
+
+    .create-post-format-help-btn {
+        border: none;
+        background: transparent;
+        color: #6b7280;
+        cursor: pointer;
+        padding: 0;
+        margin: 0;
+        font-size: 18px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+    }
+
+    .create-post-format-help-popover {
+        position: absolute;
+        left: 0;
+        top: calc(100% + 10px);
+        background: #333;
+        color: #fff;
+        padding: 10px 12px;
+        border-radius: 6px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        opacity: 0;
+        visibility: hidden;
+        transform: translateY(-6px);
+        transition: opacity 0.2s ease, transform 0.2s ease, visibility 0.2s ease;
+        z-index: 10000;
+        min-width: 260px;
+        max-width: 320px;
+    }
+
+    .create-post-format-help-popover::before {
+        content: '';
+        position: absolute;
+        top: -6px;
+        right: 14px;
+        border-width: 6px;
+        border-style: solid;
+        border-color: transparent transparent #333 transparent;
+    }
+
+    .create-post-format-help-wrap:hover .create-post-format-help-popover,
+    .create-post-format-help-wrap.open .create-post-format-help-popover {
+        opacity: 1;
+        visibility: visible;
+        transform: translateY(0);
+    }
+
+    .create-post-format-help-list {
+        margin: 0;
+        padding-left: 18px;
+    }
+
+    .create-post-format-help-list li {
+        margin: 0 0 6px 0;
+        font-size: 12px;
+        line-height: 1.3;
+    }
+
+    .create-post-format-help-list li:last-child {
+        margin-bottom: 0;
+    }
+
     .create-post-upload-previews {
         display: flex;
         flex-wrap: wrap;
