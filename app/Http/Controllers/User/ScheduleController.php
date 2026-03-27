@@ -224,9 +224,9 @@ class  ScheduleController extends Controller
             return $withPosts->concat($withoutPosts);
         };
 
-        $facebook = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'facebook'));
-        $pinterest = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'pinterest'));
-        $tiktok = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'tiktok'));
+        $facebook = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'facebook'));
+        $pinterest = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'pinterest'));
+        $tiktok = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'tiktok'));
 
         return $facebook->concat($pinterest)->concat($tiktok);
     }
@@ -320,7 +320,7 @@ class  ScheduleController extends Controller
         $user = User::find(Auth::guard('user')->id());
         $accountsStatus = collect();
 
-        $user->pages()->get(['id', 'schedule_status'])->each(function ($page) use ($accountsStatus) {   
+        $user->pages()->get(['id', 'schedule_status'])->each(function ($page) use ($accountsStatus) {
             $accountsStatus->push([
                 'id' => $page->id,
                 'type' => 'facebook',
@@ -2389,7 +2389,7 @@ class  ScheduleController extends Controller
     {
         $types = array_values(array_filter(
             (array) $request->input('type', []),
-            fn ($t) => $t !== null && $t !== ''
+            fn($t) => $t !== null && $t !== ''
         ));
 
         return count($types) === 1 && (string) $types[0] === 'pinterest';
@@ -2406,7 +2406,13 @@ class  ScheduleController extends Controller
     public function postsListing(Request $request)
     {
         $data = $request->all();
-        $posts = Post::with("page.facebook", "board.pinterest", "user.timezone")->isScheduled();
+        $viewer = Auth::guard('user')->user();
+        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::guard('user')->id()];
+
+        $posts = Post::withoutGlobalScopes()
+            ->with("page.facebook", "board.pinterest", "user.timezone")
+            ->isScheduled()
+            ->whereIn('user_id', $postCreatorIds);
 
         if (!empty($request->account_id)) {
             $posts = $posts->whereIn("account_id", $request->account_id);
@@ -2585,6 +2591,9 @@ class  ScheduleController extends Controller
         }
 
         $user = Auth::guard('user')->user();
+        $postCreatorIds = $user instanceof User ? $user->schedulePostCreatorUserIds() : [(int) Auth::guard('user')->id()];
+        $base->whereIn('user_id', $postCreatorIds);
+
         $userTz = TimezoneService::getUserTimezone($user);
         $nowUtc = Carbon::now($userTz)->setTimezone('UTC')->format('Y-m-d H:i:s');
 
@@ -2643,8 +2652,11 @@ class  ScheduleController extends Controller
         $startDate = Carbon::now($userTz)->addDays($offset)->startOfDay();
         $endDate = $startDate->copy()->addDays($days - 1)->endOfDay();
 
-        $postsQuery = Post::with('page.facebook', 'board.pinterest', 'tiktok')
-            ->where('user_id', $user->id)
+        $postCreatorIds = $user->schedulePostCreatorUserIds();
+
+        $postsQuery = Post::withoutGlobalScopes()
+            ->with('page.facebook', 'board.pinterest', 'tiktok', 'user')
+            ->whereIn('user_id', $postCreatorIds)
             ->where('account_id', $accountId)
             ->where('social_type', 'like', "%{$socialType}%")
             ->where('status', 0)
@@ -2662,7 +2674,12 @@ class  ScheduleController extends Controller
         $timeline = [];
         $now = Carbon::now($userTz);
 
-        $formatPostForSlot = function ($post) {
+        $formatPostForSlot = function ($post) use ($user) {
+            $author = $post->user;
+            $createdByName = $author
+                ? trim((string) ($author->full_name ?: (($author->username ?? '') !== '' ? $author->username : ($author->email ?? ''))))
+                : '';
+
             return [
                 'id' => $post->id,
                 'title' => $post->title,
@@ -2677,6 +2694,8 @@ class  ScheduleController extends Controller
                 'account_profile' => $post->account_profile ? (str_starts_with($post->account_profile, 'http') ? $post->account_profile : asset($post->account_profile)) : null,
                 'social_type' => $post->social_type,
                 'created_at' => $post->created_at ? Carbon::parse($post->created_at)->diffForHumans() : null,
+                'is_own_post' => (int) $post->user_id === (int) $user->id,
+                'created_by_name' => $createdByName,
             ];
         };
 
@@ -2753,6 +2772,8 @@ class  ScheduleController extends Controller
     public function getPageSentPosts(Request $request)
     {
         $userId = (int) Auth::id();
+        $viewer = Auth::guard('user')->user();
+        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [$userId];
         $accountIds = (array) $request->input('account_id', []);
         if (empty($accountIds)) {
             return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
@@ -2810,11 +2831,12 @@ class  ScheduleController extends Controller
 
             $ourPostsByExternalId = empty($postIds)
                 ? collect()
-                : Post::where('user_id', $userId)
-                    ->whereIn('post_id', $postIds)
-                    ->with('user')
-                    ->get()
-                    ->keyBy(fn($p) => (string) $p->post_id);
+                : Post::withoutGlobalScopes()
+                ->whereIn('user_id', $postCreatorIds)
+                ->whereIn('post_id', $postIds)
+                ->with('user')
+                ->get()
+                ->keyBy(fn($p) => (string) $p->post_id);
 
             foreach ($posts as &$post) {
                 $post['account_name'] = $page->name;
@@ -2847,8 +2869,8 @@ class  ScheduleController extends Controller
         $pageIds = $pages->pluck('id')->all();
         $pagesById = $pages->keyBy('id');
 
-        $dbSentPosts = Post::query()
-            ->where('user_id', $userId)
+        $dbSentPosts = Post::withoutGlobalScopes()
+            ->whereIn('user_id', $postCreatorIds)
             ->where('social_type', 'facebook')
             ->whereIn('account_id', $pageIds)
             ->where('status', 1)
@@ -2887,12 +2909,14 @@ class  ScheduleController extends Controller
     public function getPinterestSentPosts(Request $request)
     {
         $userId = (int) Auth::id();
+        $viewer = Auth::guard('user')->user();
+        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [$userId];
         $accountIds = (array) $request->input('account_id', []);
         if (empty($accountIds)) {
             return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
         }
 
-        $boards = Board::whereIn('id', $accountIds)->where('user_id', $userId)->get();
+        $boards = Board::whereIn('id', $accountIds)->get();
         if ($boards->isEmpty()) {
             return response()->json(['success' => false, 'message' => 'No boards found', 'posts' => []]);
         }
@@ -2900,8 +2924,8 @@ class  ScheduleController extends Controller
         $boardIds = $boards->pluck('id')->all();
         $boardsById = $boards->keyBy('id');
 
-        $dbPosts = Post::query()
-            ->where('user_id', $userId)
+        $dbPosts = Post::withoutGlobalScopes()
+            ->whereIn('user_id', $postCreatorIds)
             ->where('social_type', 'like', '%pinterest%')
             ->whereIn('account_id', $boardIds)
             ->where('status', 1)
@@ -2930,12 +2954,14 @@ class  ScheduleController extends Controller
     public function getTikTokSentPosts(Request $request)
     {
         $userId = (int) Auth::id();
+        $viewer = Auth::guard('user')->user();
+        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [$userId];
         $accountIds = (array) $request->input('account_id', []);
         if (empty($accountIds)) {
             return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
         }
 
-        $accounts = Tiktok::whereIn('id', $accountIds)->where('user_id', $userId)->get();
+        $accounts = Tiktok::whereIn('id', $accountIds)->get();
         if ($accounts->isEmpty()) {
             return response()->json(['success' => false, 'message' => 'No TikTok accounts found', 'posts' => []]);
         }
@@ -2943,8 +2969,8 @@ class  ScheduleController extends Controller
         $tiktokIds = $accounts->pluck('id')->all();
         $accountsById = $accounts->keyBy('id');
 
-        $dbPosts = Post::query()
-            ->where('user_id', $userId)
+        $dbPosts = Post::withoutGlobalScopes()
+            ->whereIn('user_id', $postCreatorIds)
             ->where('social_type', 'like', '%tiktok%')
             ->whereIn('account_id', $tiktokIds)
             ->where('status', 1)

@@ -697,6 +697,24 @@ class User extends Authenticatable
     }
 
     /**
+     * User IDs whose scheduled posts this viewer may see in queue/sent tabs.
+     * Team lead: self plus active team members; team member: self only; otherwise self only.
+     */
+    public function schedulePostCreatorUserIds(): array
+    {
+        if ($this->isTeamMember()) {
+            return [(int) $this->id];
+        }
+        if ($this->isTeamLead()) {
+            $memberIds = $this->teamMemberAsLead()->active()->pluck('member_id')->map(fn ($id) => (int) $id)->all();
+
+            return array_values(array_unique(array_merge([(int) $this->id], $memberIds)));
+        }
+
+        return [(int) $this->id];
+    }
+
+    /**
      * Get the effective user for feature limits (team member uses team lead's limits)
      */
     public function getEffectiveUser()

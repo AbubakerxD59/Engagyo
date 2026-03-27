@@ -676,7 +676,16 @@
             }
             cardHtml += '</div>';
             cardHtml += '<div class="queue-post-card-footer">';
-            cardHtml += '<span class="queue-post-created">' + (createdAgo ? 'You created this ' + createdAgo : '') + '</span>';
+            var createdLine = '';
+            if (post.is_own_post) {
+                createdLine = createdAgo ? 'You created this ' + createdAgo : '';
+            } else if (post.created_by_name) {
+                var byName = escapeHtml(post.created_by_name);
+                createdLine = createdAgo ? (byName + ' scheduled this ' + createdAgo) : ('Scheduled by ' + byName);
+            } else if (createdAgo) {
+                createdLine = 'Scheduled ' + createdAgo;
+            }
+            cardHtml += '<span class="queue-post-created">' + createdLine + '</span>';
             cardHtml += '<div class="queue-post-actions">';
             cardHtml += '<button type="button" class="queue-post-publish-now-btn btn-publish-now" data-id="' + postId + '"><i class="fas fa-paper-plane"></i> Publish Now</button>';
             cardHtml += '<button type="button" class="queue-post-edit-btn" data-id="' + postId + '" aria-label="Edit"><i class="fas fa-pencil-alt"></i></button>';
