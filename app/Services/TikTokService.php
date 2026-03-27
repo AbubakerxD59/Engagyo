@@ -287,7 +287,7 @@ class TikTokService
         try {
             $endpoint = $this->baseUrl . "post/publish/creator_info/query/";
             $response = $this->client->get($endpoint, [], $header);
-
+            dd($response);
             if (isset($response['data'])) {
                 return [
                     'success' => true,
