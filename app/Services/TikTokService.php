@@ -280,25 +280,63 @@ class TikTokService
     public function queryCreatorInfo($access_token)
     {
         $header = array(
-            "Content-Type" => "application/json",
+            "Content-Type" => "application/json; charset=UTF-8",
             "Authorization" => "Bearer " . $access_token
         );
 
         try {
             $endpoint = $this->baseUrl . "post/publish/creator_info/query/";
-            $response = $this->client->get($endpoint, [], $header);
-            dd($access_token, $response);
-            if (isset($response['data'])) {
+            // API method is POST (GET returns errors / empty handled response).
+            $response = $this->client->postJson($endpoint, [], $header);
+            dd($response);
+
+            if ($response === null) {
+                Log::warning('TikTok queryCreatorInfo: empty response (HTTP error or non-JSON).');
                 return [
-                    'success' => true,
-                    'data' => $response['data']
+                    'success' => false,
+                    'message' => 'No response from TikTok. Check logs or try again.',
+                    'data' => null,
                 ];
             }
 
+            $errorCode = $response['error']['code'] ?? null;
+            $errorMessage = $response['error']['message'] ?? '';
+
+            if (($errorCode === 'ok' || $errorCode === null) && isset($response['data']) && is_array($response['data'])) {
+                $data = $response['data'];
+
+                // Normalize flags for callers that expect *_enabled (API returns *_disabled).
+                if (!array_key_exists('comment_enabled', $data) && array_key_exists('comment_disabled', $data)) {
+                    $data['comment_enabled'] = !$data['comment_disabled'];
+                }
+                if (!array_key_exists('duet_enabled', $data) && array_key_exists('duet_disabled', $data)) {
+                    $data['duet_enabled'] = !$data['duet_disabled'];
+                }
+                if (!array_key_exists('stitch_enabled', $data) && array_key_exists('stitch_disabled', $data)) {
+                    $data['stitch_enabled'] = !$data['stitch_disabled'];
+                }
+
+                return [
+                    'success' => true,
+                    'data' => $data,
+                ];
+            }
+
+            $msg = $errorMessage !== '' ? $errorMessage : 'Failed to fetch creator info';
+            if ($errorCode && $errorCode !== 'ok') {
+                $msg = "TikTok API ({$errorCode}): {$msg}";
+            }
+
+            Log::warning('TikTok queryCreatorInfo failed', [
+                'code' => $errorCode,
+                'message' => $errorMessage,
+                'response_keys' => array_keys($response),
+            ]);
+
             return [
                 'success' => false,
-                'message' => $response['error']['message'] ?? 'Failed to fetch creator info',
-                'data' => null
+                'message' => $msg,
+                'data' => null,
             ];
         } catch (Exception $e) {
             info("TikTok query creator info error: " . $e->getMessage());
