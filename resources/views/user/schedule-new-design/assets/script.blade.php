@@ -273,10 +273,22 @@
             return true;
         }
 
+        /** Selected accounts are all TikTok (same sent-tab timeline as Pinterest). */
+        function isTikTokOnlySelection() {
+            var selected = getSelectedAccounts();
+            if (selected.accountIds.length === 0) return false;
+            for (var i = 0; i < selected.accountTypes.length; i++) {
+                if (selected.accountTypes[i] !== 'tiktok') return false;
+            }
+            return true;
+        }
+
         function refreshSentTabView() {
             if (shouldUseFacebookSentPageTimeline()) {
                 showSentPosts();
             } else if (isPinterestOnlySelection()) {
+                showSentPosts();
+            } else if (isTikTokOnlySelection()) {
                 showSentPosts();
             } else {
                 loadPosts(1);
@@ -289,6 +301,7 @@
         var postsStatusRequest = null;
         var sentPostsRequest = null;
         var pinterestSentRequest = null;
+        var tiktokSentRequest = null;
         var queueSectionRequest = null;
         var publishSentRefreshTimer = null;
 
@@ -338,8 +351,8 @@
                 },
                 success: function(data) {
                     $('#posts-status-tabs [data-count="queue"]').text(data.queue);
-                    // Sent badge from listing APIs for Facebook timeline + Pinterest sent; otherwise DB counts.
-                    if (!shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection()) {
+                    // Sent badge from listing APIs for Facebook timeline + Pinterest/TikTok sent; otherwise DB counts.
+                    if (!shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection()) {
                         $('#posts-status-tabs [data-count="sent"]').text(data.sent);
                     }
                 },
@@ -351,6 +364,8 @@
                 loadSentPagePostsCached(selectedAccounts);
             } else if (isPinterestOnlySelection()) {
                 loadPinterestSentPagePostsCached(selectedAccounts);
+            } else if (isTikTokOnlySelection()) {
+                loadTikTokSentPagePostsCached(selectedAccounts);
             } else {
                 cachedSentPagePosts = null;
             }
@@ -421,6 +436,40 @@
                 },
                 complete: function() {
                     pinterestSentRequest = null;
+                }
+            });
+        }
+
+        function loadTikTokSentPagePostsCached(selectedAccounts) {
+            if (!isTikTokOnlySelection()) {
+                return;
+            }
+            cachedSentPagePosts = null;
+            if (tiktokSentRequest && tiktokSentRequest.readyState !== 4) {
+                tiktokSentRequest.abort();
+            }
+            tiktokSentRequest = $.ajax({
+                url: "{{ route('panel.schedule.posts.tiktok.sent') }}",
+                type: "GET",
+                data: { account_id: selectedAccounts.accountIds },
+                success: function(response) {
+                    var posts = (response.success && response.posts) ? response.posts : [];
+                    cachedSentPagePosts = posts;
+                    $('#posts-status-tabs [data-count="sent"]').text(posts.length);
+                    if (currentPostStatusTab === 'sent') {
+                        showSentPosts();
+                    }
+                },
+                error: function(xhr, textStatus) {
+                    if (textStatus === 'abort') return;
+                    cachedSentPagePosts = [];
+                    $('#posts-status-tabs [data-count="sent"]').text(0);
+                    if (currentPostStatusTab === 'sent') {
+                        showSentPosts();
+                    }
+                },
+                complete: function() {
+                    tiktokSentRequest = null;
                 }
             });
         }
@@ -3158,7 +3207,7 @@
 
             var profileImg = post.account_profile || '';
             var socialLogo = socialLogos[st] || socialLogos.facebook;
-            var accountName = post.account_name || (st === 'pinterest' ? 'Pinterest board' : 'Facebook Page');
+            var accountName = post.account_name || (st === 'pinterest' ? 'Pinterest board' : (st === 'tiktok' ? 'TikTok' : 'Facebook Page'));
 
             var imageHtml = '';
             if (post.full_picture) {
@@ -3179,7 +3228,7 @@
             var viewPostBtn = '';
             if (post.permalink_url) {
                 var perm = $('<span>').text(post.permalink_url).html();
-                var viewLabel = st === 'pinterest' ? 'View Pin' : 'View Post';
+                var viewLabel = st === 'pinterest' ? 'View Pin' : (st === 'tiktok' ? 'View on TikTok' : 'View Post');
                 viewPostBtn = '<a href="' + perm + '" target="_blank" rel="noopener noreferrer" class="sent-card-view-btn"><i class="fas fa-external-link-alt"></i> ' + viewLabel + '</a>';
             }
             var dbPostId = post.db_post_id || '';
@@ -3200,6 +3249,8 @@
                 publishedViaHtml = 'Published via <span class="sent-card-published-via-tooltip" title="' + pubEmail + '" data-tooltip="' + pubEmail + '">' + pubUsername + '</span>';
             } else if (st === 'pinterest') {
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon pinterest"><i class="fab fa-pinterest-p"></i></span> Pinterest';
+            } else if (st === 'tiktok') {
+                publishedViaHtml = 'Published via <span class="sent-card-platform-icon tiktok"><i class="fab fa-tiktok"></i></span> TikTok';
             } else {
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon facebook"><i class="fab fa-facebook-f"></i></span> Facebook';
             }
@@ -3426,12 +3477,15 @@
             var postId = $btn.data('post-id');
             var pageId = $btn.data('page-id');
 
-            if (social === 'pinterest') {
+            if (social === 'pinterest' || social === 'tiktok') {
                 if (!dbPostId) {
                     toastr.error('Cannot delete: missing post info.');
                     return;
                 }
-                if (!confirm('Delete this Pin from Pinterest and from the app? This cannot be undone.')) return;
+                var deleteConfirmMsg = social === 'tiktok'
+                    ? 'Delete this post from TikTok and from the app? This cannot be undone.'
+                    : 'Delete this Pin from Pinterest and from the app? This cannot be undone.';
+                if (!confirm(deleteConfirmMsg)) return;
                 $btn.prop('disabled', true).addClass('is-deleting');
                 $.ajax({
                     url: "{{ route('panel.schedule.post.delete') }}",

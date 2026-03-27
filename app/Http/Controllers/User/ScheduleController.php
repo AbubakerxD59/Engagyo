@@ -2842,6 +2842,107 @@ class  ScheduleController extends Controller
     }
 
     /**
+     * TikTok Sent tab: published schedule posts for selected accounts (same card payload as Pinterest sent).
+     */
+    public function getTikTokSentPosts(Request $request)
+    {
+        $userId = (int) Auth::id();
+        $accountIds = (array) $request->input('account_id', []);
+        if (empty($accountIds)) {
+            return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
+        }
+
+        $accounts = Tiktok::whereIn('id', $accountIds)->where('user_id', $userId)->get();
+        if ($accounts->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No TikTok accounts found', 'posts' => []]);
+        }
+
+        $tiktokIds = $accounts->pluck('id')->all();
+        $accountsById = $accounts->keyBy('id');
+
+        $dbPosts = Post::query()
+            ->where('user_id', $userId)
+            ->where('social_type', 'like', '%tiktok%')
+            ->whereIn('account_id', $tiktokIds)
+            ->where('status', 1)
+            ->whereNotNull('published_at')
+            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
+            ->where('source', 'schedule')
+            ->with('user', 'tiktok')
+            ->orderByDesc('published_at')
+            ->get();
+
+        $allPosts = [];
+        foreach ($dbPosts as $dbPost) {
+            $account = $accountsById->get($dbPost->account_id) ?? $dbPost->tiktok;
+            if (!$account) {
+                continue;
+            }
+            $allPosts[] = $this->sentTabPostFromTikTokRecord($dbPost, $account);
+        }
+
+        return response()->json(['success' => true, 'posts' => $allPosts]);
+    }
+
+    /**
+     * Minimal Sent-tab payload from a published TikTok Post row (same keys as Pinterest / Facebook sent cards).
+     */
+    private function sentTabPostFromTikTokRecord(Post $dbPost, Tiktok $account): array
+    {
+        $published = Carbon::parse($dbPost->published_at);
+        $createdTime = $published->toIso8601String();
+
+        $fullPicture = '';
+        $rawImage = $dbPost->getAttributes()['image'] ?? null;
+        if (!empty($rawImage)) {
+            $img = $rawImage;
+            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                $fullPicture = $img;
+            } else {
+                $fullPicture = fetchFromS3($img);
+            }
+        }
+
+        $username = (string) ($account->username ?? '');
+        $usernameForUrl = ltrim($username, '@');
+        $permalink = $usernameForUrl !== ''
+            ? 'https://www.tiktok.com/@' . rawurlencode($usernameForUrl)
+            : null;
+
+        $profileImage = $account->profile_image ?? '';
+
+        $payload = [
+            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-' . $dbPost->id),
+            'created_time' => $createdTime,
+            'message' => (string) ($dbPost->title ?? ''),
+            'story' => '',
+            'type' => (string) ($dbPost->type ?? ''),
+            'full_picture' => $fullPicture,
+            'permalink_url' => $permalink,
+            'account_name' => $account->display_name ?: $username ?: 'TikTok',
+            'account_profile' => $profileImage,
+            'social_type' => 'tiktok',
+            'page_db_id' => $account->id,
+            'db_post_id' => $dbPost->id,
+            'insights' => [
+                'post_reactions' => 0,
+                'post_impressions' => 0,
+                'post_clicks' => 0,
+            ],
+            'comments' => 0,
+            'shares' => 0,
+            'from_local_db' => true,
+        ];
+
+        if ($dbPost->user) {
+            $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
+            $payload['publisher_email'] = $dbPost->user->email ?? '';
+        }
+
+        return $payload;
+    }
+
+    /**
      * Minimal Sent-tab payload from a published Pinterest Post row (metrics zeroed; same keys as Facebook sent cards).
      */
     private function sentTabPostFromPinterestRecord(Post $dbPost, Board $board): array
