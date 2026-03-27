@@ -100,6 +100,29 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    @elseif ($account->type == 'tiktok')
+                                        @php
+                                            $ttProfile = $account->profile_image ?? '';
+                                            $ttName = $account->display_name ?? $account->name ?? $account->username ?? '';
+                                            $ttUsername = $account->username ?? '';
+                                        @endphp
+                                        <div class="account-card {{ ($hasSelectedAccount && $selectedAccountId == (string) $account->id && ($saved['type'] ?? '') === 'tiktok') ? 'active' : (!$hasSelectedAccount ? 'active' : '') }}" data-type="tiktok"
+                                            data-id="{{ $account->id }}">
+                                            <div class="account-card-inner">
+                                                <div class="account-avatar">
+                                                    <img src="{{ $ttProfile }}"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';"
+                                                        loading="lazy" alt="">
+                                                    <span class="platform-badge tiktok">
+                                                        <i class="fab fa-tiktok"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-details">
+                                                    <span class="account-name">{{ Str::limit($ttName, 18) }}</span>
+                                                    <span class="account-username">{{ Str::limit($ttUsername, 15) }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     @endif
                                 @endforeach
                             </div>
@@ -209,7 +232,6 @@
     @include('user.schedule.modals.schedule-modal')
     @include('user.schedule-new-design.modals.create-post-modal')
     @include('user.schedule.modals.edit-post-modal')
-    @include('user.schedule.modals.tiktok-post-modal')
 
     {{-- Post Comment Modal (design matches Create Post modal) --}}
     <div class="modal fade post-comment-modal" id="postCommentModal" tabindex="-1" role="dialog" aria-labelledby="postCommentModalLabel" aria-hidden="true">

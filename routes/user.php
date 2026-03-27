@@ -50,6 +50,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
             Route::get("queue-timeline", "getQueueTimeline")->name("queue.timeline");
             Route::get("last-used-account", "getLastUsedAccount")->name("last-used-account");
             Route::get("accounts-with-status", "getAccountsWithStatus")->name("accounts-with-status");
+            Route::get("tiktok/creator-info", "getTikTokCreatorInfo")->name("tiktok.creator-info");
             Route::get("selected-account", "getSelectedAccount")->name("selected-account");
             Route::post("selected-account", "saveSelectedAccount")->name("selected-account.save");
             Route::get("timeslots", "getTimeslots")->name("timeslots");

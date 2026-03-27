@@ -388,6 +388,79 @@ class  ScheduleController extends Controller
     }
 
     /**
+     * Fetch live TikTok creator info for Direct Post UX compliance.
+     */
+    public function getTikTokCreatorInfo(Request $request)
+    {
+        $request->validate([
+            'account_id' => 'required|integer',
+        ]);
+
+        $user = Auth::guard('user')->user();
+        $account = Tiktok::where('id', $request->integer('account_id'))
+            ->where('user_id', $user->id)
+            ->first();
+
+        if (!$account) {
+            return response()->json([
+                'success' => false,
+                'message' => 'TikTok account not found.',
+            ]);
+        }
+
+        $tokenResponse = TikTokService::validateToken($account);
+        if (!$tokenResponse['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $tokenResponse['message'] ?? 'Failed to validate TikTok access token.',
+            ]);
+        }
+
+        $creatorInfoResponse = $this->tiktokService->queryCreatorInfo($tokenResponse['access_token']);
+        if (!$creatorInfoResponse['success']) {
+            return response()->json([
+                'success' => false,
+                'message' => $creatorInfoResponse['message'] ?? 'Failed to fetch TikTok creator info.',
+            ]);
+        }
+
+        $creatorInfo = $creatorInfoResponse['data'] ?? [];
+        $privacyOptions = $creatorInfo['privacy_level_options'] ?? [];
+        if (!is_array($privacyOptions)) {
+            $privacyOptions = [];
+        }
+
+        $canPost = true;
+        if (array_key_exists('can_post', $creatorInfo)) {
+            $canPost = (bool) $creatorInfo['can_post'];
+        } elseif (array_key_exists('can_post_content', $creatorInfo)) {
+            $canPost = (bool) $creatorInfo['can_post_content'];
+        }
+
+        $canComment = (bool) ($creatorInfo['comment_enabled'] ?? !($creatorInfo['comment_disabled'] ?? false));
+        $canDuet = (bool) ($creatorInfo['duet_enabled'] ?? !($creatorInfo['duet_disabled'] ?? false));
+        $canStitch = (bool) ($creatorInfo['stitch_enabled'] ?? !($creatorInfo['stitch_disabled'] ?? false));
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'account_id' => $account->id,
+                'display_name' => $creatorInfo['creator_nickname'] ?? $account->display_name ?? $account->username,
+                'username' => $account->username,
+                'can_post' => $canPost,
+                'can_post_reason' => $creatorInfo['can_not_post_reason'] ?? $creatorInfo['can_post_message'] ?? null,
+                'privacy_level_options' => array_values($privacyOptions),
+                'max_video_post_duration_sec' => isset($creatorInfo['max_video_post_duration_sec'])
+                    ? (int) $creatorInfo['max_video_post_duration_sec']
+                    : null,
+                'comment_enabled' => $canComment,
+                'duet_enabled' => $canDuet,
+                'stitch_enabled' => $canStitch,
+            ],
+        ]);
+    }
+
+    /**
      * Get the user's saved schedule selected account from the database.
      */
     public function getSelectedAccount()
@@ -740,6 +813,58 @@ class  ScheduleController extends Controller
                     // Check if this is a TikTok-specific post (from modal)
                     $tiktokAccountId = $request->get("tiktok_account_id");
                     if ($tiktokAccountId && $tiktokAccountId == $account->id && $file) {
+                        // Validate token and query latest creator info (required by TikTok Direct Post UX rules)
+                        $tokenResponse = TikTokService::validateToken($account);
+                        if (!$tokenResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
+                            );
+                        }
+                        $access_token = $tokenResponse['access_token'];
+
+                        $creatorInfoResponse = $this->tiktokService->queryCreatorInfo($access_token);
+                        if (!$creatorInfoResponse['success']) {
+                            return array(
+                                "success" => false,
+                                "message" => $creatorInfoResponse["message"] ?? "Failed to fetch TikTok creator info."
+                            );
+                        }
+                        $creatorInfo = $creatorInfoResponse['data'] ?? [];
+                        $canPost = $creatorInfo['can_post'] ?? ($creatorInfo['can_post_content'] ?? true);
+                        if (!$canPost) {
+                            return array(
+                                "success" => false,
+                                "message" => $creatorInfo['can_not_post_reason'] ?? "TikTok cannot accept new posts for this account right now. Please try again later."
+                            );
+                        }
+
+                        $privacyLevel = (string) $request->get("tiktok_privacy_level");
+                        $allowedPrivacy = ['FOLLOWER_OF_CREATOR', 'MUTUAL_FOLLOW_FRIENDS', 'SELF_ONLY'];
+                        if ($privacyLevel === '' || !in_array($privacyLevel, $allowedPrivacy, true)) {
+                            return array(
+                                "success" => false,
+                                "message" => "Invalid TikTok privacy option.",
+                            );
+                        }
+                        $commercialToggle = (int) $request->get("tiktok_commercial_toggle", 0);
+                        if ($commercialToggle && $privacyLevel === 'SELF_ONLY') {
+                            return array(
+                                "success" => false,
+                                "message" => "Only You is not available when disclose post content is enabled.",
+                            );
+                        }
+
+                        $isVideoPost = empty($image);
+                        $maxVideoDuration = isset($creatorInfo['max_video_post_duration_sec']) ? (int) $creatorInfo['max_video_post_duration_sec'] : null;
+                        $videoDuration = (float) $request->get("tiktok_video_duration", 0);
+                        if ($isVideoPost && $maxVideoDuration && $videoDuration > 0 && $videoDuration > $maxVideoDuration) {
+                            return array(
+                                "success" => false,
+                                "message" => "Video duration exceeds TikTok account limit ({$maxVideoDuration}s)."
+                            );
+                        }
+
                         // This is a TikTok post from the modal - use TikTok-specific fields
                         $type = !empty($image) ? "photo" : "video";
                         $data = [
@@ -774,15 +899,6 @@ class  ScheduleController extends Controller
                             $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                         }
 
-                        // Use validateToken for proper error handling
-                        $tokenResponse = TikTokService::validateToken($account);
-                        if (!$tokenResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
-                            );
-                        }
-                        $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
                         // Merge TikTok metadata into postData
                         $postData = array_merge($postData, $tiktokMetadata);

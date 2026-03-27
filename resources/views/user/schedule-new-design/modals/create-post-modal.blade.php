@@ -102,6 +102,33 @@
                                                         class="fas fa-check"></i></span>
                                             </label>
                                         </div>
+                                    @elseif ($type === 'tiktok')
+                                        @php
+                                            $name = $account->display_name ?? $account->name ?? $account->username ?? '';
+                                            $username = $account->username ?? '';
+                                            $profileImg = $account->profile_image ?? '';
+                                            $tooltip = $name . ($username ? ' - ' . $username : '');
+                                        @endphp
+                                        <div class="channels-dropdown-item" data-id="{{ $account->id }}"
+                                            data-type="{{ $type }}"
+                                            data-name="{{ Str::lower($name . ' ' . $username) }}"
+                                            data-tooltip="{{ $tooltip }}">
+                                            <div class="channels-dropdown-item-avatar">
+                                                <img src="{{ $profileImg }}"
+                                                    onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';"
+                                                    loading="lazy" alt="">
+                                                <span class="channels-dropdown-item-badge tiktok"><i
+                                                        class="fab fa-tiktok"></i></span>
+                                            </div>
+                                            <span class="channels-dropdown-item-name">{{ $name }}</span>
+                                            <label class="channels-dropdown-item-checkbox">
+                                                <input type="checkbox" class="channels-dropdown-checkbox"
+                                                    data-id="{{ $account->id }}" data-type="{{ $type }}"
+                                                    data-schedule-status="{{ $account->schedule_status ?? 'inactive' }}">
+                                                <span class="channels-dropdown-checkbox-icon"><i
+                                                        class="fas fa-check"></i></span>
+                                            </label>
+                                        </div>
                                     @endif
                                 @endforeach
                             </div>
@@ -182,6 +209,57 @@
                                     <p class="create-post-upload-text">Drag & drop or <span
                                             class="create-post-upload-link" id="createPostUploadLink">select a
                                             file</span></p>
+                                </div>
+                            </div>
+                            <div id="createPostTikTokSettingsWrap" class="mt-3" style="display:none;">
+                                <div class="border rounded p-3" style="background:#f8fafc;color:#1f2937;border-color:#e5e7eb !important;">
+                                    <h6 class="mb-3" style="color:#111827;">TikTok Post Settings</h6>
+                                    <div id="createPostTikTokError" class="alert alert-danger py-2 px-3 mb-3"
+                                        style="display:none;"></div>
+                                    <div class="form-group mb-3">
+                                        <label for="createPostTikTokPrivacyLevel" class="mb-1" style="color:#374151;">Who can view this post?</label>
+                                        <select id="createPostTikTokPrivacyLevel" class="form-control w-50">
+                                            <option value="">Select privacy</option>
+                                            <option value="FOLLOWER_OF_CREATOR">Followers</option>
+                                            <option value="MUTUAL_FOLLOW_FRIENDS">Friends</option>
+                                            <option value="SELF_ONLY">Only You</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group mb-2">
+                                        <label class="d-block mb-2" style="color:#374151;">Allow users to</label>
+                                        <label class="mb-0 d-flex align-items-center">
+                                            <input type="checkbox" id="createPostTikTokAllowComment" class="mr-2">
+                                            <span>Comment</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group mb-2">
+                                        <label class="mb-0 d-flex align-items-center">
+                                            <input type="checkbox" id="createPostTikTokCommercialToggle" class="mr-2">
+                                            <span>Disclose post content</span>
+                                        </label>
+                                    </div>
+                                    <div id="createPostTikTokCommercialOptions" class="form-group mb-2 pl-4" style="display:none;">
+                                        <label class="mb-0 d-flex align-items-center">
+                                            <input type="checkbox" id="createPostTikTokYourBrand" class="mr-2">
+                                            <span>Your brand</span>
+                                        </label>
+                                        <label class="mt-2 mb-0 d-flex align-items-center">
+                                            <input type="checkbox" id="createPostTikTokBrandedContent" class="mr-2">
+                                            <span>Branded content</span>
+                                        </label>
+                                    </div>
+                                    <div class="form-group mb-2">
+                                        <label class="mb-0 d-flex align-items-center">
+                                            <input type="checkbox" id="createPostTikTokAddMusic" class="mr-2">
+                                            <span>Add recommended music from TikTok</span>
+                                        </label>
+                                    </div>
+                                    <small class="d-block mt-2" style="color:#4b5563;">
+                                        By posting, you agree to TikTok's
+                                        <span id="createPostTikTokPolicyPrefix" style="display:none;"><a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noopener noreferrer">Branded Content Policy</a> and </span>
+                                        <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en"
+                                            target="_blank" rel="noopener noreferrer">Music Usage Confirmation</a>.
+                                    </small>
                                 </div>
                             </div>
                             <div class="create-post-editor-actions">

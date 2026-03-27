@@ -118,7 +118,7 @@
                 <div class="form-group">
                     <div class="alert alert-info" id="tiktok-declaration">
                         <i class="fas fa-exclamation-circle"></i>
-                        <strong>By posting, you agree to TikTok's Music Usage Confirmation</strong>
+                        <strong>By posting, you agree to TikTok's <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener noreferrer">Music Usage Confirmation</a></strong>
                     </div>
                 </div>
 
