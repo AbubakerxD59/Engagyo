@@ -300,11 +300,11 @@ class User extends Authenticatable
     public function getScheduledActiveAccounts()
     {
         // Pinterest Boards
-        $boards = Board::with("pinterest")->whereScheduledActive()->get();
+        $boards = Board::with("pinterest", "timeslots")->whereScheduledActive()->get();
         // Facebook Pages
-        $pages = Page::with("facebook")->whereScheduledActive()->get();
+        $pages = Page::with("facebook", "timeslots")->whereScheduledActive()->get();
         // TikTok Accounts
-        $tiktoks = Tiktok::whereScheduledActive()->get();
+        $tiktoks = Tiktok::with("timeslots")->whereScheduledActive()->get();
         $accounts = collect();
         $accounts = $boards->concat($pages)->concat($tiktoks);
         return $accounts;
@@ -328,17 +328,17 @@ class User extends Authenticatable
                     continue;
                 }
                 if ($type === 'facebook') {
-                    $page = Page::with('facebook')->where('id', $id)->where('user_id', $this->id)->first();
+                    $page = Page::with(['facebook', 'timeslots'])->where('id', $id)->first();
                     if ($page) {
                         $accounts->push($page);
                     }
                 } elseif ($type === 'pinterest') {
-                    $board = Board::with('pinterest')->where('id', $id)->where('user_id', $this->id)->first();
+                    $board = Board::with(['pinterest', 'timeslots'])->where('id', $id)->first();
                     if ($board) {
                         $accounts->push($board);
                     }
                 } elseif ($type === 'tiktok') {
-                    $tiktok = Tiktok::where('id', $id)->where('user_id', $this->id)->first();
+                    $tiktok = Tiktok::with('timeslots')->where('id', $id)->first();
                     if ($tiktok) {
                         $accounts->push($tiktok);
                     }

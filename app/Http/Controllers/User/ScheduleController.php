@@ -616,6 +616,42 @@ class  ScheduleController extends Controller
     }
 
     /**
+     * Human-readable account name for queue validation errors.
+     */
+    private function accountLabelForQueueError(object $account): string
+    {
+        foreach (['name', 'display_name', 'username'] as $prop) {
+            if (!empty($account->{$prop})) {
+                return (string) $account->{$prop};
+            }
+        }
+
+        return 'this account';
+    }
+
+    /**
+     * Queue (add to posting hours) requires at least one timeslot per selected account.
+     *
+     * @param \Illuminate\Support\Collection|\Traversable $accounts
+     * @return array|null Error payload for JSON, or null if OK
+     */
+    private function validateQueueAccountsHaveTimeslots($accounts): ?array
+    {
+        foreach ($accounts as $account) {
+            if (count($account->timeslots) === 0) {
+                $label = $this->accountLabelForQueueError($account);
+
+                return [
+                    'success' => false,
+                    'message' => 'Please select at least one posting hour for ' . $label . '.',
+                ];
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Facebook media formats from create-post modal.
      * Input (from JS): facebook_content_formats = JSON array of "post" | "reel" | "story"
      * - image: post -> photo, story -> story
@@ -1210,6 +1246,10 @@ class  ScheduleController extends Controller
         try {
             $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
             $accounts = $this->resolveAccountsForPost($request, $user);
+            $queueValidation = $this->validateQueueAccountsHaveTimeslots($accounts);
+            if ($queueValidation !== null) {
+                return $queueValidation;
+            }
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
             $file = $request->file("files") ? true : false;
@@ -1221,16 +1261,6 @@ class  ScheduleController extends Controller
                     $video = saveToS3($request->file("files"));
                 } else {
                     $image = saveImage($request->file("files"));
-                }
-            }
-
-            foreach ($accounts as $account) {
-                $wouldReceivePost = ($account->type === 'facebook') || ($account->type === 'pinterest' && $file) || ($account->type === 'tiktok' && $file);
-                if ($wouldReceivePost && count($account->timeslots) === 0) {
-                    return [
-                        'success' => false,
-                        'message' => 'Please select at least 1 timeslot for the selected account(s).'
-                    ];
                 }
             }
 
@@ -1354,11 +1384,6 @@ class  ScheduleController extends Controller
                     $response = array(
                         "success" => true,
                         "message" => "Your posts are queued for Later!"
-                    );
-                } else {
-                    $response = array(
-                        "success" => false,
-                        "message" => "Please select atleast 1 posting hour for " . $account->name . " account!"
                     );
                 }
             }
@@ -1689,6 +1714,11 @@ class  ScheduleController extends Controller
             $url = $request->get("url") ?? null;
             $image = $request->get("image") ?? null;
             if (!empty($url)) {
+                $queueValidation = $this->validateQueueAccountsHaveTimeslots($accounts);
+                if ($queueValidation !== null) {
+                    return $queueValidation;
+                }
+
                 // Count how many posts will be created (link allowed without image for Facebook/Instagram)
                 $postsToCreate = 0;
                 foreach ($accounts as $account) {
@@ -1796,11 +1826,6 @@ class  ScheduleController extends Controller
                                 }
                             }
                         }
-                    } else {
-                        $response = array(
-                            "success" => false,
-                            "message" => "Please select atleast 1 posting hour for " . $account->name . " account!"
-                        );
                     }
                 }
                 $response = array(
