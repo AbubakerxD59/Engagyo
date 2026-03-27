@@ -824,6 +824,7 @@ class  ScheduleController extends Controller
                         $access_token = $tokenResponse['access_token'];
 
                         $creatorInfoResponse = $this->tiktokService->queryCreatorInfo($access_token);
+                        dd($creatorInfoResponse);
                         if (!$creatorInfoResponse['success']) {
                             return array(
                                 "success" => false,
