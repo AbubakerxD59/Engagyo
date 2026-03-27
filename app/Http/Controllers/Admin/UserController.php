@@ -50,8 +50,8 @@ class UserController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'first_name' => 'required|string|max:150',
-            'last_name' => 'required|string|max:150',
+            'first_name' => 'nullable|string|max:150',
+            'last_name' => 'nullable|string|max:150',
             'email' => 'required|email|max:250|unique:users',
             'password' => 'required|min:4|confirmed',
             'role' => 'required',
@@ -60,8 +60,8 @@ class UserController extends Controller
         ]);
 
         $userData = [
-            'first_name' => $request->first_name,
-            'last_name' => $request->last_name,
+            'first_name' => $request->first_name ?: null,
+            'last_name' => $request->last_name ?: null,
             'username' => UsernameService::generate($request->email),
             'email' => $request->email,
             'password' => $request->password,
@@ -188,8 +188,8 @@ class UserController extends Controller
     public function update(Request $request, string $id)
     {
         $validated = $request->validate([
-            'first_name' => 'required|string|max:150',
-            'last_name' => 'required|string|max:150',
+            'first_name' => 'nullable|string|max:150',
+            'last_name' => 'nullable|string|max:150',
             'email' => 'required|email|max:250|unique:users,email,' . $id,
             'role' => 'required',
             'active' => 'required',
@@ -203,8 +203,8 @@ class UserController extends Controller
             $packageChanged = false;
 
             $data = [
-                'first_name' => $request->first_name,
-                'last_name' => $request->last_name,
+                'first_name' => $request->first_name ?: null,
+                'last_name' => $request->last_name ?: null,
                 'email' => $request->email,
                 'status' => $request->active ? 1 : 0
             ];

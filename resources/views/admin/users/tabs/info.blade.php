@@ -6,7 +6,7 @@
     <div class="col-md-9">
         <input type="text" class="form-control" name="first_name" id="first_name"
             value="{{ old('first_name', $user->first_name) }}"
-            placeholder="Enter first name" required>
+            placeholder="Enter first name (optional)">
         @error('first_name')
             <div class="invalid-feedback d-block">{{ $message }}</div>
         @enderror
@@ -20,7 +20,7 @@
     <div class="col-md-9">
         <input type="text" class="form-control" name="last_name" id="last_name"
             value="{{ old('last_name', $user->last_name) }}"
-            placeholder="Enter last name" required>
+            placeholder="Enter last name (optional)">
         @error('last_name')
             <div class="invalid-feedback d-block">{{ $message }}</div>
         @enderror
