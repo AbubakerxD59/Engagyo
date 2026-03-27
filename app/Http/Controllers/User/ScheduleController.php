@@ -2892,14 +2892,30 @@ class  ScheduleController extends Controller
         $published = Carbon::parse($dbPost->published_at);
         $createdTime = $published->toIso8601String();
 
+        $postType = strtolower((string) ($dbPost->getAttributes()['type'] ?? $dbPost->type ?? ''));
+        $isVideo = $postType === 'video';
+
         $fullPicture = '';
         $rawImage = $dbPost->getAttributes()['image'] ?? null;
         if (!empty($rawImage)) {
             $img = $rawImage;
             if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
                 $fullPicture = $img;
-            } else {
+            } elseif ($isVideo) {
                 $fullPicture = fetchFromS3($img);
+            } else {
+                $fullPicture = url(getImage('', $img));
+            }
+        }
+
+        if ($fullPicture === '' && $isVideo) {
+            $rawVideo = $dbPost->getAttributes()['video'] ?? null;
+            if (!empty($rawVideo)) {
+                if (str_starts_with($rawVideo, 'http://') || str_starts_with($rawVideo, 'https://')) {
+                    $fullPicture = $rawVideo;
+                } else {
+                    $fullPicture = fetchFromS3($rawVideo);
+                }
             }
         }
 
