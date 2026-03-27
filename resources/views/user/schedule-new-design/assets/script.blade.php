@@ -607,7 +607,8 @@
             var linkUrl = post.url || '';
             var linkDesc = (post.description || post.title || '').trim();
             var videoSrc = (post.video || '').toString().trim();
-            var isVideoMedia = !!videoSrc;
+            var postTypeNorm = (post.type || '').toString().toLowerCase();
+            var isVideoMedia = !!videoSrc && postTypeNorm === 'video';
 
             var cardHtml = '<div class="queue-post-card' + (isLinkPost ? ' queue-post-card-link' : '') + '" data-post-id="' + postId + '">';
             cardHtml += '<div class="queue-post-card-inner">';
@@ -3232,7 +3233,7 @@
 
             var videoUrl = (post.video_url || '').toString().trim();
             var imageHtml = '';
-            if (videoUrl) {
+            if (videoUrl && postType === 'video') {
                 var vSrc = $('<span>').text(videoUrl).html();
                 var posterAttr = '';
                 if (post.full_picture) {
