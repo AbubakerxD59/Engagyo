@@ -652,6 +652,47 @@ class  ScheduleController extends Controller
     }
 
     /**
+     * Queue tab: image URL only when media exists in DB. Skips the Post model image accessor placeholder for text-only posts.
+     */
+    private function queueTimelinePostImageUrl(Post $post): ?string
+    {
+        $rawImage = $post->getAttributes()['image'] ?? null;
+        if ($rawImage === null || $rawImage === '') {
+            return null;
+        }
+
+        $rawImage = (string) $rawImage;
+        if (str_starts_with($rawImage, 'http://') || str_starts_with($rawImage, 'https://')) {
+            return $rawImage;
+        }
+
+        $type = strtolower((string) ($post->getAttributes()['type'] ?? ''));
+        $social = strtolower((string) ($post->getAttributes()['social_type'] ?? ''));
+        if (str_contains($social, 'tiktok') && $type === 'video') {
+            return fetchFromS3($rawImage);
+        }
+
+        return url(getImage('', $rawImage));
+    }
+
+    /**
+     * Public URL for a post's stored video file (S3 key or absolute URL).
+     */
+    private function postStoredVideoUrl(Post $post): ?string
+    {
+        $rawVideo = $post->getAttributes()['video'] ?? null;
+        if ($rawVideo === null || $rawVideo === '') {
+            return null;
+        }
+        $rawVideo = (string) $rawVideo;
+        if (str_starts_with($rawVideo, 'http://') || str_starts_with($rawVideo, 'https://')) {
+            return $rawVideo;
+        }
+
+        return fetchFromS3($rawVideo);
+    }
+
+    /**
      * Facebook media formats from create-post modal.
      * Input (from JS): facebook_content_formats = JSON array of "post" | "reel" | "story"
      * - image: post -> photo, story -> story
@@ -2630,7 +2671,8 @@ class  ScheduleController extends Controller
                 'url' => $post->url,
                 'type' => $post->type,
                 'status' => (int) $post->status,
-                'image' => $post->image ? (str_starts_with($post->image, 'http') ? $post->image : asset($post->image)) : null,
+                'image' => $this->queueTimelinePostImageUrl($post),
+                'video' => $this->postStoredVideoUrl($post),
                 'account_name' => $post->account_name ?? ucfirst($post->social_type),
                 'account_profile' => $post->account_profile ? (str_starts_with($post->account_profile, 'http') ? $post->account_profile : asset($post->account_profile)) : null,
                 'social_type' => $post->social_type,
@@ -2949,16 +2991,7 @@ class  ScheduleController extends Controller
             }
         }
 
-        if ($fullPicture === '' && $isVideo) {
-            $rawVideo = $dbPost->getAttributes()['video'] ?? null;
-            if (!empty($rawVideo)) {
-                if (str_starts_with($rawVideo, 'http://') || str_starts_with($rawVideo, 'https://')) {
-                    $fullPicture = $rawVideo;
-                } else {
-                    $fullPicture = fetchFromS3($rawVideo);
-                }
-            }
-        }
+        $videoUrl = $this->postStoredVideoUrl($dbPost);
 
         $username = (string) ($account->username ?? '');
         $usernameForUrl = ltrim($username, '@');
@@ -2989,6 +3022,7 @@ class  ScheduleController extends Controller
             'comments' => 0,
             'shares' => 0,
             'from_local_db' => true,
+            'video_url' => $videoUrl,
         ];
 
         if ($dbPost->user) {
@@ -3046,6 +3080,9 @@ class  ScheduleController extends Controller
             'from_local_db' => true,
         ];
 
+        $payload['type'] = (string) ($dbPost->getAttributes()['type'] ?? $dbPost->type ?? '');
+        $payload['video_url'] = $this->postStoredVideoUrl($dbPost);
+
         if ($dbPost->user) {
             $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
             $payload['publisher_email'] = $dbPost->user->email ?? '';
@@ -3063,14 +3100,17 @@ class  ScheduleController extends Controller
         $createdTime = $published->toIso8601String();
 
         $fullPicture = '';
-        if (!empty($dbPost->image)) {
-            $img = $dbPost->image;
+        $rawImage = $dbPost->getAttributes()['image'] ?? null;
+        if (!empty($rawImage)) {
+            $img = (string) $rawImage;
             if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
                 $fullPicture = $img;
             } else {
                 $fullPicture = fetchFromS3($img);
             }
         }
+
+        $videoUrl = $this->postStoredVideoUrl($dbPost);
 
         $payload = [
             'id' => $dbPost->post_id,
@@ -3081,6 +3121,7 @@ class  ScheduleController extends Controller
             // Expected values from scheduled Facebook posts: post/photo, video, reel, story, etc.
             'type' => (string) ($dbPost->type ?? ''),
             'full_picture' => $fullPicture,
+            'video_url' => $videoUrl,
             'permalink_url' => $dbPost->facebook_post_url,
             'account_name' => $page->name,
             'account_profile' => $page->profile_image,

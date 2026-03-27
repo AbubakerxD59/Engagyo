@@ -606,6 +606,8 @@
             var linkTitle = post.title || post.url || '';
             var linkUrl = post.url || '';
             var linkDesc = (post.description || post.title || '').trim();
+            var videoSrc = (post.video || '').toString().trim();
+            var isVideoMedia = !!videoSrc;
 
             var cardHtml = '<div class="queue-post-card' + (isLinkPost ? ' queue-post-card-link' : '') + '" data-post-id="' + postId + '">';
             cardHtml += '<div class="queue-post-card-inner">';
@@ -660,7 +662,15 @@
                         cardHtml += '<div class="queue-post-text">' + textFull + '</div>';
                     }
                 }
-                if (imgSrc) {
+                if (isVideoMedia) {
+                    var vEsc = $('<span>').text(videoSrc).html();
+                    var posterEsc = imgSrc ? $('<span>').text(imgSrc).html() : '';
+                    cardHtml += '<div class="queue-post-video-wrap">' +
+                        '<video class="queue-post-video" preload="metadata" playsinline controls' +
+                        (posterEsc ? ' poster="' + posterEsc + '"' : '') + '>' +
+                        '<source src="' + vEsc + '" type="video/mp4">' +
+                        '</video></div>';
+                } else if (imgSrc) {
                     cardHtml += '<div class="queue-post-image-wrap"><img src="' + imgSrc + '" alt="" class="queue-post-image" loading="lazy" onerror="this.style.display=\'none\'"></div>';
                 }
             }
@@ -3203,14 +3213,25 @@
                 formatBadgesHtml = '<div class="sent-post-format-badges"><span class="queue-post-format-badge reel">Reel</span></div>';
             } else if (postType === 'story') {
                 formatBadgesHtml = '<div class="sent-post-format-badges"><span class="queue-post-format-badge story">Story</span></div>';
+            } else if (postType === 'video') {
+                formatBadgesHtml = '<div class="sent-post-format-badges"><span class="queue-post-format-badge reel">Video</span></div>';
             }
 
             var profileImg = post.account_profile || '';
             var socialLogo = socialLogos[st] || socialLogos.facebook;
             var accountName = post.account_name || (st === 'pinterest' ? 'Pinterest board' : (st === 'tiktok' ? 'TikTok' : 'Facebook Page'));
 
+            var videoUrl = (post.video_url || '').toString().trim();
             var imageHtml = '';
-            if (post.full_picture) {
+            if (videoUrl) {
+                var vSrc = $('<span>').text(videoUrl).html();
+                var posterAttr = '';
+                if (post.full_picture) {
+                    posterAttr = ' poster="' + $('<span>').text(post.full_picture).html() + '"';
+                }
+                imageHtml = '<div class="sent-card-video-wrap"><video class="sent-card-video" preload="metadata" playsinline controls' +
+                    posterAttr + '><source src="' + vSrc + '" type="video/mp4"></video></div>';
+            } else if (post.full_picture) {
                 var picSrc = $('<span>').text(post.full_picture).html();
                 imageHtml = '<div class="sent-card-image"><img src="' + picSrc + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>';
             }

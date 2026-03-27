@@ -1333,6 +1333,27 @@
         object-fit: cover;
     }
 
+    .queue-post-video-wrap {
+        flex-shrink: 0;
+        margin-left: auto;
+        width: 120px;
+        max-width: 100%;
+        height: 120px;
+        border-radius: 6px;
+        overflow: hidden;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .queue-post-video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
+        vertical-align: middle;
+    }
+
     /* --- Link post preview --- */
     .queue-post-card-link .queue-post-card-body {
         padding: 0;
@@ -1713,6 +1734,25 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
+    }
+
+    .sent-card-video-wrap {
+        flex-shrink: 0;
+        width: 130px;
+        max-width: 100%;
+        height: 110px;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .sent-card-video {
+        width: 100%;
+        height: 100%;
+        object-fit: contain;
     }
 
     .sent-card-video-thumb {
