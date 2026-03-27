@@ -33,6 +33,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 
 class  ScheduleController extends Controller
 {
@@ -2705,11 +2706,26 @@ class  ScheduleController extends Controller
 
         foreach ($pages as $page) {
             $cacheKey = $this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
-            $posts = Cache::get($cacheKey);
+            $posts = null;
+            try {
+                $posts = Cache::get($cacheKey);
+            } catch (\Throwable $e) {
+                Log::warning('Facebook sent posts cache read failed', [
+                    'key' => $cacheKey,
+                    'message' => $e->getMessage(),
+                ]);
+            }
             if ($posts === null) {
                 $posts = $this->fetchPagePostsFromStore($page, $since, $until, $duration);
                 if ($posts !== null) {
-                    Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+                    try {
+                        Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+                    } catch (\Throwable $e) {
+                        Log::warning('Facebook sent posts cache write failed', [
+                            'key' => $cacheKey,
+                            'message' => $e->getMessage(),
+                        ]);
+                    }
                 }
             }
             if (!is_array($posts)) {
