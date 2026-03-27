@@ -288,7 +288,6 @@ class TikTokService
             $endpoint = $this->baseUrl . "post/publish/creator_info/query/";
             // API method is POST (GET returns errors / empty handled response).
             $response = $this->client->post($endpoint, [], $header);
-            dd($endpoint, $header, $response);
 
             if ($response === null) {
                 Log::warning('TikTok queryCreatorInfo: empty response (HTTP error or non-JSON).');
