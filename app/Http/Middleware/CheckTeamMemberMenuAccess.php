@@ -99,6 +99,7 @@ class CheckTeamMemberMenuAccess
                     'panel.schedule',
                     'panel.schedule.account.status',
                     'panel.schedule.process.post',
+                    'panel.schedule.process.chain-posts',
                     'panel.schedule.get.setting',
                     'panel.schedule.queue-settings',
                     'panel.schedule.timeslot.setting',

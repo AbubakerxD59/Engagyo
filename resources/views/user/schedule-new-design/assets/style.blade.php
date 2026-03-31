@@ -824,6 +824,18 @@
         color: #fff;
     }
 
+    .selected-account-action-btn.selected-account-chain-posts {
+        background: #fff;
+        border-color: #495057;
+        color: #495057;
+    }
+
+    .selected-account-action-btn.selected-account-chain-posts:hover {
+        background: #f1f3f5;
+        border-color: #343a40;
+        color: #343a40;
+    }
+
     .selected-account-action-chip {
         display: inline-flex;
         align-items: center;
@@ -4903,6 +4915,16 @@
     .create-post-segmented-btn-primary:hover {
         background: #a7f3d0;
         color: #047857;
+    }
+
+    #createPostModal.is-chain-posts-only .create-post-segmented-buttons {
+        border-radius: 24px;
+    }
+
+    #createPostModal.is-chain-posts-only .create-post-segmented-btn[href="queue"] {
+        border-right: none;
+        padding-left: 22px;
+        padding-right: 22px;
     }
 
     .create-post-footer-actions-wrap {

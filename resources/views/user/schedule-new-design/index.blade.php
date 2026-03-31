@@ -176,6 +176,12 @@
                                                     <i class="fas fa-plus"></i>
                                                     <span>New Post</span>
                                                 </button>
+                                                <button type="button"
+                                                    class="selected-account-action-btn selected-account-chain-posts"
+                                                    title="Chain posts" aria-label="Chain posts">
+                                                    <i class="fas fa-link"></i>
+                                                    <span>Chain Posts</span>
+                                                </button>
 
                                             </div>
                                         </div>

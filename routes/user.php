@@ -36,6 +36,7 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
         Route::controller(ScheduleController::class)->prefix("schedule/")->name("schedule.")->group(function () {
             Route::get("account/status", "accountStatus")->name("account.status");
             Route::post("process/post", "processPost")->name("process.post");
+            Route::post("process/chain-posts", "processChainPosts")->name("process.chain-posts");
             Route::get("get/setting", "getSetting")->name("get.setting");
             Route::get("queue-settings", "getQueueSettings")->name("queue-settings");
             Route::post("timeslot/setting", "timeslotSetting")->name("timeslot.setting");

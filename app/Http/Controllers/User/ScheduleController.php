@@ -30,6 +30,7 @@ use App\Services\TimezoneService;
 use Carbon\Carbon;
 use Exception;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -590,6 +591,218 @@ class  ScheduleController extends Controller
             }
         }
         return response()->json($response);
+    }
+
+    public function processChainPosts(Request $request)
+    {
+        try {
+            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
+            if (!$user) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized.']);
+            }
+
+            $accounts = $this->resolveAccountsForPost($request, $user);
+            if ($accounts->isEmpty()) {
+                return response()->json(['success' => false, 'message' => 'Please select at least one channel.']);
+            }
+
+            $rawFiles = $request->file('files');
+            if ($rawFiles === null) {
+                return response()->json(['success' => false, 'message' => 'Please upload at least one file for chain posts.']);
+            }
+            $files = is_array($rawFiles) ? array_values(array_filter($rawFiles)) : [$rawFiles];
+            if (count($files) === 0) {
+                return response()->json(['success' => false, 'message' => 'Please upload at least one file for chain posts.']);
+            }
+
+            $queueValidation = $this->validateQueueAccountsHaveTimeslots($accounts);
+            if ($queueValidation !== null) {
+                return response()->json($queueValidation);
+            }
+
+            $postsPerRound = max(1, (int) $request->input('chain_posts_per_round', 1));
+
+            $postsToCreate = $this->countChainQueuePosts($accounts, $files, $request, $postsPerRound);
+            if ($postsToCreate > 0) {
+                $limitCheck = $this->checkScheduledPostsLimit($user, $postsToCreate);
+                if (!$limitCheck['allowed']) {
+                    return response()->json(['success' => false, 'message' => $limitCheck['message']]);
+                }
+            }
+
+            $fileIndex = 0;
+            $n = count($files);
+            $facebookTokenOk = [];
+
+            while ($fileIndex < $n) {
+                foreach ($accounts as $account) {
+                    if (count($account->timeslots) === 0) {
+                        continue;
+                    }
+                    for ($r = 0; $r < $postsPerRound && $fileIndex < $n; $r++) {
+                        $uploaded = $files[$fileIndex];
+                        if (!$uploaded instanceof UploadedFile || !$uploaded->isValid()) {
+                            return response()->json(['success' => false, 'message' => 'One or more uploads are invalid.']);
+                        }
+                        $this->queueChainUploadedFileForAccount($user, $account, $request, $uploaded, $facebookTokenOk);
+                        $fileIndex++;
+                    }
+                }
+            }
+
+            sleep(1);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Your chain posts are queued!',
+            ]);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function countChainQueuePosts($accounts, array $files, Request $request, int $postsPerRound): int
+    {
+        $total = 0;
+        $fileIndex = 0;
+        $n = count($files);
+        while ($fileIndex < $n) {
+            foreach ($accounts as $account) {
+                if (count($account->timeslots) === 0) {
+                    continue;
+                }
+                for ($r = 0; $r < $postsPerRound && $fileIndex < $n; $r++) {
+                    $total += $this->countQueuePostsForChainFileAndAccount($account, $files[$fileIndex], $request);
+                    $fileIndex++;
+                }
+            }
+        }
+
+        return $total;
+    }
+
+    private function countQueuePostsForChainFileAndAccount($account, UploadedFile $file, Request $request): int
+    {
+        if ($account->type === 'facebook' || $account->type === 'pinterest' || $account->type === 'tiktok') {
+            return 1;
+        }
+
+        return 0;
+    }
+
+    private function queueChainUploadedFileForAccount(User $user, $account, Request $request, UploadedFile $file, array &$facebookTokenOk): void
+    {
+        $ext = strtolower($file->getClientOriginalExtension() ?: '');
+        $isVideo = in_array($ext, ['mp4', 'mkv', 'mov', 'mpeg', 'webm'], true);
+        $image = null;
+        $video = null;
+        if ($isVideo) {
+            $video = saveToS3($file);
+        } else {
+            $image = saveImage($file);
+        }
+
+        $content = $request->get('content');
+        $comment = $request->get('comment');
+
+        if ($account->type === 'facebook') {
+            if (! isset($facebookTokenOk[$account->id])) {
+                Facebook::where('id', $account->fb_id)->firstOrFail();
+                $tokenResponse = FacebookService::validateToken($account);
+                if (! $tokenResponse['success']) {
+                    throw new Exception($tokenResponse['message'] ?? 'Failed to validate Facebook access token.');
+                }
+                $facebookTokenOk[$account->id] = true;
+            }
+
+            $nextTime = (new Post)->nextScheduleTime(
+                ['account_id' => $account->id, 'social_type' => 'facebook', 'source' => 'schedule'],
+                $account->timeslots,
+                $user
+            );
+            $type = ! empty($image) ? 'photo' : 'video';
+            $data = [
+                'user_id' => $user->id,
+                'account_id' => $account->id,
+                'social_type' => 'facebook',
+                'type' => $type,
+                'source' => $this->source,
+                'title' => $content,
+                'comment' => $comment,
+                'image' => $image,
+                'video' => $video,
+                'status' => 0,
+                'publish_date' => $nextTime,
+            ];
+            $post = PostService::create($data);
+            if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+            }
+            $this->logService->logQueuedPost('facebook', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
+
+            return;
+        }
+
+        if ($account->type === 'pinterest') {
+            Pinterest::where('id', $account->pin_id)->firstOrFail();
+            $nextTime = (new Post)->nextScheduleTime(
+                ['account_id' => $account->id, 'social_type' => 'pinterest', 'source' => 'schedule'],
+                $account->timeslots,
+                $user
+            );
+            $type = ! empty($image) ? 'photo' : 'video';
+            $data = [
+                'user_id' => $user->id,
+                'account_id' => $account->id,
+                'social_type' => 'pinterest',
+                'type' => $type,
+                'source' => $this->source,
+                'title' => $content,
+                'comment' => $comment,
+                'image' => $image,
+                'video' => $video,
+                'status' => 0,
+                'publish_date' => $nextTime,
+            ];
+            $post = PostService::create($data);
+            if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+            }
+            $this->logService->logQueuedPost('pinterest', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
+
+            return;
+        }
+
+        if ($account->type === 'tiktok') {
+            Tiktok::where('id', $account->id)->firstOrFail();
+            $nextTime = (new Post)->nextScheduleTime(
+                ['account_id' => $account->id, 'social_type' => 'tiktok', 'source' => 'schedule'],
+                $account->timeslots,
+                $user
+            );
+            $type = ! empty($image) ? 'photo' : 'video';
+            $data = [
+                'user_id' => $user->id,
+                'account_id' => $account->id,
+                'social_type' => 'tiktok',
+                'type' => $type,
+                'source' => $this->source,
+                'title' => $content,
+                'comment' => $comment,
+                'image' => $image,
+                'video' => $video,
+                'status' => 0,
+                'publish_date' => $nextTime,
+            ];
+            $post = PostService::create($data);
+            if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+            }
+            $this->logService->logQueuedPost('tiktok', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
+        }
     }
 
     /**

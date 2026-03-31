@@ -29,6 +29,7 @@
         var action_name = '';
         var $createPostActiveButton = null;
         var createPostFromTimeslot = false;
+        var createPostChainPostsMode = false;
         var createPostSlotDate = '';
         var createPostSlotTime = '';
         var createPostSlotDisplay = '';
@@ -163,7 +164,11 @@
                         payload = { type: 'all', id: null, _token: "{{ csrf_token() }}" };
                     }
                 }
-                $.post("{{ route('panel.schedule.selected-account.save') }}", payload);
+                if (selectedAccountSaveXhr && selectedAccountSaveXhr.readyState !== 4) {
+                    selectedAccountSaveXhr.abort();
+                }
+                selectedAccountSaveXhr = $.post("{{ route('panel.schedule.selected-account.save') }}", payload)
+                    .always(function() { selectedAccountSaveXhr = null; });
             } catch (e) {}
         }
 
@@ -355,6 +360,7 @@
         var cachedSentPagePosts = null;
         var postsSearchQuery = '';
         var postsStatusRequest = null;
+        var selectedAccountSaveXhr = null;
         var sentPostsRequest = null;
         var pinterestSentRequest = null;
         var tiktokSentRequest = null;
@@ -1066,16 +1072,8 @@
         }
 
         function loadQueueTimeslotsSectionNow() {
-            if (queueSectionLoading) return;
-            var selectedAccounts = getSelectedAccounts();
-            var pairs = selectedAccounts.pairs || [];
-            var $content = $('#queue-timeslots-content');
-            var $empty = $('#queue-timeslots-empty');
-            queueDayOffset = 0;
-            queueTimelineData = [];
-            queueHasMore = true;
+            // Supersede any in-flight queue load (e.g. user switched sidebar account before the previous request finished).
             var requestId = ++queueLoadRequestId;
-
             if (queueSectionRequest && queueSectionRequest.readyState !== 4) {
                 queueSectionRequest.abort();
             }
@@ -1084,6 +1082,16 @@
             });
             queueSectionMultiRequests = [];
             queueSectionRequest = null;
+            queueSectionLoading = false;
+            queueLoadingMore = false;
+
+            var selectedAccounts = getSelectedAccounts();
+            var pairs = selectedAccounts.pairs || [];
+            var $content = $('#queue-timeslots-content');
+            var $empty = $('#queue-timeslots-empty');
+            queueDayOffset = 0;
+            queueTimelineData = [];
+            queueHasMore = true;
 
             if (pairs.length === 0) {
                 queueTimelineIsAllChannelsQueue = false;
@@ -1661,11 +1669,23 @@
 
         // New Post: open Create Post modal
         $(document).on('click', '.selected-account-new-post', function() {
+            createPostChainPostsMode = false;
+            $('#createPostModal').modal('show');
+        });
+
+        $(document).on('click', '.selected-account-chain-posts', function() {
+            createPostChainPostsMode = true;
+            createPostFromTimeslot = false;
+            createPostSlotDate = '';
+            createPostSlotTime = '';
+            createPostSlotDisplay = '';
+            createPostSlotDisplayFooter = '';
             $('#createPostModal').modal('show');
         });
 
         // Queue + New button: open Create Post modal in queue-from-timeslot mode
         $(document).on('click', '.queue-timeslots-new-btn', function() {
+            createPostChainPostsMode = false;
             createPostFromTimeslot = true;
             createPostSlotDate = $(this).data('slot-date') || '';
             createPostSlotTime = $(this).data('slot-time') || '';
@@ -1710,7 +1730,7 @@
                         onlyTiktok = false;
                     }
                 });
-                $('.create-post-draft-btn').toggle(!createPostFromTimeslot && onlyTiktok);
+                $('.create-post-draft-btn').toggle(!createPostFromTimeslot && !createPostChainPostsMode && onlyTiktok);
             } else {
                 $('#createPostEmptyState').show();
                 $('#createPostEditorWrap').hide();
@@ -2068,16 +2088,32 @@
         $('#createPostModal').on('show.bs.modal', function(e) {
             e.target.inert = false;
             fetchAccountsWithStatus();
-            if (createPostFromTimeslot) {
-                $('.create-post-segmented-btn[href="schedule"]').show();
-                $('.create-post-segmented-btn[href="queue"]').show();
-                $('.create-post-segmented-btn[href="publish"]').show();
+            var $modal = $('#createPostModal');
+            var $queue = $('.create-post-segmented-btn[href="queue"]');
+            var $publish = $('.create-post-segmented-btn[href="publish"]');
+            if (createPostChainPostsMode) {
+                $modal.addClass('is-chain-posts-only');
+                $('#createPostScheduleDropdown').removeClass('is-open');
+                $('.create-post-segmented-btn[href="schedule"]').hide();
+                $queue.show().addClass('create-post-segmented-btn-primary');
+                $publish.hide().removeClass('create-post-segmented-btn-primary');
                 $('.create-post-draft-btn').hide();
-            } else {
-                $('.create-post-segmented-btn[href="schedule"]').show();
-                $('.create-post-segmented-btn[href="queue"]').show();
-                $('.create-post-segmented-btn[href="publish"]').show();
                 updateCreatePostModalSelection();
+            } else {
+                $modal.removeClass('is-chain-posts-only');
+                $queue.removeClass('create-post-segmented-btn-primary');
+                $publish.addClass('create-post-segmented-btn-primary');
+                if (createPostFromTimeslot) {
+                    $('.create-post-segmented-btn[href="schedule"]').show();
+                    $queue.show();
+                    $publish.show();
+                    $('.create-post-draft-btn').hide();
+                } else {
+                    $('.create-post-segmented-btn[href="schedule"]').show();
+                    $queue.show();
+                    $publish.show();
+                    updateCreatePostModalSelection();
+                }
             }
         });
         $('#createPostModal').on('hide.bs.modal', function(e) {
@@ -2086,10 +2122,14 @@
         });
         $('#createPostModal').on('hidden.bs.modal', function() {
             createPostFromTimeslot = false;
+            createPostChainPostsMode = false;
             createPostSlotDate = '';
             createPostSlotTime = '';
             createPostSlotDisplay = '';
             createPostSlotDisplayFooter = '';
+            $('#createPostModal').removeClass('is-chain-posts-only');
+            $('.create-post-segmented-btn[href="queue"]').removeClass('create-post-segmented-btn-primary');
+            $('.create-post-segmented-btn[href="publish"]').addClass('create-post-segmented-btn-primary');
             $('.create-post-segmented-btn[href="schedule"]').show();
             $('.create-post-segmented-btn[href="queue"]').show();
             $('.create-post-segmented-btn[href="publish"]').show();
@@ -2228,7 +2268,38 @@
                 $preview.removeClass('is-video-uploading').addClass('is-video-uploaded');
                 $preview.find('.create-post-video-upload-percent').text('Uploaded');
                 $preview.find('.create-post-video-upload-progress-fill').css('width', '100%');
+            } else if (status === 'idle') {
+                $preview.removeClass('is-video-uploading is-video-uploaded');
+                $preview.find('.create-post-video-upload-progress-fill').css('width', '0%');
+                $preview.find('.create-post-video-upload-percent').text('0%');
             }
+        }
+
+        function applyCreatePostChainUploadProgress(loaded, total) {
+            if (!total || total <= 0 || !createPostFiles.length) return;
+            var sizes = createPostFiles.map(function(f) { return typeof f.size === 'number' ? f.size : 0; });
+            var T = sizes.reduce(function(a, b) { return a + b; }, 0);
+            if (T < 1) T = 1;
+            var virtualPos = (loaded / total) * T;
+            var cum = 0;
+            createPostFiles.forEach(function(file, i) {
+                var uploadId = file.__uploadId;
+                if (!uploadId) return;
+                var sz = sizes[i];
+                var start = cum;
+                var end = cum + sz;
+                cum = end;
+                var progress = 0;
+                if (virtualPos >= end) {
+                    progress = 100;
+                } else if (virtualPos <= start || sz < 1) {
+                    progress = 0;
+                } else {
+                    progress = ((virtualPos - start) / sz) * 100;
+                }
+                createPostUploadStates[uploadId] = { status: 'uploading', progress: progress };
+                updateCreatePostVideoUploadUi(uploadId, progress, 'uploading');
+            });
         }
 
         $('#createPostUploadZone').on('click', function(e) {
@@ -2589,6 +2660,10 @@
         }
 
         function processCreatePostLink() {
+            if (createPostChainPostsMode) {
+                toastr.error("Chain posts uses file uploads. Add files or open New Post for links.");
+                return;
+            }
             var content = $('#createPostEditorTextarea').val();
             var comment = getCreatePostCommentValue();
             var image = $('#createPostLinkPreview #link_image').attr('src');
@@ -2650,6 +2725,10 @@
         }
 
         function processCreatePostContentOnly() {
+            if (createPostChainPostsMode) {
+                toastr.error("Chain posts uses file uploads. Add files or open New Post for text-only posts.");
+                return;
+            }
             var content = $('#createPostEditorTextarea').val();
             var comment = getCreatePostCommentValue();
             var dt = getScheduleDateTime();
@@ -2693,9 +2772,96 @@
         function processCreatePostPhotoVideo() {
             var filesToProcess = createPostFiles.slice();
             if (filesToProcess.length === 0) return;
+            if (createPostChainPostsMode && action_name === 'queue') {
+                if (!validateCreatePostTikTokSettings()) return;
+                processCreatePostChainQueue();
+                return;
+            }
             if (!validateCreatePostTikTokSettings()) return;
             disableActionButton();
             processCreatePostFilesQueue(filesToProcess, 0);
+        }
+
+        function processCreatePostChainQueue() {
+            if (createPostFiles.length === 0) return;
+            if (!validateCreatePostTikTokSettings()) return;
+            disableActionButton();
+            var formData = new FormData();
+            formData.append("_token", "{{ csrf_token() }}");
+            formData.append("content", $('#createPostEditorTextarea').val() || '');
+            formData.append("comment", getCreatePostCommentValue() || '');
+            formData.append("chain_posts_per_round", "1");
+            createPostFiles.forEach(function(file) {
+                formData.append("files[]", file);
+            });
+            var fbFormats = $('input[name="create_post_facebook_formats[]"]:checked').map(function() {
+                return $(this).val();
+            }).get();
+            formData.append("facebook_content_formats", JSON.stringify(fbFormats));
+            var selectedAccounts = getCreatePostSelectedAccounts();
+            if (selectedAccounts.length > 0) {
+                formData.append("account_ids", JSON.stringify(selectedAccounts));
+            }
+            var tiktokAccounts = getCreatePostSelectedTikTokAccounts(selectedAccounts);
+            if (tiktokAccounts.length > 0) {
+                formData.append('tiktok_account_id', tiktokAccounts[0].id);
+                formData.append('tiktok_privacy_level', $('#createPostTikTokPrivacyLevel').val() || '');
+                formData.append('tiktok_allow_comment', $('#createPostTikTokAllowComment').is(':checked') ? 1 : 0);
+                formData.append('tiktok_allow_duet', 0);
+                formData.append('tiktok_allow_stitch', 0);
+                formData.append('tiktok_commercial_toggle', $('#createPostTikTokCommercialToggle').is(':checked') ? 1 : 0);
+                formData.append('tiktok_your_brand', $('#createPostTikTokYourBrand').is(':checked') ? 1 : 0);
+                formData.append('tiktok_branded_content', $('#createPostTikTokBrandedContent').is(':checked') ? 1 : 0);
+            }
+            createPostFiles.forEach(function(file) {
+                var uid = file.__uploadId;
+                if (!uid) return;
+                createPostUploadStates[uid] = { status: 'uploading', progress: 0 };
+                updateCreatePostVideoUploadUi(uid, 0, 'uploading');
+            });
+            $.ajax({
+                url: "{{ route('panel.schedule.process.chain-posts') }}",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                xhr: function() {
+                    var xhr = $.ajaxSettings.xhr();
+                    if (xhr.upload) {
+                        xhr.upload.addEventListener('progress', function(evt) {
+                            if (!evt.lengthComputable) return;
+                            applyCreatePostChainUploadProgress(evt.loaded, evt.total);
+                        });
+                    }
+                    return xhr;
+                },
+                success: function(response) {
+                    if (response.success) {
+                        resetCreatePostArea();
+                        toastr.success(response.message);
+                    } else {
+                        createPostFiles.forEach(function(file) {
+                            var uid = file.__uploadId;
+                            if (!uid) return;
+                            createPostUploadStates[uid] = { status: 'idle', progress: 0 };
+                            updateCreatePostVideoUploadUi(uid, 0, 'idle');
+                        });
+                        toastr.error(response.message);
+                    }
+                    enableActionButton();
+                },
+                error: function(xhr) {
+                    createPostFiles.forEach(function(file) {
+                        var uid = file.__uploadId;
+                        if (!uid) return;
+                        createPostUploadStates[uid] = { status: 'idle', progress: 0 };
+                        updateCreatePostVideoUploadUi(uid, 0, 'idle');
+                    });
+                    var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : "Failed to queue chain posts.";
+                    toastr.error(msg);
+                    enableActionButton();
+                }
+            });
         }
 
         function processCreatePostFilesQueue(filesArray, index) {
