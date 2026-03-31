@@ -65,27 +65,49 @@
         }
         // character count
         getCharacterCount($('.check_count'));
+        /**
+         * Sidebar modes: (1) All channels — every account is included; (2) exactly one account.
+         * Multiple individual cards cannot be selected at once; only All channels or a single page/board/TikTok.
+         */
         function getSelectedAccounts() {
-            var accountIds = [];
-            var accountTypes = [];
-            $('.account-card.active:not(.all-channels-card)').each(function() {
-                var accountId = $(this).data("id");
-                var accountType = $(this).data("type");
-                if (accountId && accountType) {
-                    accountIds.push(accountId);
-                    if (accountTypes.indexOf(accountType) === -1) {
-                        accountTypes.push(accountType);
+            var pairs = [];
+            if (isAllChannelsActive()) {
+                $('.account-card:not(.all-channels-card)').each(function() {
+                    var accountId = $(this).data('id');
+                    var accountType = $(this).data('type');
+                    if (accountId != null && accountType) {
+                        pairs.push({ id: accountId, type: accountType });
+                    }
+                });
+            } else {
+                var $one = $('.account-card.active:not(.all-channels-card)').first();
+                if ($one.length) {
+                    var accountId = $one.data('id');
+                    var accountType = $one.data('type');
+                    if (accountId != null && accountType) {
+                        pairs.push({ id: accountId, type: accountType });
                     }
                 }
-            });
+            }
+            var accountIds = pairs.map(function(p) { return p.id; });
+            var accountTypes = pairs.map(function(p) { return p.type; });
             return {
                 accountIds: accountIds,
-                accountTypes: accountTypes
+                accountTypes: accountTypes,
+                pairs: pairs
             };
         }
 
         function isAllChannelsActive() {
             return $('.all-channels-card').hasClass('active');
+        }
+
+        /** If not in All channels mode, ensure at most one account card stays active (fixes bad DOM state). */
+        function normalizeSidebarToSingleAccountWhenNotAllChannels() {
+            if ($('.all-channels-card').hasClass('active')) return;
+            var $active = $('.account-card.active:not(.all-channels-card)');
+            if ($active.length <= 1) return;
+            $active.slice(1).removeClass('active');
         }
 
         function updateUrlFromAccountSelection() {
@@ -333,6 +355,9 @@
         var pinterestSentRequest = null;
         var tiktokSentRequest = null;
         var queueSectionRequest = null;
+        var queueSectionMultiRequests = [];
+        var queueTimelineIsAllChannelsQueue = false;
+        var queueTimelineMultiPairs = [];
         var publishSentRefreshTimer = null;
 
         /** After async Facebook publish job completes, Sent tab can show the post from DB; poll briefly so it appears without a manual refresh. */
@@ -816,6 +841,52 @@
             return html;
         }
 
+        function queueTimelineStrcmp(a, b) {
+            if (a < b) return -1;
+            if (a > b) return 1;
+            return 0;
+        }
+
+        /** Merge per-account queue timelines (All channels) by calendar day and slot time (UTC key). */
+        function mergeQueueTimelineArrays(timelineArrays) {
+            var dayMap = {};
+            timelineArrays.forEach(function(timeline) {
+                if (!timeline || !timeline.length) return;
+                timeline.forEach(function(day) {
+                    if (!day || !day.date) return;
+                    var d = day.date;
+                    if (!dayMap[d]) {
+                        dayMap[d] = { date: d, label: day.label, date_display: day.date_display, slotMap: {} };
+                    }
+                    (day.slots || []).forEach(function(slot) {
+                        var key = slot.datetime_utc || (d + '_' + slot.time + '_' + (slot.time_display || ''));
+                        if (!dayMap[d].slotMap[key]) {
+                            dayMap[d].slotMap[key] = {
+                                time: slot.time,
+                                time_display: slot.time_display,
+                                datetime_utc: slot.datetime_utc,
+                                has_post: !!slot.has_post,
+                                posts: (slot.posts && slot.posts.slice) ? slot.posts.slice() : [].concat(slot.posts || [])
+                            };
+                        } else {
+                            var ex = dayMap[d].slotMap[key];
+                            var nextPosts = slot.posts || [];
+                            ex.posts = (ex.posts || []).concat(nextPosts);
+                            ex.has_post = ex.has_post || (nextPosts.length > 0) || !!slot.has_post;
+                        }
+                    });
+                });
+            });
+            return Object.keys(dayMap).sort().map(function(d) {
+                var dm = dayMap[d];
+                var keys = Object.keys(dm.slotMap).sort(function(a, b) {
+                    return queueTimelineStrcmp(dm.slotMap[a].time, dm.slotMap[b].time);
+                });
+                var slots = keys.map(function(k) { return dm.slotMap[k]; });
+                return { date: dm.date, label: dm.label, date_display: dm.date_display, slots: slots };
+            });
+        }
+
         function getQueueSkeletonHtml() {
             var html = '<div class="queue-skeleton">';
             html += '<div class="queue-timeslots-day-group"><h3 class="queue-timeslots-day-header"><div class="skeleton-line skeleton-day-header animate-pulse-slow"></div></h3>';
@@ -850,102 +921,230 @@
         function loadQueueTimeslotsSectionNow() {
             if (queueSectionLoading) return;
             var selectedAccounts = getSelectedAccounts();
+            var pairs = selectedAccounts.pairs || [];
             var $content = $('#queue-timeslots-content');
             var $empty = $('#queue-timeslots-empty');
             queueDayOffset = 0;
             queueTimelineData = [];
             queueHasMore = true;
             var requestId = ++queueLoadRequestId;
-            if (selectedAccounts.accountIds.length === 0) {
+
+            if (queueSectionRequest && queueSectionRequest.readyState !== 4) {
+                queueSectionRequest.abort();
+            }
+            queueSectionMultiRequests.forEach(function(r) {
+                if (r && r.readyState !== 4) r.abort();
+            });
+            queueSectionMultiRequests = [];
+            queueSectionRequest = null;
+
+            if (pairs.length === 0) {
+                queueTimelineIsAllChannelsQueue = false;
+                queueTimelineMultiPairs = [];
                 $content.empty().hide();
                 $empty.find('.queue-timeslots-empty-text').text('No queued posts found.');
                 $empty.show();
                 return;
             }
+
             queueSectionLoading = true;
-            var accountId = selectedAccounts.accountIds[0];
-            var accountType = selectedAccounts.accountTypes[0];
             $content.html(getQueueSkeletonHtml()).show();
             $empty.hide();
-            if (queueSectionRequest && queueSectionRequest.readyState !== 4) {
-                queueSectionRequest.abort();
+
+            function finishQueueLoadError() {
+                queueSectionLoading = false;
+                if (requestId !== queueLoadRequestId) return;
+                $content.empty().hide();
+                $empty.find('.queue-timeslots-empty-text').text('Failed to load queue.');
+                $empty.show();
             }
-            queueSectionRequest = $.ajax({
-                url: "{{ route('panel.schedule.queue.timeline') }}",
-                type: "GET",
-                data: { account_id: accountId, type: accountType, days: queueInitialBatchSize, offset: 0, source: 'schedule' },
-                success: function(data) {
-                    queueSectionLoading = false;
-                    if (requestId !== queueLoadRequestId) return;
-                    if (!data.success || !data.timeline || data.timeline.length === 0) {
-                        $content.empty().hide();
-                        $empty.find('.queue-timeslots-empty-text').text(data.message || 'No queued posts found.');
-                        $empty.show();
-                        return;
-                    }
-                    queueTimelineData = data.timeline;
-                    queueDayOffset = (data.next_offset !== undefined) ? data.next_offset : data.timeline.length;
-                    queueHasMore = data.has_more !== false;
-                    var toRender = filterQueueTimelineByTitle(data.timeline, postsSearchQuery);
-                    $content.empty();
-                    if (toRender.length === 0 && postsSearchQuery) {
-                        $content.hide();
-                        $empty.find('.queue-timeslots-empty-text').text('No posts match your search.');
-                        $empty.show();
-                    } else {
-                        $content.html(renderQueueTimeline(toRender)).show();
-                        $empty.hide();
-                        bindQueuePostActions();
-                    }
-                },
-                error: function(xhr, textStatus) {
-                    if (textStatus === 'abort') {
+
+            if (pairs.length === 1) {
+                queueTimelineIsAllChannelsQueue = false;
+                queueTimelineMultiPairs = [];
+                var accountId = pairs[0].id;
+                var accountType = pairs[0].type;
+                queueSectionRequest = $.ajax({
+                    url: "{{ route('panel.schedule.queue.timeline') }}",
+                    type: "GET",
+                    data: { account_id: accountId, type: accountType, days: queueInitialBatchSize, offset: 0, source: 'schedule' },
+                    success: function(data) {
                         queueSectionLoading = false;
-                        return;
+                        if (requestId !== queueLoadRequestId) return;
+                        if (!data.success || !data.timeline || data.timeline.length === 0) {
+                            $content.empty().hide();
+                            $empty.find('.queue-timeslots-empty-text').text(data.message || 'No queued posts found.');
+                            $empty.show();
+                            return;
+                        }
+                        queueTimelineData = data.timeline;
+                        queueDayOffset = (data.next_offset !== undefined) ? data.next_offset : data.timeline.length;
+                        queueHasMore = data.has_more !== false;
+                        var toRender = filterQueueTimelineByTitle(data.timeline, postsSearchQuery);
+                        $content.empty();
+                        if (toRender.length === 0 && postsSearchQuery) {
+                            $content.hide();
+                            $empty.find('.queue-timeslots-empty-text').text('No posts match your search.');
+                            $empty.show();
+                        } else {
+                            $content.html(renderQueueTimeline(toRender)).show();
+                            $empty.hide();
+                            bindQueuePostActions();
+                        }
+                    },
+                    error: function(xhr, textStatus) {
+                        if (textStatus === 'abort') {
+                            queueSectionLoading = false;
+                            return;
+                        }
+                        finishQueueLoadError();
+                    },
+                    complete: function() {
+                        queueSectionRequest = null;
                     }
-                    queueSectionLoading = false;
-                    if (requestId !== queueLoadRequestId) return;
-                    $content.empty().hide();
-                    $empty.find('.queue-timeslots-empty-text').text('Failed to load queue.');
-                    $empty.show();
-                },
-                complete: function() {
-                    queueSectionRequest = null;
-                }
+                });
+                return;
+            }
+
+            queueTimelineIsAllChannelsQueue = true;
+            queueTimelineMultiPairs = pairs.slice();
+            var results = new Array(pairs.length);
+            var pending = pairs.length;
+            pairs.forEach(function(pair, idx) {
+                var req = $.ajax({
+                    url: "{{ route('panel.schedule.queue.timeline') }}",
+                    type: "GET",
+                    data: { account_id: pair.id, type: pair.type, days: queueInitialBatchSize, offset: 0, source: 'schedule' },
+                    success: function(data) {
+                        if (requestId !== queueLoadRequestId) return;
+                        results[idx] = (data.success && data.timeline && data.timeline.length) ? data.timeline : [];
+                    },
+                    error: function(xhr, textStatus) {
+                        if (textStatus === 'abort') return;
+                        if (requestId !== queueLoadRequestId) return;
+                        results[idx] = [];
+                    },
+                    complete: function() {
+                        pending--;
+                        if (pending !== 0) return;
+                        queueSectionLoading = false;
+                        queueSectionMultiRequests = [];
+                        if (requestId !== queueLoadRequestId) return;
+                        var merged = mergeQueueTimelineArrays(results);
+                        if (!merged.length) {
+                            $content.empty().hide();
+                            $empty.find('.queue-timeslots-empty-text').text('No queued posts found.');
+                            $empty.show();
+                            return;
+                        }
+                        queueTimelineData = merged;
+                        queueDayOffset = queueInitialBatchSize;
+                        queueHasMore = true;
+                        var toRender = filterQueueTimelineByTitle(merged, postsSearchQuery);
+                        $content.empty();
+                        if (toRender.length === 0 && postsSearchQuery) {
+                            $content.hide();
+                            $empty.find('.queue-timeslots-empty-text').text('No posts match your search.');
+                            $empty.show();
+                        } else {
+                            $content.html(renderQueueTimeline(toRender)).show();
+                            $empty.hide();
+                            bindQueuePostActions();
+                        }
+                    }
+                });
+                queueSectionMultiRequests.push(req);
             });
         }
 
         function loadMoreQueueTimeline() {
             if (queueLoadingMore || !queueHasMore) return;
             if (queueTimelineData.length <= 1) return;
-            var selectedAccounts = getSelectedAccounts();
-            if (selectedAccounts.accountIds.length === 0) return;
+            var selected = getSelectedAccounts();
+            var pairs;
+            if (queueTimelineIsAllChannelsQueue && queueTimelineMultiPairs.length > 1 && isAllChannelsActive()) {
+                pairs = queueTimelineMultiPairs;
+            } else {
+                pairs = selected.pairs || [];
+            }
+            if (pairs.length === 0) return;
+
             queueLoadingMore = true;
-            var accountId = selectedAccounts.accountIds[0];
-            var accountType = selectedAccounts.accountTypes[0];
             var currentOffset = queueDayOffset;
-            $.ajax({
-                url: "{{ route('panel.schedule.queue.timeline') }}",
-                type: "GET",
-                data: { account_id: accountId, type: accountType, days: queueBatchSize, offset: currentOffset, source: 'schedule' },
-                success: function(data) {
-                    queueLoadingMore = false;
-                    if (data.success && data.timeline && data.timeline.length > 0) {
-                        queueTimelineData = queueTimelineData.concat(data.timeline);
-                        queueDayOffset = (data.next_offset !== undefined) ? data.next_offset : (currentOffset + data.timeline.length);
-                        queueHasMore = (data.has_more !== false) && (data.timeline.length >= queueBatchSize);
-                        var toAppend = filterQueueTimelineByTitle(data.timeline, postsSearchQuery);
-                        if (toAppend.length > 0) {
-                            $('#queue-timeslots-content').append(renderQueueTimeline(toAppend));
-                            bindQueuePostActions();
+            var requestId = queueLoadRequestId;
+
+            if (pairs.length === 1) {
+                var accountId = pairs[0].id;
+                var accountType = pairs[0].type;
+                $.ajax({
+                    url: "{{ route('panel.schedule.queue.timeline') }}",
+                    type: "GET",
+                    data: { account_id: accountId, type: accountType, days: queueBatchSize, offset: currentOffset, source: 'schedule' },
+                    success: function(data) {
+                        queueLoadingMore = false;
+                        if (requestId !== queueLoadRequestId) return;
+                        if (data.success && data.timeline && data.timeline.length > 0) {
+                            queueTimelineData = queueTimelineData.concat(data.timeline);
+                            queueDayOffset = (data.next_offset !== undefined) ? data.next_offset : (currentOffset + data.timeline.length);
+                            queueHasMore = (data.has_more !== false) && (data.timeline.length >= queueBatchSize);
+                            var toAppend = filterQueueTimelineByTitle(data.timeline, postsSearchQuery);
+                            if (toAppend.length > 0) {
+                                $('#queue-timeslots-content').append(renderQueueTimeline(toAppend));
+                                bindQueuePostActions();
+                            }
+                        } else {
+                            queueHasMore = false;
                         }
-                    } else {
-                        queueHasMore = false;
+                    },
+                    error: function() {
+                        queueLoadingMore = false;
                     }
-                },
-                error: function() {
-                    queueLoadingMore = false;
-                }
+                });
+                return;
+            }
+
+            var results = new Array(pairs.length);
+            var pending = pairs.length;
+            pairs.forEach(function(pair, idx) {
+                $.ajax({
+                    url: "{{ route('panel.schedule.queue.timeline') }}",
+                    type: "GET",
+                    data: { account_id: pair.id, type: pair.type, days: queueBatchSize, offset: currentOffset, source: 'schedule' },
+                    success: function(data) {
+                        if (requestId !== queueLoadRequestId) return;
+                        results[idx] = (data.success && data.timeline) ? data.timeline : [];
+                    },
+                    error: function() {
+                        if (requestId !== queueLoadRequestId) return;
+                        results[idx] = [];
+                    },
+                    complete: function() {
+                        pending--;
+                        if (pending !== 0) return;
+                        queueLoadingMore = false;
+                        if (requestId !== queueLoadRequestId) return;
+                        var mergedNew = mergeQueueTimelineArrays(results);
+                        if (mergedNew.length > 0) {
+                            queueTimelineData = queueTimelineData.concat(mergedNew);
+                            queueDayOffset = currentOffset + queueBatchSize;
+                            var anyFull = false;
+                            for (var i = 0; i < results.length; i++) {
+                                if (results[i] && results[i].length >= queueBatchSize) {
+                                    anyFull = true;
+                                    break;
+                                }
+                            }
+                            queueHasMore = anyFull;
+                            var toAppend = filterQueueTimelineByTitle(mergedNew, postsSearchQuery);
+                            if (toAppend.length > 0) {
+                                $('#queue-timeslots-content').append(renderQueueTimeline(toAppend));
+                                bindQueuePostActions();
+                            }
+                        } else {
+                            queueHasMore = false;
+                        }
+                    }
+                });
             });
         }
 
@@ -1286,6 +1485,7 @@
 
         // Apply account selection: URL param takes precedence, else use saved selection from database
         if (applyAccountSelectionFromUrl()) {
+            normalizeSidebarToSingleAccountWhenNotAllChannels();
             saveSelectedAccountToDb();
             updateSelectedAccountHeader();
         } else {
@@ -1300,6 +1500,7 @@
                         saveSelectedAccountToDb();
                     }
                 }
+                normalizeSidebarToSingleAccountWhenNotAllChannels();
                 updateSelectedAccountHeader();
             }).fail(function() {
                 updateSelectedAccountHeader();
