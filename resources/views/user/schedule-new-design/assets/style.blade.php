@@ -812,16 +812,83 @@
         color: #fff;
     }
 
-    .selected-account-action-btn.selected-account-new-post {
+    .selected-account-action-btn.new-post-btn {
         background: #495057;
         border-color: #495057;
         color: #fff;
     }
 
-    .selected-account-action-btn.selected-account-new-post:hover {
+    .selected-account-action-btn.new-post-btn:hover {
         background: #343a40;
         border-color: #343a40;
         color: #fff;
+    }
+
+    .queue-new-post-channels-row .queue-new-post-single-channel-wrap {
+        min-height: 40px;
+    }
+
+    /* Queue new post: no add-channel (+) or remove-channel (×) controls */
+    #queueNewPostModal.queue-new-post-modal .create-post-channels-btn,
+    #queueNewPostModal.queue-new-post-modal .create-post-selected-channel-chip-remove {
+        display: none !important;
+    }
+
+    .queue-new-post-top-bar.create-post-channels-row {
+        flex-wrap: wrap;
+        padding-right: 44px;
+        min-height: 40px;
+    }
+
+    .queue-new-post-top-left {
+        flex: 0 1 auto;
+        min-width: 0;
+        max-width: 42%;
+    }
+
+    .queue-new-post-slot-info {
+        flex: 1 1 auto;
+        min-width: 0;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 2px;
+        padding: 0 6px;
+    }
+
+    .queue-new-post-slot-label {
+        font-size: 11px;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: #6b7280;
+        line-height: 1.2;
+    }
+
+    .queue-new-post-slot-datetime {
+        font-size: 14px;
+        font-weight: 600;
+        color: #111827;
+        line-height: 1.3;
+        word-break: break-word;
+    }
+
+    .queue-new-post-slot-info.is-muted .queue-new-post-slot-datetime {
+        font-weight: 500;
+        font-size: 12px;
+        color: #6b7280;
+    }
+
+    /* Create Post modal: match queue modal slot line when opened from a queue timeslot */
+    #createPostModal .create-post-timeslot-slot-bar.queue-new-post-slot-info {
+        align-items: flex-end;
+        text-align: right;
+        width: 100%;
+        padding: 0 12px 10px 44px;
+        margin-top: -4px;
+        box-sizing: border-box;
     }
 
     .selected-account-action-btn.selected-account-chain-posts {
@@ -3738,6 +3805,7 @@
         width: 36px;
         height: 36px;
         padding: 0;
+        flex-shrink: 0;
         background: #e5e7eb;
         color: #4b5563;
         font-size: 14px;
@@ -3763,10 +3831,98 @@
         gap: 8px;
     }
 
+    #createPostModal .create-post-channels-dropdown-wrap {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .create-post-channels-real {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 8px;
+    }
+
+    #createPostModal .create-post-channels-real {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .create-post-channels-skeleton {
+        display: none;
+        align-items: center;
+        gap: 10px;
+        min-height: 40px;
+    }
+
+    #createPostModal.create-post-channels-loading .create-post-channels-real {
+        display: none !important;
+    }
+
+    #createPostModal.create-post-channels-loading .create-post-channels-skeleton {
+        display: flex !important;
+    }
+
+    .create-post-skeleton-chip,
+    .create-post-skeleton-plus {
+        flex-shrink: 0;
+        background: linear-gradient(90deg, #e5e7eb 25%, #f3f4f6 50%, #e5e7eb 75%);
+        background-size: 200% 100%;
+        animation: create-post-channels-skeleton-shimmer 1.2s ease-in-out infinite;
+    }
+
+    .create-post-skeleton-chip {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+    }
+
+    .create-post-skeleton-chip--short {
+        width: 36px;
+        height: 36px;
+    }
+
+    .create-post-skeleton-plus {
+        width: 36px;
+        height: 36px;
+        border-radius: 8px;
+    }
+
+    @keyframes create-post-channels-skeleton-shimmer {
+        0% {
+            background-position: 200% 0;
+        }
+
+        100% {
+            background-position: -200% 0;
+        }
+    }
+
     .create-post-selected-channels {
         display: flex;
         align-items: center;
         gap: 10px;
+    }
+
+    #createPostModal .create-post-selected-channels {
+        flex: 1 1 auto;
+        min-width: 0;
+    }
+
+    .create-post-channel-chain-sep {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        width: 18px;
+        height: 40px;
+        color: #94a3b8;
+        font-size: 11px;
+    }
+
+    .create-post-channel-chain-sep i {
+        opacity: 0.9;
     }
 
     .create-post-selected-channel-chip {
@@ -5342,13 +5498,17 @@
 
     /* new post modal responsive */
     @media (min-width: 576px) {
-        #createPostModal .modal-dialog-centered {
+
+        #createPostModal .modal-dialog-centered,
+        #queueNewPostModal .modal-dialog-centered {
             min-height: calc(100% - 10rem);
         }
     }
 
     @media (max-width: 576px) {
-        #createPostModal .modal-dialog-centered {
+
+        #createPostModal .modal-dialog-centered,
+        #queueNewPostModal .modal-dialog-centered {
             min-height: calc(100% - 10rem);
         }
     }

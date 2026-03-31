@@ -2982,6 +2982,73 @@ class  ScheduleController extends Controller
         ]);
     }
 
+    /**
+     * Next slot that would be used when queueing a post (matches Post::nextScheduleTime used on queue).
+     */
+    public function getNextQueueSlot(Request $request)
+    {
+        $accountId = $request->input('account_id');
+        $accountType = $request->input('type');
+
+        if (!$accountId || !$accountType) {
+            return response()->json(['success' => false, 'message' => 'Account required']);
+        }
+
+        /** @var User|null $user */
+        $user = Auth::guard('user')->user();
+        if (!$user instanceof User) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized']);
+        }
+
+        $accounts = $user->getAccountsForPostCreation([
+            ['id' => (int) $accountId, 'type' => (string) $accountType],
+        ]);
+
+        if ($accounts->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'Account not found']);
+        }
+
+        $account = $accounts->first();
+        $timeslots = $account->timeslots ?? collect();
+
+        if ($timeslots->isEmpty()) {
+            return response()->json([
+                'success' => true,
+                'has_timeslots' => false,
+                'display' => '',
+                'message' => 'Add posting hours in queue settings to use the queue.',
+            ]);
+        }
+
+        $socialType = $account->type === 'pinterest' ? 'pinterest' : ($account->type === 'tiktok' ? 'tiktok' : 'facebook');
+        $nextLocal = (new Post)->nextScheduleTime(
+            ['account_id' => $account->id, 'social_type' => $socialType, 'source' => 'schedule'],
+            $timeslots,
+            $user
+        );
+
+        $userTz = TimezoneService::getUserTimezone($user);
+        try {
+            $dt = Carbon::parse($nextLocal, $userTz);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => true,
+                'has_timeslots' => true,
+                'display' => $nextLocal,
+                'date_display' => '',
+                'time_display' => '',
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'has_timeslots' => true,
+            'date_display' => $dt->format('l, F j, Y'),
+            'time_display' => $dt->format('h:i A'),
+            'display' => $dt->format('D, M j') . ' · ' . $dt->format('h:i A'),
+        ]);
+    }
+
     public function getPageSentPosts(Request $request)
     {
         $userId = (int) Auth::id();

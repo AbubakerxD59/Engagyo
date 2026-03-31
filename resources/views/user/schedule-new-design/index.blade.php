@@ -171,7 +171,7 @@
                                             </div>
                                             <div class="selected-account-actions">
                                                 <button type="button"
-                                                    class="selected-account-action-btn selected-account-new-post"
+                                                    class="selected-account-action-btn new-post-btn"
                                                     title="New post" aria-label="New post">
                                                     <i class="fas fa-plus"></i>
                                                     <span>New Post</span>
@@ -237,6 +237,7 @@
     @include('user.schedule.modals.settings-modal')
     @include('user.schedule.modals.schedule-modal')
     @include('user.schedule-new-design.modals.create-post-modal')
+    @include('user.schedule-new-design.modals.queue-new-post-modal')
     @include('user.schedule.modals.edit-post-modal')
 
     {{-- Post Comment Modal (design matches Create Post modal) --}}
@@ -296,44 +297,50 @@
     <script type="module">
         (async function() {
             await import('https://cdn.jsdelivr.net/npm/emoji-picker-element@^1/index.js');
-            const wrap = document.getElementById('createPostEmojiPickerWrap');
-            const btn = document.getElementById('createPostEmojiBtn');
-            const postTextarea = document.getElementById('createPostEditorTextarea');
-            const commentTextarea = document.getElementById('createPostComment');
-            const firstCommentInput = document.getElementById('createPostFirstComment');
-            if (!wrap || !btn || !postTextarea) return;
-            const textInputs = [postTextarea, commentTextarea, firstCommentInput].filter(Boolean);
-            let lastFocusedInput = postTextarea;
-            textInputs.forEach(function(el) {
-                el.addEventListener('focus', function() { lastFocusedInput = el; });
-            });
-            const picker = document.createElement('emoji-picker');
-            wrap.appendChild(picker);
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                wrap.classList.toggle('is-open');
-            });
-            function insertEmojiAtCursor(target, emoji) {
-                const start = target.selectionStart;
-                const end = target.selectionEnd;
-                const text = target.value;
-                target.value = text.substring(0, start) + emoji + text.substring(end);
-                target.selectionStart = target.selectionEnd = start + emoji.length;
-                target.focus();
-            }
-            picker.addEventListener('emoji-click', function(e) {
-                const emoji = (e.detail.unicode || (e.detail.emoji && e.detail.emoji.unicode)) || '';
-                if (!emoji) return;
-                const target = textInputs.indexOf(document.activeElement) >= 0 ? document.activeElement : lastFocusedInput;
-                insertEmojiAtCursor(target, emoji);
-            });
-            document.addEventListener('click', function(e) {
-                if (!wrap.contains(e.target) && !btn.contains(e.target)) {
-                    wrap.classList.remove('is-open');
+            function setupEmojiPicker(wrapId, btnId, postId, commentId, firstCommentId) {
+                const wrap = document.getElementById(wrapId);
+                const btn = document.getElementById(btnId);
+                const postTextarea = document.getElementById(postId);
+                const commentTextarea = commentId ? document.getElementById(commentId) : null;
+                const firstCommentInput = firstCommentId ? document.getElementById(firstCommentId) : null;
+                if (!wrap || !btn || !postTextarea) return;
+                const textInputs = [postTextarea, commentTextarea, firstCommentInput].filter(Boolean);
+                let lastFocusedInput = postTextarea;
+                textInputs.forEach(function(el) {
+                    el.addEventListener('focus', function() { lastFocusedInput = el; });
+                });
+                const picker = document.createElement('emoji-picker');
+                wrap.appendChild(picker);
+                btn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    wrap.classList.toggle('is-open');
+                });
+                function insertEmojiAtCursor(target, emoji) {
+                    const start = target.selectionStart;
+                    const end = target.selectionEnd;
+                    const text = target.value;
+                    target.value = text.substring(0, start) + emoji + text.substring(end);
+                    target.selectionStart = target.selectionEnd = start + emoji.length;
+                    target.focus();
                 }
-            });
-            $('#createPostModal').on('hidden.bs.modal', function() {
-                wrap.classList.remove('is-open');
+                picker.addEventListener('emoji-click', function(e) {
+                    const emoji = (e.detail.unicode || (e.detail.emoji && e.detail.emoji.unicode)) || '';
+                    if (!emoji) return;
+                    const target = textInputs.indexOf(document.activeElement) >= 0 ? document.activeElement : lastFocusedInput;
+                    insertEmojiAtCursor(target, emoji);
+                });
+                document.addEventListener('click', function(e) {
+                    if (!wrap.contains(e.target) && !btn.contains(e.target)) {
+                        wrap.classList.remove('is-open');
+                    }
+                });
+                return wrap;
+            }
+            const wrapCreate = setupEmojiPicker('createPostEmojiPickerWrap', 'createPostEmojiBtn', 'createPostEditorTextarea', 'createPostComment', 'createPostFirstComment');
+            const wrapQueue = setupEmojiPicker('queueNewPostEmojiPickerWrap', 'queueNewPostEmojiBtn', 'queueNewPostEditorTextarea', 'queueNewPostComment', null);
+            $('#createPostModal, #queueNewPostModal').on('hidden.bs.modal', function() {
+                if (wrapCreate) wrapCreate.classList.remove('is-open');
+                if (wrapQueue) wrapQueue.classList.remove('is-open');
             });
         })();
     </script>

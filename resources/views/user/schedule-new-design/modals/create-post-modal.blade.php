@@ -25,13 +25,19 @@
                 {{-- Channel selection row --}}
                 <div class="create-post-channels-row">
                     <div class="create-post-channels-dropdown-wrap">
-                        <div class="create-post-selected-channels" id="createPostSelectedChannels">
-                            {{-- Selected channel icons rendered by JS --}}
+                        <div class="create-post-channels-skeleton" id="createPostChannelsSkeleton" aria-hidden="true">
+                            <span class="create-post-skeleton-plus"></span>
+                            <span class="create-post-skeleton-chip"></span>
+                            <span class="create-post-skeleton-chip create-post-skeleton-chip--short"></span>
                         </div>
+                        <div class="create-post-channels-real" id="createPostChannelsReal">
                         <button type="button" class="create-post-channels-btn" id="createPostChannelsBtn"
                             title="Add channel" aria-label="Add channel">
                             <i class="fas fa-plus"></i>
                         </button>
+                        <div class="create-post-selected-channels" id="createPostSelectedChannels">
+                            {{-- Selected channel icons rendered by JS --}}
+                        </div>
                         <div class="create-post-channels-dropdown" id="createPostChannelsDropdown">
                             <div class="channels-dropdown-search">
                                 <i class="fas fa-search channels-dropdown-search-icon"></i>
@@ -137,7 +143,15 @@
                             style="display: none;">
                             {{-- Rendered by JS --}}
                         </div>
+                        </div>
                     </div>
+                </div>
+
+                {{-- Same "Queued for" strip as queue new post modal, when composing from a timeslot (multi-account / All channels) --}}
+                <div class="create-post-timeslot-slot-bar queue-new-post-slot-info" id="createPostTimeslotSlotBar"
+                    style="display: none;" aria-live="polite">
+                    <span class="queue-new-post-slot-label">Queued for</span>
+                    <span class="queue-new-post-slot-datetime" id="createPostTimeslotSlotDatetime"></span>
                 </div>
 
                 {{-- Main content area --}}

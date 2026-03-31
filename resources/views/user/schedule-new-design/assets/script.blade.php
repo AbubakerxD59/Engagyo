@@ -30,10 +30,51 @@
         var $createPostActiveButton = null;
         var createPostFromTimeslot = false;
         var createPostChainPostsMode = false;
+        var createPostShowActiveChannelsOnly = false;
+        var createPostAccountsRequestId = 0;
         var createPostSlotDate = '';
         var createPostSlotTime = '';
         var createPostSlotDisplay = '';
         var createPostSlotDisplayFooter = '';
+        /** Set when opening queue modal from a queue timeslot "+ New" (single-account sidebar). */
+        var queueNewPostPinnedSlotDate = '';
+        var queueNewPostPinnedSlotTime = '';
+        var queueNewPostPinnedSlotDisplay = '';
+        function clearQueueNewPostPinnedSlot() {
+            queueNewPostPinnedSlotDate = '';
+            queueNewPostPinnedSlotTime = '';
+            queueNewPostPinnedSlotDisplay = '';
+        }
+        /** Queue tab "+ New" uses queue modal when exactly one account is selected (not All channels). */
+        function shouldUseQueueModalForQueueTimeslotNew() {
+            if (isAllChannelsActive()) return false;
+            return $('.account-card.active:not(.all-channels-card)').length === 1;
+        }
+        function createPostQueueUsesFixedSlot() {
+            if (action_name !== 'queue') return false;
+            if (createPostFromTimeslot && createPostSlotDate && createPostSlotTime) return true;
+            if (isQueueNewPostModalVisible() && queueNewPostPinnedSlotDate && queueNewPostPinnedSlotTime) return true;
+            return false;
+        }
+        function isQueueNewPostModalVisible() {
+            return $('#queueNewPostModal').hasClass('show');
+        }
+        function activeComposeModal$() {
+            return isQueueNewPostModalVisible() ? $('#queueNewPostModal') : $('#createPostModal');
+        }
+        function pm$(part) {
+            var prefix = isQueueNewPostModalVisible() ? 'queueNewPost' : 'createPost';
+            return $('#' + prefix + part);
+        }
+        function getSidebarSingleAccountPairForQueueModal() {
+            if (isAllChannelsActive()) return null;
+            var $one = $('.account-card.active:not(.all-channels-card)').first();
+            if (!$one.length) return null;
+            var id = $one.data('id');
+            var type = $one.data('type') || 'facebook';
+            if (id == null || !type) return null;
+            return { id: id, type: type };
+        }
         var current_file = 0;
         var is_link = 0;
         var is_video = 0;
@@ -203,19 +244,21 @@
         }
 
         // Toggle Facebook format help popover (Post / Reel / Story)
-        $(document).on('click', '#createPostFormatHelpBtn', function(e) {
+        $(document).on('click', '#createPostFormatHelpBtn, #queueNewPostFormatHelpBtn', function(e) {
             e.stopPropagation();
-            $('#createPostFormatHelpWrap').toggleClass('open');
-            var isOpen = $('#createPostFormatHelpWrap').hasClass('open');
-            $('#createPostFormatHelpWrap .create-post-format-help-popover').attr('aria-hidden', isOpen ? 'false' : 'true');
+            var $wrap = $(this).closest('.create-post-format-help-wrap');
+            $wrap.toggleClass('open');
+            var isOpen = $wrap.hasClass('open');
+            $wrap.find('.create-post-format-help-popover').attr('aria-hidden', isOpen ? 'false' : 'true');
         });
 
         // Close help popover when clicking outside
         $(document).on('click', function() {
-            if ($('#createPostFormatHelpWrap').hasClass('open')) {
-                $('#createPostFormatHelpWrap').removeClass('open');
-                $('#createPostFormatHelpWrap .create-post-format-help-popover').attr('aria-hidden', 'true');
-            }
+            $('.create-post-format-help-wrap.open').each(function() {
+                var $w = $(this);
+                $w.removeClass('open');
+                $w.find('.create-post-format-help-popover').attr('aria-hidden', 'true');
+            });
         });
 
         function applyAccountSelectionFromUrl() {
@@ -1556,6 +1599,7 @@
             updateSelectedAccountHeader();
             updateUrlFromAccountSelection();
             saveSelectedAccountToDb();
+            if ($('#queueNewPostModal').hasClass('show')) updateQueueNewPostModalSelection();
         });
 
         $(document).on("click", ".account-card:not(.all-channels-card)", function() {
@@ -1566,6 +1610,7 @@
             updateSelectedAccountHeader();
             updateUrlFromAccountSelection();
             saveSelectedAccountToDb();
+            if ($('#queueNewPostModal').hasClass('show')) updateQueueNewPostModalSelection();
         });
 
         // Search icon click (collapsed state): expand sidebar and focus search
@@ -1667,31 +1712,55 @@
             $(this).addClass('is-active');
         });
 
-        // New Post: open Create Post modal
-        $(document).on('click', '.selected-account-new-post', function() {
+        // New Post: Create Post modal (multi-channel, active accounts pre-selected)
+        $(document).on('click', '.new-post-btn', function() {
             createPostChainPostsMode = false;
+            createPostShowActiveChannelsOnly = true;
+            clearQueueNewPostPinnedSlot();
             $('#createPostModal').modal('show');
         });
 
+        // Chain Posts: Create Post modal, chain-only footer (same shell as New Post)
         $(document).on('click', '.selected-account-chain-posts', function() {
             createPostChainPostsMode = true;
+            createPostShowActiveChannelsOnly = true;
             createPostFromTimeslot = false;
             createPostSlotDate = '';
             createPostSlotTime = '';
             createPostSlotDisplay = '';
             createPostSlotDisplayFooter = '';
+            clearQueueNewPostPinnedSlot();
             $('#createPostModal').modal('show');
         });
 
-        // Queue + New button: open Create Post modal in queue-from-timeslot mode
+        // Queue tab "+ New": queue modal + pinned slot when one account selected; Create Post for All channels / multi-select
         $(document).on('click', '.queue-timeslots-new-btn', function() {
+            var slotDate = $(this).data('slot-date') || '';
+            var slotTime = $(this).data('slot-time') || '';
+            var slotDisplay = $(this).data('slot-display') || '';
+            var slotDisplayFooter = $(this).data('slot-display-footer') || '';
             createPostChainPostsMode = false;
-            createPostFromTimeslot = true;
-            createPostSlotDate = $(this).data('slot-date') || '';
-            createPostSlotTime = $(this).data('slot-time') || '';
-            createPostSlotDisplay = $(this).data('slot-display') || '';
-            createPostSlotDisplayFooter = $(this).data('slot-display-footer') || '';
-            $('#createPostModal').modal('show');
+            createPostShowActiveChannelsOnly = false;
+            if (shouldUseQueueModalForQueueTimeslotNew()) {
+                createPostFromTimeslot = false;
+                createPostSlotDate = '';
+                createPostSlotTime = '';
+                createPostSlotDisplay = '';
+                createPostSlotDisplayFooter = '';
+                clearQueueNewPostPinnedSlot();
+                queueNewPostPinnedSlotDate = slotDate;
+                queueNewPostPinnedSlotTime = slotTime;
+                queueNewPostPinnedSlotDisplay = (slotDisplayFooter || slotDisplay || '').trim();
+                $('#queueNewPostModal').modal('show');
+            } else {
+                clearQueueNewPostPinnedSlot();
+                createPostFromTimeslot = true;
+                createPostSlotDate = slotDate;
+                createPostSlotTime = slotTime;
+                createPostSlotDisplay = slotDisplay;
+                createPostSlotDisplayFooter = slotDisplayFooter;
+                $('#createPostModal').modal('show');
+            }
         });
 
         var lastUsedAccountId = null;
@@ -1703,7 +1772,9 @@
             var $dropdown = $('#createPostChannelsDropdown');
             $dropdown.toggleClass('is-open');
             if ($dropdown.hasClass('is-open')) {
-                syncChannelsDropdownFromSidebar();
+                if (!createPostFromTimeslot && !createPostShowActiveChannelsOnly) {
+                    syncChannelsDropdownFromSidebar();
+                }
                 $('#channelsDropdownSearch').val('').trigger('input');
             }
         });
@@ -1713,6 +1784,61 @@
                 var scheduleStatus = $(this).attr('data-schedule-status');
                 $(this).prop('checked', scheduleStatus === 'active');
             });
+        }
+
+        function updateCreatePostChannelsListVisibility() {
+            // Always list every connected account in the dropdown. New Post / Chain Posts only pre-select
+            // those with schedule_status === 'active' (see applyNewPostOrChainChannelSelection); chips follow checked boxes.
+            $('#createPostModal').removeClass('create-post-active-channels-only');
+            $('.channels-dropdown-item').removeClass('is-create-post-channel-hidden');
+        }
+
+        function applyTimeslotCreatePostChannelSelection() {
+            var $cards = $('.account-card.active:not(.all-channels-card)');
+            if ($cards.length === 1) {
+                var id = $cards.first().data('id');
+                var type = $cards.first().data('type') || 'facebook';
+                $('.channels-dropdown-checkbox').prop('checked', false);
+                $('.channels-dropdown-checkbox[data-id="' + id + '"][data-type="' + type + '"]').prop('checked', true);
+                return;
+            }
+            if ($cards.length > 1) {
+                var keys = {};
+                $cards.each(function() {
+                    var cid = $(this).data('id');
+                    var ctype = $(this).data('type') || 'facebook';
+                    if (cid != null && ctype) {
+                        keys[String(ctype) + '_' + String(cid)] = true;
+                    }
+                });
+                $('.channels-dropdown-checkbox').each(function() {
+                    var cid = $(this).data('id');
+                    var ctype = $(this).data('type') || 'facebook';
+                    var key = String(ctype) + '_' + String(cid);
+                    $(this).prop('checked', !!keys[key]);
+                });
+                return;
+            }
+            syncChannelsDropdownFromSidebar();
+        }
+
+        function applyNewPostOrChainChannelSelection() {
+            $('.channels-dropdown-checkbox').each(function() {
+                var st = ($(this).attr('data-schedule-status') || 'inactive').toString().toLowerCase();
+                $(this).prop('checked', st === 'active');
+            });
+        }
+
+        function applyInitialCreatePostChannelSelection() {
+            updateCreatePostChannelsListVisibility();
+            if (createPostFromTimeslot) {
+                applyTimeslotCreatePostChannelSelection();
+            } else if (createPostShowActiveChannelsOnly) {
+                applyNewPostOrChainChannelSelection();
+            } else {
+                syncChannelsDropdownFromSidebar();
+            }
+            updateCreatePostModalSelection();
         }
 
         function updateCreatePostModalSelection() {
@@ -1730,21 +1856,137 @@
                         onlyTiktok = false;
                     }
                 });
-                $('.create-post-draft-btn').toggle(!createPostFromTimeslot && !createPostChainPostsMode && onlyTiktok);
+                $('#createPostModal .create-post-draft-btn').toggle(!createPostFromTimeslot && !createPostChainPostsMode && onlyTiktok);
             } else {
                 $('#createPostEmptyState').show();
                 $('#createPostEditorWrap').hide();
                 $('#createPostMainContent').removeClass('has-editor');
                 $('#createPostCommentWrap').hide();
-                $('.create-post-draft-btn').hide();
+                $('#createPostModal .create-post-draft-btn').hide();
             }
             renderLastUsed();
             updateCreatePostFacebookFormatRow();
             updateCreatePostTextareasVisibility();
             refreshCreatePostTikTokSettings();
+            refreshCreatePostTimeslotSlotBar();
+        }
+
+        function refreshCreatePostTimeslotSlotBar() {
+            var $bar = $('#createPostTimeslotSlotBar');
+            var $dt = $('#createPostTimeslotSlotDatetime');
+            if (!$bar.length) return;
+            if (createPostFromTimeslot && createPostSlotDate && createPostSlotTime &&
+                (createPostSlotDisplayFooter || createPostSlotDisplay)) {
+                $bar.show();
+                $dt.text(createPostSlotDisplayFooter || createPostSlotDisplay);
+            } else {
+                $bar.hide();
+                $dt.text('');
+            }
+        }
+
+        function renderQueueNewPostSingleChannel() {
+            var $container = $('#queueNewPostSelectedChannels');
+            $container.empty();
+            var p = getSidebarSingleAccountPairForQueueModal();
+            if (!p) return;
+            var $item = $('.channels-dropdown-item[data-id="' + p.id + '"][data-type="' + p.type + '"]');
+            var $card = $('.account-card.active:not(.all-channels-card)').first();
+            var src = $item.find('.channels-dropdown-item-avatar img').attr('src') || '';
+            var tooltip = ($item.attr('data-tooltip') || $item.find('.channels-dropdown-item-name').text() || '').trim();
+            if (!$item.length && $card.length && String($card.data('id')) === String(p.id) && ($card.data('type') || 'facebook') === p.type) {
+                src = $card.find('.account-avatar img').first().attr('src') || src;
+                var nm = $card.find('.account-name').text().trim();
+                var un = $card.find('.account-username').text().trim();
+                tooltip = (nm + (un ? ' - ' + un : '')).trim();
+            }
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok' };
+            var type = p.type || 'facebook';
+            var logo = socialLogos[type] || socialLogos.facebook;
+            var icon = iconMap[type] || iconMap.facebook;
+            tooltip = (tooltip || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            var html = '<div class="create-post-selected-channel-chip has-tooltip queue-new-post-single-chip" data-id="' + p.id + '" data-type="' + type + '" data-tooltip="' + tooltip + '">' +
+                '<span class="create-post-selected-channel-chip-inner">' +
+                '<img src="' + src + '" alt="" onerror="this.onerror=null; this.src=\'' + logo + '\';">' +
+                '<span class="create-post-chip-badge ' + type + '"><i class="' + icon + '"></i></span>' +
+                '</span></div>';
+            $container.append(html);
+        }
+
+        function refreshQueueNewPostNextSlotDisplay() {
+            var $wrap = $('#queueNewPostSlotInfo');
+            var $dt = $('#queueNewPostSlotDatetime');
+            var $lbl = $('#queueNewPostSlotLabel');
+            if (!$dt.length) return;
+            if ($lbl.length) {
+                $lbl.text('Queued for');
+            }
+            if (queueNewPostPinnedSlotDisplay) {
+                $wrap.removeClass('is-muted');
+                $dt.text(queueNewPostPinnedSlotDisplay);
+                return;
+            }
+            var p = getSidebarSingleAccountPairForQueueModal();
+            if (!p) {
+                $wrap.removeClass('is-muted');
+                $dt.text('—');
+                return;
+            }
+            $wrap.removeClass('is-muted');
+            $dt.text('Loading…');
+            $.get("{{ route('panel.schedule.next-queue-slot') }}", { account_id: p.id, type: p.type })
+                .done(function(res) {
+                    if (!res || !res.success) {
+                        $dt.text('—');
+                        return;
+                    }
+                    if (!res.has_timeslots) {
+                        $wrap.addClass('is-muted');
+                        $dt.text(res.message || 'Add posting hours in queue settings.');
+                        return;
+                    }
+                    if (res.display) {
+                        $dt.text(res.display);
+                    } else if (res.date_display && res.time_display) {
+                        $dt.text(res.date_display + ' · ' + res.time_display);
+                    } else {
+                        $dt.text('—');
+                    }
+                })
+                .fail(function() {
+                    $dt.text('—');
+                });
+        }
+
+        function updateQueueNewPostModalSelection() {
+            if (!$('#queueNewPostModal').hasClass('show')) return;
+            var p = getSidebarSingleAccountPairForQueueModal();
+            renderQueueNewPostSingleChannel();
+            if (p) {
+                $('#queueNewPostEmptyState').hide();
+                $('#queueNewPostEditorWrap').show();
+                $('#queueNewPostMainContent').addClass('has-editor');
+                var onlyTiktok = (p.type || '') === 'tiktok';
+                $('#queueNewPostModal .create-post-draft-btn').toggle(!createPostFromTimeslot && onlyTiktok);
+            } else {
+                $('#queueNewPostEmptyState').show();
+                $('#queueNewPostEditorWrap').hide();
+                $('#queueNewPostMainContent').removeClass('has-editor');
+                $('#queueNewPostCommentWrap').hide();
+                $('#queueNewPostModal .create-post-draft-btn').hide();
+            }
+            updateCreatePostFacebookFormatRow();
+            updateCreatePostTextareasVisibility();
+            refreshCreatePostTikTokSettings();
+            refreshQueueNewPostNextSlotDisplay();
         }
 
         function createPostHasFacebookChannelSelected() {
+            if (isQueueNewPostModalVisible()) {
+                var q = getSidebarSingleAccountPairForQueueModal();
+                return !!(q && (q.type || '') === 'facebook');
+            }
             var found = false;
             $('.channels-dropdown-checkbox:checked').each(function() {
                 if (($(this).data('type') || '') === 'facebook') {
@@ -1756,6 +1998,10 @@
         }
 
         function createPostHasOnlyFacebookChannelsSelected() {
+            if (isQueueNewPostModalVisible()) {
+                var q = getSidebarSingleAccountPairForQueueModal();
+                return !!(q && (q.type || '') === 'facebook');
+            }
             var checked = $('.channels-dropdown-checkbox:checked');
             if (checked.length === 0) return false;
             var onlyFacebook = true;
@@ -1786,8 +2032,8 @@
             var hasImage = createPostHasImageInQueue();
             // Always show the format selector when only Facebook channels are selected.
             var show = createPostHasOnlyFacebookChannelsSelected() && !is_link;
-            var $wrap = $('#createPostFacebookFormatWrap');
-            var $reelOption = $('#createPostFormatReel').closest('.create-post-format-option');
+            var $wrap = pm$('FacebookFormatWrap');
+            var $reelOption = pm$('FormatReel').closest('.create-post-format-option');
             if (show) {
                 $wrap.show();
                 // Reels are video-only. For image posts keep Post/Story.
@@ -1796,38 +2042,43 @@
                 } else {
                     $reelOption.hide();
                     // If Reel was selected but no video is present, unselect it and ensure Post remains selected.
-                    if ($('#createPostFormatReel').is(':checked')) {
-                        $('#createPostFormatReel').prop('checked', false);
-                        $('#createPostFormatPost').prop('checked', true);
+                    if (pm$('FormatReel').is(':checked')) {
+                        pm$('FormatReel').prop('checked', false);
+                        pm$('FormatPost').prop('checked', true);
                     }
                 }
             } else {
                 $wrap.hide();
                 $reelOption.show();
                 // Reset to Post only when the row is hidden.
-                $('#createPostFormatPost').prop('checked', true);
-                $('#createPostFormatReel, #createPostFormatStory').prop('checked', false);
+                pm$('FormatPost').prop('checked', true);
+                pm$('FormatReel').add(pm$('FormatStory')).prop('checked', false);
             }
             updateCreatePostTextareasVisibility();
         }
 
         function updateCreatePostTextareasVisibility() {
-            var checkedCount = $('.channels-dropdown-checkbox:checked').length;
+            var checkedCount;
+            if (isQueueNewPostModalVisible()) {
+                checkedCount = getSidebarSingleAccountPairForQueueModal() ? 1 : 0;
+            } else {
+                checkedCount = $('.channels-dropdown-checkbox:checked').length;
+            }
             if (checkedCount === 0) {
-                $('#createPostCommentWrap').hide();
-                $('#createPostEditorTextarea').show();
+                pm$('CommentWrap').hide();
+                pm$('EditorTextarea').show();
                 return;
             }
 
-            var fbFormatVisible = $('#createPostFacebookFormatWrap').is(':visible');
-            var selectedFormats = $('input[name="create_post_facebook_formats[]"]:checked').map(function() {
+            var fbFormatVisible = pm$('FacebookFormatWrap').is(':visible');
+            var selectedFormats = activeComposeModal$().find('input[name="create_post_facebook_formats[]"]:checked').map(function() {
                 return $(this).val();
             }).get();
 
             if (!fbFormatVisible || selectedFormats.length === 0) {
-                $('#createPostCommentWrap').hide();
-                $('#createPostEditorTextarea').show();
-                $('#createPostEmojiBtn').show();
+                pm$('CommentWrap').hide();
+                pm$('EditorTextarea').show();
+                pm$('EmojiBtn').show();
                 return;
             }
 
@@ -1836,18 +2087,18 @@
 
             // Comment textarea should show if "post" format is among the selections.
             if (hasPostFormat) {
-                $('#createPostCommentWrap').show();
+                pm$('CommentWrap').show();
             } else {
-                $('#createPostCommentWrap').hide();
+                pm$('CommentWrap').hide();
             }
 
             // If Story is selected without Post, hide caption/content textarea; only upload area remains visible.
             if (hasStoryFormat && !hasPostFormat) {
-                $('#createPostEditorTextarea').hide();
-                $('#createPostEmojiBtn').hide();
+                pm$('EditorTextarea').hide();
+                pm$('EmojiBtn').hide();
             } else {
-                $('#createPostEditorTextarea').show();
-                $('#createPostEmojiBtn').show();
+                pm$('EditorTextarea').show();
+                pm$('EmojiBtn').show();
             }
         }
 
@@ -1909,8 +2160,11 @@
             });
         }
 
-        function fetchAccountsWithStatus() {
+        function fetchAccountsWithStatus(requestId) {
             $.get("{{ route('panel.schedule.accounts-with-status') }}", function(response) {
+                if (requestId !== createPostAccountsRequestId) {
+                    return;
+                }
                 if (response.success) {
                     lastUsedAccountData = response.account || null;
                     var accountsStatusList = response.accounts_status || [];
@@ -1919,14 +2173,6 @@
                         var key = item.type + '_' + item.id;
                         statusMap[key] = item.schedule_status;
                     });
-                    var sidebarSelectedKeys = [];
-                    if (createPostFromTimeslot) {
-                        $('.account-card.active:not(.all-channels-card)').each(function() {
-                            var id = $(this).data('id');
-                            var type = $(this).data('type') || 'facebook';
-                            if (id && type) sidebarSelectedKeys.push(type + '_' + id);
-                        });
-                    }
                     $('.channels-dropdown-checkbox').each(function() {
                         var id = $(this).data('id');
                         var type = $(this).data('type') || 'facebook';
@@ -1934,19 +2180,24 @@
                         var status = statusMap[key];
                         if (status !== undefined) {
                             $(this).attr('data-schedule-status', status);
-                            if (createPostFromTimeslot && sidebarSelectedKeys.length > 0) {
-                                $(this).prop('checked', sidebarSelectedKeys.indexOf(key) !== -1);
-                            } else {
-                                $(this).prop('checked', status === 'active');
-                            }
                         }
                     });
-                    updateCreatePostModalSelection();
+                    applyInitialCreatePostChannelSelection();
                 } else {
                     lastUsedAccountData = null;
+                    applyInitialCreatePostChannelSelection();
                 }
             }).fail(function() {
+                if (requestId !== createPostAccountsRequestId) {
+                    return;
+                }
                 lastUsedAccountData = null;
+                applyInitialCreatePostChannelSelection();
+            }).always(function() {
+                if (requestId !== createPostAccountsRequestId) {
+                    return;
+                }
+                $('#createPostModal').removeClass('create-post-channels-loading');
             });
         }
 
@@ -1981,6 +2232,7 @@
             $container.empty();
             var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}" };
             var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok' };
+            var chipHtmls = [];
             $('.channels-dropdown-checkbox:checked').each(function() {
                 var $item = $(this).closest('.channels-dropdown-item');
                 var src = $item.find('.channels-dropdown-item-avatar img').attr('src') || '';
@@ -1996,8 +2248,21 @@
                     '<img src="' + src + '" alt="" onerror="this.onerror=null; this.src=\'' + logo + '\';">' +
                     '<span class="create-post-chip-badge ' + type + '"><i class="' + icon + '"></i></span>' +
                     '</span></div>';
-                $container.append(html);
+                chipHtmls.push(html);
             });
+            var chainSep = '<span class="create-post-channel-chain-sep" aria-hidden="true" title="Chain"><i class="fas fa-link"></i></span>';
+            if (createPostChainPostsMode && chipHtmls.length > 1) {
+                chipHtmls.forEach(function(html, idx) {
+                    if (idx > 0) {
+                        $container.append(chainSep);
+                    }
+                    $container.append(html);
+                });
+            } else {
+                chipHtmls.forEach(function(html) {
+                    $container.append(html);
+                });
+            }
         }
 
         function updateAccountScheduleStatus(accountId, isChecked, showToast, accountType) {
@@ -2067,6 +2332,10 @@
         $(document).on('input', '#channelsDropdownSearch', function() {
             var q = $(this).val().toLowerCase().trim();
             $('.channels-dropdown-item').each(function() {
+                if ($(this).hasClass('is-create-post-channel-hidden')) {
+                    $(this).hide();
+                    return;
+                }
                 var name = $(this).data('name') || '';
                 $(this).toggle(name.indexOf(q) !== -1);
             });
@@ -2087,32 +2356,38 @@
         $('#createPostModal').prop('inert', true);
         $('#createPostModal').on('show.bs.modal', function(e) {
             e.target.inert = false;
-            fetchAccountsWithStatus();
+            var requestId = ++createPostAccountsRequestId;
             var $modal = $('#createPostModal');
-            var $queue = $('.create-post-segmented-btn[href="queue"]');
-            var $publish = $('.create-post-segmented-btn[href="publish"]');
+            if (createPostShowActiveChannelsOnly) {
+                $modal.addClass('create-post-channels-loading');
+                $('.channels-dropdown-checkbox').prop('checked', false);
+                $('#createPostLastUsed').empty().hide();
+                lastUsedAccountId = null;
+                updateCreatePostModalSelection();
+            }
+            fetchAccountsWithStatus(requestId);
+            var $queue = $modal.find('.create-post-segmented-btn[href="queue"]');
+            var $publish = $modal.find('.create-post-segmented-btn[href="publish"]');
             if (createPostChainPostsMode) {
                 $modal.addClass('is-chain-posts-only');
                 $('#createPostScheduleDropdown').removeClass('is-open');
-                $('.create-post-segmented-btn[href="schedule"]').hide();
+                $modal.find('.create-post-segmented-btn[href="schedule"]').hide();
                 $queue.show().addClass('create-post-segmented-btn-primary');
                 $publish.hide().removeClass('create-post-segmented-btn-primary');
-                $('.create-post-draft-btn').hide();
-                updateCreatePostModalSelection();
+                $modal.find('.create-post-draft-btn').hide();
             } else {
                 $modal.removeClass('is-chain-posts-only');
                 $queue.removeClass('create-post-segmented-btn-primary');
                 $publish.addClass('create-post-segmented-btn-primary');
                 if (createPostFromTimeslot) {
-                    $('.create-post-segmented-btn[href="schedule"]').show();
+                    $modal.find('.create-post-segmented-btn[href="schedule"]').show();
                     $queue.show();
                     $publish.show();
-                    $('.create-post-draft-btn').hide();
+                    $modal.find('.create-post-draft-btn').hide();
                 } else {
-                    $('.create-post-segmented-btn[href="schedule"]').show();
+                    $modal.find('.create-post-segmented-btn[href="schedule"]').show();
                     $queue.show();
                     $publish.show();
-                    updateCreatePostModalSelection();
                 }
             }
         });
@@ -2121,19 +2396,26 @@
             $('#createPostScheduleDropdown').removeClass('is-open');
         });
         $('#createPostModal').on('hidden.bs.modal', function() {
+            createPostAccountsRequestId++;
+            $('#createPostModal').removeClass('create-post-channels-loading');
             createPostFromTimeslot = false;
             createPostChainPostsMode = false;
+            createPostShowActiveChannelsOnly = false;
             createPostSlotDate = '';
             createPostSlotTime = '';
             createPostSlotDisplay = '';
             createPostSlotDisplayFooter = '';
+            refreshCreatePostTimeslotSlotBar();
             $('#createPostModal').removeClass('is-chain-posts-only');
-            $('.create-post-segmented-btn[href="queue"]').removeClass('create-post-segmented-btn-primary');
-            $('.create-post-segmented-btn[href="publish"]').addClass('create-post-segmented-btn-primary');
-            $('.create-post-segmented-btn[href="schedule"]').show();
-            $('.create-post-segmented-btn[href="queue"]').show();
-            $('.create-post-segmented-btn[href="publish"]').show();
+            var $cm = $('#createPostModal');
+            $cm.find('.create-post-segmented-btn[href="queue"]').removeClass('create-post-segmented-btn-primary');
+            $cm.find('.create-post-segmented-btn[href="publish"]').addClass('create-post-segmented-btn-primary');
+            $cm.find('.create-post-segmented-btn[href="schedule"]').show();
+            $cm.find('.create-post-segmented-btn[href="queue"]').show();
+            $cm.find('.create-post-segmented-btn[href="publish"]').show();
             $('#createPostChannelsDropdown').removeClass('is-open');
+            $('#createPostModal').removeClass('create-post-active-channels-only');
+            $('.channels-dropdown-item').removeClass('is-create-post-channel-hidden');
             $('#createPostEditorTextarea').val('').css('height', 'auto');
             $('#createPostComment').val('');
             $('#createPostFirstComment').val('');
@@ -2144,31 +2426,71 @@
             is_link = 0;
         });
 
-        $('#createPostModal').on('shown.bs.modal', function() {
-            if (createPostFromTimeslot) {
-                var $sidebarActive = $('.account-card.active:not(.all-channels-card)');
-                if ($sidebarActive.length === 1) {
-                    var accountId = $sidebarActive.first().data('id');
-                    var accountType = $sidebarActive.first().data('type');
-                    $('.channels-dropdown-checkbox').prop('checked', false);
-                    $('.channels-dropdown-checkbox[data-id="' + accountId + '"][data-type="' + accountType + '"]').prop('checked', true);
-                } else {
-                    syncChannelsDropdownFromSidebar();
-                }
-            } else if (!$('.all-channels-card').hasClass('active')) {
-                var $oneSidebar = $('.account-card.active:not(.all-channels-card)');
-                if ($oneSidebar.length === 1) {
-                    var sid = $oneSidebar.first().data('id');
-                    var stype = $oneSidebar.first().data('type');
-                    $('.channels-dropdown-checkbox').prop('checked', false);
-                    $('.channels-dropdown-checkbox[data-id="' + sid + '"][data-type="' + stype + '"]').prop('checked', true);
-                } else {
-                    syncChannelsDropdownFromSidebar();
-                }
-            } else {
-                syncChannelsDropdownFromSidebar();
+        $('#queueNewPostModal').prop('inert', true);
+        $('#queueNewPostModal').on('show.bs.modal', function(e) {
+            e.target.inert = false;
+            createPostFiles = [];
+            createPostRevokeUrls();
+            is_link = 0;
+            $('#queueNewPostLinkPreview').empty();
+            $('#queueNewPostEditorTextarea').val('').css('height', 'auto');
+            $('#queueNewPostComment').val('');
+            $('#queueNewPostUploadPreviews').empty();
+            createPostUploadStates = {};
+            $('#queueNewPostScheduleDropdown').removeClass('is-open');
+            if (queueNewPostPinnedSlotDate && queueNewPostPinnedSlotTime) {
+                $('#queueNewPostScheduleDate').val(queueNewPostPinnedSlotDate);
+                var pt = queueNewPostPinnedSlotTime;
+                $('#queueNewPostScheduleTime').val(pt.length >= 5 ? pt.substring(0, 5) : pt);
             }
-            renderSelectedChannels();
+            var $qm = $('#queueNewPostModal');
+            var $queue = $qm.find('.create-post-segmented-btn[href="queue"]');
+            var $publish = $qm.find('.create-post-segmented-btn[href="publish"]');
+            $qm.find('.create-post-segmented-btn[href="schedule"]').show();
+            $queue.show();
+            $publish.show();
+            $queue.removeClass('create-post-segmented-btn-primary');
+            $publish.addClass('create-post-segmented-btn-primary');
+            $qm.find('.create-post-draft-btn').hide();
+        });
+        $('#queueNewPostModal').on('shown.bs.modal', function() {
+            updateQueueNewPostModalSelection();
+        });
+        $('#queueNewPostModal').on('hide.bs.modal', function(e) {
+            e.target.inert = true;
+            $('#queueNewPostScheduleDropdown').removeClass('is-open');
+        });
+        $('#queueNewPostModal').on('hidden.bs.modal', function() {
+            createPostFromTimeslot = false;
+            createPostSlotDate = '';
+            createPostSlotTime = '';
+            createPostSlotDisplay = '';
+            createPostSlotDisplayFooter = '';
+            clearQueueNewPostPinnedSlot();
+            var $qm = $('#queueNewPostModal');
+            $qm.find('.create-post-segmented-btn[href="queue"]').removeClass('create-post-segmented-btn-primary');
+            $qm.find('.create-post-segmented-btn[href="publish"]').addClass('create-post-segmented-btn-primary');
+            $qm.find('.create-post-segmented-btn[href="schedule"]').show();
+            $qm.find('.create-post-segmented-btn[href="queue"]').show();
+            $qm.find('.create-post-segmented-btn[href="publish"]').show();
+            $('#queueNewPostEditorTextarea').val('').css('height', 'auto');
+            $('#queueNewPostComment').val('');
+            $('#queueNewPostLinkPreview').empty();
+            createPostFiles = [];
+            createPostRevokeUrls();
+            $('#queueNewPostUploadPreviews').empty();
+            createPostUploadStates = {};
+            is_link = 0;
+            $('#queueNewPostTikTokCommercialToggle').prop('checked', false);
+            $('#queueNewPostTikTokYourBrand').prop('checked', false);
+            $('#queueNewPostTikTokBrandedContent').prop('checked', false);
+            $('#queueNewPostTikTokCommercialOptions').hide();
+            $('#queueNewPostSlotDatetime').text('—');
+            $('#queueNewPostSlotInfo').removeClass('is-muted');
+            var $lbl = $('#queueNewPostSlotLabel');
+            if ($lbl.length) {
+                $lbl.text('Queued for');
+            }
         });
 
         // Create post editor: file upload (drag & drop, click) - extensions from schedule dropZone
@@ -2203,7 +2525,7 @@
                 });
                 createPostFiles = createPostFiles.concat(allowed);
                 renderCreatePostUploadPreviews();
-                $('#createPostLinkPreview').empty();
+                pm$('LinkPreview').empty();
                 is_link = 0;
                 toastr.success((allowed.length === 1 ? '1 file' : allowed.length + ' files') + ' added');
             }
@@ -2214,7 +2536,7 @@
 
         function renderCreatePostUploadPreviews() {
             createPostRevokeUrls();
-            var $container = $('#createPostUploadPreviews');
+            var $container = pm$('UploadPreviews');
             $container.empty();
             createPostFiles.forEach(function(file, idx) {
                 var uploadId = file.__uploadId || (++createPostUploadSeq);
@@ -2302,13 +2624,14 @@
             });
         }
 
-        $('#createPostUploadZone').on('click', function(e) {
+        $(document).on('click', '#createPostUploadZone, #queueNewPostUploadZone', function(e) {
             e.preventDefault();
             if ($(e.target).closest('.create-post-upload-preview-remove').length) return;
-            $('#createPostFileInput').trigger('click');
+            var isQueue = $(this).attr('id') === 'queueNewPostUploadZone';
+            $(isQueue ? '#queueNewPostFileInput' : '#createPostFileInput').trigger('click');
         });
 
-        $('#createPostFileInput').on('change', function() {
+        $(document).on('change', '#createPostFileInput, #queueNewPostFileInput', function() {
             createPostAddFiles(Array.from(this.files || []));
             this.value = '';
         });
@@ -2326,35 +2649,43 @@
             refreshCreatePostTikTokSettings();
         });
 
-        function createPostSetupDropZone($el) {
+        function createPostSetupDropZone($el, $uploadZone) {
             $el.on('dragover', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                $('#createPostUploadZone').addClass('is-dragover');
+                $uploadZone.addClass('is-dragover');
             }).on('dragleave drop', function(e) {
                 e.preventDefault();
                 e.stopPropagation();
-                $('#createPostUploadZone').removeClass('is-dragover');
+                $uploadZone.removeClass('is-dragover');
             }).on('drop', function(e) {
                 createPostAddFiles(Array.from(e.originalEvent.dataTransfer.files || []));
             });
         }
 
-        createPostSetupDropZone($('#createPostEditorWrap'));
-        createPostSetupDropZone($('#createPostUploadZone'));
+        createPostSetupDropZone($('#createPostEditorWrap'), $('#createPostUploadZone'));
+        createPostSetupDropZone($('#createPostUploadZone'), $('#createPostUploadZone'));
+        createPostSetupDropZone($('#queueNewPostEditorWrap'), $('#queueNewPostUploadZone'));
+        createPostSetupDropZone($('#queueNewPostUploadZone'), $('#queueNewPostUploadZone'));
 
-        function autoResizeCreatePostTextarea() {
-            var el = document.getElementById('createPostEditorTextarea');
+        function autoResizePostTextarea(el) {
             if (!el) return;
             el.style.height = 'auto';
             el.style.height = Math.max(120, el.scrollHeight) + 'px';
         }
 
-        $('#createPostEditorTextarea').on('input', function() {
-            autoResizeCreatePostTextarea();
+        function autoResizeCreatePostTextarea() {
+            var el = document.getElementById(isQueueNewPostModalVisible() ? 'queueNewPostEditorTextarea' : 'createPostEditorTextarea');
+            autoResizePostTextarea(el);
+        }
+
+        $(document).on('input', '#createPostEditorTextarea, #queueNewPostEditorTextarea', function() {
+            autoResizePostTextarea(this);
+            var $modal = $(this).closest('#createPostModal, #queueNewPostModal');
+            var $linkPreview = $modal.find('.create-post-link-preview');
             var value = $(this).val().trim();
             if (!value) {
-                $('#createPostLinkPreview').empty();
+                $linkPreview.empty();
                 is_link = 0;
                 updateCreatePostFacebookFormatRow();
                 refreshCreatePostTikTokSettings();
@@ -2363,17 +2694,18 @@
             is_link = 0;
             var linkToFetch = checkLink(value) ? value : extractUrlFromContent(value);
             if (linkToFetch && createPostFiles.length === 0) {
-                createPostFetchFromLink(linkToFetch);
+                createPostFetchFromLink(linkToFetch, $modal);
             } else {
-                $('#createPostLinkPreview').empty();
+                $linkPreview.empty();
             }
             updateCreatePostFacebookFormatRow();
             refreshCreatePostTikTokSettings();
         });
 
-        function createPostFetchFromLink(link) {
+        function createPostFetchFromLink(link, $modal) {
             if (!link) return;
-            var $container = $('#createPostLinkPreview');
+            if (!$modal || !$modal.length) $modal = activeComposeModal$();
+            var $container = $modal.find('.create-post-link-preview');
             $container.html('<div class="skeleton-wrapper"><div class="content-col"><div class="skeleton-bar bar-title"></div><div class="skeleton-bar bar-full"></div></div><div class="image-col"><div class="skeleton-bar image-placeholder"></div></div></div>');
             $.ajax({
                 url: "{{ route('general.previewLink') }}",
@@ -2389,8 +2721,9 @@
                             $container.html(html);
                             is_link = 1;
                             if (response.title) {
-                                $('#createPostEditorTextarea').val(response.title);
-                                setTimeout(autoResizeCreatePostTextarea, 0);
+                                var $ta = $modal.find('.create-post-editor-textarea');
+                                $ta.val(response.title);
+                                setTimeout(function() { autoResizePostTextarea($ta[0]); }, 0);
                             }
                         } else {
                             $container.html('<div style="padding: 1rem; color: #DC2626;">Error loading preview.</div>');
@@ -2411,9 +2744,10 @@
             });
         }
 
-        $(document).on('click', '#createPostLinkPreview .close-btn-placeholder', function() {
-            $('#createPostLinkPreview').empty();
-            $('#createPostEditorTextarea').val('');
+        $(document).on('click', '#createPostLinkPreview .close-btn-placeholder, #queueNewPostLinkPreview .close-btn-placeholder', function() {
+            var $modal = $(this).closest('#createPostModal, #queueNewPostModal');
+            $modal.find('.create-post-link-preview').empty();
+            $modal.find('.create-post-editor-textarea').val('');
             is_link = 0;
             updateCreatePostFacebookFormatRow();
             refreshCreatePostTikTokSettings();
@@ -2422,13 +2756,14 @@
         // publish/queue/schedule post
         $('.action_btn').on('click', function() {
             action_name = $(this).attr("href");
-            var inCreatePost = $(this).closest('#createPostModal').length > 0;
+            var inCreatePost = $(this).closest('#createPostModal, #queueNewPostModal').length > 0;
             if (inCreatePost && $(this).hasClass('create-post-segmented-btn')) {
                 $createPostActiveButton = $(this);
             }
             if (action_name == "schedule") {
                 if (inCreatePost) {
-                    $('#createPostScheduleDropdown').toggleClass('is-open');
+                    var $dd = $(this).closest('.create-post-modal').find('.create-post-schedule-dropdown');
+                    $dd.toggleClass('is-open');
                 } else {
                     var schedule_modal = $(".schedule-modal");
                     schedule_modal.modal("toggle");
@@ -2444,7 +2779,7 @@
                     } else if (createPostFiles.length > 0) {
                         processCreatePostPhotoVideo();
                     } else {
-                        var content = $('#createPostEditorTextarea').val().trim();
+                        var content = pm$('EditorTextarea').val().trim();
                         if (empty(content)) {
                             toastr.error("Please enter post content or upload a file!");
                             return;
@@ -2473,7 +2808,7 @@
                 return false;
             }
             if (!checkPastDateTime(schedule_date, schedule_time)) {
-                if ($('#createPostModal').hasClass('show')) {
+                if ($('#createPostModal').hasClass('show') || $('#queueNewPostModal').hasClass('show')) {
                     if (is_link) processCreatePostLink();
                     else if (createPostFiles.length > 0) processCreatePostPhotoVideo();
                     else processCreatePostContentOnly();
@@ -2487,17 +2822,17 @@
         $(document).on('click', '.create-post-schedule-confirm', function(e) {
             e.stopPropagation();
             action_name = 'schedule';
-            $createPostActiveButton = $('.create-post-schedule-trigger');
+            $createPostActiveButton = $(this).closest('.create-post-modal').find('.create-post-schedule-trigger');
             if (!checkCreatePostAccounts()) {
                 toastr.error("Please select at least one channel!");
                 return;
             }
-            if (is_link && !$('#createPostLinkPreview .link_url').text().trim()) {
+            if (is_link && !pm$('LinkPreview').find('.link_url').text().trim()) {
                 toastr.error("Invalid link preview.");
                 return;
             }
             if (!is_link && createPostFiles.length === 0) {
-                var content = $('#createPostEditorTextarea').val().trim();
+                var content = pm$('EditorTextarea').val().trim();
                 if (empty(content)) {
                     toastr.error("Please enter post content or upload a file!");
                     return;
@@ -2511,7 +2846,7 @@
                 return;
             }
             if (!checkPastDateTime(schedule_date, schedule_time)) {
-                $('#createPostScheduleDropdown').removeClass('is-open');
+                pm$('ScheduleDropdown').removeClass('is-open');
                 if (is_link) processCreatePostLink();
                 else if (createPostFiles.length > 0) processCreatePostPhotoVideo();
                 else processCreatePostContentOnly();
@@ -2519,15 +2854,22 @@
         });
 
         $(document).on('click', function(e) {
-            if (!$(e.target).closest('.create-post-schedule-trigger, #createPostScheduleDropdown').length) {
-                $('#createPostScheduleDropdown').removeClass('is-open');
+            if (!$(e.target).closest('.create-post-schedule-trigger, #createPostScheduleDropdown, #queueNewPostScheduleDropdown').length) {
+                $('#createPostScheduleDropdown, #queueNewPostScheduleDropdown').removeClass('is-open');
             }
         });
         function checkCreatePostAccounts() {
+            if (isQueueNewPostModalVisible()) {
+                return !!getSidebarSingleAccountPairForQueueModal();
+            }
             return $('.channels-dropdown-checkbox:checked').length > 0;
         }
 
         function getCreatePostSelectedAccounts() {
+            if (isQueueNewPostModalVisible()) {
+                var p = getSidebarSingleAccountPairForQueueModal();
+                return p ? [{ id: p.id, type: p.type }] : [];
+            }
             var accounts = [];
             $('.channels-dropdown-checkbox:checked').each(function() {
                 var id = $(this).data('id');
@@ -2542,7 +2884,11 @@
             (selectedAccounts || []).forEach(function(acc) {
                 if ((acc.type || '') !== 'tiktok') return;
                 var $item = $('.channels-dropdown-checkbox[data-id="' + acc.id + '"][data-type="tiktok"]').closest('.channels-dropdown-item');
-                var name = $item.find('.channels-dropdown-item-name').text().trim() || 'TikTok Account';
+                var name = $item.find('.channels-dropdown-item-name').text().trim();
+                if (!name && isQueueNewPostModalVisible()) {
+                    name = $('.account-card.active:not(.all-channels-card)').first().find('.account-name').text().trim();
+                }
+                if (!name) name = 'TikTok Account';
                 tiktokAccounts.push({ id: acc.id, name: name });
             });
             return tiktokAccounts;
@@ -2555,13 +2901,13 @@
             var onlyTikTokSelected = selectedAccounts.length > 0 && selectedAccounts.every(function(acc) {
                 return (acc.type || '') === 'tiktok';
             });
-            var $wrap = $('#createPostTikTokSettingsWrap');
+            var $wrap = pm$('TikTokSettingsWrap');
             if (tiktokAccounts.length === 0 || (!hasMedia && !onlyTikTokSelected)) {
                 $wrap.hide();
-                $('#createPostTikTokCommercialToggle').prop('checked', false);
-                $('#createPostTikTokYourBrand').prop('checked', false);
-                $('#createPostTikTokBrandedContent').prop('checked', false);
-                $('#createPostTikTokCommercialOptions').hide();
+                pm$('TikTokCommercialToggle').prop('checked', false);
+                pm$('TikTokYourBrand').prop('checked', false);
+                pm$('TikTokBrandedContent').prop('checked', false);
+                pm$('TikTokCommercialOptions').hide();
                 return;
             }
             $wrap.show();
@@ -2569,8 +2915,8 @@
         }
 
         function syncCreatePostTikTokPrivacyForDisclosure() {
-            var disclose = $('#createPostTikTokCommercialToggle').is(':checked');
-            var $sel = $('#createPostTikTokPrivacyLevel');
+            var disclose = pm$('TikTokCommercialToggle').is(':checked');
+            var $sel = pm$('TikTokPrivacyLevel');
             var $onlyYou = $sel.find('option[value="SELF_ONLY"]');
             if (disclose) {
                 $onlyYou.prop('disabled', true).attr('title', 'Not available when disclose post content is enabled.');
@@ -2583,29 +2929,29 @@
         }
 
         function syncCreatePostTikTokCommercialOptions() {
-            var enabled = $('#createPostTikTokCommercialToggle').is(':checked');
+            var enabled = pm$('TikTokCommercialToggle').is(':checked');
             if (enabled) {
-                $('#createPostTikTokCommercialOptions').show();
+                pm$('TikTokCommercialOptions').show();
             } else {
-                $('#createPostTikTokCommercialOptions').hide();
-                $('#createPostTikTokYourBrand').prop('checked', false);
-                $('#createPostTikTokBrandedContent').prop('checked', false);
+                pm$('TikTokCommercialOptions').hide();
+                pm$('TikTokYourBrand').prop('checked', false);
+                pm$('TikTokBrandedContent').prop('checked', false);
             }
             updateCreatePostTikTokConsentText();
             syncCreatePostTikTokPrivacyForDisclosure();
         }
 
-        $(document).on('change', '#createPostTikTokCommercialToggle', function() {
+        $(document).on('change', '#createPostTikTokCommercialToggle, #queueNewPostTikTokCommercialToggle', function() {
             syncCreatePostTikTokCommercialOptions();
         });
-        $(document).on('change', '#createPostTikTokYourBrand, #createPostTikTokBrandedContent', function() {
+        $(document).on('change', '#createPostTikTokYourBrand, #createPostTikTokBrandedContent, #queueNewPostTikTokYourBrand, #queueNewPostTikTokBrandedContent', function() {
             updateCreatePostTikTokConsentText();
         });
 
         function updateCreatePostTikTokConsentText() {
-            var addPolicy = $('#createPostTikTokCommercialToggle').is(':checked') &&
-                ($('#createPostTikTokYourBrand').is(':checked') || $('#createPostTikTokBrandedContent').is(':checked'));
-            $('#createPostTikTokPolicyPrefix').toggle(addPolicy);
+            var addPolicy = pm$('TikTokCommercialToggle').is(':checked') &&
+                (pm$('TikTokYourBrand').is(':checked') || pm$('TikTokBrandedContent').is(':checked'));
+            pm$('TikTokPolicyPrefix').toggle(addPolicy);
         }
 
         function validateCreatePostTikTokSettings() {
@@ -2617,16 +2963,16 @@
             });
             if (tiktokAccounts.length === 0 || (!hasMedia && !onlyTikTokSelected)) return true;
 
-            if (!$('#createPostTikTokPrivacyLevel').val()) {
+            if (!pm$('TikTokPrivacyLevel').val()) {
                 toastr.error('Please select TikTok privacy.');
                 return false;
             }
-            if ($('#createPostTikTokCommercialToggle').is(':checked')) {
-                if ($('#createPostTikTokPrivacyLevel').val() === 'SELF_ONLY') {
+            if (pm$('TikTokCommercialToggle').is(':checked')) {
+                if (pm$('TikTokPrivacyLevel').val() === 'SELF_ONLY') {
                     toastr.error('"Only You" is not available when disclose post content is enabled.');
                     return false;
                 }
-                if (!$('#createPostTikTokYourBrand').is(':checked') && !$('#createPostTikTokBrandedContent').is(':checked')) {
+                if (!pm$('TikTokYourBrand').is(':checked') && !pm$('TikTokBrandedContent').is(':checked')) {
                     toastr.error('Select "Your brand" or "Branded content".');
                     return false;
                 }
@@ -2635,24 +2981,27 @@
         }
 
         function getCreatePostCommentValue() {
-            if ($('#createPostFirstCommentWrap').is(':visible')) {
-                return $('#createPostFirstComment').val() || '';
+            if (pm$('FirstCommentWrap').length && pm$('FirstCommentWrap').is(':visible')) {
+                return pm$('FirstComment').val() || '';
             }
-            return $('#createPostComment').val() || '';
+            return pm$('Comment').val() || '';
         }
 
         function getCreatePostScheduleDateTime() {
             return {
-                date: $('#createPostScheduleDate').val() || '',
-                time: $('#createPostScheduleTime').val() || ''
+                date: pm$('ScheduleDate').val() || '',
+                time: pm$('ScheduleTime').val() || ''
             };
         }
 
         function getScheduleDateTime() {
-            if (createPostFromTimeslot && createPostSlotDate && createPostSlotTime) {
+            if (action_name === 'queue' && createPostFromTimeslot && createPostSlotDate && createPostSlotTime) {
                 return { date: createPostSlotDate, time: createPostSlotTime };
             }
-            if ($('#createPostModal').hasClass('show') && action_name === 'schedule') {
+            if (action_name === 'queue' && isQueueNewPostModalVisible() && queueNewPostPinnedSlotDate && queueNewPostPinnedSlotTime) {
+                return { date: queueNewPostPinnedSlotDate, time: queueNewPostPinnedSlotTime };
+            }
+            if (($('#createPostModal').hasClass('show') || $('#queueNewPostModal').hasClass('show')) && action_name === 'schedule') {
                 var dt = getCreatePostScheduleDateTime();
                 return { date: dt.date, time: dt.time };
             }
@@ -2664,14 +3013,14 @@
                 toastr.error("Chain posts uses file uploads. Add files or open New Post for links.");
                 return;
             }
-            var content = $('#createPostEditorTextarea').val();
+            var content = pm$('EditorTextarea').val();
             var comment = getCreatePostCommentValue();
-            var image = $('#createPostLinkPreview #link_image').attr('src');
-            var url = $('#createPostLinkPreview .link_url').text().trim();
+            var image = pm$('LinkPreview').find('#link_image').attr('src');
+            var url = pm$('LinkPreview').find('.link_url').text().trim();
             var dt = getScheduleDateTime();
             var schedule_date = dt.date;
             var schedule_time = dt.time;
-            var effectiveAction = (createPostFromTimeslot && action_name === 'queue') ? 'schedule' : action_name;
+            var effectiveAction = createPostQueueUsesFixedSlot() ? 'schedule' : action_name;
             if (!url) {
                 toastr.error("Invalid link preview.");
                 return;
@@ -2695,13 +3044,13 @@
             var tiktokAccounts = getCreatePostSelectedTikTokAccounts(selectedAccounts);
             if (tiktokAccounts.length > 0) {
                 postData.tiktok_account_id = tiktokAccounts[0].id;
-                postData.tiktok_privacy_level = $('#createPostTikTokPrivacyLevel').val();
-                postData.tiktok_allow_comment = $('#createPostTikTokAllowComment').is(':checked') ? 1 : 0;
+                postData.tiktok_privacy_level = pm$('TikTokPrivacyLevel').val();
+                postData.tiktok_allow_comment = pm$('TikTokAllowComment').is(':checked') ? 1 : 0;
                 postData.tiktok_allow_duet = 0;
                 postData.tiktok_allow_stitch = 0;
-                postData.tiktok_commercial_toggle = $('#createPostTikTokCommercialToggle').is(':checked') ? 1 : 0;
-                postData.tiktok_your_brand = $('#createPostTikTokYourBrand').is(':checked') ? 1 : 0;
-                postData.tiktok_branded_content = $('#createPostTikTokBrandedContent').is(':checked') ? 1 : 0;
+                postData.tiktok_commercial_toggle = pm$('TikTokCommercialToggle').is(':checked') ? 1 : 0;
+                postData.tiktok_your_brand = pm$('TikTokYourBrand').is(':checked') ? 1 : 0;
+                postData.tiktok_branded_content = pm$('TikTokBrandedContent').is(':checked') ? 1 : 0;
             }
             disableActionButton();
             $.ajax({
@@ -2729,10 +3078,10 @@
                 toastr.error("Chain posts uses file uploads. Add files or open New Post for text-only posts.");
                 return;
             }
-            var content = $('#createPostEditorTextarea').val();
+            var content = pm$('EditorTextarea').val();
             var comment = getCreatePostCommentValue();
             var dt = getScheduleDateTime();
-            var effectiveAction = (createPostFromTimeslot && action_name === 'queue') ? 'schedule' : action_name;
+            var effectiveAction = createPostQueueUsesFixedSlot() ? 'schedule' : action_name;
             var data = {
                 "_token": "{{ csrf_token() }}",
                 "content": content,
@@ -2788,13 +3137,13 @@
             disableActionButton();
             var formData = new FormData();
             formData.append("_token", "{{ csrf_token() }}");
-            formData.append("content", $('#createPostEditorTextarea').val() || '');
+            formData.append("content", pm$('EditorTextarea').val() || '');
             formData.append("comment", getCreatePostCommentValue() || '');
             formData.append("chain_posts_per_round", "1");
             createPostFiles.forEach(function(file) {
                 formData.append("files[]", file);
             });
-            var fbFormats = $('input[name="create_post_facebook_formats[]"]:checked').map(function() {
+            var fbFormats = activeComposeModal$().find('input[name="create_post_facebook_formats[]"]:checked').map(function() {
                 return $(this).val();
             }).get();
             formData.append("facebook_content_formats", JSON.stringify(fbFormats));
@@ -2805,13 +3154,13 @@
             var tiktokAccounts = getCreatePostSelectedTikTokAccounts(selectedAccounts);
             if (tiktokAccounts.length > 0) {
                 formData.append('tiktok_account_id', tiktokAccounts[0].id);
-                formData.append('tiktok_privacy_level', $('#createPostTikTokPrivacyLevel').val() || '');
-                formData.append('tiktok_allow_comment', $('#createPostTikTokAllowComment').is(':checked') ? 1 : 0);
+                formData.append('tiktok_privacy_level', pm$('TikTokPrivacyLevel').val() || '');
+                formData.append('tiktok_allow_comment', pm$('TikTokAllowComment').is(':checked') ? 1 : 0);
                 formData.append('tiktok_allow_duet', 0);
                 formData.append('tiktok_allow_stitch', 0);
-                formData.append('tiktok_commercial_toggle', $('#createPostTikTokCommercialToggle').is(':checked') ? 1 : 0);
-                formData.append('tiktok_your_brand', $('#createPostTikTokYourBrand').is(':checked') ? 1 : 0);
-                formData.append('tiktok_branded_content', $('#createPostTikTokBrandedContent').is(':checked') ? 1 : 0);
+                formData.append('tiktok_commercial_toggle', pm$('TikTokCommercialToggle').is(':checked') ? 1 : 0);
+                formData.append('tiktok_your_brand', pm$('TikTokYourBrand').is(':checked') ? 1 : 0);
+                formData.append('tiktok_branded_content', pm$('TikTokBrandedContent').is(':checked') ? 1 : 0);
             }
             createPostFiles.forEach(function(file) {
                 var uid = file.__uploadId;
@@ -2871,12 +3220,12 @@
                 return;
             }
             var file = filesArray[index];
-            var content = $('#createPostEditorTextarea').val();
+            var content = pm$('EditorTextarea').val();
             var comment = getCreatePostCommentValue();
             var dt = getScheduleDateTime();
             var schedule_date = dt.date;
             var schedule_time = dt.time;
-            var effectiveAction = (createPostFromTimeslot && action_name === 'queue') ? 'schedule' : action_name;
+            var effectiveAction = createPostQueueUsesFixedSlot() ? 'schedule' : action_name;
             var ext = (file.name || '').split('.').pop().toLowerCase();
             var isVideo = ['mp4', 'mkv', 'mov', 'mpeg', 'webm'].indexOf(ext) !== -1;
             var formData = new FormData();
@@ -2890,7 +3239,7 @@
             formData.append("schedule_time", effectiveAction === 'schedule' ? (schedule_time || '') : '');
             formData.append("files", file);
             var uploadId = file.__uploadId || null;
-            var fbFormats = $('input[name="create_post_facebook_formats[]"]:checked').map(function() {
+            var fbFormats = activeComposeModal$().find('input[name="create_post_facebook_formats[]"]:checked').map(function() {
                 return $(this).val();
             }).get();
             // Always send the selected formats array; backend will map to concrete media types
@@ -2903,13 +3252,13 @@
             var tiktokAccounts = getCreatePostSelectedTikTokAccounts(selectedAccounts);
             if (tiktokAccounts.length > 0) {
                 formData.append('tiktok_account_id', tiktokAccounts[0].id);
-                formData.append('tiktok_privacy_level', $('#createPostTikTokPrivacyLevel').val() || '');
-                formData.append('tiktok_allow_comment', $('#createPostTikTokAllowComment').is(':checked') ? 1 : 0);
+                formData.append('tiktok_privacy_level', pm$('TikTokPrivacyLevel').val() || '');
+                formData.append('tiktok_allow_comment', pm$('TikTokAllowComment').is(':checked') ? 1 : 0);
                 formData.append('tiktok_allow_duet', 0);
                 formData.append('tiktok_allow_stitch', 0);
-                formData.append('tiktok_commercial_toggle', $('#createPostTikTokCommercialToggle').is(':checked') ? 1 : 0);
-                formData.append('tiktok_your_brand', $('#createPostTikTokYourBrand').is(':checked') ? 1 : 0);
-                formData.append('tiktok_branded_content', $('#createPostTikTokBrandedContent').is(':checked') ? 1 : 0);
+                formData.append('tiktok_commercial_toggle', pm$('TikTokCommercialToggle').is(':checked') ? 1 : 0);
+                formData.append('tiktok_your_brand', pm$('TikTokYourBrand').is(':checked') ? 1 : 0);
+                formData.append('tiktok_branded_content', pm$('TikTokBrandedContent').is(':checked') ? 1 : 0);
             }
             if (uploadId) {
                 createPostUploadStates[uploadId] = { status: 'uploading', progress: 0 };
@@ -2966,30 +3315,34 @@
             if (createdForAccounts.length > 0) {
                 focusScheduleViewOnPostAccounts(createdForAccounts);
             }
-            $('#createPostEditorTextarea').val('').css('height', 'auto');
-            $('#createPostComment').val('').attr('rows', 1).css({ height: '', minHeight: '', maxHeight: '' });
-            $('#createPostFirstComment').val('');
-            $('#createPostLinkPreview').empty();
+            pm$('EditorTextarea').val('').css('height', 'auto');
+            pm$('Comment').val('').attr('rows', 1).css({ height: '', minHeight: '', maxHeight: '' });
+            pm$('FirstComment').val('');
+            pm$('LinkPreview').empty();
             createPostFiles = [];
             createPostRevokeUrls();
-            $('#createPostUploadPreviews').empty();
+            pm$('UploadPreviews').empty();
             createPostUploadStates = {};
             is_link = 0;
             is_video = 0;
             current_file = 0;
             // Preserve selected Facebook format across resets; just recalculate row visibility.
             updateCreatePostFacebookFormatRow();
-            $('#createPostScheduleDropdown').removeClass('is-open');
+            pm$('ScheduleDropdown').removeClass('is-open');
             if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
                 loadQueueTimeslotsSection();
             }
             loadPostsStatusCounts();
             if (typeof loadPosts === 'function') loadPosts(1);
-            $('#createPostTikTokCommercialToggle').prop('checked', false);
-            $('#createPostTikTokYourBrand').prop('checked', false);
-            $('#createPostTikTokBrandedContent').prop('checked', false);
+            pm$('TikTokCommercialToggle').prop('checked', false);
+            pm$('TikTokYourBrand').prop('checked', false);
+            pm$('TikTokBrandedContent').prop('checked', false);
             syncCreatePostTikTokCommercialOptions();
             refreshCreatePostTikTokSettings();
+            if (isQueueNewPostModalVisible() && (queueNewPostPinnedSlotDate || queueNewPostPinnedSlotDisplay)) {
+                clearQueueNewPostPinnedSlot();
+                refreshQueueNewPostNextSlotDisplay();
+            }
         }
 
         // validate and process post
