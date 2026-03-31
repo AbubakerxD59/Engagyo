@@ -145,6 +145,36 @@
             } catch (e) {}
         }
 
+        /**
+         * After create-post success: single-select the primary target account in the sidebar,
+         * switch to Queue tab, persist selection (URL + DB). Queue reload is done by resetCreatePostArea().
+         */
+        function focusScheduleViewOnPostAccounts(accounts) {
+            if (!accounts || accounts.length === 0) return;
+            var acc = accounts[0];
+            var id = acc.id != null ? String(acc.id) : '';
+            var type = (acc.type || 'facebook').toString().toLowerCase();
+            if (!id) return;
+            var $card = $('.account-card:not(.all-channels-card)[data-id="' + id + '"][data-type="' + type + '"]');
+            if ($card.length === 0) {
+                $card = $('.account-card:not(.all-channels-card)[data-id="' + id + '"]');
+            }
+            if ($card.length === 0) return;
+            $('.all-channels-card').removeClass('active');
+            $('.account-card:not(.all-channels-card)').removeClass('active');
+            $card.first().addClass('active');
+            updateSelectedAccountHeader();
+            updateUrlFromAccountSelection();
+            saveSelectedAccountToDb();
+            if (currentPostStatusTab !== 'queue') {
+                currentPostStatusTab = 'queue';
+                $('#posts-status-tabs .posts-status-tab').removeClass('is-active').attr('aria-selected', 'false');
+                $('#posts-status-tabs .posts-status-tab[data-tab="queue"]').addClass('is-active').attr('aria-selected', 'true');
+                $('#queue-timeslots-section').show();
+                $('#postsGrid').hide();
+            }
+        }
+
         // Toggle Facebook format help popover (Post / Reel / Story)
         $(document).on('click', '#createPostFormatHelpBtn', function(e) {
             e.stopPropagation();
@@ -1737,6 +1767,16 @@
                 } else {
                     syncChannelsDropdownFromSidebar();
                 }
+            } else if (!$('.all-channels-card').hasClass('active')) {
+                var $oneSidebar = $('.account-card.active:not(.all-channels-card)');
+                if ($oneSidebar.length === 1) {
+                    var sid = $oneSidebar.first().data('id');
+                    var stype = $oneSidebar.first().data('type');
+                    $('.channels-dropdown-checkbox').prop('checked', false);
+                    $('.channels-dropdown-checkbox[data-id="' + sid + '"][data-type="' + stype + '"]').prop('checked', true);
+                } else {
+                    syncChannelsDropdownFromSidebar();
+                }
             } else {
                 syncChannelsDropdownFromSidebar();
             }
@@ -2408,6 +2448,10 @@
         }
 
         function resetCreatePostArea() {
+            var createdForAccounts = getCreatePostSelectedAccounts();
+            if (createdForAccounts.length > 0) {
+                focusScheduleViewOnPostAccounts(createdForAccounts);
+            }
             $('#createPostEditorTextarea').val('').css('height', 'auto');
             $('#createPostComment').val('').attr('rows', 1).css({ height: '', minHeight: '', maxHeight: '' });
             $('#createPostFirstComment').val('');
