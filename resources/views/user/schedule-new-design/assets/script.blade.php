@@ -336,6 +336,10 @@
         }
 
         function refreshSentTabView() {
+            if (isAllChannelsActive()) {
+                showSentPosts();
+                return;
+            }
             if (shouldUseFacebookSentPageTimeline()) {
                 showSentPosts();
             } else if (isPinterestOnlySelection()) {
@@ -359,6 +363,147 @@
         var queueTimelineIsAllChannelsQueue = false;
         var queueTimelineMultiPairs = [];
         var publishSentRefreshTimer = null;
+        var allChannelsSentLoadGeneration = 0;
+        var mixedSentRequests = [];
+
+        function abortMixedSentRequests() {
+            mixedSentRequests.forEach(function(r) {
+                if (r && r.readyState !== 4) r.abort();
+            });
+            mixedSentRequests = [];
+        }
+
+        /**
+         * All channels: load sent posts from every Facebook page, Pinterest board, and TikTok account,
+         * merge by time, same card shape as single-account Sent tab (showSentPosts / renderSentPagePostCard).
+         */
+        function loadAllChannelsSentPostsAggregated(selectedAccounts) {
+            var gen = ++allChannelsSentLoadGeneration;
+            abortMixedSentRequests();
+            if (sentPostsRequest && sentPostsRequest.readyState !== 4) sentPostsRequest.abort();
+            if (pinterestSentRequest && pinterestSentRequest.readyState !== 4) pinterestSentRequest.abort();
+            if (tiktokSentRequest && tiktokSentRequest.readyState !== 4) tiktokSentRequest.abort();
+
+            var pairs = selectedAccounts.pairs || [];
+            var fbIds = [];
+            var pinIds = [];
+            var ttIds = [];
+            pairs.forEach(function(p) {
+                var t = (p.type || '').toString().toLowerCase();
+                if (t === 'facebook') fbIds.push(p.id);
+                else if (t === 'pinterest') pinIds.push(p.id);
+                else if (t === 'tiktok') ttIds.push(p.id);
+            });
+
+            cachedSentPagePosts = null;
+            if (currentPostStatusTab === 'sent') {
+                $('#postsGrid').html(getSentPostsSkeletonHtml());
+            }
+
+            var pending = 0;
+            var chunks = [];
+
+            function finalize() {
+                if (gen !== allChannelsSentLoadGeneration) return;
+                var merged = [];
+                for (var i = 0; i < chunks.length; i++) {
+                    merged = merged.concat(chunks[i] || []);
+                }
+                merged.sort(function(a, b) {
+                    var ta = parseCreatedTime(a.created_time);
+                    var tb = parseCreatedTime(b.created_time);
+                    if (!ta || isNaN(ta.getTime())) return 1;
+                    if (!tb || isNaN(tb.getTime())) return -1;
+                    return tb.getTime() - ta.getTime();
+                });
+                cachedSentPagePosts = merged;
+                $('#posts-status-tabs [data-count="sent"]').text(merged.length);
+                if (currentPostStatusTab === 'sent') {
+                    showSentPosts();
+                }
+                mixedSentRequests = [];
+            }
+
+            function onRequestDone() {
+                pending--;
+                if (pending <= 0) finalize();
+            }
+
+            if (fbIds.length) {
+                pending++;
+                var fbPostsResult = [];
+                var rfb = $.ajax({
+                    url: "{{ route('panel.schedule.posts.sent.page') }}",
+                    type: "GET",
+                    data: { account_id: fbIds },
+                    success: function(response) {
+                        if (gen !== allChannelsSentLoadGeneration) return;
+                        fbPostsResult = (response.success && response.posts) ? response.posts : [];
+                    },
+                    error: function(xhr, textStatus) {
+                        if (textStatus === 'abort' || gen !== allChannelsSentLoadGeneration) return;
+                        fbPostsResult = [];
+                    },
+                    complete: function() {
+                        if (gen === allChannelsSentLoadGeneration) chunks.push(fbPostsResult);
+                        onRequestDone();
+                    }
+                });
+                mixedSentRequests.push(rfb);
+            }
+            if (pinIds.length) {
+                pending++;
+                var pinPostsResult = [];
+                var rpin = $.ajax({
+                    url: "{{ route('panel.schedule.posts.pinterest.sent') }}",
+                    type: "GET",
+                    data: { account_id: pinIds },
+                    success: function(response) {
+                        if (gen !== allChannelsSentLoadGeneration) return;
+                        pinPostsResult = (response.success && response.posts) ? response.posts : [];
+                    },
+                    error: function(xhr, textStatus) {
+                        if (textStatus === 'abort' || gen !== allChannelsSentLoadGeneration) return;
+                        pinPostsResult = [];
+                    },
+                    complete: function() {
+                        if (gen === allChannelsSentLoadGeneration) chunks.push(pinPostsResult);
+                        onRequestDone();
+                    }
+                });
+                mixedSentRequests.push(rpin);
+            }
+            if (ttIds.length) {
+                pending++;
+                var ttPostsResult = [];
+                var rtt = $.ajax({
+                    url: "{{ route('panel.schedule.posts.tiktok.sent') }}",
+                    type: "GET",
+                    data: { account_id: ttIds },
+                    success: function(response) {
+                        if (gen !== allChannelsSentLoadGeneration) return;
+                        ttPostsResult = (response.success && response.posts) ? response.posts : [];
+                    },
+                    error: function(xhr, textStatus) {
+                        if (textStatus === 'abort' || gen !== allChannelsSentLoadGeneration) return;
+                        ttPostsResult = [];
+                    },
+                    complete: function() {
+                        if (gen === allChannelsSentLoadGeneration) chunks.push(ttPostsResult);
+                        onRequestDone();
+                    }
+                });
+                mixedSentRequests.push(rtt);
+            }
+
+            if (pending === 0) {
+                cachedSentPagePosts = [];
+                $('#posts-status-tabs [data-count="sent"]').text(0);
+                if (currentPostStatusTab === 'sent') {
+                    showSentPosts();
+                }
+            }
+        }
 
         /** After async Facebook publish job completes, Sent tab can show the post from DB; poll briefly so it appears without a manual refresh. */
         function scheduleSentTabRefreshAfterPublish() {
@@ -406,8 +551,8 @@
                 },
                 success: function(data) {
                     $('#posts-status-tabs [data-count="queue"]').text(data.queue);
-                    // Sent badge from listing APIs for Facebook timeline + Pinterest/TikTok sent; otherwise DB counts.
-                    if (!shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection()) {
+                    // Sent badge: all-channels merged sent load; FB/Pin/TT dedicated APIs; else DB counts.
+                    if (!isAllChannelsActive() && !shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection()) {
                         $('#posts-status-tabs [data-count="sent"]').text(data.sent);
                     }
                 },
@@ -415,7 +560,9 @@
                     postsStatusRequest = null;
                 }
             });
-            if (shouldUseFacebookSentPageTimeline()) {
+            if (isAllChannelsActive()) {
+                loadAllChannelsSentPostsAggregated(selectedAccounts);
+            } else if (shouldUseFacebookSentPageTimeline()) {
                 loadSentPagePostsCached(selectedAccounts);
             } else if (isPinterestOnlySelection()) {
                 loadPinterestSentPagePostsCached(selectedAccounts);
@@ -3331,6 +3478,10 @@
 
         function loadPosts(page = 1) {
             currentPage = page;
+            if (currentPostStatusTab === 'sent' && isAllChannelsActive()) {
+                loadAllChannelsSentPostsAggregated(getSelectedAccounts());
+                return;
+            }
             if (currentPostStatusTab === 'sent' && !shouldUseFacebookSentPageTimeline()) {
                 sentPostsGroupedByDay = [];
                 sentDayOffset = 0;
@@ -3887,12 +4038,18 @@
             if (currentPostStatusTab === 'queue') {
                 if (typeof loadQueueTimeslotsSection === 'function') loadQueueTimeslotsSection();
             } else if (currentPostStatusTab === 'sent') {
-                if (shouldUseFacebookSentPageTimeline()) {
+                if (isAllChannelsActive()) {
+                    cachedSentPagePosts = null;
+                    loadAllChannelsSentPostsAggregated(getSelectedAccounts());
+                } else if (shouldUseFacebookSentPageTimeline()) {
                     cachedSentPagePosts = null;
                     loadSentPagePostsCached(getSelectedAccounts());
                 } else if (isPinterestOnlySelection()) {
                     cachedSentPagePosts = null;
                     loadPinterestSentPagePostsCached(getSelectedAccounts());
+                } else if (isTikTokOnlySelection()) {
+                    cachedSentPagePosts = null;
+                    loadTikTokSentPagePostsCached(getSelectedAccounts());
                 } else {
                     loadPosts(1);
                 }
@@ -3924,8 +4081,12 @@
                             if (typeof loadQueueTimeslotsSection === 'function') {
                                 loadQueueTimeslotsSection(true);
                             }
-                            if (currentPostStatusTab === 'sent' && !shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection()) {
-                                loadPosts(1);
+                            if (currentPostStatusTab === 'sent') {
+                                if (isAllChannelsActive()) {
+                                    loadAllChannelsSentPostsAggregated(getSelectedAccounts());
+                                } else if (!shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection()) {
+                                    loadPosts(1);
+                                }
                             }
                         }
                         lastNotificationCount = currentCount;
