@@ -238,8 +238,8 @@
                                             <option value="FOLLOWER_OF_CREATOR">Followers</option>
                                             <option value="SELF_ONLY">Private</option>
 
-                                            <option value="MUTUAL_FOLLOW_FRIENDS">Friends</option>
-                                            <option value="SELF_ONLY">Only You</option>
+                                            {{-- <option value="MUTUAL_FOLLOW_FRIENDS">Friends</option> --}}
+                                            {{-- <option value="SELF_ONLY">Only You</option> --}}
                                         </select>
                                     </div>
                                     <div class="form-group mb-2">
