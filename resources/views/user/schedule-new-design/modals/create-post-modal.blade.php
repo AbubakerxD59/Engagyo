@@ -235,11 +235,11 @@
                                         <select id="createPostTikTokPrivacyLevel" class="form-control w-50">
                                             <option value="">Select privacy</option>
                                             <option value="MUTUAL_FOLLOW_FRIENDS">Public</option>
+                                            <option value="FOLLOWER_OF_CREATOR">Followers</option>
                                             <option value="SELF_ONLY">Private</option>
 
-                                            {{-- <option value="FOLLOWER_OF_CREATOR">Followers</option>
                                             <option value="MUTUAL_FOLLOW_FRIENDS">Friends</option>
-                                            <option value="SELF_ONLY">Only You</option> --}}
+                                            <option value="SELF_ONLY">Only You</option>
                                         </select>
                                     </div>
                                     <div class="form-group mb-2">
