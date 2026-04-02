@@ -19,7 +19,6 @@ class JoggAiController extends BaseController
      */
     public function uploadMedia(Request $request)
     {
-        dd('1');
         $validator = Validator::make($request->all(), [
             'image' => 'nullable|url',
             'video' => 'nullable|url',
