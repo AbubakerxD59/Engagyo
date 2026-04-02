@@ -27,9 +27,9 @@ class JoggAiController extends BaseController
             return $this->errorResponse($validator->errors()->first(), 422);
         }
 
-        $apiKey = $request->header('x-api-key');
+        $apiKey = $request->header('api_key');
         if ($apiKey === null || $apiKey === '') {
-            return $this->errorResponse('x-api-key header is required.', 401);
+            return $this->errorResponse('API Key header is required.', 401);
         }
 
         $mediaUrl = $request->input('media_url');
