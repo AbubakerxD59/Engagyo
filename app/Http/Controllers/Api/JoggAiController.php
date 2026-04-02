@@ -28,10 +28,13 @@ class JoggAiController extends BaseController
             return $this->errorResponse($validator->errors()->first(), 422);
         }
 
-        $apiKey = $request->header('api_key');
-        dd($apiKey);
+        $apiKey = $this->resolveJoggApiKey($request);
         if ($apiKey === null || $apiKey === '') {
-            return $this->errorResponse('API Key header is required.', 401);
+            return $this->errorResponse(
+                'Jogg API key is required. Send header x-api-key (recommended), api-key, or Authorization: Bearer <key>. ' .
+                    'Avoid header name api_key — many proxies strip underscores and it will not reach the app.',
+                401
+            );
         }
 
         $imageUrl = trim((string) $request->input('image', ''));
@@ -219,5 +222,42 @@ class JoggAiController extends BaseController
 
             return $this->errorResponse('Failed to process media URL.', 500);
         }
+    }
+
+    /**
+     * Read Jogg key from headers. Prefer hyphenated names; underscores are often dropped by nginx before PHP.
+     */
+    private function resolveJoggApiKey(Request $request): ?string
+    {
+        $candidates = [
+            'x-api-key',
+            'X-Api-Key',
+            'api-key',
+            'API_KEY'
+        ];
+
+        foreach ($candidates as $name) {
+            $value = $request->header($name);
+            if (is_array($value)) {
+                $value = $value[0] ?? null;
+            }
+            if ($value !== null && trim((string) $value) !== '') {
+                return trim((string) $value);
+            }
+        }
+
+        foreach (['HTTP_X_API_KEY', 'HTTP_API_KEY'] as $serverKey) {
+            $value = $request->server($serverKey);
+            if ($value !== null && trim((string) $value) !== '') {
+                return trim((string) $value);
+            }
+        }
+
+        $bearer = $request->bearerToken();
+        if ($bearer !== null && trim($bearer) !== '') {
+            return trim($bearer);
+        }
+
+        return null;
     }
 }
