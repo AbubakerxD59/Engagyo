@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\JoggAiController;
 use App\Http\Controllers\Api\PostController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
@@ -37,6 +38,9 @@ Route::prefix('v1')->group(function () {
             'timestamp' => now()->toIso8601String(),
         ]);
     });
+
+    // Jogg AI: download remote media and store under public/uploads/jogg_ai (no Engagyo auth; Jogg x-api-key required)
+    Route::post('/posts/jogg-ai/upload-media', [JoggAiController::class, 'uploadMedia']);
 
     /*
     |--------------------------------------------------------------------------
