@@ -29,6 +29,7 @@ class JoggAiController extends BaseController
         }
 
         $apiKey = $request->header('api_key');
+        dd($apiKey);
         if ($apiKey === null || $apiKey === '') {
             return $this->errorResponse('API Key header is required.', 401);
         }
