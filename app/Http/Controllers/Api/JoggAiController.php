@@ -20,7 +20,8 @@ class JoggAiController extends BaseController
     public function uploadMedia(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'media_url' => 'required|url',
+            'image' => 'nullable|url',
+            'video' => 'nullable|url',
         ]);
 
         if ($validator->fails()) {
@@ -32,7 +33,14 @@ class JoggAiController extends BaseController
             return $this->errorResponse('API Key header is required.', 401);
         }
 
-        $mediaUrl = $request->input('media_url');
+        $imageUrl = trim((string) $request->input('image', ''));
+        $videoUrl = trim((string) $request->input('video', ''));
+
+        if ($imageUrl === '' && $videoUrl === '') {
+            return $this->errorResponse('Either image or video URL is required.', 422);
+        }
+
+        $mediaUrl = $imageUrl !== '' ? $imageUrl : $videoUrl;
 
         try {
             $response = Http::timeout(120)->get($mediaUrl);
