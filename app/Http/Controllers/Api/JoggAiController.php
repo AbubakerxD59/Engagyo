@@ -45,15 +45,24 @@ class JoggAiController extends BaseController
         }
 
         $mediaUrl = $imageUrl !== '' ? $imageUrl : $videoUrl;
+        $fetchUrl = $this->resolveGoogleDriveDirectUrl($mediaUrl);
 
         try {
-            $response = Http::timeout(120)->get($mediaUrl);
+            $response = Http::timeout(120)->get($fetchUrl);
 
             if (!$response->successful()) {
                 return $this->errorResponse('Unable to download media from the provided URL.', 400);
             }
 
             $contentType = strtolower(trim(explode(';', (string) $response->header('Content-Type'))[0]));
+
+            if ($fetchUrl !== $mediaUrl && str_starts_with($contentType, 'text/html')) {
+                return $this->errorResponse(
+                    'Google Drive did not return the file directly (HTML response). Try a smaller file, ensure the link is "Anyone with the link", or use a direct file URL.',
+                    422
+                );
+            }
+
             $allowedContentTypes = [
                 'image/jpeg',
                 'image/jpg',
@@ -222,6 +231,23 @@ class JoggAiController extends BaseController
 
             return $this->errorResponse('Failed to process media URL.', 500);
         }
+    }
+
+    /**
+     * Google Drive share/preview URLs return HTML. Rewrite to export URL so Http client follows redirects to raw bytes (e.g. video/mp4).
+     */
+    private function resolveGoogleDriveDirectUrl(string $url): string
+    {
+        if (preg_match('#^https?://(?:www\.)?drive\.google\.com/file/(?:u/\d+/)?d/([a-zA-Z0-9_-]+)#', $url, $m)) {
+            return 'https://drive.google.com/uc?export=download&id=' . $m[1];
+        }
+
+        if (preg_match('#^https?://(?:www\.)?drive\.google\.com/open#', $url)
+            && preg_match('#[?&]id=([a-zA-Z0-9_-]+)#', $url, $m)) {
+            return 'https://drive.google.com/uc?export=download&id=' . $m[1];
+        }
+
+        return $url;
     }
 
     /**
