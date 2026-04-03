@@ -12,6 +12,8 @@ use App\Jobs\PublishPinterestPost;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
 use App\Services\PostService;
+use App\Services\TimezoneService;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
@@ -42,6 +44,7 @@ class PostController extends BaseController
             'title' => 'required|string',
             'description' => 'nullable|string',
             'link' => 'nullable|url',
+            'publish_now' => 'nullable|in:0,1',
             'scheduled_at' => 'nullable|date|after:now',
         ]);
 
@@ -57,14 +60,10 @@ class PostController extends BaseController
         $title = $request->input('title');
         $description = $request->input('description', '');
         $link = $request->input('link');
-        $scheduledAt = $request->input('scheduled_at');
-
-        // Determine if this is a scheduled post or immediate publish
-        $publishNow = empty($scheduledAt);
 
         return match ($platform) {
-            Platform::FACEBOOK => $this->publishToFacebook($user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt),
-            Platform::PINTEREST => $this->publishToPinterest($user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt),
+            Platform::FACEBOOK => $this->publishToFacebook($request, $user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link),
+            Platform::PINTEREST => $this->publishToPinterest($request, $user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link),
             default => $this->errorResponse('Platform not supported for posting', 400),
         };
     }
@@ -79,11 +78,9 @@ class PostController extends BaseController
      * @param string $title
      * @param string $description
      * @param string|null $link
-     * @param bool $publishNow
-     * @param string|null $scheduledAt
      * @return \Illuminate\Http\JsonResponse
      */
-    private function publishToFacebook($user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt = null)
+    private function publishToFacebook(Request $request, $user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link)
     {
         // Find the page by page_id (belongs to user)
         $page = Page::withoutGlobalScopes()
@@ -100,8 +97,10 @@ class PostController extends BaseController
             return $this->errorResponse('Facebook page access token has expired. Please reconnect your Facebook account.', 401);
         }
 
-        // Determine publish date and scheduled status
-        $publishDate = $publishNow ? now() : $scheduledAt;
+        $page->loadMissing('timeslots');
+        $timing = $this->resolveApiPublishTiming($request, $user, $page, 'facebook');
+        $publishNow = $timing['publish_now'];
+        $publishDate = $publishNow ? now() : $timing['publish_date'];
         $isScheduled = !$publishNow;
 
         // Create the post record
@@ -167,7 +166,7 @@ class PostController extends BaseController
         }
 
         // Scheduled post response
-        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($scheduledAt));
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($timing['publish_date']));
         return $this->successResponse([
             'post' => [
                 'id' => $post->id,
@@ -191,11 +190,9 @@ class PostController extends BaseController
      * @param string $title
      * @param string $description
      * @param string|null $link
-     * @param bool $publishNow
-     * @param string|null $scheduledAt
      * @return \Illuminate\Http\JsonResponse
      */
-    private function publishToPinterest($user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link, $publishNow, $scheduledAt = null)
+    private function publishToPinterest(Request $request, $user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link)
     {
         // Find the board by board_id (belongs to user)
         $board = Board::withoutGlobalScopes()
@@ -220,8 +217,10 @@ class PostController extends BaseController
         }
         $accessToken = $tokenResponse['access_token'];
 
-        // Determine publish date and scheduled status
-        $publishDate = $publishNow ? now() : $scheduledAt;
+        $board->loadMissing('timeslots');
+        $timing = $this->resolveApiPublishTiming($request, $user, $board, 'pinterest');
+        $publishNow = $timing['publish_now'];
+        $publishDate = $publishNow ? now() : $timing['publish_date'];
         $isScheduled = !$publishNow;
 
         // Create the post record
@@ -282,7 +281,7 @@ class PostController extends BaseController
         }
 
         // Scheduled post response
-        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($scheduledAt));
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($timing['publish_date']));
         return $this->successResponse([
             'post' => [
                 'id' => $post->id,
@@ -293,7 +292,7 @@ class PostController extends BaseController
                 'created_at' => $post->created_at->toIso8601String(),
             ],
             'account' => $this->formatPinterestAccount($board, $pinterest),
-        ], 'Post scheduled successfully for ' . date('M d, Y \a\t h:i A', strtotime($scheduledAt)));
+        ], 'Post scheduled successfully for ' . $scheduledDate);
     }
 
     /**
@@ -438,6 +437,7 @@ class PostController extends BaseController
             'title' => 'required|string',
             'description' => 'nullable|string',
             'link' => 'nullable|url',
+            'publish_now' => 'nullable|in:0,1',
             'scheduled_at' => 'nullable|date|after:now',
         ]);
 
@@ -453,14 +453,10 @@ class PostController extends BaseController
         $title = $request->input('title');
         $description = $request->input('description', '');
         $link = $request->input('link');
-        $scheduledAt = $request->input('scheduled_at');
-
-        // Determine if this is a scheduled post or immediate publish
-        $publishNow = empty($scheduledAt);
 
         return match ($platform) {
-            Platform::FACEBOOK => $this->publishVideoToFacebook($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link, $publishNow, $scheduledAt),
-            Platform::PINTEREST => $this->publishVideoToPinterest($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link, $publishNow, $scheduledAt),
+            Platform::FACEBOOK => $this->publishVideoToFacebook($request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link),
+            Platform::PINTEREST => $this->publishVideoToPinterest($request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link),
             default => $this->errorResponse('Platform not supported for video posting', 400),
         };
     }
@@ -475,11 +471,9 @@ class PostController extends BaseController
      * @param string $title
      * @param string $description
      * @param string|null $link
-     * @param bool $publishNow
-     * @param string|null $scheduledAt
      * @return \Illuminate\Http\JsonResponse
      */
-    private function publishVideoToFacebook($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link = null, $publishNow, $scheduledAt = null)
+    private function publishVideoToFacebook(Request $request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link = null)
     {
         // Find the page by page_id (belongs to user)
         $page = Page::withoutGlobalScopes()
@@ -498,6 +492,10 @@ class PostController extends BaseController
         }
         $accessToken = $tokenResponse['access_token'];
 
+        $page->loadMissing('timeslots');
+        $timing = $this->resolveApiPublishTiming($request, $user, $page, 'facebook');
+        $publishNow = $timing['publish_now'];
+
         // Download video from URL to local storage
         try {
             $localVideoPath = $this->downloadVideoToLocal($videoUrl);
@@ -508,8 +506,7 @@ class PostController extends BaseController
             return $this->errorResponse('Error processing video: ' . $e->getMessage(), 500);
         }
 
-        // Determine publish date and scheduled status
-        $publishDate = $publishNow ? now() : $scheduledAt;
+        $publishDate = $publishNow ? now() : $timing['publish_date'];
         $isScheduled = !$publishNow;
 
         // Create the post record - store local path instead of URL
@@ -564,7 +561,7 @@ class PostController extends BaseController
         }
 
         // Scheduled post response
-        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($scheduledAt));
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($timing['publish_date']));
         return $this->successResponse([
             'post' => [
                 'id' => $post->id,
@@ -575,7 +572,7 @@ class PostController extends BaseController
                 'created_at' => $post->created_at->toIso8601String(),
             ],
             'account' => $this->formatFacebookAccount($page),
-        ], 'Video scheduled successfully for ' . date('M d, Y \a\t h:i A', strtotime($scheduledAt)));
+        ], 'Video scheduled successfully for ' . $scheduledDate);
     }
 
     /**
@@ -588,11 +585,9 @@ class PostController extends BaseController
      * @param string $title
      * @param string $description
      * @param string|null $link
-     * @param bool $publishNow
-     * @param string|null $scheduledAt
      * @return \Illuminate\Http\JsonResponse
      */
-    private function publishVideoToPinterest($user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link = null, $publishNow, $scheduledAt = null)
+    private function publishVideoToPinterest(Request $request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link = null)
     {
         // Find the board by board_id (belongs to user)
         $board = Board::withoutGlobalScopes()
@@ -617,6 +612,10 @@ class PostController extends BaseController
         }
         $accessToken = $tokenResponse['access_token'];
 
+        $board->loadMissing('timeslots');
+        $timing = $this->resolveApiPublishTiming($request, $user, $board, 'pinterest');
+        $publishNow = $timing['publish_now'];
+
         // Download video from URL and upload to S3
         try {
             $videoKey = $this->downloadAndUploadVideoToS3($videoUrl);
@@ -627,8 +626,7 @@ class PostController extends BaseController
             return $this->errorResponse('Error processing video: ' . $e->getMessage(), 500);
         }
 
-        // Determine publish date and scheduled status
-        $publishDate = $publishNow ? now() : $scheduledAt;
+        $publishDate = $publishNow ? now() : $timing['publish_date'];
         $isScheduled = !$publishNow;
 
         // Create the post record
@@ -681,7 +679,7 @@ class PostController extends BaseController
         }
 
         // Scheduled post response
-        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($scheduledAt));
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($timing['publish_date']));
         return $this->successResponse([
             'post' => [
                 'id' => $post->id,
@@ -773,6 +771,63 @@ class PostController extends BaseController
             Log::error('Error downloading video to local: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Resolve API publish timing: publish_now=1 → immediate; else scheduled_at if set;
+     * else next free queue timeslot for the account; else today/next day 14:00 in user timezone.
+     *
+     * @param Page|Board $account
+     * @return array{publish_now: bool, publish_date: string}
+     */
+    private function resolveApiPublishTiming(Request $request, $user, $account, string $socialType): array
+    {
+        if ((int) $request->input('publish_now') === 1) {
+            return [
+                'publish_now' => true,
+                'publish_date' => '',
+            ];
+        }
+
+        $scheduledAt = $request->input('scheduled_at');
+        if ($scheduledAt !== null && trim((string) $scheduledAt) !== '') {
+            return [
+                'publish_now' => false,
+                'publish_date' => $scheduledAt,
+            ];
+        }
+
+        $account->loadMissing('timeslots');
+        $timeslots = $account->timeslots;
+
+        $search = [
+            'account_id' => $account->id,
+            'social_type' => $socialType,
+        ];
+
+        if ($timeslots->isNotEmpty()) {
+            $nextLocal = (new Post)->nextScheduleTime($search, $timeslots, $user);
+            if (preg_match('/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}$/', $nextLocal)) {
+                $nextLocal .= ':00';
+            }
+
+            return [
+                'publish_now' => false,
+                'publish_date' => $nextLocal,
+            ];
+        }
+
+        $tz = TimezoneService::getUserTimezone($user);
+        $now = Carbon::now($tz);
+        $target = $now->copy()->setTime(14, 0, 0);
+        if ($now->greaterThanOrEqualTo($target)) {
+            $target->addDay();
+        }
+
+        return [
+            'publish_now' => false,
+            'publish_date' => $target->format('Y-m-d H:i:s'),
+        ];
     }
 
     /**

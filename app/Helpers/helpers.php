@@ -901,7 +901,7 @@ function getApiEndpoints()
         "id" => "posts-create",
         "method" => "POST",
         "endpoint" => "/posts",
-        "description" => "Create and publish a post (photo or link) to Facebook or Pinterest. If scheduled_at is provided, the post will be scheduled for the specified date and time. If not provided, the post will be published immediately.",
+        "description" => "Create a post (photo or link) to Facebook or Pinterest. Use publish_now=1 to publish immediately. Otherwise scheduling follows: optional scheduled_at, else the next free queue timeslot for that page/board, else 14:00 today (user timezone) or tomorrow if 14:00 has passed.",
         "category" => "Posts",
         "parameters" => [
             ["name" => "platform", "type" => "string", "required" => true, "description" => "Target platform: 'facebook' or 'pinterest'"],
@@ -910,7 +910,8 @@ function getApiEndpoints()
             ["name" => "title", "type" => "string", "required" => true, "description" => "Post title/message (max 500 characters)"],
             ["name" => "description", "type" => "string", "required" => false, "description" => "Additional description (max 2000 characters)"],
             ["name" => "link", "type" => "string", "required" => false, "description" => "Destination URL for link posts"],
-            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Optional. Schedule post for future date and time (format: Y-m-d H:i:s). If provided, the post will be scheduled for the given date and time. If not provided, the post will be published immediately."]
+            ["name" => "publish_now", "type" => "integer", "required" => false, "description" => "Set to 1 to publish immediately. If 0 or omitted, scheduled_at and queue logic apply (publish_now takes precedence over scheduled_at when set to 1)."],
+            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Used only when publish_now is not 1. Schedule for this date/time (must be after now; format e.g. Y-m-d H:i:s). Interpreted in the user's timezone then stored in UTC."]
         ],
         "request" => [
             "headers" => [
@@ -926,7 +927,7 @@ function getApiEndpoints()
                 "link" => "https://example.com/my-article",
                 "scheduled_at" => "2025-12-25 10:00:00"
             ],
-            "curl" => 'curl -X POST "{base_url}/posts" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"facebook","account_id":"123456789","image_url":"https://example.com/image.jpg","title":"My Post"}\''
+            "curl" => 'curl -X POST "{base_url}/posts" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"facebook","account_id":"123456789","image_url":"https://example.com/image.jpg","title":"My Post","publish_now":1}\''
         ],
         "response" => [
             "success" => true,
@@ -948,7 +949,7 @@ function getApiEndpoints()
                 ]
             ]
         ],
-        "notes" => "Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id. When scheduled_at is provided, status will be 'scheduled'. When not provided, status will be 'publishing' and the post will be queued for immediate publishing."
+        "notes" => "Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id. Scheduling: (1) publish_now=1 → immediate publish, status 'publishing'. (2) Else if scheduled_at is set → schedule at that time, status 'scheduled'. (3) Else if the page/board has queue timeslots configured → next available slot among pending posts on that account. (4) Else default 14:00 local user time today, or tomorrow if 14:00 already passed. Omitting publish_now and scheduled_at no longer implies immediate publish; send publish_now=1 for that."
     ];
 
     $endpoints[] = [
@@ -998,7 +999,7 @@ function getApiEndpoints()
         "id" => "videos-create",
         "method" => "POST",
         "endpoint" => "/posts/video",
-        "description" => "Create and publish a video to Facebook or Pinterest. If scheduled_at is provided, the video will be scheduled for the specified date and time. If not provided, the video will be published immediately.",
+        "description" => "Create a video post on Facebook or Pinterest. Same scheduling rules as POST /posts: publish_now=1 for immediate publish; otherwise scheduled_at, then queue timeslots, then default 14:00 (user timezone).",
         "category" => "Videos",
         "parameters" => [
             ["name" => "platform", "type" => "string", "required" => true, "description" => "Target platform: 'facebook' or 'pinterest'"],
@@ -1007,7 +1008,8 @@ function getApiEndpoints()
             ["name" => "title", "type" => "string", "required" => true, "description" => "Video title/description (max 500 characters)"],
             ["name" => "description", "type" => "string", "required" => false, "description" => "Additional description (max 2000 characters)"],
             ["name" => "link", "type" => "string", "required" => false, "description" => "Optional. Destination URL for the video post"],
-            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Optional. Schedule video for future date and time (format: Y-m-d H:i:s). If provided, the video will be scheduled for the given date and time. If not provided, the video will be published immediately."]
+            ["name" => "publish_now", "type" => "integer", "required" => false, "description" => "Set to 1 to publish immediately. If 0 or omitted, scheduled_at and queue logic apply."],
+            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Used only when publish_now is not 1. Schedule for this date/time (must be after now). Interpreted in the user's timezone."]
         ],
         "request" => [
             "headers" => [
@@ -1023,7 +1025,7 @@ function getApiEndpoints()
                 "link" => "https://example.com/my-article",
                 "scheduled_at" => "2025-12-25 10:00:00"
             ],
-            "curl" => 'curl -X POST "{base_url}/posts/video" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"facebook","account_id":"123456789","video_url":"https://example.com/video.mp4","title":"My Video"}\''
+            "curl" => 'curl -X POST "{base_url}/posts/video" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"facebook","account_id":"123456789","video_url":"https://example.com/video.mp4","title":"My Video","publish_now":1}\''
         ],
         "response" => [
             "success" => true,
@@ -1045,7 +1047,7 @@ function getApiEndpoints()
                 ]
             ]
         ],
-        "notes" => "Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id. The video_url must be publicly accessible. For Pinterest, the video will be downloaded from the URL, uploaded to S3, and then published. Supported video formats: mp4, mov, avi, mkv, webm, flv. When scheduled_at is provided, status will be 'scheduled'. When not provided, status will be 'publishing' and the video will be queued for immediate publishing."
+        "notes" => "Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id. The video_url must be publicly accessible. For Pinterest, the video is downloaded from the URL, uploaded to S3, then published. Supported video formats: mp4, mov, avi, mkv, webm, flv. Scheduling matches POST /posts: publish_now=1 → 'publishing'; else scheduled_at → 'scheduled'; else queue slot or default 14:00 local. Send publish_now=1 for immediate publish."
     ];
 
     return $endpoints;
