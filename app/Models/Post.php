@@ -263,9 +263,15 @@ class Post extends Model
                 }
             }
 
-            // Start checking from the next timeslot
+            // Start checking from the next timeslot after the last post
             $startDate = $lastPostDate;
             $timeslotIndex = ($lastTimeslotIndex >= 0) ? ($lastTimeslotIndex + 1) : 0;
+
+            // Fetched/imported posts can have publish_date in the past; never schedule before today
+            if ($startDate < $currentDate) {
+                $startDate = $currentDate;
+                $timeslotIndex = 0;
+            }
 
             // Track used timeslots for each date
             $usedTimeslotsByDate = [];
@@ -321,12 +327,15 @@ class Post extends Model
                     continue;
                 }
 
-                // Check if timeslot has passed for current day
+                // On today, skip timeslots that are already past — try the next slot same day first
                 if ($startDate == $currentDate && $timeslot24Hour <= $currentTime) {
-                    // Timeslot has passed, move to next day
-                    $startDate = date('Y-m-d', strtotime($startDate . ' +1 day'));
-                    if (!isset($usedTimeslotsByDate[$startDate])) {
-                        $usedTimeslotsByDate[$startDate] = [];
+                    $timeslotIndex++;
+                    if ($timeslotIndex >= count($times)) {
+                        $startDate = date('Y-m-d', strtotime($startDate . ' +1 day'));
+                        $timeslotIndex = 0;
+                        if (!isset($usedTimeslotsByDate[$startDate])) {
+                            $usedTimeslotsByDate[$startDate] = [];
+                        }
                     }
                     $attempts++;
                     continue;
