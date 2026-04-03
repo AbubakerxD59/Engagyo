@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\BaseController;
+use App\Services\VideoUrlDownloadService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Http;
@@ -45,55 +46,24 @@ class JoggAiController extends BaseController
         }
 
         $mediaUrl = $imageUrl !== '' ? $imageUrl : $videoUrl;
-        $fetchUrl = $this->resolveGoogleDriveDirectUrl($mediaUrl);
 
         try {
-            $response = Http::timeout(120)->get($fetchUrl);
+            $fetched = VideoUrlDownloadService::fetchBinary(
+                $mediaUrl,
+                VideoUrlDownloadService::joggAllowedContentTypes(),
+                120
+            );
 
-            if (!$response->successful()) {
-                return $this->errorResponse('Unable to download media from the provided URL.', 400);
-            }
-
-            $contentType = strtolower(trim(explode(';', (string) $response->header('Content-Type'))[0]));
-
-            if ($fetchUrl !== $mediaUrl && str_starts_with($contentType, 'text/html')) {
+            if ($fetched === null) {
                 return $this->errorResponse(
-                    'Google Drive did not return the file directly (HTML response). Try a smaller file, ensure the link is "Anyone with the link", or use a direct file URL.',
+                    'Unable to download media from the provided URL, or the format is not allowed (image/video only). For Google Drive, use a share link with "Anyone with the link" or a direct file URL.',
                     422
                 );
             }
 
-            $allowedContentTypes = [
-                'image/jpeg',
-                'image/jpg',
-                'image/png',
-                'image/gif',
-                'image/webp',
-                'video/mp4',
-                'video/quicktime',
-                'video/x-msvideo',
-                'video/x-matroska',
-                'video/webm',
-            ];
-
-            if (!in_array($contentType, $allowedContentTypes, true)) {
-                return $this->errorResponse('Only image or video URLs are allowed.', 422);
-            }
-
+            $contentType = $fetched['content_type'];
+            $extension = $fetched['extension'];
             $mediaCategory = Str::startsWith($contentType, 'image/') ? 'image' : 'video';
-            $extensionMap = [
-                'image/jpeg' => 'jpg',
-                'image/jpg' => 'jpg',
-                'image/png' => 'png',
-                'image/gif' => 'gif',
-                'image/webp' => 'webp',
-                'video/mp4' => 'mp4',
-                'video/quicktime' => 'mov',
-                'video/x-msvideo' => 'avi',
-                'video/x-matroska' => 'mkv',
-                'video/webm' => 'webm',
-            ];
-            $extension = $extensionMap[$contentType] ?? 'bin';
 
             $uploadDirectory = public_path('uploads/jogg_ai');
             if (!File::exists($uploadDirectory)) {
@@ -103,7 +73,7 @@ class JoggAiController extends BaseController
             $fileName = 'jogg_ai_' . time() . '_' . Str::random(8) . '.' . $extension;
             $absolutePath = $uploadDirectory . DIRECTORY_SEPARATOR . $fileName;
 
-            File::put($absolutePath, $response->body());
+            File::put($absolutePath, $fetched['body']);
 
             if (!File::exists($absolutePath)) {
                 return $this->errorResponse('Failed to store downloaded media.', 500);
@@ -231,23 +201,6 @@ class JoggAiController extends BaseController
 
             return $this->errorResponse('Failed to process media URL.', 500);
         }
-    }
-
-    /**
-     * Google Drive share/preview URLs return HTML. Rewrite to export URL so Http client follows redirects to raw bytes (e.g. video/mp4).
-     */
-    private function resolveGoogleDriveDirectUrl(string $url): string
-    {
-        if (preg_match('#^https?://(?:www\.)?drive\.google\.com/file/(?:u/\d+/)?d/([a-zA-Z0-9_-]+)#', $url, $m)) {
-            return 'https://drive.google.com/uc?export=download&id=' . $m[1];
-        }
-
-        if (preg_match('#^https?://(?:www\.)?drive\.google\.com/open#', $url)
-            && preg_match('#[?&]id=([a-zA-Z0-9_-]+)#', $url, $m)) {
-            return 'https://drive.google.com/uc?export=download&id=' . $m[1];
-        }
-
-        return $url;
     }
 
     /**

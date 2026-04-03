@@ -13,11 +13,11 @@ use App\Services\FacebookService;
 use App\Services\PinterestService;
 use App\Services\PostService;
 use App\Services\TimezoneService;
+use App\Services\VideoUrlDownloadService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
 
@@ -496,11 +496,10 @@ class PostController extends BaseController
         $timing = $this->resolveApiPublishTiming($request, $user, $page, 'facebook');
         $publishNow = $timing['publish_now'];
 
-        // Download video from URL to local storage
         try {
-            $localVideoPath = $this->downloadVideoToLocal($videoUrl);
-            if (!$localVideoPath) {
-                return $this->errorResponse('Failed to download video from URL. Please ensure the URL is accessible and points to a valid video file.', 400);
+            $videoKey = $this->downloadAndUploadVideoToS3($videoUrl);
+            if (!$videoKey) {
+                return $this->errorResponse('Failed to download video from URL. Ensure the URL is public, returns a supported video type (e.g. mp4), and Google Drive links use "Anyone with the link" when applicable.', 400);
             }
         } catch (\Exception $e) {
             return $this->errorResponse('Error processing video: ' . $e->getMessage(), 500);
@@ -509,7 +508,6 @@ class PostController extends BaseController
         $publishDate = $publishNow ? now() : $timing['publish_date'];
         $isScheduled = !$publishNow;
 
-        // Create the post record - store local path instead of URL
         $post = PostService::create([
             'user_id' => $user->id,
             'account_id' => $page->id,
@@ -518,7 +516,7 @@ class PostController extends BaseController
             'source' => 'api',
             'title' => $title,
             'description' => $description,
-            'video' => $localVideoPath,
+            'video' => $videoKey,
             'publish_date' => $publishDate,
             'scheduled' => $isScheduled ? 1 : 0,
         ]);
@@ -529,17 +527,11 @@ class PostController extends BaseController
         }
 
         if ($publishNow) {
-            // Prepare video post data for Facebook - use local file path
-            $postData = [
-                'description' => $title,
-                'source' => $localVideoPath, // Facebook SDK accepts file path via 'source' parameter
-            ];
-
+            $postData = PostService::postTypeBody($post);
             if (!empty($description)) {
                 $postData['description'] = $title . "\n\n" . $description;
             }
 
-            // Dispatch the job to publish
             PublishFacebookPost::dispatch(
                 $post->id,
                 $postData,
@@ -702,73 +694,21 @@ class PostController extends BaseController
     private function downloadAndUploadVideoToS3(string $videoUrl): ?string
     {
         try {
-            // Download video from URL
-            $response = Http::timeout(300)->get($videoUrl);
-
-            if (!$response->successful()) {
+            $fetched = VideoUrlDownloadService::downloadVideoForApi($videoUrl);
+            if ($fetched === null) {
                 return null;
             }
 
-            // Get video content
-            $videoContent = $response->body();
+            $fileName = 'videos/' . time() . '_' . random_int(1000, 9999) . '.' . $fetched['extension'];
 
-            // Generate a unique filename
-            $extension = $this->getVideoExtensionFromUrl($videoUrl);
-            $fileName = 'videos/' . time() . '_' . rand(1000, 9999) . '.' . $extension;
-
-            // Upload to S3
-            $uploaded = Storage::disk('s3')->put($fileName, $videoContent);
-
-            if ($uploaded) {
+            if (Storage::disk('s3')->put($fileName, $fetched['body'])) {
                 return $fileName;
             }
 
             return null;
         } catch (\Exception $e) {
             Log::error('Error downloading/uploading video: ' . $e->getMessage());
-            return null;
-        }
-    }
 
-    /**
-     * Download video from URL to local storage.
-     *
-     * @param string $videoUrl
-     * @return string|null Local file path or null on failure
-     */
-    private function downloadVideoToLocal(string $videoUrl): ?string
-    {
-        try {
-            // Download video from URL
-            $response = Http::timeout(300)->get($videoUrl);
-
-            if (!$response->successful()) {
-                Log::error('Failed to download video from URL: ' . $videoUrl . ' - Status: ' . $response->status());
-                return null;
-            }
-
-            // Get video content
-            $videoContent = $response->body();
-
-            // Generate a unique filename
-            $extension = $this->getVideoExtensionFromUrl($videoUrl);
-            $fileName = 'videos/' . time() . '_' . rand(1000, 9999) . '.' . $extension;
-
-            // Save to local storage (using 'public' disk)
-            $disk = Storage::disk('public');
-            $saved = $disk->put($fileName, $videoContent);
-
-            if ($saved) {
-                // Return the full absolute path to the file
-                // For 'public' disk, files are stored in storage/app/public/
-                $fullPath = storage_path('app/public/' . $fileName);
-                return $fullPath;
-            }
-
-            Log::error('Failed to save video to local storage: ' . $fileName);
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Error downloading video to local: ' . $e->getMessage());
             return null;
         }
     }
@@ -828,26 +768,5 @@ class PostController extends BaseController
             'publish_now' => false,
             'publish_date' => $target->format('Y-m-d H:i:s'),
         ];
-    }
-
-    /**
-     * Get video extension from URL.
-     *
-     * @param string $url
-     * @return string
-     */
-    private function getVideoExtensionFromUrl(string $url): string
-    {
-        $parsedUrl = parse_url($url);
-        $path = $parsedUrl['path'] ?? '';
-        $extension = pathinfo($path, PATHINFO_EXTENSION);
-
-        // Default to mp4 if no extension found
-        $validExtensions = ['mp4', 'mov', 'avi', 'mkv', 'webm', 'flv'];
-        if (in_array(strtolower($extension), $validExtensions)) {
-            return strtolower($extension);
-        }
-
-        return 'mp4';
     }
 }

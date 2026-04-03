@@ -1047,7 +1047,7 @@ function getApiEndpoints()
                 ]
             ]
         ],
-        "notes" => "Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id. The video_url must be publicly accessible. For Pinterest, the video is downloaded from the URL, uploaded to S3, then published. Supported video formats: mp4, mov, avi, mkv, webm, flv. Scheduling matches POST /posts: publish_now=1 → 'publishing'; else scheduled_at → 'scheduled'; else queue slot or default 14:00 local. Send publish_now=1 for immediate publish."
+        "notes" => "Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id. The video is downloaded from video_url (Google Drive share links supported the same way as Jogg AI), validated by Content-Type (e.g. video/mp4), stored on S3, then published using a public file URL. Supported types: mp4, mov, avi, mkv, webm (by MIME). Scheduling matches POST /posts: publish_now=1 → 'publishing'; else scheduled_at → 'scheduled'; else queue slot or default 14:00 local. Send publish_now=1 for immediate publish."
     ];
 
     return $endpoints;
