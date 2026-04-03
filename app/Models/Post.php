@@ -187,6 +187,16 @@ class Post extends Model
         $query->whereIn("source", ["rss"]);
     }
 
+    /**
+     * Posts not sourced from RSS (RSS publishing is handled by rss:publish only).
+     */
+    public function scopeNotRss($query)
+    {
+        $query->where(function ($q) {
+            $q->where('source', '!=', 'rss')->orWhereNull('source');
+        });
+    }
+
     public function scopeIsScheduled($query)
     {
         $query->whereIn("source", ["schedule"]);

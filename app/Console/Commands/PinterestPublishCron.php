@@ -33,7 +33,13 @@ class PinterestPublishCron extends Command
     {
         // $now = date("Y-m-d H:i");
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
-        $posts = $post->with("user", "board.pinterest")->notPublished()->past($now)->pinterest()->notSchedule()->get();
+        $posts = $post->with("user", "board.pinterest")
+            ->notPublished()
+            ->past($now)
+            ->pinterest()
+            ->notSchedule()
+            ->notRss()
+            ->get();
         
         foreach ($posts as $post) {
             try {

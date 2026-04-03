@@ -34,7 +34,13 @@ class FacebookPublishCron extends Command
         // $now = date("Y-m-d H:i");
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
 
-        $posts = $post->with("user", "page.facebook")->notPublished()->past($now)->facebook()->notSchedule()->get();
+        $posts = $post->with("user", "page.facebook")
+            ->notPublished()
+            ->past($now)
+            ->facebook()
+            ->notSchedule()
+            ->notRss()
+            ->get();
         foreach ($posts as $key => $post) {
             try {
                 sleep(3);
