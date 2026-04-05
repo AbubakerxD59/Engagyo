@@ -801,6 +801,11 @@ class  ScheduleController extends Controller
             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
             }
+            if ($type === 'photo' && (int) $request->get('tiktok_auto_add_music', 0)) {
+                $post->update([
+                    'response' => json_encode(['auto_add_music' => true]),
+                ]);
+            }
             $this->logService->logQueuedPost('tiktok', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
         }
     }
@@ -1183,6 +1188,9 @@ class  ScheduleController extends Controller
                             "your_brand" => $request->get("tiktok_your_brand", 0),
                             "branded_content" => $request->get("tiktok_branded_content", 0),
                         ];
+                        if ($type === "photo" && $request->get("tiktok_auto_add_music")) {
+                            $tiktokMetadata["auto_add_music"] = true;
+                        }
                         $post->update(["response" => json_encode($tiktokMetadata)]);
 
                         // Verify account belongs to user before incrementing

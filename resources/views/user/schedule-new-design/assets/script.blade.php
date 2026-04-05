@@ -2485,6 +2485,7 @@
             $('#queueNewPostTikTokYourBrand').prop('checked', false);
             $('#queueNewPostTikTokBrandedContent').prop('checked', false);
             $('#queueNewPostTikTokCommercialOptions').hide();
+            $('#queueNewPostTikTokAddMusic').prop('checked', false);
             $('#queueNewPostSlotDatetime').text('—');
             $('#queueNewPostSlotInfo').removeClass('is-muted');
             var $lbl = $('#queueNewPostSlotLabel');
@@ -2908,6 +2909,7 @@
                 pm$('TikTokYourBrand').prop('checked', false);
                 pm$('TikTokBrandedContent').prop('checked', false);
                 pm$('TikTokCommercialOptions').hide();
+                pm$('TikTokAddMusic').prop('checked', false);
                 return;
             }
             $wrap.show();
@@ -3052,6 +3054,9 @@
                 postData.tiktok_commercial_toggle = pm$('TikTokCommercialToggle').is(':checked') ? 1 : 0;
                 postData.tiktok_your_brand = pm$('TikTokYourBrand').is(':checked') ? 1 : 0;
                 postData.tiktok_branded_content = pm$('TikTokBrandedContent').is(':checked') ? 1 : 0;
+                if (pm$('TikTokAddMusic').is(':checked')) {
+                    postData.tiktok_auto_add_music = 1;
+                }
             }
             disableActionButton();
             $.ajax({
@@ -3162,6 +3167,9 @@
                 formData.append('tiktok_commercial_toggle', pm$('TikTokCommercialToggle').is(':checked') ? 1 : 0);
                 formData.append('tiktok_your_brand', pm$('TikTokYourBrand').is(':checked') ? 1 : 0);
                 formData.append('tiktok_branded_content', pm$('TikTokBrandedContent').is(':checked') ? 1 : 0);
+                if (pm$('TikTokAddMusic').is(':checked')) {
+                    formData.append('tiktok_auto_add_music', 1);
+                }
             }
             createPostFiles.forEach(function(file) {
                 var uid = file.__uploadId;
@@ -3260,6 +3268,9 @@
                 formData.append('tiktok_commercial_toggle', pm$('TikTokCommercialToggle').is(':checked') ? 1 : 0);
                 formData.append('tiktok_your_brand', pm$('TikTokYourBrand').is(':checked') ? 1 : 0);
                 formData.append('tiktok_branded_content', pm$('TikTokBrandedContent').is(':checked') ? 1 : 0);
+                if (!isVideo && pm$('TikTokAddMusic').is(':checked')) {
+                    formData.append('tiktok_auto_add_music', 1);
+                }
             }
             if (uploadId) {
                 createPostUploadStates[uploadId] = { status: 'uploading', progress: 0 };
@@ -3338,6 +3349,7 @@
             pm$('TikTokCommercialToggle').prop('checked', false);
             pm$('TikTokYourBrand').prop('checked', false);
             pm$('TikTokBrandedContent').prop('checked', false);
+            pm$('TikTokAddMusic').prop('checked', false);
             syncCreatePostTikTokCommercialOptions();
             refreshCreatePostTikTokSettings();
             if (isQueueNewPostModalVisible() && (queueNewPostPinnedSlotDate || queueNewPostPinnedSlotDisplay)) {

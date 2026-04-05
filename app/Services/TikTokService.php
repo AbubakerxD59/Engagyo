@@ -436,6 +436,27 @@ class TikTokService
     }
 
     /**
+     * Maps "Disclose post content" + sub-options to TikTok post_info (video and photo direct post).
+     * brand_organic_toggle: creator's own business (in-app "Your brand").
+     * brand_content_toggle: third-party / paid partnership (in-app "Branded content").
+     *
+     * @see https://developers.tiktok.com/doc/content-posting-api-reference-direct-post
+     * @see https://developers.tiktok.com/doc/content-posting-api-reference-photo-post
+     */
+    private function applyTikTokDisclosureToPostInfo(array &$postInfo, array $post): void
+    {
+        if (empty($post['commercial_content_toggle'])) {
+            return;
+        }
+        if (!empty($post['your_brand'])) {
+            $postInfo['brand_organic_toggle'] = true;
+        }
+        if (!empty($post['branded_content'])) {
+            $postInfo['brand_content_toggle'] = true;
+        }
+    }
+
+    /**
      * Download file from S3 to local storage and return public URL
      *
      * @param string $s3KeyOrUrl S3 key or URL
@@ -586,23 +607,7 @@ class TikTokService
                 $postInfo["disable_stitch"] = (bool) $post['disable_stitch'];
             }
 
-            // Add commercial content settings if provided
-            if (isset($post['commercial_content_toggle']) && $post['commercial_content_toggle']) {
-                $postInfo["commercial_content_toggle"] = true;
-                if (isset($post['your_brand']) && $post['your_brand']) {
-                    $postInfo["commercial_content_type"] = "BRAND_ORGANIC";
-                }
-                if (isset($post['branded_content']) && $post['branded_content']) {
-                    $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
-                }
-                // If both are selected, use BRANDED_CONTENT
-                if (
-                    isset($post['your_brand']) && $post['your_brand'] &&
-                    isset($post['branded_content']) && $post['branded_content']
-                ) {
-                    $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
-                }
-            }
+            $this->applyTikTokDisclosureToPostInfo($postInfo, $post);
 
             $requestBody = [
                 "post_info" => $postInfo,
@@ -756,23 +761,11 @@ class TikTokService
                 $postInfo["disable_comment"] = (bool) $post['disable_comment'];
             }
 
-            // Add commercial content settings if provided
-            if (isset($post['commercial_content_toggle']) && $post['commercial_content_toggle']) {
-                $postInfo["commercial_content_toggle"] = true;
-                if (isset($post['your_brand']) && $post['your_brand']) {
-                    $postInfo["commercial_content_type"] = "BRAND_ORGANIC";
-                }
-                if (isset($post['branded_content']) && $post['branded_content']) {
-                    $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
-                }
-                // If both are selected, use BRANDED_CONTENT
-                if (
-                    isset($post['your_brand']) && $post['your_brand'] &&
-                    isset($post['branded_content']) && $post['branded_content']
-                ) {
-                    $postInfo["commercial_content_type"] = "BRANDED_CONTENT";
-                }
+            if (!empty($post['auto_add_music'])) {
+                $postInfo["auto_add_music"] = true;
             }
+
+            $this->applyTikTokDisclosureToPostInfo($postInfo, $post);
 
             $requestBody = [
                 "media_type" => "PHOTO",
