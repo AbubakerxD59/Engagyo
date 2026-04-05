@@ -64,7 +64,7 @@ class TikTokController extends Controller
                                 "access_token" => $access_token,
                                 "expires_in" => $tokenData["expires_in"] ?? 3600,
                                 "refresh_token" => $tokenData["refresh_token"] ?? null,
-                                "refresh_token_expires_in" => $tokenData["refresh_token_expires_in"] ?? null,
+                                "refresh_token_expires_in" => $tokenData["refresh_expires_in"] ?? null,
                                 "url_shortener_enabled" => $urlShortenerEnabled,
                             ];
 

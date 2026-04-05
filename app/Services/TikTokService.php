@@ -195,6 +195,8 @@ class TikTokService
             }
             if (isset($tokenRefresh["refresh_token_expires_in"])) {
                 $updateData["refresh_token_expires_in"] = $tokenRefresh["refresh_token_expires_in"];
+            } elseif (isset($tokenRefresh["refresh_expires_in"])) {
+                $updateData["refresh_token_expires_in"] = $tokenRefresh["refresh_expires_in"];
             }
 
             $tiktok->update($updateData);
@@ -372,38 +374,58 @@ class TikTokService
                 ];
             }
 
-            $access_token = $tiktok->access_token;
-            $response = ["success" => true, "access_token" => $access_token];
+            $service = new TikTokService();
 
-            // If token is expired or invalid, try to refresh it
-            if (!$tiktok->validToken()) {
-                info("TikTok token expired for account ID: {$tiktok->id}. Attempting to refresh...");
+            if ($tiktok->validToken()) {
+                return ["success" => true, "access_token" => $tiktok->access_token];
+            }
 
-                // Check if refresh token exists
-                if (empty($tiktok->refresh_token)) {
-                    return [
-                        "success" => false,
-                        "message" => "TikTok refresh token is missing. Please reconnect your TikTok account."
-                    ];
-                }
+            info("TikTok access token past stored expiry for account ID: {$tiktok->id}. Verifying with TikTok...");
 
-                $service = new TikTokService();
+            // Stored expires_in can be wrong or stale; avoid refresh (and refresh-token rotation) if the access token still works.
+            $userInfo = $service->me($tiktok->access_token);
+            if (!empty($userInfo)) {
+                info("TikTok access token still valid for account ID: {$tiktok->id}; skipping OAuth refresh.");
+                return ["success" => true, "access_token" => $tiktok->access_token];
+            }
+
+            if (empty($tiktok->refresh_token)) {
+                return [
+                    "success" => false,
+                    "message" => "TikTok refresh token is missing. Please reconnect your TikTok account."
+                ];
+            }
+
+            $oldRefresh = $tiktok->refresh_token;
+            $token = $service->refreshAccessToken($oldRefresh, $tiktok->id);
+
+            if (isset($token["success"]) && $token["success"] && isset($token["access_token"])) {
+                info("TikTok token refreshed successfully for account ID: {$tiktok->id}");
+                return ["success" => true, "access_token" => $token["access_token"]];
+            }
+
+            // Another request may have refreshed and rotated the refresh token; retry once with DB state.
+            $tiktok->refresh();
+            if (!empty($tiktok->refresh_token) && $tiktok->refresh_token !== $oldRefresh) {
+                info("TikTok OAuth refresh retry for account ID: {$tiktok->id} after concurrent token update.");
                 $token = $service->refreshAccessToken($tiktok->refresh_token, $tiktok->id);
-
                 if (isset($token["success"]) && $token["success"] && isset($token["access_token"])) {
-                    $response = ["success" => true, "access_token" => $token["access_token"]];
-                    info("TikTok token refreshed successfully for account ID: {$tiktok->id}");
-                } else {
-                    $errorMessage = $token["message"] ?? "Failed to refresh TikTok token. Please reconnect your account.";
-                    $response = [
-                        "success" => false,
-                        "message" => $errorMessage
-                    ];
-                    info("TikTok token refresh failed for account ID: {$tiktok->id}. Error: " . $errorMessage);
+                    return ["success" => true, "access_token" => $token["access_token"]];
                 }
             }
 
-            return $response;
+            $errorMessage = $token["message"] ?? "Failed to refresh TikTok token. Please reconnect your account.";
+            info("TikTok token refresh failed for account ID: {$tiktok->id}. Error: " . $errorMessage);
+
+            $hint = " If your TikTok session is old, disconnect and reconnect the account under Accounts.";
+            if (stripos($errorMessage, "invalid") !== false || stripos($errorMessage, "expired") !== false) {
+                $errorMessage .= $hint;
+            }
+
+            return [
+                "success" => false,
+                "message" => $errorMessage,
+            ];
         } catch (\Exception $e) {
             info("TikTok validateToken error: " . $e->getMessage());
             return [
@@ -553,15 +575,15 @@ class TikTokService
                 "title" => $post['title'] ?? "", // Optional: Video caption (max 2200 UTF-16 runes)
             ];
 
-            // Add interaction settings if provided
-            if (isset($post['disable_comment'])) {
-                $postInfo["disable_comment"] = !$post['disable_comment']; // Invert because API uses "disable"
+            // Add interaction settings if provided (already "disable_*" semantics from ScheduleController)
+            if (array_key_exists('disable_comment', $post)) {
+                $postInfo["disable_comment"] = (bool) $post['disable_comment'];
             }
-            if (isset($post['disable_duet'])) {
-                $postInfo["disable_duet"] = !$post['disable_duet'];
+            if (array_key_exists('disable_duet', $post)) {
+                $postInfo["disable_duet"] = (bool) $post['disable_duet'];
             }
-            if (isset($post['disable_stitch'])) {
-                $postInfo["disable_stitch"] = !$post['disable_stitch'];
+            if (array_key_exists('disable_stitch', $post)) {
+                $postInfo["disable_stitch"] = (bool) $post['disable_stitch'];
             }
 
             // Add commercial content settings if provided
@@ -730,8 +752,8 @@ class TikTokService
             ];
 
             // Add interaction settings if provided (only comment for photos)
-            if (isset($post['disable_comment'])) {
-                $postInfo["disable_comment"] = !$post['disable_comment'];
+            if (array_key_exists('disable_comment', $post)) {
+                $postInfo["disable_comment"] = (bool) $post['disable_comment'];
             }
 
             // Add commercial content settings if provided

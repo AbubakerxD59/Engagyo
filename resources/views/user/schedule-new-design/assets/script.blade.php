@@ -2919,10 +2919,11 @@
             var $sel = pm$('TikTokPrivacyLevel');
             var $onlyYou = $sel.find('option[value="SELF_ONLY"]');
             if (disclose) {
-                $onlyYou.prop('disabled', true).attr('title', 'Not available when disclose post content is enabled.');
+                // Change selection before disabling SELF_ONLY; otherwise some browsers clear the select value.
                 if ($sel.val() === 'SELF_ONLY') {
                     $sel.val('FOLLOWER_OF_CREATOR');
                 }
+                $onlyYou.prop('disabled', true).attr('title', 'Not available when disclose post content is enabled.');
             } else {
                 $onlyYou.prop('disabled', false).removeAttr('title');
             }
