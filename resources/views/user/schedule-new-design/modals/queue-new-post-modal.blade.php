@@ -108,9 +108,6 @@
                                         <label for="queueNewPostTikTokPrivacyLevel" class="mb-1" style="color:#374151;">Who can view this post?</label>
                                         <select id="queueNewPostTikTokPrivacyLevel" class="form-control w-50">
                                             <option value="">Select privacy</option>
-                                            <option value="FOLLOWER_OF_CREATOR">Followers</option>
-                                            <option value="MUTUAL_FOLLOW_FRIENDS">Friends</option>
-                                            <option value="SELF_ONLY">Only You</option>
                                         </select>
                                     </div>
                                     <div class="form-group mb-2">
@@ -124,16 +121,52 @@
                                         <label class="mb-0 d-flex align-items-center">
                                             <input type="checkbox" id="queueNewPostTikTokCommercialToggle" class="mr-2">
                                             <span>Disclose post content</span>
+                                            <div class="create-post-format-help-wrap ml-2">
+                                                <button type="button" class="create-post-format-help-btn"
+                                                    aria-label="Disclose post content help">
+                                                    <i class="fas fa-question-circle"></i>
+                                                </button>
+                                                <div class="create-post-format-help-popover" role="tooltip"
+                                                    aria-hidden="true">
+                                                    <ul class="create-post-format-help-list">
+                                                        <li>Branded content visibility cannot be set to private.</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
                                         </label>
                                     </div>
                                     <div id="queueNewPostTikTokCommercialOptions" class="form-group mb-2 pl-4" style="display:none;">
                                         <label class="mb-0 d-flex align-items-center">
                                             <input type="checkbox" id="queueNewPostTikTokYourBrand" class="mr-2">
                                             <span>Your brand</span>
+                                            <div class="create-post-format-help-wrap ml-2">
+                                                <button type="button" class="create-post-format-help-btn"
+                                                    aria-label="Your brand help">
+                                                    <i class="fas fa-question-circle"></i>
+                                                </button>
+                                                <div class="create-post-format-help-popover" role="tooltip"
+                                                    aria-hidden="true">
+                                                    <ul class="create-post-format-help-list">
+                                                        <li>Your photo/video will be labeled as 'Promotional content'</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
                                         </label>
                                         <label class="mt-2 mb-0 d-flex align-items-center">
                                             <input type="checkbox" id="queueNewPostTikTokBrandedContent" class="mr-2">
                                             <span>Branded content</span>
+                                            <div class="create-post-format-help-wrap ml-2">
+                                                <button type="button" class="create-post-format-help-btn"
+                                                    aria-label="Branded content help">
+                                                    <i class="fas fa-question-circle"></i>
+                                                </button>
+                                                <div class="create-post-format-help-popover" role="tooltip"
+                                                    aria-hidden="true">
+                                                    <ul class="create-post-format-help-list">
+                                                        <li>Your photo/video will be labeled as 'Paid partnership'</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
                                         </label>
                                     </div>
                                     <div class="form-group mb-2">

@@ -1450,16 +1450,9 @@
         }
 
         function populateTikTokFormOptions() {
-            // Populate privacy options with defaults
+            // Start with no privacy options; creator_info call will populate this.
             var select = $('#tiktok-privacy-level');
             select.html('<option value="">-- Select Privacy Level --</option>');
-            var defaultOptions = ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR',
-                'SELF_ONLY'
-            ];
-            defaultOptions.forEach(function(option) {
-                var label = option.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                select.append($('<option></option>').attr('value', option).text(label));
-            });
 
             // Hide Duet and Stitch for photo posts
             var isPhoto = $('#tiktok-post-type').val() === 'photo';
@@ -1555,6 +1548,9 @@
             }
 
             var options = Array.isArray(data.privacy_level_options) ? data.privacy_level_options : [];
+            if (options.length === 0) {
+                options = ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY'];
+            }
             var select = $('#tiktok-privacy-level');
             select.html('<option value="">-- Select Privacy Level --</option>');
             options.forEach(function(option) {
@@ -1698,10 +1694,11 @@
         });
 
         function checkBrandedContentPrivacy() {
-            var brandedContent = $('#tiktok-branded-content').is(':checked');
             var privacyLevel = $('#tiktok-privacy-level').val();
             var warning = $('#branded-content-privacy-warning');
             var $selfOnlyOption = $('#tiktok-privacy-level option[value="SELF_ONLY"]');
+            var $brandedCheckbox = $('#tiktok-branded-content');
+            var brandedContent = $brandedCheckbox.is(':checked');
 
             if (brandedContent && privacyLevel === 'SELF_ONLY') {
                 warning.show();
@@ -1717,6 +1714,19 @@
                     'Branded content visibility cannot be set to private.');
             } else {
                 $selfOnlyOption.prop('disabled', false).removeAttr('title');
+            }
+
+            // Two-way rule: if privacy is private, branded content cannot be selected.
+            if ($('#tiktok-privacy-level').val() === 'SELF_ONLY') {
+                $brandedCheckbox.prop('checked', false);
+                $brandedCheckbox.prop('disabled', true).attr('title',
+                    'Branded content visibility cannot be set to private.');
+                $brandedCheckbox.closest('label').attr('title',
+                    'Branded content visibility cannot be set to private.');
+                warning.show();
+            } else {
+                $brandedCheckbox.prop('disabled', false).removeAttr('title');
+                $brandedCheckbox.closest('label').removeAttr('title');
             }
         }
 

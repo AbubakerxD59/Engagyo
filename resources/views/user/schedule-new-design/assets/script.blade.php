@@ -247,7 +247,7 @@
         }
 
         // Toggle Facebook format help popover (Post / Reel / Story)
-        $(document).on('click', '#createPostFormatHelpBtn, #queueNewPostFormatHelpBtn', function(e) {
+        $(document).on('click', '.create-post-format-help-btn', function(e) {
             e.stopPropagation();
             var $wrap = $(this).closest('.create-post-format-help-wrap');
             $wrap.toggleClass('open');
@@ -2951,6 +2951,9 @@
                     pm$('TikTokCreatorNickname').text(nickname);
 
                     var options = Array.isArray(response.data.privacy_level_options) ? response.data.privacy_level_options : [];
+                    if (options.length === 0) {
+                        options = ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY'];
+                    }
                     var $sel = pm$('TikTokPrivacyLevel');
                     var currentValue = $sel.val();
                     $sel.html('<option value="">Select privacy</option>');
@@ -2977,14 +2980,36 @@
             var disclose = pm$('TikTokCommercialToggle').is(':checked');
             var $sel = pm$('TikTokPrivacyLevel');
             var $onlyYou = $sel.find('option[value="SELF_ONLY"]');
+            var $branded = pm$('TikTokBrandedContent');
+            var isPrivate = $sel.val() === 'SELF_ONLY';
+            var brandedChecked = $branded.is(':checked');
             if (disclose) {
                 // Change selection before disabling SELF_ONLY; otherwise some browsers clear the select value.
                 if ($sel.val() === 'SELF_ONLY') {
                     $sel.val('FOLLOWER_OF_CREATOR');
                 }
+                isPrivate = $sel.val() === 'SELF_ONLY';
                 $onlyYou.prop('disabled', true).attr('title', 'Not available when disclose post content is enabled.');
+                if (isPrivate) {
+                    $branded.prop('checked', false);
+                }
+                $branded.prop('disabled', isPrivate).attr('title', isPrivate ? 'Branded content visibility cannot be set to private.' : null);
+                $branded.closest('label').attr('title', isPrivate ? 'Branded content visibility cannot be set to private.' : null);
             } else {
-                $onlyYou.prop('disabled', false).removeAttr('title');
+                if (brandedChecked) {
+                    $onlyYou.prop('disabled', true).attr('title', 'Branded content visibility cannot be set to private.');
+                    if ($sel.val() === 'SELF_ONLY') {
+                        $sel.val('FOLLOWER_OF_CREATOR');
+                    }
+                } else {
+                    $onlyYou.prop('disabled', false).removeAttr('title');
+                }
+                isPrivate = $sel.val() === 'SELF_ONLY';
+                if (isPrivate) {
+                    $branded.prop('checked', false);
+                }
+                $branded.prop('disabled', isPrivate).attr('title', isPrivate ? 'Branded content visibility cannot be set to private.' : null);
+                $branded.closest('label').attr('title', isPrivate ? 'Branded content visibility cannot be set to private.' : null);
             }
         }
 
@@ -3006,6 +3031,10 @@
         });
         $(document).on('change', '#createPostTikTokYourBrand, #createPostTikTokBrandedContent, #queueNewPostTikTokYourBrand, #queueNewPostTikTokBrandedContent', function() {
             updateCreatePostTikTokConsentText();
+            syncCreatePostTikTokPrivacyForDisclosure();
+        });
+        $(document).on('change', '#createPostTikTokPrivacyLevel, #queueNewPostTikTokPrivacyLevel', function() {
+            syncCreatePostTikTokPrivacyForDisclosure();
         });
 
         function updateCreatePostTikTokConsentText() {
@@ -3045,7 +3074,7 @@
                     return false;
                 }
                 if (!pm$('TikTokYourBrand').is(':checked') && !pm$('TikTokBrandedContent').is(':checked')) {
-                    toastr.error('Select "Your brand" or "Branded content".');
+                    toastr.error('You need to indicate if your content promotes yourself, a third party, or both');
                     return false;
                 }
             }
@@ -4993,16 +5022,9 @@
         }
 
         function populateTikTokFormOptions() {
-            // Populate privacy options with defaults
+            // Start with no privacy options; creator_info call will populate this.
             var select = $('#tiktok-privacy-level');
             select.html('<option value="">-- Select Privacy Level --</option>');
-            var defaultOptions = ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR',
-                'SELF_ONLY'
-            ];
-            defaultOptions.forEach(function(option) {
-                var label = option.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
-                select.append($('<option></option>').attr('value', option).text(label));
-            });
 
             // Hide Duet and Stitch for photo posts
             var isPhoto = $('#tiktok-post-type').val() === 'photo';
@@ -5099,6 +5121,9 @@
             }
 
             var options = Array.isArray(data.privacy_level_options) ? data.privacy_level_options : [];
+            if (options.length === 0) {
+                options = ['PUBLIC_TO_EVERYONE', 'MUTUAL_FOLLOW_FRIENDS', 'FOLLOWER_OF_CREATOR', 'SELF_ONLY'];
+            }
             var select = $('#tiktok-privacy-level');
             select.html('<option value="">-- Select Privacy Level --</option>');
             options.forEach(function(option) {
@@ -5243,10 +5268,11 @@
         });
 
         function checkBrandedContentPrivacy() {
-            var brandedContent = $('#tiktok-branded-content').is(':checked');
             var privacyLevel = $('#tiktok-privacy-level').val();
             var warning = $('#branded-content-privacy-warning');
             var $selfOnlyOption = $('#tiktok-privacy-level option[value="SELF_ONLY"]');
+            var $brandedCheckbox = $('#tiktok-branded-content');
+            var brandedContent = $brandedCheckbox.is(':checked');
 
             if (brandedContent && privacyLevel === 'SELF_ONLY') {
                 warning.show();
@@ -5265,6 +5291,19 @@
                 }
             } else {
                 $selfOnlyOption.prop('disabled', false).removeAttr('title');
+            }
+
+            // Two-way rule: if privacy is private, branded content cannot be selected.
+            if ($('#tiktok-privacy-level').val() === 'SELF_ONLY') {
+                $brandedCheckbox.prop('checked', false);
+                $brandedCheckbox.prop('disabled', true).attr('title',
+                    'Branded content visibility cannot be set to private.');
+                $brandedCheckbox.closest('label').attr('title',
+                    'Branded content visibility cannot be set to private.');
+                warning.show();
+            } else {
+                $brandedCheckbox.prop('disabled', false).removeAttr('title');
+                $brandedCheckbox.closest('label').removeAttr('title');
             }
         }
 
