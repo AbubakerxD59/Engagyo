@@ -2914,12 +2914,14 @@
                 pm$('TikTokCommercialOptions').hide();
                 pm$('TikTokAddMusic').prop('checked', false);
                 pm$('TikTokAllowComment').prop('disabled', false).prop('checked', false);
+                pm$('TikTokCreatorNickname').text('—');
                 createPostTikTokCreatorInfo = null;
                 createPostTikTokCreatorInfoLoaded = false;
                 createPostTikTokCreatorInfoAccountId = null;
                 return;
             }
             $wrap.show();
+            pm$('TikTokCreatorNickname').text(tiktokAccounts[0].name || '—');
             fetchCreatePostTikTokCreatorInfo(tiktokAccounts[0].id);
             syncCreatePostTikTokPrivacyForDisclosure();
         }
@@ -2939,11 +2941,14 @@
                 data: { account_id: accountId },
                 success: function(response) {
                     if (!response || !response.success || !response.data) {
+                        pm$('TikTokCreatorNickname').text('—');
                         createPostTikTokCreatorInfoLoaded = false;
                         return;
                     }
                     createPostTikTokCreatorInfo = response.data;
                     createPostTikTokCreatorInfoLoaded = true;
+                    var nickname = response.data.display_name || response.data.nickname || response.data.username || '—';
+                    pm$('TikTokCreatorNickname').text(nickname);
 
                     var options = Array.isArray(response.data.privacy_level_options) ? response.data.privacy_level_options : [];
                     var $sel = pm$('TikTokPrivacyLevel');
@@ -5055,6 +5060,7 @@
                 success: function(response) {
                     if (!response || !response.success || !response.data) {
                         setTikTokModalError((response && response.message) ? response.message : 'Failed to fetch TikTok account settings.');
+                        $('#tiktok-account-names').html('');
                         tiktokCreatorInfoLoaded = false;
                         validateTikTokForm();
                         return;

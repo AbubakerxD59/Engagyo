@@ -228,6 +228,10 @@
                             <div id="createPostTikTokSettingsWrap" class="mt-3" style="display:none;">
                                 <div class="border rounded p-3" style="background:#f8fafc;color:#1f2937;border-color:#e5e7eb !important;">
                                     <h6 class="mb-3" style="color:#111827;">TikTok Post Settings</h6>
+                                    <div class="mb-2 small" style="color:#4b5563;">
+                                        Posting as:
+                                        <strong id="createPostTikTokCreatorNickname">—</strong>
+                                    </div>
                                     <div id="createPostTikTokError" class="alert alert-danger py-2 px-3 mb-3"
                                         style="display:none;"></div>
                                     <div class="form-group mb-3">
