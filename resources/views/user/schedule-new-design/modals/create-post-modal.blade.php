@@ -311,6 +311,10 @@
                                         <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en"
                                             target="_blank" rel="noopener noreferrer">Music Usage Confirmation</a>.
                                     </small>
+                                    <label class="mb-0 d-flex align-items-center mt-2" style="color:#374151;">
+                                        <input type="checkbox" id="createPostTikTokConsentConfirm" class="mr-2">
+                                        <span>I agree and consent to upload this content to TikTok.</span>
+                                    </label>
                                 </div>
                             </div>
                             <div class="create-post-editor-actions">

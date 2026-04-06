@@ -2489,6 +2489,7 @@
             $('#queueNewPostTikTokBrandedContent').prop('checked', false);
             $('#queueNewPostTikTokCommercialOptions').hide();
             $('#queueNewPostTikTokAddMusic').prop('checked', false);
+            $('#queueNewPostTikTokConsentConfirm').prop('checked', false);
             $('#queueNewPostSlotDatetime').text('—');
             $('#queueNewPostSlotInfo').removeClass('is-muted');
             var $lbl = $('#queueNewPostSlotLabel');
@@ -2898,6 +2899,15 @@
             return tiktokAccounts;
         }
 
+        function getCreatePostSuccessMessage(baseMessage, selectedAccounts) {
+            var message = baseMessage || 'Post created successfully.';
+            var hasTikTok = getCreatePostSelectedTikTokAccounts(selectedAccounts || []).length > 0;
+            if (hasTikTok) {
+                message += ' It may take a few minutes for the content to process and be visible on your profile.';
+            }
+            return message;
+        }
+
         function refreshCreatePostTikTokSettings() {
             var selectedAccounts = getCreatePostSelectedAccounts();
             var tiktokAccounts = getCreatePostSelectedTikTokAccounts(selectedAccounts);
@@ -2911,6 +2921,7 @@
                 pm$('TikTokCommercialToggle').prop('checked', false);
                 pm$('TikTokYourBrand').prop('checked', false);
                 pm$('TikTokBrandedContent').prop('checked', false);
+                pm$('TikTokConsentConfirm').prop('checked', false);
                 pm$('TikTokCommercialOptions').hide();
                 pm$('TikTokAddMusic').prop('checked', false);
                 pm$('TikTokAllowComment').prop('disabled', false).prop('checked', false);
@@ -3078,6 +3089,10 @@
                     return false;
                 }
             }
+            if (!pm$('TikTokConsentConfirm').is(':checked')) {
+                toastr.error('Please confirm consent before uploading to TikTok.');
+                return false;
+            }
             return true;
         }
 
@@ -3164,7 +3179,7 @@
                 success: function(response) {
                     if (response.success) {
                         resetCreatePostArea();
-                        toastr.success(response.message);
+                        toastr.success(getCreatePostSuccessMessage(response.message, selectedAccounts));
                     } else {
                         toastr.error(response.message);
                     }
@@ -3209,7 +3224,7 @@
                 success: function(response) {
                     if (response.success) {
                         resetCreatePostArea();
-                        toastr.success(response.message);
+                        toastr.success(getCreatePostSuccessMessage(response.message, selectedAccounts));
                     } else {
                         toastr.error(response.message);
                     }
@@ -3294,7 +3309,7 @@
                 success: function(response) {
                     if (response.success) {
                         resetCreatePostArea();
-                        toastr.success(response.message);
+                        toastr.success(getCreatePostSuccessMessage(response.message, selectedAccounts));
                     } else {
                         createPostFiles.forEach(function(file) {
                             var uid = file.__uploadId;
@@ -3398,7 +3413,7 @@
                             createPostUploadStates[uploadId] = { status: 'uploaded', progress: 100 };
                             updateCreatePostVideoUploadUi(uploadId, 100, 'uploaded');
                         }
-                        toastr.success(response.message);
+                        toastr.success(getCreatePostSuccessMessage(response.message, selectedAccounts));
                         processCreatePostFilesQueue(filesArray, index + 1);
                     } else {
                         if (uploadId) {
@@ -3447,6 +3462,7 @@
             pm$('TikTokCommercialToggle').prop('checked', false);
             pm$('TikTokYourBrand').prop('checked', false);
             pm$('TikTokBrandedContent').prop('checked', false);
+            pm$('TikTokConsentConfirm').prop('checked', false);
             pm$('TikTokAddMusic').prop('checked', false);
             syncCreatePostTikTokCommercialOptions();
             refreshCreatePostTikTokSettings();
