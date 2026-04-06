@@ -21,6 +21,7 @@ use App\Console\Commands\RunPinterestTests;
 use App\Console\Commands\CleanupPinterestTestPosts;
 use App\Console\Commands\RunTikTokTests;
 use App\Console\Commands\CleanupTikTokTestPosts;
+use App\Console\Commands\TikTokFetchPublishStatus;
 use App\Console\Commands\PurgeOldPosts;
 use App\Console\Commands\PublishPendingCommentsCron;
 use App\Console\Commands\ScheduleShufflePosts;
@@ -51,6 +52,7 @@ class Kernel extends ConsoleKernel
         CleanupPinterestTestPosts::class, //pinterest:cleanup-tests
         RunTikTokTests::class, //tiktok:run-tests
         CleanupTikTokTestPosts::class, //tiktok:cleanup-tests
+        TikTokFetchPublishStatus::class, //tiktok:fetch-publish-status
         ShuffleRssPosts::class, //app:shuffle-rss-posts
         SyncPageInsights::class, //insights:sync-page
         SyncPagePosts::class, //insights:sync-posts
@@ -89,6 +91,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('pinterest:cleanup-tests')->hourly();
         // Command to cleanup TikTok test posts older than 24 hours (runs hourly)
         $schedule->command('tiktok:cleanup-tests')->hourly();
+        // Poll TikTok publish status so users can understand processing state
+        $schedule->command('tiktok:fetch-publish-status')->everyFiveMinutes();
         // Command to shuffle rss posts
         $schedule->command('app:shuffle-rss-posts')->dailyAt('01:00');
         // Command to shuffle scheduled posts for pages with schedule_shuffle enabled

@@ -638,11 +638,12 @@ class TikTokService
                         "response" => json_encode([
                             "success" => true,
                             "publish_id" => $publishId,
-                            "message" => "Video published successfully to TikTok"
+                            "processing_status" => "PENDING",
+                            "message" => "Video submitted to TikTok. It may take a few minutes to process and appear on your profile."
                         ])
                     ]);
                     // Create success notification (background job)
-                    $this->successNotification($post_row->user_id, "Post Published", "Your TikTok video has been published successfully.", $post_row);
+                    $this->successNotification($post_row->user_id, "Post Submitted", "Your TikTok video was submitted. It may take a few minutes to process and appear on your profile.", $post_row);
                     $this->logService->logPost('tiktok', 'video', $id, ['publish_id' => $publishId], 'success');
                 } else {
                     // Error occurred - check error details
@@ -794,11 +795,12 @@ class TikTokService
                         "response" => json_encode([
                             "success" => true,
                             "publish_id" => $publishId,
-                            "message" => "Photo published successfully to TikTok"
+                            "processing_status" => "PENDING",
+                            "message" => "Photo submitted to TikTok. It may take a few minutes to process and appear on your profile."
                         ])
                     ]);
                     // Create success notification (background job)
-                    $this->successNotification($post_row->user_id, "Post Published", "Your TikTok photo has been published successfully.", $post_row);
+                    $this->successNotification($post_row->user_id, "Post Submitted", "Your TikTok photo was submitted. It may take a few minutes to process and appear on your profile.", $post_row);
                     $this->logService->logPost('tiktok', 'photo', $id, ['publish_id' => $publishId], 'success');
                 } else {
                     // Check if there's an error in the response

@@ -1124,6 +1124,34 @@
         border-radius: 10px;
     }
 
+    /* Create-post modals: use same scrollbar design as queue tab */
+    .create-post-modal .create-post-main-content,
+    .create-post-modal .create-post-editor-wrap,
+    .create-post-modal .channels-dropdown-list {
+        scrollbar-width: thin;
+        scrollbar-color: #d1d5db transparent;
+    }
+
+    .create-post-modal .create-post-main-content::-webkit-scrollbar,
+    .create-post-modal .create-post-editor-wrap::-webkit-scrollbar,
+    .create-post-modal .channels-dropdown-list::-webkit-scrollbar {
+        width: 5px;
+        height: 5px;
+    }
+
+    .create-post-modal .create-post-main-content::-webkit-scrollbar-track,
+    .create-post-modal .create-post-editor-wrap::-webkit-scrollbar-track,
+    .create-post-modal .channels-dropdown-list::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .create-post-modal .create-post-main-content::-webkit-scrollbar-thumb,
+    .create-post-modal .create-post-editor-wrap::-webkit-scrollbar-thumb,
+    .create-post-modal .channels-dropdown-list::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 10px;
+    }
+
     .queue-timeslots-content {
         display: flex;
         flex-direction: column;
@@ -1899,6 +1927,31 @@
         display: inline-flex;
         align-items: center;
         gap: 6px;
+    }
+
+    .sent-card-status-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 600;
+        line-height: 1.3;
+    }
+
+    .sent-card-status-badge.processing {
+        color: #92400e;
+        background: #fef3c7;
+    }
+
+    .sent-card-status-badge.published {
+        color: #065f46;
+        background: #d1fae5;
+    }
+
+    .sent-card-status-badge.failed {
+        color: #991b1b;
+        background: #fee2e2;
     }
 
     .sent-card-published-via-tooltip {

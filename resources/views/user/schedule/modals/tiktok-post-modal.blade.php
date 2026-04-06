@@ -120,6 +120,10 @@
                         <i class="fas fa-exclamation-circle"></i>
                         <strong>By posting, you agree to TikTok's <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener noreferrer">Music Usage Confirmation</a></strong>
                     </div>
+                    <label class="mb-0 d-flex align-items-center mt-2">
+                        <input type="checkbox" id="tiktok-consent-confirm" class="mr-2">
+                        <span>I agree and consent to upload this content to TikTok.</span>
+                    </label>
                 </div>
 
                 <!-- Processing Time Notification -->

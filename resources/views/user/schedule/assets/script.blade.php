@@ -910,6 +910,22 @@
         function renderPostCard(post) {
             var statusClass = post.status == 1 ? 'published' : (post.status == -1 ? 'failed' : 'pending');
             var statusText = post.status == 1 ? 'Published' : (post.status == -1 ? 'Failed' : 'Pending');
+            if ((post.social_type || '') === 'tiktok' && post.response) {
+                try {
+                    var responseObj = (typeof post.response === 'string') ? JSON.parse(post.response) : post.response;
+                    var processingStatus = String((responseObj && responseObj.processing_status) || '').toUpperCase();
+                    if (processingStatus && (processingStatus.indexOf('PEND') !== -1 || processingStatus.indexOf('PROCESS') !== -1)) {
+                        statusClass = 'pending';
+                        statusText = 'Processing';
+                    } else if (processingStatus && (processingStatus.indexOf('FAIL') !== -1 || processingStatus.indexOf('ERROR') !== -1 || processingStatus.indexOf('REJECT') !== -1)) {
+                        statusClass = 'failed';
+                        statusText = 'Failed';
+                    } else if (processingStatus && (processingStatus.indexOf('COMPLETE') !== -1 || processingStatus.indexOf('SUCCESS') !== -1 || processingStatus.indexOf('PUBLISH') !== -1)) {
+                        statusClass = 'published';
+                        statusText = 'Published';
+                    }
+                } catch (e) {}
+            }
             var platformIcon = post.social_type === 'facebook' ? 'fab fa-facebook-f' : (post.social_type ===
                 'pinterest' ? 'fab fa-pinterest-p' : 'fab fa-tiktok');
             var platformClass = post.social_type;
@@ -1364,6 +1380,7 @@
             $('#tiktok-commercial-toggle').prop('checked', false);
             $('#tiktok-your-brand').prop('checked', false);
             $('#tiktok-branded-content').prop('checked', false);
+            $('#tiktok-consent-confirm').prop('checked', false);
             $('#commercial-options').hide();
             $('#commercial-prompts').html('');
             $('#commercial-error').hide();
@@ -1736,6 +1753,9 @@
             $('#title-char-count').text(count);
             validateTikTokForm();
         });
+        $('#tiktok-consent-confirm').on('change', function() {
+            validateTikTokForm();
+        });
 
         function validateTikTokForm() {
             var isValid = true;
@@ -1750,6 +1770,12 @@
             // Check privacy level
             var privacyLevel = $('#tiktok-privacy-level').val();
             if (!privacyLevel) {
+                isValid = false;
+            }
+
+            // Require explicit user consent before upload/publish
+            var consentConfirmed = $('#tiktok-consent-confirm').is(':checked');
+            if (!consentConfirmed) {
                 isValid = false;
             }
 
@@ -1793,6 +1819,8 @@
                 publishTitle = 'Loading TikTok account rules...';
             } else if (currentTikTokCreatorInfo && currentTikTokCreatorInfo.can_post === false) {
                 publishTitle = currentTikTokCreatorInfo.can_post_reason || 'This account cannot post right now.';
+            } else if (!consentConfirmed) {
+                publishTitle = 'Please confirm consent before uploading to TikTok.';
             } else if (!hasPreview) {
                 publishTitle = 'Preview must be visible before publishing.';
             } else if (!tiktokVideoDurationValid && tiktokVideoDurationMessage) {
