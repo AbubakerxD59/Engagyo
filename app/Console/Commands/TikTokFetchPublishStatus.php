@@ -30,7 +30,7 @@ class TikTokFetchPublishStatus extends Command
         $posts = Post::with('tiktok')
             ->tiktok()
             ->whereNotNull('post_id')
-            ->whereIn('status', [0, 1])
+            ->whereIn('status', [2, 1])
             ->orderByDesc('id')
             ->limit($limit)
             ->get();

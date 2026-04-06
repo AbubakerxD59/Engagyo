@@ -634,7 +634,7 @@ class TikTokService
                     // Post was successfully published
                     $post_row->update([
                         "post_id" => $publishId,
-                        "status" => 0,
+                        "status" => 2, // Status 2 = processing on TikTok side
                         "published_at" => date("Y-m-d H:i:s"),
                         "response" => json_encode([
                             "success" => true,
@@ -792,7 +792,7 @@ class TikTokService
                     // Post was successfully published
                     $post_row->update([
                         "post_id" => $publishId,
-                        "status" => 0,
+                        "status" => 2, // Status 2 = processing on TikTok side
                         "published_at" => date("Y-m-d H:i:s"),
                         "response" => json_encode([
                             "success" => true,

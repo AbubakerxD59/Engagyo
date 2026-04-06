@@ -128,7 +128,7 @@ class PollTikTokPublishStatus implements ShouldQueue
         $response['success'] = true;
         $response['message'] = 'Post submitted to TikTok and still processing. It may take a few minutes to appear on your profile.';
         $post->update([
-            'status' => 0,
+            'status' => 2,
             'response' => json_encode($response),
         ]);
 

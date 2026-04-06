@@ -319,6 +319,7 @@ class PostController extends BaseController
         $statusText = match (true) {
             $post->status === -1 => 'failed',
             $post->status === 1 => 'published',
+            $post->status === 2 => 'processing',
             $post->scheduled === 1 && $post->status === 0 => 'scheduled',
             $post->status === 0 => 'pending',
             default => 'unknown',
