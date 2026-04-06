@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use Exception;
+use App\Jobs\PollTikTokPublishStatus;
 use App\Models\Tiktok as TikTokModel;
 use App\Models\Notification;
 use App\Services\HttpService;
@@ -633,7 +634,7 @@ class TikTokService
                     // Post was successfully published
                     $post_row->update([
                         "post_id" => $publishId,
-                        "status" => 1,
+                        "status" => 0,
                         "published_at" => date("Y-m-d H:i:s"),
                         "response" => json_encode([
                             "success" => true,
@@ -645,6 +646,7 @@ class TikTokService
                     // Create success notification (background job)
                     $this->successNotification($post_row->user_id, "Post Submitted", "Your TikTok video was submitted. It may take a few minutes to process and appear on your profile.", $post_row);
                     $this->logService->logPost('tiktok', 'video', $id, ['publish_id' => $publishId], 'success');
+                    PollTikTokPublishStatus::dispatch($post_row->id, 0, 60);
                 } else {
                     // Error occurred - check error details
                     $errorMessage = $response['error']['message'] ?? "Unknown error occurred";
@@ -790,7 +792,7 @@ class TikTokService
                     // Post was successfully published
                     $post_row->update([
                         "post_id" => $publishId,
-                        "status" => 1,
+                        "status" => 0,
                         "published_at" => date("Y-m-d H:i:s"),
                         "response" => json_encode([
                             "success" => true,
@@ -802,6 +804,7 @@ class TikTokService
                     // Create success notification (background job)
                     $this->successNotification($post_row->user_id, "Post Submitted", "Your TikTok photo was submitted. It may take a few minutes to process and appear on your profile.", $post_row);
                     $this->logService->logPost('tiktok', 'photo', $id, ['publish_id' => $publishId], 'success');
+                    PollTikTokPublishStatus::dispatch($post_row->id, 0, 60);
                 } else {
                     // Check if there's an error in the response
                     $errorMessage = $response['error']['message'] ?? $response['error']['log_id'] ?? "Unknown error occurred";
