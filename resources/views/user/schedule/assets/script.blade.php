@@ -1739,6 +1739,7 @@
 
         function validateTikTokForm() {
             var isValid = true;
+            var hasPreview = $('#content-preview').is(':visible');
 
             // Check title
             var title = $('#tiktok-title').val().trim();
@@ -1749,6 +1750,11 @@
             // Check privacy level
             var privacyLevel = $('#tiktok-privacy-level').val();
             if (!privacyLevel) {
+                isValid = false;
+            }
+
+            // Require content preview before publish
+            if (!hasPreview) {
                 isValid = false;
             }
 
@@ -1787,6 +1793,8 @@
                 publishTitle = 'Loading TikTok account rules...';
             } else if (currentTikTokCreatorInfo && currentTikTokCreatorInfo.can_post === false) {
                 publishTitle = currentTikTokCreatorInfo.can_post_reason || 'This account cannot post right now.';
+            } else if (!hasPreview) {
+                publishTitle = 'Preview must be visible before publishing.';
             } else if (!tiktokVideoDurationValid && tiktokVideoDurationMessage) {
                 publishTitle = tiktokVideoDurationMessage;
             } else if (commercialToggle && !$('#tiktok-your-brand').is(':checked') && !$('#tiktok-branded-content').is(':checked')) {
