@@ -803,7 +803,7 @@ class  ScheduleController extends Controller
             }
             if ($type === 'photo' && (int) $request->get('tiktok_auto_add_music', 0)) {
                 $post->update([
-                    'response' => json_encode(['auto_add_music' => true]),
+                    'metadata' => json_encode(['auto_add_music' => true]),
                 ]);
             }
             $this->logService->logQueuedPost('tiktok', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
@@ -1136,8 +1136,11 @@ class  ScheduleController extends Controller
                         }
 
                         $privacyLevel = (string) $request->get("tiktok_privacy_level");
-                        $allowedPrivacy = ['FOLLOWER_OF_CREATOR', 'MUTUAL_FOLLOW_FRIENDS', 'SELF_ONLY'];
-                        if ($privacyLevel === '' || !in_array($privacyLevel, $allowedPrivacy, true)) {
+                        $privacyOptions = $creatorInfo['privacy_level_options'] ?? [];
+                        if (!is_array($privacyOptions) || empty($privacyOptions)) {
+                            $privacyOptions = ['FOLLOWER_OF_CREATOR', 'MUTUAL_FOLLOW_FRIENDS', 'SELF_ONLY'];
+                        }
+                        if ($privacyLevel === '' || !in_array($privacyLevel, $privacyOptions, true)) {
                             return array(
                                 "success" => false,
                                 "message" => "Invalid TikTok privacy option.",
@@ -1178,7 +1181,7 @@ class  ScheduleController extends Controller
                         ];
                         $post = PostService::create($data);
 
-                        // Store TikTok-specific metadata in response field
+                        // Store TikTok-specific metadata in metadata field
                         $tiktokMetadata = [
                             "privacy_level" => $request->get("tiktok_privacy_level"),
                             "disable_comment" => !$request->get("tiktok_allow_comment", 0),
@@ -1191,7 +1194,7 @@ class  ScheduleController extends Controller
                         if ($type === "photo" && $request->get("tiktok_auto_add_music")) {
                             $tiktokMetadata["auto_add_music"] = true;
                         }
-                        $post->update(["response" => json_encode($tiktokMetadata)]);
+                        $post->update(["metadata" => json_encode($tiktokMetadata)]);
 
                         // Verify account belongs to user before incrementing
                         if ($this->verifyPostAccountBelongsToUser($post, $user)) {

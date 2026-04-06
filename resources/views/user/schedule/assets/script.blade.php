@@ -1677,16 +1677,13 @@
 
         function updateDeclaration() {
             var commercialToggle = $('#tiktok-commercial-toggle').is(':checked');
-            var yourBrand = $('#tiktok-your-brand').is(':checked');
             var brandedContent = $('#tiktok-branded-content').is(':checked');
             var declaration = $('#tiktok-declaration');
 
-            if (commercialToggle && (yourBrand || brandedContent)) {
-                if (yourBrand || brandedContent) {
-                    declaration.html(
-                        '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noopener noreferrer">Branded Content Policy</a> and <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener noreferrer">Music Usage Confirmation</a></strong>'
-                    );
-                }
+            if (commercialToggle && brandedContent) {
+                declaration.html(
+                    '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noopener noreferrer">Branded Content Policy</a> and <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener noreferrer">Music Usage Confirmation</a></strong>'
+                );
             } else {
                 declaration.html(
                     '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener noreferrer">Music Usage Confirmation</a></strong>'

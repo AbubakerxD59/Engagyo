@@ -95,6 +95,9 @@
         var tiktokCreatorInfoLoaded = false;
         var tiktokVideoDurationValid = true;
         var tiktokVideoDurationMessage = '';
+        var createPostTikTokCreatorInfo = null;
+        var createPostTikTokCreatorInfoLoaded = false;
+        var createPostTikTokCreatorInfoAccountId = null;
 
         function showTikTokModalOnTop() {
             var $modal = $('.tiktok-post-modal');
@@ -2910,10 +2913,59 @@
                 pm$('TikTokBrandedContent').prop('checked', false);
                 pm$('TikTokCommercialOptions').hide();
                 pm$('TikTokAddMusic').prop('checked', false);
+                pm$('TikTokAllowComment').prop('disabled', false).prop('checked', false);
+                createPostTikTokCreatorInfo = null;
+                createPostTikTokCreatorInfoLoaded = false;
+                createPostTikTokCreatorInfoAccountId = null;
                 return;
             }
             $wrap.show();
+            fetchCreatePostTikTokCreatorInfo(tiktokAccounts[0].id);
             syncCreatePostTikTokPrivacyForDisclosure();
+        }
+
+        function fetchCreatePostTikTokCreatorInfo(accountId) {
+            if (!accountId) return;
+            if (createPostTikTokCreatorInfoLoaded && createPostTikTokCreatorInfoAccountId === accountId) {
+                return;
+            }
+            createPostTikTokCreatorInfoLoaded = false;
+            createPostTikTokCreatorInfo = null;
+            createPostTikTokCreatorInfoAccountId = accountId;
+
+            $.ajax({
+                url: "{{ route('panel.schedule.tiktok.creator-info') }}",
+                type: "GET",
+                data: { account_id: accountId },
+                success: function(response) {
+                    if (!response || !response.success || !response.data) {
+                        createPostTikTokCreatorInfoLoaded = false;
+                        return;
+                    }
+                    createPostTikTokCreatorInfo = response.data;
+                    createPostTikTokCreatorInfoLoaded = true;
+
+                    var options = Array.isArray(response.data.privacy_level_options) ? response.data.privacy_level_options : [];
+                    var $sel = pm$('TikTokPrivacyLevel');
+                    var currentValue = $sel.val();
+                    $sel.html('<option value="">Select privacy</option>');
+                    options.forEach(function(option) {
+                        var label = String(option).replace(/_/g, ' ').replace(/\b\w/g, function(l) { return l.toUpperCase(); });
+                        $sel.append($('<option></option>').attr('value', option).text(label));
+                    });
+                    if (currentValue && options.indexOf(currentValue) !== -1) {
+                        $sel.val(currentValue);
+                    }
+
+                    var commentEnabled = response.data.comment_enabled !== false;
+                    pm$('TikTokAllowComment').prop('disabled', !commentEnabled);
+                    if (!commentEnabled) {
+                        pm$('TikTokAllowComment').prop('checked', false);
+                    }
+
+                    syncCreatePostTikTokPrivacyForDisclosure();
+                }
+            });
         }
 
         function syncCreatePostTikTokPrivacyForDisclosure() {
@@ -2953,7 +3005,7 @@
 
         function updateCreatePostTikTokConsentText() {
             var addPolicy = pm$('TikTokCommercialToggle').is(':checked') &&
-                (pm$('TikTokYourBrand').is(':checked') || pm$('TikTokBrandedContent').is(':checked'));
+                pm$('TikTokBrandedContent').is(':checked');
             pm$('TikTokPolicyPrefix').toggle(addPolicy);
         }
 
@@ -2965,6 +3017,18 @@
                 return (acc.type || '') === 'tiktok';
             });
             if (tiktokAccounts.length === 0 || (!hasMedia && !onlyTikTokSelected)) return true;
+
+            var activeTikTokAccountId = tiktokAccounts[0].id;
+            if (createPostTikTokCreatorInfoAccountId !== activeTikTokAccountId || !createPostTikTokCreatorInfoLoaded) {
+                fetchCreatePostTikTokCreatorInfo(activeTikTokAccountId);
+                toastr.error('Loading TikTok account rules. Please try again.');
+                return false;
+            }
+
+            if (createPostTikTokCreatorInfo && createPostTikTokCreatorInfo.can_post === false) {
+                toastr.error(createPostTikTokCreatorInfo.can_post_reason || 'This TikTok account cannot post right now. Please try again later.');
+                return false;
+            }
 
             if (!pm$('TikTokPrivacyLevel').val()) {
                 toastr.error('Please select TikTok privacy.');
@@ -5152,16 +5216,13 @@
 
         function updateDeclaration() {
             var commercialToggle = $('#tiktok-commercial-toggle').is(':checked');
-            var yourBrand = $('#tiktok-your-brand').is(':checked');
             var brandedContent = $('#tiktok-branded-content').is(':checked');
             var declaration = $('#tiktok-declaration');
 
-            if (commercialToggle && (yourBrand || brandedContent)) {
-                if (yourBrand || brandedContent) {
-                    declaration.html(
-                        '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noopener noreferrer">Branded Content Policy</a> and <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener noreferrer">Music Usage Confirmation</a></strong>'
-                    );
-                }
+            if (commercialToggle && brandedContent) {
+                declaration.html(
+                    '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noopener noreferrer">Branded Content Policy</a> and <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener noreferrer">Music Usage Confirmation</a></strong>'
+                );
             } else {
                 declaration.html(
                     '<i class="fas fa-exclamation-circle"></i> <strong>By posting, you agree to TikTok\'s <a href="https://www.tiktok.com/legal/page/global/music-usage-confirmation/en" target="_blank" rel="noopener noreferrer">Music Usage Confirmation</a></strong>'

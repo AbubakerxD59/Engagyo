@@ -33,7 +33,8 @@ class Post extends Model
         "status",
         "published_at",
         "scheduled",
-        "response"
+        "response",
+        "metadata",
     ];
 
     protected $appends = ["date", "time", "modal_time", "message", "response_message"];

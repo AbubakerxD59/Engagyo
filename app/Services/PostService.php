@@ -42,6 +42,7 @@ class PostService
             "scheduled" => isset($data["scheduled"]) ? $data["scheduled"] : 0,
             "status" => 0,
             "video" => isset($data["video"]) ? $data["video"] : 0,
+            "metadata" => isset($data["metadata"]) ? $data["metadata"] : null,
         ]);
         return $post;
     }
@@ -305,8 +306,9 @@ class PostService
                 "file_url" => $post->video_key ?: $post->video
             ];
         }
-        if (!empty($post->response)) {
-            $metadata = json_decode($post->response, true);
+        $rawMetadata = $post->metadata ?? $post->response;
+        if (!empty($rawMetadata)) {
+            $metadata = is_array($rawMetadata) ? $rawMetadata : json_decode($rawMetadata, true);
             if (is_array($metadata)) {
                 $postData = array_merge($postData, $metadata);
             }
