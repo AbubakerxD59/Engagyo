@@ -19,8 +19,10 @@ class InstagramGraphService
 
     /**
      * Publish photo, feed video, or reel via Instagram Content Publishing API.
+     *
+     * @param  callable(array<string, mixed>): void|null  $onStep  Optional hook for carousel (and media_publish) progress logging.
      */
-    public function publishPost(Post $post, string $accessToken): void
+    public function publishPost(Post $post, string $accessToken, ?callable $onStep = null): void
     {
         $post->loadMissing('instagramAccount');
         $ig = $post->instagramAccount;
@@ -37,7 +39,7 @@ class InstagramGraphService
             return;
         }
         if ($type === 'carousel') {
-            $this->publishCarouselPost($post, $accessToken);
+            $this->publishCarouselPost($post, $accessToken, $onStep);
 
             return;
         }
@@ -49,6 +51,26 @@ class InstagramGraphService
         }
 
         $this->failPost($post, 'Unsupported Instagram post type: '.$type);
+    }
+
+    /**
+     * @param  callable(array<string, mixed>): void|null  $onStep
+     */
+    private function emitStep(?callable $onStep, string $key, string $message, string $status, array $meta = []): void
+    {
+        if ($onStep === null) {
+            return;
+        }
+        $payload = [
+            'key' => $key,
+            'message' => $message,
+            'status' => $status,
+            'at' => now()->toIso8601String(),
+        ];
+        if ($meta !== []) {
+            $payload['meta'] = $meta;
+        }
+        $onStep($payload);
     }
 
     /**
@@ -106,7 +128,7 @@ class InstagramGraphService
             return;
         }
 
-        $this->finishMediaPublish($post, $igUserId, (string) $creationId, $accessToken, 'Photo published successfully to Instagram');
+        $this->finishMediaPublish($post, $igUserId, (string) $creationId, $accessToken, 'Photo published successfully to Instagram', null);
     }
 
     /**
@@ -175,37 +197,49 @@ class InstagramGraphService
             ? 'Reel published successfully to Instagram'
             : 'Video published successfully to Instagram';
 
-        $this->finishMediaPublish($post, $igUserId, (string) $creationId, $accessToken, $successMsg);
+        $this->finishMediaPublish($post, $igUserId, (string) $creationId, $accessToken, $successMsg, null);
     }
 
     /**
      * Carousel: create is_carousel_item children (images and/or videos), then CAROUSEL container, then media_publish.
+     *
+     * @param  callable(array<string, mixed>): void|null  $onStep
      */
-    private function publishCarouselPost(Post $post, string $accessToken): void
+    private function publishCarouselPost(Post $post, string $accessToken, ?callable $onStep = null): void
     {
         $post->loadMissing('instagramAccount');
         $ig = $post->instagramAccount;
         if (! $ig || empty($ig->ig_user_id)) {
+            $this->emitStep($onStep, 'carousel.account', 'Instagram account missing on post.', 'error', []);
             $this->failPost($post, 'Instagram account not found for this post.');
 
             return;
         }
 
+        $igUserId = $ig->ig_user_id;
+        $this->emitStep($onStep, 'carousel.account', 'Instagram Business account ready.', 'ok', ['ig_user_id' => $igUserId]);
+
         $body = PostService::postTypeBody($post);
         $items = $body['carousel_items'] ?? [];
         if (! is_array($items) || count($items) < 2) {
+            $this->emitStep($onStep, 'carousel.items', 'Need at least two public media URLs.', 'error', ['resolved_count' => is_array($items) ? count($items) : 0]);
             $this->failPost($post, 'At least two media URLs are required for an Instagram carousel.');
 
             return;
         }
         if (count($items) > 10) {
+            $this->emitStep($onStep, 'carousel.items', 'Too many items.', 'error', ['count' => count($items)]);
             $this->failPost($post, 'Instagram carousels support at most 10 items.');
 
             return;
         }
 
+        $this->emitStep($onStep, 'carousel.items', 'Resolved carousel items for Content Publishing API.', 'ok', [
+            'count' => count($items),
+            'types' => array_values(array_map(fn ($it) => is_array($it) ? ($it['type'] ?? 'image') : '?', $items)),
+        ]);
+
         $base = $this->graphBaseUrl();
-        $igUserId = $ig->ig_user_id;
         $childIds = [];
 
         foreach ($items as $idx => $item) {
@@ -214,7 +248,9 @@ class InstagramGraphService
             }
             $kind = $item['type'] ?? 'image';
             $mediaUrl = trim((string) ($item['url'] ?? ''));
+            $stepChild = 'carousel.child.'.($idx + 1);
             if ($mediaUrl === '') {
+                $this->emitStep($onStep, $stepChild.'.url', 'Carousel media URL '.($idx + 1).' is empty.', 'error', []);
                 $this->failPost($post, 'Carousel media URL '.($idx + 1).' is empty.');
 
                 return;
@@ -237,6 +273,8 @@ class InstagramGraphService
                 $isVideoChild = false;
             }
 
+            $this->emitStep($onStep, $stepChild.'.create', 'Creating carousel child '.($idx + 1).' container ('.($isVideoChild ? 'video' : 'image').')…', 'running', []);
+
             $create = Http::asForm()
                 ->acceptJson()
                 ->timeout(120)
@@ -245,6 +283,7 @@ class InstagramGraphService
             if (! $create->successful()) {
                 $msg = $this->formatGraphError($create);
                 Log::warning('Instagram carousel child container failed', ['post_id' => $post->id, 'index' => $idx, 'message' => $msg]);
+                $this->emitStep($onStep, $stepChild.'.create', $msg, 'error', []);
                 $this->failPost($post, $msg);
 
                 return;
@@ -252,13 +291,25 @@ class InstagramGraphService
 
             $creationId = $create->json('id');
             if (empty($creationId)) {
+                $this->emitStep($onStep, $stepChild.'.create', 'Invalid API response (no container id).', 'error', []);
                 $this->failPost($post, 'Invalid response creating Instagram carousel item '.($idx + 1).'.');
 
                 return;
             }
 
-            $waitError = $this->waitForMediaContainerReady($base, (string) $creationId, $accessToken, $isVideoChild);
+            $this->emitStep($onStep, $stepChild.'.create', 'Child container created.', 'ok', ['container_id' => (string) $creationId]);
+
+            $waitError = $this->waitForMediaContainerReady(
+                $base,
+                (string) $creationId,
+                $accessToken,
+                $isVideoChild,
+                $onStep,
+                $stepChild.'.process',
+                'Waiting for slide '.($idx + 1).' to finish processing…',
+            );
             if ($waitError !== null) {
+                $this->emitStep($onStep, $stepChild.'.process', $waitError, 'error', ['container_id' => (string) $creationId]);
                 $this->failPost($post, $waitError);
 
                 return;
@@ -277,6 +328,8 @@ class InstagramGraphService
             $payload['caption'] = $caption;
         }
 
+        $this->emitStep($onStep, 'carousel.parent.create', 'Creating carousel parent container…', 'running', ['children' => count($childIds)]);
+
         $createCarousel = Http::asForm()
             ->acceptJson()
             ->timeout(120)
@@ -285,6 +338,7 @@ class InstagramGraphService
         if (! $createCarousel->successful()) {
             $msg = $this->formatGraphError($createCarousel);
             Log::warning('Instagram carousel container failed', ['post_id' => $post->id, 'message' => $msg]);
+            $this->emitStep($onStep, 'carousel.parent.create', $msg, 'error', []);
             $this->failPost($post, $msg);
 
             return;
@@ -292,24 +346,41 @@ class InstagramGraphService
 
         $carouselCreationId = $createCarousel->json('id');
         if (empty($carouselCreationId)) {
+            $this->emitStep($onStep, 'carousel.parent.create', 'Invalid API response (no carousel container id).', 'error', []);
             $this->failPost($post, 'Invalid response creating Instagram carousel container.');
 
             return;
         }
 
-        $waitParent = $this->waitForMediaContainerReady($base, (string) $carouselCreationId, $accessToken, false);
+        $this->emitStep($onStep, 'carousel.parent.create', 'Carousel container created.', 'ok', ['container_id' => (string) $carouselCreationId]);
+
+        $waitParent = $this->waitForMediaContainerReady(
+            $base,
+            (string) $carouselCreationId,
+            $accessToken,
+            false,
+            $onStep,
+            'carousel.parent.process',
+            'Waiting for carousel container to be ready…',
+        );
         if ($waitParent !== null) {
+            $this->emitStep($onStep, 'carousel.parent.process', $waitParent, 'error', ['container_id' => (string) $carouselCreationId]);
             $this->failPost($post, $waitParent);
 
             return;
         }
 
-        $this->finishMediaPublish($post, $igUserId, (string) $carouselCreationId, $accessToken, 'Carousel published successfully to Instagram');
+        $this->finishMediaPublish($post, $igUserId, (string) $carouselCreationId, $accessToken, 'Carousel published successfully to Instagram', $onStep);
     }
 
-    private function finishMediaPublish(Post $post, string $igUserId, string $creationId, string $accessToken, string $successMessage): void
+    /**
+     * @param  callable(array<string, mixed>): void|null  $onStep
+     */
+    private function finishMediaPublish(Post $post, string $igUserId, string $creationId, string $accessToken, string $successMessage, ?callable $onStep = null): void
     {
         $base = $this->graphBaseUrl();
+
+        $this->emitStep($onStep, 'instagram.media_publish', 'Calling media_publish…', 'running', ['creation_id' => $creationId]);
 
         $publish = Http::asForm()
             ->acceptJson()
@@ -322,6 +393,7 @@ class InstagramGraphService
         if (! $publish->successful()) {
             $msg = $this->formatGraphError($publish);
             Log::warning('Instagram media_publish failed', ['post_id' => $post->id, 'message' => $msg]);
+            $this->emitStep($onStep, 'instagram.media_publish', $msg, 'error', []);
             $this->failPost($post, $msg);
 
             return;
@@ -329,10 +401,13 @@ class InstagramGraphService
 
         $mediaId = $publish->json('id');
         if (empty($mediaId)) {
+            $this->emitStep($onStep, 'instagram.media_publish', 'Instagram publish response missing media id.', 'error', []);
             $this->failPost($post, 'Instagram publish response missing media id.');
 
             return;
         }
+
+        $this->emitStep($onStep, 'instagram.media_publish', $successMessage, 'ok', ['instagram_media_id' => (string) $mediaId]);
 
         $post->update([
             'post_id' => (string) $mediaId,
@@ -351,10 +426,18 @@ class InstagramGraphService
     /**
      * Poll container until status is FINISHED. Video/Reels processing often needs several minutes.
      *
+     * @param  callable(array<string, mixed>): void|null  $onStep
      * @return string|null Error message, or null when ready for media_publish
      */
-    private function waitForMediaContainerReady(string $base, string $creationId, string $accessToken, bool $isVideo): ?string
-    {
+    private function waitForMediaContainerReady(
+        string $base,
+        string $creationId,
+        string $accessToken,
+        bool $isVideo,
+        ?callable $onStep = null,
+        ?string $waitStepKey = null,
+        ?string $waitStepLabel = null,
+    ): ?string {
         // Reels/video transcoding can exceed 5–10+ minutes; photos are usually fast.
         $maxAttempts = $isVideo ? 200 : 60;
         $sleepSec = $isVideo ? 5 : 2;
@@ -362,6 +445,13 @@ class InstagramGraphService
 
         $lastPayload = null;
         $lastCode = null;
+
+        if ($onStep !== null && $waitStepKey !== null) {
+            $this->emitStep($onStep, $waitStepKey, $waitStepLabel ?? 'Polling container status…', 'running', [
+                'creation_id' => $creationId,
+                'is_video' => $isVideo,
+            ]);
+        }
 
         for ($i = 0; $i < $maxAttempts; $i++) {
             $statusResp = Http::acceptJson()
@@ -392,7 +482,21 @@ class InstagramGraphService
             $lastCode = $code;
 
             if ($code === 'FINISHED') {
+                if ($onStep !== null && $waitStepKey !== null) {
+                    $this->emitStep($onStep, $waitStepKey, 'Container processing finished.', 'ok', [
+                        'creation_id' => $creationId,
+                        'attempts' => $i + 1,
+                    ]);
+                }
+
                 return null;
+            }
+            if ($onStep !== null && $waitStepKey !== null && $i > 0 && ($i + 1) % 10 === 0) {
+                $this->emitStep($onStep, $waitStepKey, $waitStepLabel ?? 'Still processing…', 'running', [
+                    'creation_id' => $creationId,
+                    'attempt' => $i + 1,
+                    'last_status' => $lastCode,
+                ]);
             }
             if (in_array($code, ['ERROR', 'EXPIRED'], true)) {
                 // Meta sometimes briefly reports ERROR while transcoding; one short recheck for video.

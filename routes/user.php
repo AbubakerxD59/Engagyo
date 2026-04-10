@@ -187,6 +187,8 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
     Route::resource('team-members', TeamMemberController::class)->except(['show']);
 
     // Instagram carousel publishing test (off unless INSTAGRAM_CAROUSEL_TEST_ENABLED=true)
-    Route::get('schedule/dev/instagram-carousel-test', InstagramCarouselTestController::class)
+    Route::get('schedule/dev/instagram-carousel-test', [InstagramCarouselTestController::class, 'show'])
         ->name('schedule.dev.instagram-carousel-test');
+    Route::post('schedule/dev/instagram-carousel-test', [InstagramCarouselTestController::class, 'publish'])
+        ->name('schedule.dev.instagram-carousel-test.publish');
 });
