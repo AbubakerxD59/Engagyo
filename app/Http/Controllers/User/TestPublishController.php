@@ -574,7 +574,7 @@ class TestPublishController extends Controller
 
         $steps[] = [
             'id' => $stepId++,
-            'title' => 'Step 3: Publish payload (caption + video_url, media_type=VIDEO)',
+            'title' => 'Step 3: Publish payload (caption + video_url; API uses media_type=REELS + share_to_feed)',
             'status' => 'info',
             'data' => $payload,
         ];

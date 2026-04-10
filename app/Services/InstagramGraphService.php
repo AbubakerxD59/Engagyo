@@ -36,13 +36,9 @@ class InstagramGraphService
 
             return;
         }
-        if ($type === 'video') {
-            $this->publishVideoOrReelPost($post, $accessToken, 'VIDEO');
-
-            return;
-        }
-        if ($type === 'reel') {
-            $this->publishVideoOrReelPost($post, $accessToken, 'REELS');
+        if ($type === 'video' || $type === 'reel') {
+            // Meta deprecated media_type=VIDEO for standalone posts; use REELS + share_to_feed for feed-visible video.
+            $this->publishVideoOrReelPost($post, $accessToken);
 
             return;
         }
@@ -108,9 +104,9 @@ class InstagramGraphService
     }
 
     /**
-     * @param  'VIDEO'|'REELS'  $mediaType
+     * Single video / “feed video” via Content Publishing: use REELS container + share_to_feed (VIDEO is deprecated).
      */
-    private function publishVideoOrReelPost(Post $post, string $accessToken, string $mediaType): void
+    private function publishVideoOrReelPost(Post $post, string $accessToken): void
     {
         $post->loadMissing('instagramAccount');
         $ig = $post->instagramAccount;
@@ -131,15 +127,15 @@ class InstagramGraphService
         $base = $this->graphBaseUrl();
         $igUserId = $ig->ig_user_id;
 
-        $payload = array_filter([
-            'media_type' => $mediaType,
+        $payload = [
+            'media_type' => 'REELS',
             'video_url' => $videoUrl,
-            'caption' => $body['caption'] ?? null,
+            'share_to_feed' => 'true',
             'access_token' => $accessToken,
-        ]);
-
-        if ($mediaType === 'REELS') {
-            $payload['share_to_feed'] = 'true';
+        ];
+        $caption = isset($body['caption']) ? trim((string) $body['caption']) : '';
+        if ($caption !== '') {
+            $payload['caption'] = $caption;
         }
 
         $create = Http::asForm()
@@ -168,7 +164,7 @@ class InstagramGraphService
             return;
         }
 
-        $successMsg = $mediaType === 'REELS'
+        $successMsg = ($post->type === 'reel')
             ? 'Reel published successfully to Instagram'
             : 'Video published successfully to Instagram';
 
@@ -257,11 +253,25 @@ class InstagramGraphService
     private function formatGraphError(\Illuminate\Http\Client\Response $response): string
     {
         $json = $response->json();
-        if (is_array($json) && ! empty($json['error']['message'])) {
-            return (string) $json['error']['message'];
+        if (! is_array($json) || empty($json['error']) || ! is_array($json['error'])) {
+            return $response->body() ?: 'Instagram Graph API request failed.';
         }
 
-        return $response->body() ?: 'Instagram Graph API request failed.';
+        $err = $json['error'];
+        $parts = [];
+        if (! empty($err['message'])) {
+            $parts[] = (string) $err['message'];
+        }
+        if (! empty($err['error_user_msg'])) {
+            $parts[] = (string) $err['error_user_msg'];
+        }
+        if (isset($err['error_subcode'])) {
+            $parts[] = '(error_subcode: '.$err['error_subcode'].')';
+        }
+
+        $msg = implode(' ', array_filter(array_unique($parts)));
+
+        return $msg !== '' ? $msg : ($response->body() ?: 'Instagram Graph API request failed.');
     }
 
     private function failPost(Post $post, string $message): void
