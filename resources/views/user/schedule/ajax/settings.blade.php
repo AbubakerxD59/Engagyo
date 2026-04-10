@@ -31,8 +31,15 @@
 
                             <img src="{{ social_logo('tiktok') }}" alt=""
                                 style="width: 15px; position:relative;" loading="lazy">
+                        @elseif($account->type == 'instagram')
+                            <img style="width:35px;height:35px;" src="{{ $account->profile_image }}"
+                                class="rounded-circle" alt="{{ social_logo('instagram') }}"
+                                onerror="this.onerror=null; this.src='{{ social_logo('instagram') }}';" loading="lazy">
+
+                            <img src="{{ social_logo('instagram') }}" alt=""
+                                style="width: 15px; position:relative;" loading="lazy">
                         @endif
-                        <b>{{ $account->name }}</b>
+                        <b>{{ $account->type === 'instagram' ? ($account->name ?? $account->username) : $account->name }}</b>
                     </div>
                 </td>
 

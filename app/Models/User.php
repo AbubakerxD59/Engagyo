@@ -245,7 +245,7 @@ class User extends Authenticatable
     public function getAccounts()
     {
         $pages = Page::with("facebook", "timeslots")->orderBy("name")->get();
-        $insta_accounts = InstagramAccount::with("linkedPage.timeslots")->orderBy("username")->get();
+        $insta_accounts = InstagramAccount::with(['linkedPage.timeslots', 'scheduleTimeslots'])->orderBy("username")->get();
         $boards = Board::with("pinterest", "timeslots")->orderBy("name")->get();
         $tiktoks = Tiktok::with("timeslots")->orderBy("username")->get();
         return $pages->concat($insta_accounts)->concat($boards)->concat($tiktoks);
@@ -261,7 +261,7 @@ class User extends Authenticatable
     {
         $ownerId = (int) ($this->getEffectiveUser()?->id ?? $this->id);
         $q = InstagramAccount::query()
-            ->with(['facebook', 'linkedPage.timeslots'])
+            ->with(['facebook', 'linkedPage.timeslots', 'scheduleTimeslots'])
             ->where('user_id', $ownerId);
 
         if ($this->isTeamMember()) {
@@ -339,7 +339,7 @@ class User extends Authenticatable
         // TikTok Accounts
         $tiktoks = Tiktok::with("timeslots")->whereScheduledActive()->get();
         // Instagram Accounts
-        $insta_accounts = InstagramAccount::with("linkedPage.timeslots")->whereScheduledActive()->get();
+        $insta_accounts = InstagramAccount::with(['linkedPage.timeslots', 'scheduleTimeslots'])->whereScheduledActive()->get();
         $accounts = collect();
         $accounts = $boards->concat($pages)->concat($tiktoks)->concat($insta_accounts);
 
@@ -379,7 +379,7 @@ class User extends Authenticatable
                         $accounts->push($tiktok);
                     }
                 } elseif ($type === 'instagram') {
-                    $ig = InstagramAccount::with(['facebook', 'linkedPage.timeslots'])->where('id', $id)->first();
+                    $ig = InstagramAccount::with(['facebook', 'linkedPage.timeslots', 'scheduleTimeslots'])->where('id', $id)->first();
                     if (! $ig) {
                         continue;
                     }

@@ -1231,7 +1231,7 @@ class  ScheduleController extends Controller
     }
 
     /**
-     * Schedule queue timeslots for an account. Instagram uses the linked Facebook page's schedule slots.
+     * Schedule queue timeslots for an account. Instagram uses its own slots when set, else the linked Page's.
      *
      * @return array<int, string> Timeslot strings (e.g. "09:00")
      */
@@ -1248,6 +1248,18 @@ class  ScheduleController extends Controller
 
             if (! $ig) {
                 return [];
+            }
+
+            $own = Timeslot::where('account_id', $ig->id)
+                ->where('account_type', 'instagram')
+                ->where('type', 'schedule')
+                ->pluck('timeslot')
+                ->sort()
+                ->values()
+                ->toArray();
+
+            if ($own !== []) {
+                return $own;
             }
 
             $ig->loadMissing('linkedPage');
@@ -2795,6 +2807,13 @@ class  ScheduleController extends Controller
             } else if ($type == "tiktok") {
                 $account = Tiktok::with("timeslots")->where("id", $id)->firstOrFail();
                 $account_id = $account->id;
+            } else if ($type == "instagram") {
+                $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
+                $account = InstagramAccount::with(['scheduleTimeslots', 'linkedPage.timeslots'])
+                    ->where('id', $id)
+                    ->where('user_id', $ownerId)
+                    ->firstOrFail();
+                $account_id = $account->id;
             }
             if ($account) {
                 // remove previous
@@ -2923,6 +2942,12 @@ class  ScheduleController extends Controller
                     if ($account) {
                         $accountId = $account->id;
                     }
+                } else if ($type == "instagram") {
+                    $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
+                    $account = InstagramAccount::with('scheduleTimeslots')->where('id', $id)->where('user_id', $ownerId)->first();
+                    if ($account) {
+                        $accountId = $account->id;
+                    }
                 }
 
                 if ($account && $accountId) {
@@ -2958,12 +2983,14 @@ class  ScheduleController extends Controller
                         });
 
                         // Get all unpublished scheduled posts for this account
-                        $posts = Post::with('user.timezone')
+                        $postsQuery = Post::with('user.timezone')
                             ->where('account_id', $accountId)
                             ->where('status', '!=', 1) // Not published
-                            ->where('scheduled', 1) // Scheduled posts only
-                            ->orderBy('publish_date', 'ASC')
-                            ->get();
+                            ->where('scheduled', 1); // Scheduled posts only
+                        if ($type === 'instagram') {
+                            $postsQuery->where('social_type', 'like', '%instagram%');
+                        }
+                        $posts = $postsQuery->orderBy('publish_date', 'ASC')->get();
 
                         if ($posts->count() > 0) {
                             $currentDateTime = now();

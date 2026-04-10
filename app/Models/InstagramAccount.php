@@ -6,6 +6,7 @@ use App\Models\Relations\BelongsToInstagramLinkedPage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class InstagramAccount extends Model
 {
@@ -49,7 +50,7 @@ class InstagramAccount extends Model
     }
 
     /**
-     * Optional Facebook Page row (same Graph page_id). Used only to inherit timeslots until Instagram has its own.
+     * Optional Facebook Page row (same Graph page_id). Timeslots fall back to this page when none are set on the Instagram row.
      */
     public function linkedPage()
     {
@@ -64,8 +65,25 @@ class InstagramAccount extends Model
         );
     }
 
+    /**
+     * Posting hours saved for this Instagram account (queue settings).
+     */
+    public function scheduleTimeslots(): HasMany
+    {
+        return $this->hasMany(Timeslot::class, 'account_id', 'id')
+            ->where('account_type', 'instagram')
+            ->where('type', 'schedule');
+    }
+
+    /**
+     * Effective schedule timeslots: Instagram-specific rows if any, otherwise the linked Facebook page's slots.
+     */
     public function getTimeslotsAttribute()
     {
+        $this->loadMissing('scheduleTimeslots');
+        if ($this->scheduleTimeslots->isNotEmpty()) {
+            return $this->scheduleTimeslots;
+        }
         $this->loadMissing('linkedPage.timeslots');
 
         return $this->linkedPage?->timeslots ?? collect();
