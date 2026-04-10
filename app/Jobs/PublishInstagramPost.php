@@ -34,7 +34,7 @@ class PublishInstagramPost implements ShouldQueue
         }
 
         try {
-            $instagramGraphService->publishPhotoPost($post, $this->accessToken);
+            $instagramGraphService->publishPost($post, $this->accessToken);
         } catch (\Throwable $e) {
             Log::error('PublishInstagramPost failed: '.$e->getMessage(), ['post_id' => $this->postId]);
             $post->update([

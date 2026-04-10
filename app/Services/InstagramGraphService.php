@@ -18,9 +18,9 @@ class InstagramGraphService
     }
 
     /**
-     * Publish a single-feed photo using Instagram Content Publishing API.
+     * Publish photo, feed video, or reel via Instagram Content Publishing API.
      */
-    public function publishPhotoPost(Post $post, string $accessToken): void
+    public function publishPost(Post $post, string $accessToken): void
     {
         $post->loadMissing('instagramAccount');
         $ig = $post->instagramAccount;
@@ -30,8 +30,35 @@ class InstagramGraphService
             return;
         }
 
-        if ($post->type !== 'photo') {
-            $this->failPost($post, 'Only photo posts are supported for Instagram.');
+        $type = (string) $post->type;
+        if ($type === 'photo') {
+            $this->publishPhotoPost($post, $accessToken);
+
+            return;
+        }
+        if ($type === 'video') {
+            $this->publishVideoOrReelPost($post, $accessToken, 'VIDEO');
+
+            return;
+        }
+        if ($type === 'reel') {
+            $this->publishVideoOrReelPost($post, $accessToken, 'REELS');
+
+            return;
+        }
+
+        $this->failPost($post, 'Unsupported Instagram post type: '.$type);
+    }
+
+    /**
+     * Publish a single-feed photo using Instagram Content Publishing API.
+     */
+    private function publishPhotoPost(Post $post, string $accessToken): void
+    {
+        $post->loadMissing('instagramAccount');
+        $ig = $post->instagramAccount;
+        if (! $ig || empty($ig->ig_user_id)) {
+            $this->failPost($post, 'Instagram account not found for this post.');
 
             return;
         }
@@ -71,11 +98,86 @@ class InstagramGraphService
             return;
         }
 
-        if (! $this->waitForMediaContainerReady($base, (string) $creationId, $accessToken)) {
+        if (! $this->waitForMediaContainerReady($base, (string) $creationId, $accessToken, false)) {
             $this->failPost($post, 'Instagram media container did not become ready in time.');
 
             return;
         }
+
+        $this->finishMediaPublish($post, $igUserId, (string) $creationId, $accessToken, 'Photo published successfully to Instagram');
+    }
+
+    /**
+     * @param  'VIDEO'|'REELS'  $mediaType
+     */
+    private function publishVideoOrReelPost(Post $post, string $accessToken, string $mediaType): void
+    {
+        $post->loadMissing('instagramAccount');
+        $ig = $post->instagramAccount;
+        if (! $ig || empty($ig->ig_user_id)) {
+            $this->failPost($post, 'Instagram account not found for this post.');
+
+            return;
+        }
+
+        $body = PostService::postTypeBody($post);
+        $videoUrl = $body['video_url'] ?? null;
+        if (empty($videoUrl)) {
+            $this->failPost($post, 'Video URL is missing for Instagram publish. Ensure the file is on a public HTTPS URL.');
+
+            return;
+        }
+
+        $base = $this->graphBaseUrl();
+        $igUserId = $ig->ig_user_id;
+
+        $payload = array_filter([
+            'media_type' => $mediaType,
+            'video_url' => $videoUrl,
+            'caption' => $body['caption'] ?? null,
+            'access_token' => $accessToken,
+        ]);
+
+        if ($mediaType === 'REELS') {
+            $payload['share_to_feed'] = 'true';
+        }
+
+        $create = Http::asForm()
+            ->acceptJson()
+            ->timeout(120)
+            ->post("{$base}/{$igUserId}/media", $payload);
+
+        if (! $create->successful()) {
+            $msg = $this->formatGraphError($create);
+            Log::warning('Instagram video container failed', ['post_id' => $post->id, 'message' => $msg]);
+            $this->failPost($post, $msg);
+
+            return;
+        }
+
+        $creationId = $create->json('id');
+        if (empty($creationId)) {
+            $this->failPost($post, 'Invalid response creating Instagram video container.');
+
+            return;
+        }
+
+        if (! $this->waitForMediaContainerReady($base, (string) $creationId, $accessToken, true)) {
+            $this->failPost($post, 'Instagram video container did not become ready in time.');
+
+            return;
+        }
+
+        $successMsg = $mediaType === 'REELS'
+            ? 'Reel published successfully to Instagram'
+            : 'Video published successfully to Instagram';
+
+        $this->finishMediaPublish($post, $igUserId, (string) $creationId, $accessToken, $successMsg);
+    }
+
+    private function finishMediaPublish(Post $post, string $igUserId, string $creationId, string $accessToken, string $successMessage): void
+    {
+        $base = $this->graphBaseUrl();
 
         $publish = Http::asForm()
             ->acceptJson()
@@ -107,16 +209,16 @@ class InstagramGraphService
             'response' => json_encode([
                 'success' => true,
                 'post_id' => (string) $mediaId,
-                'message' => 'Photo published successfully to Instagram',
+                'message' => $successMessage,
             ]),
         ]);
 
         $this->successNotification($post);
     }
 
-    private function waitForMediaContainerReady(string $base, string $creationId, string $accessToken): bool
+    private function waitForMediaContainerReady(string $base, string $creationId, string $accessToken, bool $isVideo): bool
     {
-        $maxAttempts = 45;
+        $maxAttempts = $isVideo ? 90 : 45;
         for ($i = 0; $i < $maxAttempts; $i++) {
             $statusResp = Http::acceptJson()
                 ->timeout(60)
@@ -146,7 +248,7 @@ class InstagramGraphService
                 return false;
             }
 
-            sleep(2);
+            sleep($isVideo ? 3 : 2);
         }
 
         return false;
@@ -182,12 +284,18 @@ class InstagramGraphService
         $ig = $post->instagramAccount;
         $accountImage = $ig?->profile_image ?? null;
 
+        $msg = match ((string) $post->type) {
+            'video' => 'Your Instagram video has been published successfully.',
+            'reel' => 'Your Instagram reel has been published successfully.',
+            default => 'Your Instagram photo has been published successfully.',
+        };
+
         Notification::create([
             'user_id' => $post->user_id,
             'title' => 'Post Published',
             'body' => [
                 'type' => 'success',
-                'message' => 'Your Instagram photo has been published successfully.',
+                'message' => $msg,
                 'social_type' => 'instagram',
                 'account_image' => $accountImage,
                 'account_name' => $ig?->name ?? $ig?->username ?? '',
@@ -204,12 +312,18 @@ class InstagramGraphService
         $ig = $post->instagramAccount;
         $accountImage = $ig?->profile_image ?? null;
 
+        $kind = match ((string) $post->type) {
+            'video' => 'video',
+            'reel' => 'reel',
+            default => 'photo',
+        };
+
         Notification::create([
             'user_id' => $post->user_id,
             'title' => 'Post Publishing Failed',
             'body' => [
                 'type' => 'error',
-                'message' => 'Failed to publish Instagram photo. '.$message,
+                'message' => 'Failed to publish Instagram '.$kind.'. '.$message,
                 'social_type' => 'instagram',
                 'account_image' => $accountImage,
                 'account_name' => $ig?->name ?? $ig?->username ?? '',

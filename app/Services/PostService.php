@@ -240,18 +240,56 @@ class PostService
         return $url;
     }
 
+    /**
+     * Absolute HTTPS URL for Instagram video/reel containers (video_url). Meta must fetch over the public internet.
+     */
+    public static function instagramGraphVideoUrl(Post $post): ?string
+    {
+        $raw = $post->getAttributes()['video'] ?? null;
+        if ($raw === null || $raw === '' || $raw === 0 || $raw === '0') {
+            return null;
+        }
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return null;
+        }
+
+        if (preg_match('#^https://#i', $raw)) {
+            return $raw;
+        }
+        if (preg_match('#^http://#i', $raw)) {
+            return preg_replace('#^http://#i', 'https://', $raw);
+        }
+
+        $url = trim((string) fetchFromS3($raw));
+        if ($url === '') {
+            return null;
+        }
+        if (preg_match('#^http://#i', $url)) {
+            $url = preg_replace('#^http://#i', 'https://', $url);
+        }
+
+        return $url;
+    }
+
     public static function instagramPostTypeBody(Post $post): array
     {
         $postData = [];
+        $captionParts = array_filter([(string) ($post->title ?? ''), (string) ($post->comment ?? '')]);
+        $caption = trim(implode("\n\n", $captionParts));
+        if ($caption !== '') {
+            $postData['caption'] = $caption;
+        }
+
         if ($post->type === 'photo') {
             $imageUrl = self::instagramGraphImageUrl($post);
             if ($imageUrl !== null && $imageUrl !== '') {
                 $postData['image_url'] = $imageUrl;
             }
-            $captionParts = array_filter([(string) ($post->title ?? ''), (string) ($post->comment ?? '')]);
-            $caption = trim(implode("\n\n", $captionParts));
-            if ($caption !== '') {
-                $postData['caption'] = $caption;
+        } elseif ($post->type === 'video' || $post->type === 'reel') {
+            $videoUrl = self::instagramGraphVideoUrl($post);
+            if ($videoUrl !== null && $videoUrl !== '') {
+                $postData['video_url'] = $videoUrl;
             }
         }
 

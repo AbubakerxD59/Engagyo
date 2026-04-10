@@ -105,12 +105,11 @@ class  ScheduleController extends Controller
     }
 
     /**
-     * Instagram (phase 1) supports photo-only. When every selected channel is Instagram,
-     * require an image file (not video).
+     * When every selected channel is Instagram, require a media file (photo or video), not text-only.
      *
      * @param  \Illuminate\Support\Collection|\Traversable  $accounts
      */
-    private function validateInstagramOnlyPhotoSelection($accounts, bool $file, $image, $video): ?array
+    private function validateInstagramMediaSelection($accounts, bool $file, $image, $video): ?array
     {
         $igCount = 0;
         $total = 0;
@@ -123,11 +122,19 @@ class  ScheduleController extends Controller
         if ($igCount === 0) {
             return null;
         }
-        if ($igCount === $total && (! $file || ! empty($video) || empty($image))) {
-            return [
-                'success' => false,
-                'message' => 'Instagram requires a photo image. Video and text-only posts are not supported for Instagram yet.',
-            ];
+        if ($igCount === $total) {
+            if (! $file || (empty($image) && empty($video))) {
+                return [
+                    'success' => false,
+                    'message' => 'Instagram requires a photo or video file. Text-only posts are not supported.',
+                ];
+            }
+            if (! empty($image) && ! empty($video)) {
+                return [
+                    'success' => false,
+                    'message' => 'Use a single photo or a single video per Instagram post.',
+                ];
+            }
         }
 
         return null;
@@ -789,10 +796,7 @@ class  ScheduleController extends Controller
     private function countQueuePostsForChainFileAndAccount($account, UploadedFile $file, Request $request): int
     {
         if ($account->type === 'instagram') {
-            $ext = strtolower($file->getClientOriginalExtension() ?: '');
-            $isVideo = in_array($ext, ['mp4', 'mkv', 'mov', 'mpeg', 'webm'], true);
-
-            return $isVideo ? 0 : 1;
+            return 1;
         }
         if ($account->type === 'facebook' || $account->type === 'pinterest' || $account->type === 'tiktok') {
             return 1;
@@ -920,7 +924,10 @@ class  ScheduleController extends Controller
         }
 
         if ($account->type === 'instagram') {
-            if ($isVideo || empty($image)) {
+            if (empty($image) && empty($video)) {
+                return;
+            }
+            if (! empty($image) && ! empty($video)) {
                 return;
             }
             InstagramAccount::where('id', $account->id)->firstOrFail();
@@ -929,11 +936,12 @@ class  ScheduleController extends Controller
                 $account->timeslots,
                 $user
             );
+            $mediaType = ! empty($image) ? 'photo' : 'video';
             $data = [
                 'user_id' => $user->id,
                 'account_id' => $account->id,
                 'social_type' => 'instagram',
-                'type' => 'photo',
+                'type' => $mediaType,
                 'source' => $this->source,
                 'title' => $content,
                 'comment' => $comment,
@@ -946,7 +954,7 @@ class  ScheduleController extends Controller
             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
             }
-            $this->logService->logQueuedPost('instagram', $post->id, ['type' => 'photo', 'publish_date' => $nextTime]);
+            $this->logService->logQueuedPost('instagram', $post->id, ['type' => $mediaType, 'publish_date' => $nextTime]);
         }
     }
 
@@ -1174,7 +1182,7 @@ class  ScheduleController extends Controller
                     $image = saveImage($request->file("files"));
                 }
             }
-            $igOnlyErr = $this->validateInstagramOnlyPhotoSelection($accounts, $file, $image, $video);
+            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $file, $image, $video);
             if ($igOnlyErr !== null) {
                 return $igOnlyErr;
             }
@@ -1192,7 +1200,7 @@ class  ScheduleController extends Controller
                     $totalPostsToCreate++;
                 } elseif ($account->type == "tiktok" && $file) {
                     $totalPostsToCreate++;
-                } elseif ($account->type == "instagram" && $file && ! empty($image) && empty($video)) {
+                } elseif ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
                     $totalPostsToCreate++;
                 }
             }
@@ -1432,7 +1440,7 @@ class  ScheduleController extends Controller
                         PublishTikTokPost::dispatch($post->id, $postData, $access_token, $type);
                     }
                 }
-                if ($account->type == "instagram" && $file && ! empty($image) && empty($video)) {
+                if ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
                     $ig = InstagramAccount::where('id', $account->id)->firstOrFail();
                     $tokenResponse = FacebookService::validateToken($ig);
                     if (! $tokenResponse['success']) {
@@ -1441,11 +1449,12 @@ class  ScheduleController extends Controller
                             'message' => $tokenResponse['message'] ?? 'Failed to validate Facebook access token for Instagram.',
                         ];
                     }
+                    $mediaType = ! empty($image) ? 'photo' : 'video';
                     $data = [
                         'user_id' => $user->id,
                         'account_id' => $account->id,
                         'social_type' => 'instagram',
-                        'type' => 'photo',
+                        'type' => $mediaType,
                         'source' => $this->source,
                         'title' => $content,
                         'comment' => $comment,
@@ -1458,7 +1467,7 @@ class  ScheduleController extends Controller
                     if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                         $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                     }
-                    $this->logService->logPost('instagram', 'photo', $post->id, ['action' => 'publish'], 'pending');
+                    $this->logService->logPost('instagram', $mediaType, $post->id, ['action' => 'publish'], 'pending');
                     PublishInstagramPost::dispatch($post->id, $tokenResponse['access_token']);
                 }
             }
@@ -1749,7 +1758,7 @@ class  ScheduleController extends Controller
                 }
             }
 
-            $igOnlyErr = $this->validateInstagramOnlyPhotoSelection($accounts, $file, $image, $video);
+            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $file, $image, $video);
             if ($igOnlyErr !== null) {
                 return $igOnlyErr;
             }
@@ -1768,7 +1777,7 @@ class  ScheduleController extends Controller
                         $postsToCreate++;
                     } elseif ($account->type == "tiktok" && $file) {
                         $postsToCreate++;
-                    } elseif ($account->type == "instagram" && $file && ! empty($image) && empty($video)) {
+                    } elseif ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
                         $postsToCreate++;
                     }
                 }
@@ -1873,18 +1882,19 @@ class  ScheduleController extends Controller
                             $this->logService->logQueuedPost('tiktok', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                         }
                     }
-                    if ($account->type == "instagram" && $file && ! empty($image) && empty($video)) {
+                    if ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
                         InstagramAccount::where('id', $account->id)->firstOrFail();
                         $nextTime = (new Post)->nextScheduleTime(
                             ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
                             $account->timeslots,
                             $user
                         );
+                        $mediaType = ! empty($image) ? 'photo' : 'video';
                         $data = [
                             'user_id' => $user->id,
                             'account_id' => $account->id,
                             'social_type' => 'instagram',
-                            'type' => 'photo',
+                            'type' => $mediaType,
                             'source' => $this->source,
                             'title' => $content,
                             'comment' => $comment,
@@ -1897,7 +1907,7 @@ class  ScheduleController extends Controller
                         if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                             $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                         }
-                        $this->logService->logQueuedPost('instagram', $post->id, ['type' => 'photo', 'publish_date' => $nextTime]);
+                        $this->logService->logQueuedPost('instagram', $post->id, ['type' => $mediaType, 'publish_date' => $nextTime]);
                     }
                     $response = array(
                         "success" => true,
@@ -1935,7 +1945,7 @@ class  ScheduleController extends Controller
                 }
             }
 
-            $igOnlyErr = $this->validateInstagramOnlyPhotoSelection($accounts, $file, $image, $video);
+            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $file, $image, $video);
             if ($igOnlyErr !== null) {
                 return $igOnlyErr;
             }
@@ -1954,7 +1964,7 @@ class  ScheduleController extends Controller
                     $postsToCreate++;
                 } elseif ($account->type == "tiktok" && $file) {
                     $postsToCreate++;
-                } elseif ($account->type == "instagram" && $file && ! empty($image) && empty($video)) {
+                } elseif ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
                     $postsToCreate++;
                 }
             }
@@ -2058,13 +2068,14 @@ class  ScheduleController extends Controller
                         $this->logService->logScheduledPost('tiktok', $post->id, $scheduleDateTime, ['type' => $type]);
                     }
                 }
-                if ($account->type == "instagram" && $file && ! empty($image) && empty($video)) {
+                if ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
                     InstagramAccount::where('id', $account->id)->firstOrFail();
+                    $mediaType = ! empty($image) ? 'photo' : 'video';
                     $data = [
                         'user_id' => $user->id,
                         'account_id' => $account->id,
                         'social_type' => 'instagram',
-                        'type' => 'photo',
+                        'type' => $mediaType,
                         'source' => $this->source,
                         'title' => $content,
                         'comment' => $comment,
@@ -2078,7 +2089,7 @@ class  ScheduleController extends Controller
                     if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                         $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                     }
-                    $this->logService->logScheduledPost('instagram', $post->id, $scheduleDateTime, ['type' => 'photo']);
+                    $this->logService->logScheduledPost('instagram', $post->id, $scheduleDateTime, ['type' => $mediaType]);
                 }
                 $response = array(
                     "success" => true,

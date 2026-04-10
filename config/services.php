@@ -38,7 +38,8 @@ return [
     ],
 
     /*
-    | Base URL Meta can use to fetch post images (HTTPS, public). Defaults to APP_URL.
+    | Base URL Meta can use to fetch post media for Content Publishing (HTTPS, public). Defaults to APP_URL.
+    | Used for image_url (photos). Videos typically use S3 public URLs from fetchFromS3.
     | Set INSTAGRAM_IMAGE_PUBLIC_BASE_URL when APP_URL is internal but assets are on a public host/CDN.
     */
     'instagram' => [

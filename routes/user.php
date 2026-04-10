@@ -35,6 +35,12 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
     Route::post("test/instagram-image", [TestPublishController::class, 'handleInstagramImageTest'])
         ->name("test.instagram-image.post")
         ->middleware(['feature:' . Feature::$features_list[1]]);
+    Route::get("test/instagram-video", [TestPublishController::class, 'showInstagramVideoTestForm'])
+        ->name("test.instagram-video")
+        ->middleware(['feature:' . Feature::$features_list[1]]);
+    Route::post("test/instagram-video", [TestPublishController::class, 'handleInstagramVideoTest'])
+        ->name("test.instagram-video.post")
+        ->middleware(['feature:' . Feature::$features_list[1]]);
     // Schedule Routes
     Route::controller(ScheduleController::class)->middleware(['feature:' . Feature::$features_list[1]])->group(function () {
         Route::get("schedule", "index")->name("schedule");
