@@ -176,7 +176,6 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
     // Notifications Routes
     Route::controller(NotificationController::class)->name("notifications.")->prefix("notifications/")->group(function () {
         Route::get("fetch", "fetch")->name("fetch");
-        Route::get("create-test", "createTest")->name("createTest");
         Route::post("mark-read/{id}", "markAsRead")->name("markRead");
         Route::post("mark-all-read", "markAllAsRead")->name("markAllRead");
     });
