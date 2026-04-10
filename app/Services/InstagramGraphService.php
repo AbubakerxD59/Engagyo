@@ -36,6 +36,11 @@ class InstagramGraphService
 
             return;
         }
+        if ($type === 'carousel') {
+            $this->publishCarouselPost($post, $accessToken);
+
+            return;
+        }
         if ($type === 'video' || $type === 'reel') {
             // Meta deprecated media_type=VIDEO for standalone posts; use REELS + share_to_feed for feed-visible video.
             $this->publishVideoOrReelPost($post, $accessToken);
@@ -171,6 +176,135 @@ class InstagramGraphService
             : 'Video published successfully to Instagram';
 
         $this->finishMediaPublish($post, $igUserId, (string) $creationId, $accessToken, $successMsg);
+    }
+
+    /**
+     * Carousel: create is_carousel_item children (images and/or videos), then CAROUSEL container, then media_publish.
+     */
+    private function publishCarouselPost(Post $post, string $accessToken): void
+    {
+        $post->loadMissing('instagramAccount');
+        $ig = $post->instagramAccount;
+        if (! $ig || empty($ig->ig_user_id)) {
+            $this->failPost($post, 'Instagram account not found for this post.');
+
+            return;
+        }
+
+        $body = PostService::postTypeBody($post);
+        $items = $body['carousel_items'] ?? [];
+        if (! is_array($items) || count($items) < 2) {
+            $this->failPost($post, 'At least two media URLs are required for an Instagram carousel.');
+
+            return;
+        }
+        if (count($items) > 10) {
+            $this->failPost($post, 'Instagram carousels support at most 10 items.');
+
+            return;
+        }
+
+        $base = $this->graphBaseUrl();
+        $igUserId = $ig->ig_user_id;
+        $childIds = [];
+
+        foreach ($items as $idx => $item) {
+            if (! is_array($item)) {
+                continue;
+            }
+            $kind = $item['type'] ?? 'image';
+            $mediaUrl = trim((string) ($item['url'] ?? ''));
+            if ($mediaUrl === '') {
+                $this->failPost($post, 'Carousel media URL '.($idx + 1).' is empty.');
+
+                return;
+            }
+
+            if ($kind === 'video') {
+                $payload = [
+                    'media_type' => 'VIDEO',
+                    'video_url' => $mediaUrl,
+                    'is_carousel_item' => 'true',
+                    'access_token' => $accessToken,
+                ];
+                $isVideoChild = true;
+            } else {
+                $payload = array_filter([
+                    'image_url' => $mediaUrl,
+                    'is_carousel_item' => 'true',
+                    'access_token' => $accessToken,
+                ]);
+                $isVideoChild = false;
+            }
+
+            $create = Http::asForm()
+                ->acceptJson()
+                ->timeout(120)
+                ->post("{$base}/{$igUserId}/media", $payload);
+
+            if (! $create->successful()) {
+                $msg = $this->formatGraphError($create);
+                Log::warning('Instagram carousel child container failed', ['post_id' => $post->id, 'index' => $idx, 'message' => $msg]);
+                $this->failPost($post, $msg);
+
+                return;
+            }
+
+            $creationId = $create->json('id');
+            if (empty($creationId)) {
+                $this->failPost($post, 'Invalid response creating Instagram carousel item '.($idx + 1).'.');
+
+                return;
+            }
+
+            $waitError = $this->waitForMediaContainerReady($base, (string) $creationId, $accessToken, $isVideoChild);
+            if ($waitError !== null) {
+                $this->failPost($post, $waitError);
+
+                return;
+            }
+
+            $childIds[] = (string) $creationId;
+        }
+
+        $payload = [
+            'media_type' => 'CAROUSEL',
+            'children' => implode(',', $childIds),
+            'access_token' => $accessToken,
+        ];
+        $caption = isset($body['caption']) ? trim((string) $body['caption']) : '';
+        if ($caption !== '') {
+            $payload['caption'] = $caption;
+        }
+
+        $createCarousel = Http::asForm()
+            ->acceptJson()
+            ->timeout(120)
+            ->post("{$base}/{$igUserId}/media", $payload);
+
+        if (! $createCarousel->successful()) {
+            $msg = $this->formatGraphError($createCarousel);
+            Log::warning('Instagram carousel container failed', ['post_id' => $post->id, 'message' => $msg]);
+            $this->failPost($post, $msg);
+
+            return;
+        }
+
+        $carouselCreationId = $createCarousel->json('id');
+        if (empty($carouselCreationId)) {
+            $this->failPost($post, 'Invalid response creating Instagram carousel container.');
+
+            return;
+        }
+
+        $waitParent = $this->waitForMediaContainerReady($base, (string) $carouselCreationId, $accessToken, false);
+        if ($waitParent !== null) {
+            $this->failPost($post, $waitParent);
+
+            return;
+        }
+
+        $this->finishMediaPublish($post, $igUserId, (string) $carouselCreationId, $accessToken, 'Carousel published successfully to Instagram');
     }
 
     private function finishMediaPublish(Post $post, string $igUserId, string $creationId, string $accessToken, string $successMessage): void
@@ -448,6 +582,7 @@ class InstagramGraphService
         $msg = match ((string) $post->type) {
             'video' => 'Your Instagram video has been published successfully.',
             'reel' => 'Your Instagram reel has been published successfully.',
+            'carousel' => 'Your Instagram carousel has been published successfully.',
             default => 'Your Instagram photo has been published successfully.',
         };
 
@@ -476,6 +611,7 @@ class InstagramGraphService
         $kind = match ((string) $post->type) {
             'video' => 'video',
             'reel' => 'reel',
+            'carousel' => 'carousel',
             default => 'photo',
         };
 

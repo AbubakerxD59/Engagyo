@@ -105,11 +105,152 @@ class  ScheduleController extends Controller
     }
 
     /**
-     * When every selected channel is Instagram, require a media file (photo or video), not text-only.
+     * Normalize create-post uploads: single file (existing) or multi-file Instagram carousel (files[] + instagram_content_format=carousel).
+     *
+     * @return array{error: ?array, has_files: bool, instagram_carousel: bool, image: ?string, images: array<int, string>, video: ?string, carousel_media: array<int, array{type: string, path: string}>}
+     */
+    private function normalizeCreatePostFileUploads(Request $request): array
+    {
+        $empty = [
+            'error' => null,
+            'has_files' => false,
+            'instagram_carousel' => false,
+            'image' => null,
+            'images' => [],
+            'video' => null,
+            'carousel_media' => [],
+        ];
+
+        $igFormat = strtolower(trim((string) $request->input('instagram_content_format', '')));
+        $isCarouselRequest = ($igFormat === 'carousel') || $request->boolean('instagram_carousel');
+
+        if ($isCarouselRequest) {
+            $raw = $request->file('files');
+            $files = is_array($raw) ? array_values(array_filter($raw)) : ($raw ? [$raw] : []);
+            if (count($files) < 2) {
+                return array_merge($empty, [
+                    'error' => [
+                        'success' => false,
+                        'message' => 'Select at least 2 files for an Instagram carousel.',
+                    ],
+                ]);
+            }
+            if (count($files) > 10) {
+                return array_merge($empty, [
+                    'error' => [
+                        'success' => false,
+                        'message' => 'Instagram carousels support at most 10 files.',
+                    ],
+                ]);
+            }
+            $carouselMedia = [];
+            foreach ($files as $file) {
+                if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                    return array_merge($empty, [
+                        'error' => [
+                            'success' => false,
+                            'message' => 'One or more uploaded files are invalid.',
+                        ],
+                    ]);
+                }
+                $ext = strtolower((string) ($file->getClientOriginalExtension() ?: ''));
+                if (in_array($ext, ['mp4', 'mkv', 'mov', 'mpeg', 'webm'], true)) {
+                    $carouselMedia[] = ['type' => 'video', 'path' => saveToS3($file)];
+                } else {
+                    $carouselMedia[] = ['type' => 'photo', 'path' => saveImage($file)];
+                }
+            }
+            $firstPhoto = null;
+            foreach ($carouselMedia as $row) {
+                if (($row['type'] ?? '') === 'photo') {
+                    $firstPhoto = $row['path'];
+                    break;
+                }
+            }
+
+            return [
+                'error' => null,
+                'has_files' => true,
+                'instagram_carousel' => true,
+                'image' => $firstPhoto,
+                'images' => array_values(array_filter(array_map(
+                    fn ($r) => (($r['type'] ?? '') === 'photo') ? $r['path'] : null,
+                    $carouselMedia
+                ))),
+                'video' => null,
+                'carousel_media' => $carouselMedia,
+            ];
+        }
+
+        $raw = $request->file('files');
+        if ($raw === null) {
+            return $empty;
+        }
+        $file = is_array($raw) ? ($raw[0] ?? null) : $raw;
+        if (! $file instanceof UploadedFile || ! $file->isValid()) {
+            return $empty;
+        }
+        if ($request->video) {
+            return [
+                'error' => null,
+                'has_files' => true,
+                'instagram_carousel' => false,
+                'image' => null,
+                'images' => [],
+                'video' => saveToS3($file),
+                'carousel_media' => [],
+            ];
+        }
+        $img = saveImage($file);
+
+        return [
+            'error' => null,
+            'has_files' => true,
+            'instagram_carousel' => false,
+            'image' => $img,
+            'images' => [$img],
+            'video' => null,
+            'carousel_media' => [],
+        ];
+    }
+
+    private function isInstagramOnlyAccountSelection($accounts): bool
+    {
+        $total = 0;
+        $ig = 0;
+        foreach ($accounts as $account) {
+            $total++;
+            if (($account->type ?? '') === 'instagram') {
+                $ig++;
+            }
+        }
+
+        return $total > 0 && $ig === $total;
+    }
+
+    private function instagramTypeFromUpload(Request $request, array $upload, bool $instagramOnlySelection): string
+    {
+        if (! empty($upload['instagram_carousel'])) {
+            return 'carousel';
+        }
+        if (! empty($upload['video'])) {
+            if ($instagramOnlySelection && strtolower(trim((string) $request->input('instagram_content_format', 'post'))) === 'reel') {
+                return 'reel';
+            }
+
+            return 'video';
+        }
+
+        return 'photo';
+    }
+
+    /**
+     * When every selected channel is Instagram, require a media file (photo, carousel, or video), not text-only.
      *
      * @param  \Illuminate\Support\Collection|\Traversable  $accounts
+     * @param  array<string, mixed>  $upload from normalizeCreatePostFileUploads()
      */
-    private function validateInstagramMediaSelection($accounts, bool $file, $image, $video): ?array
+    private function validateInstagramMediaSelection($accounts, array $upload): ?array
     {
         $igCount = 0;
         $total = 0;
@@ -119,22 +260,69 @@ class  ScheduleController extends Controller
                 $igCount++;
             }
         }
+
+        $carousel = ! empty($upload['instagram_carousel']);
+        if ($carousel && $igCount === 0) {
+            return [
+                'success' => false,
+                'message' => 'Instagram carousel requires at least one Instagram account selected.',
+            ];
+        }
+
         if ($igCount === 0) {
             return null;
         }
+
+        $hasFiles = ! empty($upload['has_files']);
+        $hasVideo = ! empty($upload['video']);
+        $hasImage = ! empty($upload['image']);
+
         if ($igCount === $total) {
-            if (! $file || (empty($image) && empty($video))) {
+            if (! $hasFiles) {
                 return [
                     'success' => false,
                     'message' => 'Instagram requires a photo or video file. Text-only posts are not supported.',
                 ];
             }
-            if (! empty($image) && ! empty($video)) {
+            if ($carousel) {
+                $items = is_array($upload['carousel_media'] ?? null) ? $upload['carousel_media'] : [];
+                $n = count($items);
+                if ($n < 2 || $n > 10) {
+                    return [
+                        'success' => false,
+                        'message' => 'Instagram carousels need between 2 and 10 files.',
+                    ];
+                }
+
+                return null;
+            }
+            if ($hasImage && $hasVideo) {
                 return [
                     'success' => false,
                     'message' => 'Use a single photo or a single video per Instagram post.',
                 ];
             }
+            if (! $hasImage && ! $hasVideo) {
+                return [
+                    'success' => false,
+                    'message' => 'Instagram requires a photo or video file. Text-only posts are not supported.',
+                ];
+            }
+
+            return null;
+        }
+
+        if ($carousel) {
+            return [
+                'success' => false,
+                'message' => 'Instagram carousels can only be posted when only Instagram accounts are selected.',
+            ];
+        }
+        if ($hasFiles && $hasImage && $hasVideo) {
+            return [
+                'success' => false,
+                'message' => 'Use a single photo or a single video per Instagram post.',
+            ];
         }
 
         return null;
@@ -936,7 +1124,8 @@ class  ScheduleController extends Controller
                 $account->timeslots,
                 $user
             );
-            $mediaType = ! empty($image) ? 'photo' : 'video';
+            $fmt = strtolower(trim((string) $request->input('instagram_content_format', 'post')));
+            $mediaType = ! empty($image) ? 'photo' : (($fmt === 'reel') ? 'reel' : 'video');
             $data = [
                 'user_id' => $user->id,
                 'account_id' => $account->id,
@@ -1172,17 +1361,14 @@ class  ScheduleController extends Controller
             $accounts = $this->resolveAccountsForPost($request, $user);
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
-            $file = $request->file("files") ? true : false;
-            $image = $video = null;
-            if ($file) {
-                $is_video = $request->video;
-                if ($is_video) {
-                    $video = saveToS3($request->file("files"));
-                } else {
-                    $image = saveImage($request->file("files"));
-                }
+            $upload = $this->normalizeCreatePostFileUploads($request);
+            if ($upload['error'] !== null) {
+                return $upload['error'];
             }
-            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $file, $image, $video);
+            $file = $upload['has_files'];
+            $image = $upload['image'];
+            $video = $upload['video'];
+            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $upload);
             if ($igOnlyErr !== null) {
                 return $igOnlyErr;
             }
@@ -1200,7 +1386,10 @@ class  ScheduleController extends Controller
                     $totalPostsToCreate++;
                 } elseif ($account->type == "tiktok" && $file) {
                     $totalPostsToCreate++;
-                } elseif ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
+                } elseif ($account->type == "instagram" && $file && (
+                    (! empty($upload['instagram_carousel']) && count($upload['carousel_media'] ?? []) >= 2)
+                    || ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))
+                )) {
                     $totalPostsToCreate++;
                 }
             }
@@ -1216,6 +1405,7 @@ class  ScheduleController extends Controller
             }
 
             $publishDateNow = Carbon::now(TimezoneService::getUserTimezone($user))->format('Y-m-d H:i');
+            $instagramOnlySelection = $this->isInstagramOnlyAccountSelection($accounts);
 
             foreach ($accounts as $account) {
                 if ($account->type == "facebook") {
@@ -1440,7 +1630,13 @@ class  ScheduleController extends Controller
                         PublishTikTokPost::dispatch($post->id, $postData, $access_token, $type);
                     }
                 }
-                if ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
+                if ($account->type == "instagram" && $file) {
+                    $igEligible = ! empty($upload['instagram_carousel'])
+                        ? (count($upload['carousel_media'] ?? []) >= 2)
+                        : ((($image && ! $video) || (! $image && $video)));
+                    if (! $igEligible) {
+                        continue;
+                    }
                     $ig = InstagramAccount::where('id', $account->id)->firstOrFail();
                     $tokenResponse = FacebookService::validateToken($ig);
                     if (! $tokenResponse['success']) {
@@ -1449,7 +1645,10 @@ class  ScheduleController extends Controller
                             'message' => $tokenResponse['message'] ?? 'Failed to validate Facebook access token for Instagram.',
                         ];
                     }
-                    $mediaType = ! empty($image) ? 'photo' : 'video';
+                    $mediaType = $this->instagramTypeFromUpload($request, $upload, $instagramOnlySelection);
+                    $metadata = ! empty($upload['instagram_carousel'])
+                        ? json_encode(['carousel_media' => $upload['carousel_media']])
+                        : null;
                     $data = [
                         'user_id' => $user->id,
                         'account_id' => $account->id,
@@ -1460,6 +1659,7 @@ class  ScheduleController extends Controller
                         'comment' => $comment,
                         'image' => $image,
                         'video' => $video,
+                        'metadata' => $metadata,
                         'status' => 0,
                         'publish_date' => $publishDateNow,
                     ];
@@ -1746,19 +1946,15 @@ class  ScheduleController extends Controller
             }
             $content = $request->get("content") ?? null;
             $comment = $request->get("comment") ?? null;
-            $file = $request->file("files") ? true : false;
-            $image = $request->file("files");
-            $image = $video = null;
-            if ($file) {
-                $is_video = $request->video;
-                if ($is_video) {
-                    $video = saveToS3($request->file("files"));
-                } else {
-                    $image = saveImage($request->file("files"));
-                }
+            $upload = $this->normalizeCreatePostFileUploads($request);
+            if ($upload['error'] !== null) {
+                return $upload['error'];
             }
+            $file = $upload['has_files'];
+            $image = $upload['image'];
+            $video = $upload['video'];
 
-            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $file, $image, $video);
+            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $upload);
             if ($igOnlyErr !== null) {
                 return $igOnlyErr;
             }
@@ -1777,7 +1973,10 @@ class  ScheduleController extends Controller
                         $postsToCreate++;
                     } elseif ($account->type == "tiktok" && $file) {
                         $postsToCreate++;
-                    } elseif ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
+                    } elseif ($account->type == "instagram" && $file && (
+                        (! empty($upload['instagram_carousel']) && count($upload['carousel_media'] ?? []) >= 2)
+                        || ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))
+                    )) {
                         $postsToCreate++;
                     }
                 }
@@ -1794,6 +1993,8 @@ class  ScheduleController extends Controller
                     ];
                 }
             }
+
+            $instagramOnlySelection = $this->isInstagramOnlyAccountSelection($accounts);
 
             foreach ($accounts as $account) {
                 if (count($account->timeslots) > 0) {
@@ -1882,14 +2083,23 @@ class  ScheduleController extends Controller
                             $this->logService->logQueuedPost('tiktok', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                         }
                     }
-                    if ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
+                    if ($account->type == "instagram" && $file) {
+                        $igEligible = ! empty($upload['instagram_carousel'])
+                            ? (count($upload['carousel_media'] ?? []) >= 2)
+                            : ((($image && ! $video) || (! $image && $video)));
+                        if (! $igEligible) {
+                            continue;
+                        }
                         InstagramAccount::where('id', $account->id)->firstOrFail();
                         $nextTime = (new Post)->nextScheduleTime(
                             ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
                             $account->timeslots,
                             $user
                         );
-                        $mediaType = ! empty($image) ? 'photo' : 'video';
+                        $mediaType = $this->instagramTypeFromUpload($request, $upload, $instagramOnlySelection);
+                        $metadata = ! empty($upload['instagram_carousel'])
+                            ? json_encode(['carousel_media' => $upload['carousel_media']])
+                            : null;
                         $data = [
                             'user_id' => $user->id,
                             'account_id' => $account->id,
@@ -1900,6 +2110,7 @@ class  ScheduleController extends Controller
                             'comment' => $comment,
                             'image' => $image,
                             'video' => $video,
+                            'metadata' => $metadata,
                             'status' => 0,
                             'publish_date' => $nextTime,
                         ];
@@ -1933,19 +2144,15 @@ class  ScheduleController extends Controller
             $comment = $request->get("comment") ?? null;
             $schedule_date = $request->schedule_date;
             $schedule_time = $request->schedule_time;
-            $file = $request->file("files") ? true : false;
-            $image = $request->file("files");
-            $image = $video = null;
-            if ($file) {
-                $is_video = $request->video;
-                if ($is_video) {
-                    $video = saveToS3($request->file("files"));
-                } else {
-                    $image = saveImage($request->file("files"));
-                }
+            $upload = $this->normalizeCreatePostFileUploads($request);
+            if ($upload['error'] !== null) {
+                return $upload['error'];
             }
+            $file = $upload['has_files'];
+            $image = $upload['image'];
+            $video = $upload['video'];
 
-            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $file, $image, $video);
+            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $upload);
             if ($igOnlyErr !== null) {
                 return $igOnlyErr;
             }
@@ -1964,7 +2171,10 @@ class  ScheduleController extends Controller
                     $postsToCreate++;
                 } elseif ($account->type == "tiktok" && $file) {
                     $postsToCreate++;
-                } elseif ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
+                } elseif ($account->type == "instagram" && $file && (
+                    (! empty($upload['instagram_carousel']) && count($upload['carousel_media'] ?? []) >= 2)
+                    || ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))
+                )) {
                     $postsToCreate++;
                 }
             }
@@ -1980,6 +2190,8 @@ class  ScheduleController extends Controller
                     ];
                 }
             }
+
+            $instagramOnlySelection = $this->isInstagramOnlyAccountSelection($accounts);
 
             foreach ($accounts as $account) {
                 $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
@@ -2068,9 +2280,18 @@ class  ScheduleController extends Controller
                         $this->logService->logScheduledPost('tiktok', $post->id, $scheduleDateTime, ['type' => $type]);
                     }
                 }
-                if ($account->type == "instagram" && $file && ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))) {
+                if ($account->type == "instagram" && $file) {
+                    $igEligible = ! empty($upload['instagram_carousel'])
+                        ? (count($upload['carousel_media'] ?? []) >= 2)
+                        : ((($image && ! $video) || (! $image && $video)));
+                    if (! $igEligible) {
+                        continue;
+                    }
                     InstagramAccount::where('id', $account->id)->firstOrFail();
-                    $mediaType = ! empty($image) ? 'photo' : 'video';
+                    $mediaType = $this->instagramTypeFromUpload($request, $upload, $instagramOnlySelection);
+                    $metadata = ! empty($upload['instagram_carousel'])
+                        ? json_encode(['carousel_media' => $upload['carousel_media']])
+                        : null;
                     $data = [
                         'user_id' => $user->id,
                         'account_id' => $account->id,
@@ -2081,6 +2302,7 @@ class  ScheduleController extends Controller
                         'comment' => $comment,
                         'image' => $image,
                         'video' => $video,
+                        'metadata' => $metadata,
                         'status' => 0,
                         'publish_date' => $scheduleDateTime,
                         'scheduled' => 1,

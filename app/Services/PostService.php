@@ -202,6 +202,15 @@ class PostService
     public static function instagramGraphImageUrl(Post $post): ?string
     {
         $raw = $post->getAttributes()['image'] ?? null;
+
+        return self::instagramGraphImageUrlForPath($raw !== null ? (string) $raw : null);
+    }
+
+    /**
+     * Resolve a stored image path or absolute URL to a public HTTPS URL for Instagram Graph image_url.
+     */
+    public static function instagramGraphImageUrlForPath(?string $raw): ?string
+    {
         if ($raw === null || $raw === '') {
             return null;
         }
@@ -246,7 +255,16 @@ class PostService
     public static function instagramGraphVideoUrl(Post $post): ?string
     {
         $raw = $post->getAttributes()['video'] ?? null;
-        if ($raw === null || $raw === '' || $raw === 0 || $raw === '0') {
+
+        return self::instagramGraphVideoUrlForPath($raw !== null && $raw !== '' && $raw !== 0 && $raw !== '0' ? (string) $raw : null);
+    }
+
+    /**
+     * Public HTTPS video URL for Instagram video_url (stored S3 key or absolute URL).
+     */
+    public static function instagramGraphVideoUrlForPath(?string $raw): ?string
+    {
+        if ($raw === null || $raw === '' || $raw === '0') {
             return null;
         }
         $raw = trim((string) $raw);
@@ -285,6 +303,49 @@ class PostService
             $imageUrl = self::instagramGraphImageUrl($post);
             if ($imageUrl !== null && $imageUrl !== '') {
                 $postData['image_url'] = $imageUrl;
+            }
+        } elseif ($post->type === 'carousel') {
+            $meta = $post->metadata;
+            if (is_string($meta) && $meta !== '') {
+                $decoded = json_decode($meta, true);
+                $meta = is_array($decoded) ? $decoded : [];
+            }
+            if (! is_array($meta)) {
+                $meta = [];
+            }
+            $items = [];
+            if (! empty($meta['carousel_media']) && is_array($meta['carousel_media'])) {
+                foreach ($meta['carousel_media'] as $row) {
+                    if (! is_array($row)) {
+                        continue;
+                    }
+                    $kind = $row['type'] ?? 'photo';
+                    $path = (string) ($row['path'] ?? '');
+                    if ($path === '') {
+                        continue;
+                    }
+                    if ($kind === 'video') {
+                        $u = self::instagramGraphVideoUrlForPath($path);
+                        if ($u !== null && $u !== '') {
+                            $items[] = ['type' => 'video', 'url' => $u];
+                        }
+                    } else {
+                        $u = self::instagramGraphImageUrlForPath($path);
+                        if ($u !== null && $u !== '') {
+                            $items[] = ['type' => 'image', 'url' => $u];
+                        }
+                    }
+                }
+            } elseif (! empty($meta['carousel_images']) && is_array($meta['carousel_images'])) {
+                foreach ($meta['carousel_images'] as $path) {
+                    $u = self::instagramGraphImageUrlForPath((string) $path);
+                    if ($u !== null && $u !== '') {
+                        $items[] = ['type' => 'image', 'url' => $u];
+                    }
+                }
+            }
+            if (count($items) >= 2) {
+                $postData['carousel_items'] = $items;
             }
         } elseif ($post->type === 'video' || $post->type === 'reel') {
             $videoUrl = self::instagramGraphVideoUrl($post);

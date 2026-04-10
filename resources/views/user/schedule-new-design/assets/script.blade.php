@@ -2020,6 +2020,23 @@
             return onlyFacebook;
         }
 
+        function createPostHasOnlyInstagramChannelsSelected() {
+            if (isQueueNewPostModalVisible()) {
+                var q = getSidebarSingleAccountPairForQueueModal();
+                return !!(q && (q.type || '') === 'instagram');
+            }
+            var checked = $('.channels-dropdown-checkbox:checked');
+            if (checked.length === 0) return false;
+            var onlyInstagram = true;
+            checked.each(function() {
+                if (($(this).data('type') || '') !== 'instagram') {
+                    onlyInstagram = false;
+                    return false;
+                }
+            });
+            return onlyInstagram;
+        }
+
         function createPostHasVideoInQueue() {
             var vids = ['mp4', 'mkv', 'mov', 'mpeg', 'webm'];
             for (var i = 0; i < createPostFiles.length; i++) {
@@ -2060,6 +2077,34 @@
                 pm$('FormatPost').prop('checked', true);
                 pm$('FormatReel').add(pm$('FormatStory')).prop('checked', false);
             }
+            updateCreatePostInstagramFormatRow();
+        }
+
+        function getInstagramContentFormat() {
+            var $r = activeComposeModal$().find('input[name="create_post_instagram_format"]:checked');
+            return ($r.length && $r.val()) ? String($r.val()) : 'post';
+        }
+
+        function updateCreatePostInstagramFormatRow() {
+            var hasVideo = createPostHasVideoInQueue();
+            var show = createPostHasOnlyInstagramChannelsSelected() && !is_link;
+            var $wrap = pm$('InstagramFormatWrap');
+            var $reelOption = pm$('InstagramFormatReel').closest('.create-post-format-option');
+            if (show) {
+                $wrap.show();
+                if (hasVideo) {
+                    $reelOption.show();
+                } else {
+                    $reelOption.hide();
+                    if (pm$('InstagramFormatReel').is(':checked')) {
+                        pm$('InstagramFormatPost').prop('checked', true);
+                    }
+                }
+            } else {
+                $wrap.hide();
+                $reelOption.show();
+                pm$('InstagramFormatPost').prop('checked', true);
+            }
             updateCreatePostTextareasVisibility();
         }
 
@@ -2076,10 +2121,23 @@
                 return;
             }
 
+            var igFormatVisible = pm$('InstagramFormatWrap').is(':visible');
+            var igFormat = getInstagramContentFormat();
             var fbFormatVisible = pm$('FacebookFormatWrap').is(':visible');
             var selectedFormats = activeComposeModal$().find('input[name="create_post_facebook_formats[]"]:checked').map(function() {
                 return $(this).val();
             }).get();
+
+            if (igFormatVisible && !fbFormatVisible) {
+                if (igFormat === 'post' || igFormat === 'carousel') {
+                    pm$('CommentWrap').show();
+                } else {
+                    pm$('CommentWrap').hide();
+                }
+                pm$('EditorTextarea').show();
+                pm$('EmojiBtn').show();
+                return;
+            }
 
             if (!fbFormatVisible || selectedFormats.length === 0) {
                 pm$('CommentWrap').hide();
@@ -2109,6 +2167,10 @@
         }
 
         $(document).on('change', 'input[name="create_post_facebook_formats[]"]', function() {
+            updateCreatePostTextareasVisibility();
+        });
+
+        $(document).on('change', 'input[name="create_post_instagram_format"]', function() {
             updateCreatePostTextareasVisibility();
         });
 
@@ -3240,9 +3302,53 @@
             });
         }
 
+        function validateCreatePostInstagramMedia(igFmt, filesToProcess) {
+            if (!createPostHasOnlyInstagramChannelsSelected()) return true;
+            var vids = ['mp4', 'mkv', 'mov', 'mpeg', 'webm'];
+            function isVid(f) {
+                var ext = (f.name || '').split('.').pop().toLowerCase();
+                return vids.indexOf(ext) !== -1;
+            }
+            if (igFmt === 'carousel') {
+                if (filesToProcess.length < 2) {
+                    toastr.error('Carousel needs at least 2 files.');
+                    return false;
+                }
+                if (filesToProcess.length > 10) {
+                    toastr.error('Carousel supports at most 10 files.');
+                    return false;
+                }
+                return true;
+            }
+            if (igFmt === 'reel') {
+                if (filesToProcess.length !== 1) {
+                    toastr.error('Reels use one video at a time.');
+                    return false;
+                }
+                if (!isVid(filesToProcess[0])) {
+                    toastr.error('Reels require a video file.');
+                    return false;
+                }
+                return true;
+            }
+            if (filesToProcess.length > 1) {
+                toastr.error('Single Post uses one image or video. Choose Carousel for multiple files.');
+                return false;
+            }
+            return true;
+        }
+
         function processCreatePostPhotoVideo() {
             var filesToProcess = createPostFiles.slice();
             if (filesToProcess.length === 0) return;
+            if (!createPostChainPostsMode && createPostHasOnlyInstagramChannelsSelected()) {
+                var igFmt = getInstagramContentFormat();
+                if (!validateCreatePostInstagramMedia(igFmt, filesToProcess)) return;
+                if (igFmt === 'carousel') {
+                    processCreatePostInstagramCarousel(filesToProcess);
+                    return;
+                }
+            }
             if (createPostChainPostsMode && action_name === 'queue') {
                 if (!validateCreatePostTikTokSettings()) return;
                 processCreatePostChainQueue();
@@ -3251,6 +3357,56 @@
             if (!validateCreatePostTikTokSettings()) return;
             disableActionButton();
             processCreatePostFilesQueue(filesToProcess, 0);
+        }
+
+        function processCreatePostInstagramCarousel(filesToProcess) {
+            if (!validateCreatePostTikTokSettings()) return;
+            disableActionButton();
+            var formData = new FormData();
+            formData.append("_token", "{{ csrf_token() }}");
+            formData.append("content", pm$('EditorTextarea').val() || '');
+            formData.append("comment", getCreatePostCommentValue() || '');
+            formData.append("link", "0");
+            formData.append("video", "0");
+            formData.append("instagram_content_format", "carousel");
+            filesToProcess.forEach(function(file) {
+                formData.append("files[]", file);
+            });
+            var dt = getScheduleDateTime();
+            var schedule_date = dt.date;
+            var schedule_time = dt.time;
+            var effectiveAction = createPostQueueUsesFixedSlot() ? 'schedule' : action_name;
+            formData.append("action", effectiveAction);
+            formData.append("schedule_date", effectiveAction === 'schedule' ? (schedule_date || '') : '');
+            formData.append("schedule_time", effectiveAction === 'schedule' ? (schedule_time || '') : '');
+            var fbFormats = activeComposeModal$().find('input[name="create_post_facebook_formats[]"]:checked').map(function() {
+                return $(this).val();
+            }).get();
+            formData.append("facebook_content_formats", JSON.stringify(fbFormats));
+            var selectedAccounts = getCreatePostSelectedAccounts();
+            if (selectedAccounts.length > 0) {
+                formData.append("account_ids", JSON.stringify(selectedAccounts));
+            }
+            $.ajax({
+                url: "{{ route('panel.schedule.process.post') }}",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        resetCreatePostArea();
+                        toastr.success(getCreatePostSuccessMessage(response.message, selectedAccounts));
+                    } else {
+                        toastr.error(response.message);
+                    }
+                    enableActionButton();
+                },
+                error: function() {
+                    toastr.error("Failed to process post.");
+                    enableActionButton();
+                }
+            });
         }
 
         function processCreatePostChainQueue() {
@@ -3272,6 +3428,9 @@
             var selectedAccounts = getCreatePostSelectedAccounts();
             if (selectedAccounts.length > 0) {
                 formData.append("account_ids", JSON.stringify(selectedAccounts));
+            }
+            if (selectedAccounts.length > 0 && selectedAccounts.every(function(a) { return (a.type || '') === 'instagram'; })) {
+                formData.append('instagram_content_format', getInstagramContentFormat());
             }
             var tiktokAccounts = getCreatePostSelectedTikTokAccounts(selectedAccounts);
             if (tiktokAccounts.length > 0) {
@@ -3374,6 +3533,9 @@
             if (selectedAccounts.length > 0) {
                 formData.append("account_ids", JSON.stringify(selectedAccounts));
             }
+            if (createPostHasOnlyInstagramChannelsSelected()) {
+                formData.append('instagram_content_format', getInstagramContentFormat());
+            }
             var tiktokAccounts = getCreatePostSelectedTikTokAccounts(selectedAccounts);
             if (tiktokAccounts.length > 0) {
                 formData.append('tiktok_account_id', tiktokAccounts[0].id);
@@ -3455,6 +3617,7 @@
             is_video = 0;
             current_file = 0;
             // Preserve selected Facebook format across resets; just recalculate row visibility.
+            pm$('InstagramFormatPost').prop('checked', true);
             updateCreatePostFacebookFormatRow();
             pm$('ScheduleDropdown').removeClass('is-open');
             if (currentPostStatusTab === 'queue' && typeof loadQueueTimeslotsSection === 'function') {
