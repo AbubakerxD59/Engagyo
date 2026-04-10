@@ -94,6 +94,14 @@ class InstagramGraphService
             return;
         }
 
+        $prepared = InstagramImagePrepService::normalizeResolvedHttpsImageUrl((string) $imageUrl);
+        if ($prepared['error'] !== null) {
+            $this->failPost($post, $prepared['error']);
+
+            return;
+        }
+        $imageUrl = $prepared['url'];
+
         $base = $this->graphBaseUrl();
         $igUserId = $ig->ig_user_id;
 
@@ -265,6 +273,15 @@ class InstagramGraphService
                 ];
                 $isVideoChild = true;
             } else {
+                $prepared = InstagramImagePrepService::normalizeResolvedHttpsImageUrl($mediaUrl);
+                if ($prepared['error'] !== null) {
+                    $this->emitStep($onStep, $stepChild.'.prep', $prepared['error'], 'error', []);
+                    $this->failPost($post, $prepared['error']);
+
+                    return;
+                }
+                $mediaUrl = $prepared['url'];
+
                 $payload = array_filter([
                     'image_url' => $mediaUrl,
                     'is_carousel_item' => 'true',
