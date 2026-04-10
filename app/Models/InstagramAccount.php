@@ -84,7 +84,17 @@ class InstagramAccount extends Model
     protected function profileImage(): Attribute
     {
         return Attribute::make(
-            get: fn ($value) => ! empty($value) ? asset('images/' . $value) : no_image()
+            get: function ($value) {
+                if (empty($value)) {
+                    return no_image();
+                }
+                $value = (string) $value;
+                if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+                    return $value;
+                }
+
+                return asset('images/'.$value);
+            }
         );
     }
 

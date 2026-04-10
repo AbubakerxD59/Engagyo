@@ -6,6 +6,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\Models\Package;
 use App\Models\DomainUtmCode;
+use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Storage;
 
@@ -125,47 +126,69 @@ function fetchFromS3($path)
 
 function saveImageFromUrl($url, $folder = 'images')
 {
-    $image_info = pathinfo($url);
-    if (isset($image_info["extension"])) {
-        if (str_contains($image_info["extension"], 'jpeg')) {
-            $image_info["extension"] = 'jpeg';
-        }
-        $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.' . $image_info["extension"];
-        $path = public_path() . "/$folder" . '/';
-        if (!is_dir($path)) {
-            if (!mkdir($path, 0755, true)) {
-                return false;
-            }
-        }
-        $path .= $fileName;
-        $imageData = @file_get_contents($url);
-        if ($imageData === false) {
-            return false;
-        }
-        if (file_put_contents($path, $imageData)) {
-            return $fileName;
-        } else {
-            return false;
-        }
-    } else {
-        $imageData = @file_get_contents($url);
-        if ($imageData !== false) {
-            $fileName = strtotime(date('Y-m-d H:i:s')) . rand() . '.png';
-            $path = public_path() . "/images" . '/';
-            if (!is_dir($path)) {
-                if (!mkdir($path, 0755, true)) {
-                    return false;
-                }
-            }
-            $path .= $fileName;
-            if (file_put_contents($path, $imageData)) {
-                return $fileName;
-            } else {
-                return false;
-            }
-        }
+    if (empty($url) || ! is_string($url)) {
         return false;
     }
+    $url = trim($url);
+    if (! filter_var($url, FILTER_VALIDATE_URL)) {
+        return false;
+    }
+
+    $body = null;
+    try {
+        $response = Http::timeout(45)
+            ->withOptions(['allow_redirects' => true])
+            ->withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept' => 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+            ])
+            ->get($url);
+        if ($response->successful()) {
+            $body = $response->body();
+        }
+    } catch (\Throwable $e) {
+        $body = null;
+    }
+
+    if ($body === null || $body === '') {
+        $ctx = stream_context_create([
+            'http' => [
+                'timeout' => 45,
+                'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36\r\n",
+            ],
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+            ],
+        ]);
+        $body = @file_get_contents($url, false, $ctx);
+    }
+
+    if ($body === false || $body === '') {
+        return false;
+    }
+
+    $urlPath = parse_url($url, PHP_URL_PATH) ?: '';
+    $ext = strtolower((string) pathinfo($urlPath, PATHINFO_EXTENSION));
+    $ext = preg_replace('/[^a-z0-9]/', '', $ext);
+    if ($ext === 'jpeg') {
+        $ext = 'jpg';
+    }
+    if (! in_array($ext, ['jpg', 'png', 'gif', 'webp'], true)) {
+        $ext = 'jpg';
+    }
+
+    $fileName = strtotime(date('Y-m-d H:i:s')).random_int(1000, 999999).'.'.$ext;
+    $dir = public_path().'/'.trim($folder, '/').'/';
+    if (! is_dir($dir) && ! mkdir($dir, 0755, true) && ! is_dir($dir)) {
+        return false;
+    }
+    $path = $dir.$fileName;
+    if (file_put_contents($path, $body)) {
+        return $fileName;
+    }
+
+    return false;
 }
 
 /**

@@ -366,6 +366,36 @@ class FacebookService
         return $response;
     }
 
+    /**
+     * Instagram User profile picture (page access token). Use when nested instagram_business_account omits profile_picture_url.
+     */
+    public function instagramProfilePictureUrl(string $access_token, string $ig_user_id): array
+    {
+        try {
+            $path = '/'.$ig_user_id.'?fields=profile_picture_url';
+            $response = $this->facebook->get($path, $access_token);
+            $node = $response->getGraphNode();
+            $url = $node->getField('profile_picture_url');
+
+            return [
+                'success' => true,
+                'url' => $url ? (string) $url : null,
+            ];
+        } catch (FacebookResponseException $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'url' => null,
+            ];
+        } catch (FacebookSDKException $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+                'url' => null,
+            ];
+        }
+    }
+
     public function pageProfileImage($access_token, $page_id)
     {
         $profile_picture = $this->facebook->get('/' . $page_id . '/picture?redirect=0&', $access_token);

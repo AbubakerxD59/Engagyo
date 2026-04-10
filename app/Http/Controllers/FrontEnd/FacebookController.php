@@ -246,9 +246,22 @@ class FacebookController extends Controller
                 $didIncrement = true;
             }
 
-            $profileFile = null;
-            if (! empty($igPicUrl)) {
-                $profileFile = saveImageFromUrl($igPicUrl) ?: null;
+            if (empty($igPicUrl) && $pageToken && $igId) {
+                $pic = $this->facebookService->instagramProfilePictureUrl($pageToken, $igId);
+                if (! empty($pic['success']) && ! empty($pic['url'])) {
+                    $igPicUrl = $pic['url'];
+                }
+            }
+
+            $previousProfile = $existing ? $existing->getRawOriginal('profile_image') : null;
+            $profileStored = $previousProfile;
+            if (! empty($igPicUrl) && filter_var($igPicUrl, FILTER_VALIDATE_URL)) {
+                $savedLocal = saveImageFromUrl($igPicUrl);
+                if ($savedLocal) {
+                    $profileStored = $savedLocal;
+                } else {
+                    $profileStored = $igPicUrl;
+                }
             }
 
             try {
@@ -262,7 +275,7 @@ class FacebookController extends Controller
                         'page_id' => (string) $pageId,
                         'username' => $igUsername ?: ($igName ?: $igId),
                         'name' => $igName,
-                        'profile_image' => $profileFile,
+                        'profile_image' => $profileStored,
                         'access_token' => $pageToken,
                         'expires_in' => time(),
                     ]
