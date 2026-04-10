@@ -17,6 +17,11 @@ class PublishInstagramPost implements ShouldQueue
 
     public $tries = 1;
 
+    /**
+     * Video/Reels container polling can exceed several minutes; keep workers from timing out at 60s.
+     */
+    public int $timeout = 1200;
+
     public function __construct(
         private int $postId,
         private string $accessToken

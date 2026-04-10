@@ -601,6 +601,12 @@ class TestPublishController extends Controller
             ]);
         }
 
+        // Instagram may transcode video for many minutes; avoid PHP cutting the request short during dispatchSync.
+        if (function_exists('set_time_limit')) {
+            @set_time_limit(960);
+        }
+        @ini_set('max_execution_time', '960');
+
         PublishInstagramPost::dispatchSync($post->id, $tokenResponse['access_token']);
 
         $post->refresh();

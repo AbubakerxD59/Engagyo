@@ -94,8 +94,9 @@ class InstagramGraphService
             return;
         }
 
-        if (! $this->waitForMediaContainerReady($base, (string) $creationId, $accessToken, false)) {
-            $this->failPost($post, 'Instagram media container did not become ready in time.');
+        $waitError = $this->waitForMediaContainerReady($base, (string) $creationId, $accessToken, false);
+        if ($waitError !== null) {
+            $this->failPost($post, $waitError);
 
             return;
         }
@@ -158,8 +159,9 @@ class InstagramGraphService
             return;
         }
 
-        if (! $this->waitForMediaContainerReady($base, (string) $creationId, $accessToken, true)) {
-            $this->failPost($post, 'Instagram video container did not become ready in time.');
+        $waitError = $this->waitForMediaContainerReady($base, (string) $creationId, $accessToken, true);
+        if ($waitError !== null) {
+            $this->failPost($post, $waitError);
 
             return;
         }
@@ -212,42 +214,105 @@ class InstagramGraphService
         $this->successNotification($post);
     }
 
-    private function waitForMediaContainerReady(string $base, string $creationId, string $accessToken, bool $isVideo): bool
+    /**
+     * Poll container until status is FINISHED. Video/Reels processing often needs several minutes.
+     *
+     * @return string|null Error message, or null when ready for media_publish
+     */
+    private function waitForMediaContainerReady(string $base, string $creationId, string $accessToken, bool $isVideo): ?string
     {
-        $maxAttempts = $isVideo ? 90 : 45;
+        // Reels/video transcoding can exceed 5–10+ minutes; photos are usually fast.
+        $maxAttempts = $isVideo ? 200 : 60;
+        $sleepSec = $isVideo ? 5 : 2;
+        $maxWaitHuman = $maxAttempts * $sleepSec;
+
+        $lastPayload = null;
+        $lastCode = null;
+
         for ($i = 0; $i < $maxAttempts; $i++) {
             $statusResp = Http::acceptJson()
-                ->timeout(60)
+                ->timeout(90)
                 ->get("{$base}/{$creationId}", [
-                    'fields' => 'status_code',
+                    'fields' => 'id,status_code,status',
                     'access_token' => $accessToken,
                 ]);
 
             if (! $statusResp->successful()) {
-                return false;
+                $http = $statusResp->status();
+                if ($http === 400 || $http === 401 || $http === 403) {
+                    return 'Could not read Instagram container status: '.$this->formatGraphError($statusResp);
+                }
+                Log::warning('Instagram container status GET non-success', [
+                    'creation_id' => $creationId,
+                    'http' => $http,
+                    'body' => $statusResp->body(),
+                ]);
+                sleep($sleepSec);
+
+                continue;
             }
 
             $payload = $statusResp->json();
-            $code = is_array($payload)
-                ? ($payload['status_code'] ?? data_get($payload, 'status.status_code') ?? data_get($payload, 'status'))
-                : null;
-            if (is_string($code)) {
-                $code = strtoupper($code);
-            }
+            $lastPayload = is_array($payload) ? $payload : null;
+            $code = $this->normalizeInstagramContainerStatusCode($lastPayload);
+            $lastCode = $code;
 
             if ($code === 'FINISHED') {
-                return true;
+                return null;
             }
             if (in_array($code, ['ERROR', 'EXPIRED'], true)) {
                 Log::warning('Instagram container status error', ['creation_id' => $creationId, 'status_code' => $code]);
 
-                return false;
+                return 'Instagram media container failed during processing (status: '.$code.').';
             }
 
-            sleep($isVideo ? 3 : 2);
+            sleep($sleepSec);
         }
 
-        return false;
+        $detail = $lastCode !== null
+            ? ' Last reported status: '.$lastCode.'.'
+            : '';
+        $snapshot = '';
+        if ($lastPayload !== null) {
+            $snap = json_encode($lastPayload, JSON_UNESCAPED_SLASHES);
+            if (strlen($snap) > 1200) {
+                $snap = substr($snap, 0, 1200).'…';
+            }
+            $snapshot = ' Snapshot: '.$snap;
+        }
+
+        $kind = $isVideo ? 'video' : 'media';
+
+        return 'Instagram '.$kind.' container did not become ready within '.$maxWaitHuman.'s.'.$detail.$snapshot
+            .($isVideo ? ' For video, try a shorter/smaller MP4 (H.264), or use an async queue worker with a higher time limit than the web request.' : '');
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $payload
+     */
+    private function normalizeInstagramContainerStatusCode(?array $payload): ?string
+    {
+        if ($payload === null) {
+            return null;
+        }
+
+        if (! empty($payload['status_code']) && is_string($payload['status_code'])) {
+            return strtoupper(trim($payload['status_code']));
+        }
+
+        $status = $payload['status'] ?? null;
+        if (is_string($status) && $status !== '') {
+            return strtoupper(trim($status));
+        }
+        if (is_array($status)) {
+            foreach (['status_code', 'name', 'coding'] as $key) {
+                if (! empty($status[$key]) && is_string($status[$key])) {
+                    return strtoupper(trim((string) $status[$key]));
+                }
+            }
+        }
+
+        return null;
     }
 
     private function formatGraphError(\Illuminate\Http\Client\Response $response): string
