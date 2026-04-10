@@ -93,7 +93,7 @@ class PostService
                 $postData = self::postTypeBody($post);
                 PublishPinterestPost::dispatch($post->id, $postData, $post->board->pinterest->access_token, $post->type);
             }
-            if ($post->social_type == "instagram") {
+            if (str_contains(strtolower(trim((string) $post->social_type)), 'instagram')) {
                 $ig = $post->instagramAccount;
                 if (! $ig) {
                     return [
@@ -185,25 +185,69 @@ class PostService
 
     public static function postTypeBody($post)
     {
-        switch ($post->social_type) {
-            case 'facebook':
-                return self::facebookPostTypeBody($post);
-            case 'pinterest':
-                return self::pinterestPostTypeBody($post);
-            case 'tiktok':
-                return self::tiktokPostTypeBody($post);
-            case 'instagram':
-                return self::instagramPostTypeBody($post);
-            default:
-                return [];
+        $st = strtolower(trim((string) $post->social_type));
+
+        return match (true) {
+            str_contains($st, 'instagram') => self::instagramPostTypeBody($post),
+            str_contains($st, 'pinterest') => self::pinterestPostTypeBody($post),
+            str_contains($st, 'tiktok') => self::tiktokPostTypeBody($post),
+            str_contains($st, 'facebook') => self::facebookPostTypeBody($post),
+            default => [],
+        };
+    }
+
+    /**
+     * Absolute HTTPS URL for Instagram Content Publishing (image_url). Meta must fetch this from the public internet.
+     */
+    public static function instagramGraphImageUrl(Post $post): ?string
+    {
+        $raw = $post->getAttributes()['image'] ?? null;
+        if ($raw === null || $raw === '') {
+            return null;
         }
+        $raw = trim((string) $raw);
+        if ($raw === '') {
+            return null;
+        }
+
+        if (preg_match('#^https://#i', $raw)) {
+            return $raw;
+        }
+        if (preg_match('#^http://#i', $raw)) {
+            return preg_replace('#^http://#i', 'https://', $raw);
+        }
+
+        $clean = str_replace(['..', '\\'], '', $raw);
+        $clean = ltrim($clean, '/');
+        $relative = str_starts_with($clean, 'uploads/')
+            ? $clean
+            : 'uploads/'.$clean;
+
+        $override = config('services.instagram.image_public_base_url');
+        $base = $override
+            ? rtrim((string) $override, '/')
+            : rtrim((string) config('app.url', ''), '/');
+
+        if ($base === '') {
+            return url($relative);
+        }
+
+        $url = $base.'/'.$relative;
+        if (preg_match('#^http://#i', $url)) {
+            $url = preg_replace('#^http://#i', 'https://', $url);
+        }
+
+        return $url;
     }
 
     public static function instagramPostTypeBody(Post $post): array
     {
         $postData = [];
         if ($post->type === 'photo') {
-            $postData['image_url'] = $post->image;
+            $imageUrl = self::instagramGraphImageUrl($post);
+            if ($imageUrl !== null && $imageUrl !== '') {
+                $postData['image_url'] = $imageUrl;
+            }
             $captionParts = array_filter([(string) ($post->title ?? ''), (string) ($post->comment ?? '')]);
             $caption = trim(implode("\n\n", $captionParts));
             if ($caption !== '') {

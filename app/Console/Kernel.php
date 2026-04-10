@@ -14,6 +14,7 @@ use App\Console\Commands\PinterestPublishCron;
 use App\Console\Commands\FacebookPublishCron;
 use App\Console\Commands\TikTokPublishCron;
 use App\Console\Commands\InstagramPublishCron;
+use App\Console\Commands\TestInstagramImagePublish;
 use App\Console\Commands\PublishSchedulePostCron;
 use App\Console\Commands\DownloadPhotoCron;
 use App\Console\Commands\RunFacebookTests;
@@ -46,6 +47,7 @@ class Kernel extends ConsoleKernel
         FacebookPublishCron::class, //facebook:publish
         TikTokPublishCron::class, //tiktok:publish
         InstagramPublishCron::class, //instagram:publish
+        TestInstagramImagePublish::class, //instagram:test-image
         PublishSchedulePostCron::class, //schedule:publish
         DownloadPhotoCron::class, //download:photo
         RunFacebookTests::class, //facebook:run-tests

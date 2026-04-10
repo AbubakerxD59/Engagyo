@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\PublishInstagramPost;
+use App\Models\InstagramAccount;
 use App\Models\Post;
 use App\Models\Page;
+use App\Models\User;
 use App\Services\FacebookService;
 use App\Services\PostService;
 use Illuminate\Http\Request;
@@ -310,5 +313,193 @@ class TestPublishController extends Controller
         $post = PostService::create($data);
 
         return redirect()->route('panel.test.publish.facebook', ['id' => $post->id]);
+    }
+
+    /**
+     * Test Instagram photo publish (Content Publishing API). GET form.
+     * Route: GET /panel/test/instagram-image
+     */
+    public function showInstagramImageTestForm()
+    {
+        $user = Auth::guard('user')->user();
+        $accounts = $this->instagramAccountsForPanelUser($user);
+
+        return view('user.test-instagram-image', [
+            'accounts' => $accounts,
+            'steps' => [],
+        ]);
+    }
+
+    /**
+     * Accept image upload, create Post, run PublishInstagramPost synchronously, show steps.
+     * Route: POST /panel/test/instagram-image
+     */
+    public function handleInstagramImageTest(Request $request)
+    {
+        $user = Auth::guard('user')->user();
+        $steps = [];
+        $stepId = 1;
+
+        $validated = $request->validate([
+            'instagram_account_id' => 'required|integer|exists:instagram_accounts,id',
+            'image' => 'required|file|mimetypes:image/jpeg,image/png,image/webp',
+            'caption' => 'nullable|string|max:2200',
+        ]);
+
+        $ig = InstagramAccount::where('id', $validated['instagram_account_id'])->first();
+        if (! $ig) {
+            return view('user.test-instagram-image', [
+                'accounts' => $this->instagramAccountsForPanelUser($user),
+                'error' => 'Instagram account not found.',
+                'steps' => [],
+            ]);
+        }
+
+        if (! $this->userOwnsInstagramAccount($user, $ig)) {
+            return view('user.test-instagram-image', [
+                'accounts' => $this->instagramAccountsForPanelUser($user),
+                'error' => 'You do not have access to this Instagram account.',
+                'steps' => [],
+            ]);
+        }
+
+        if (empty($ig->ig_user_id)) {
+            return view('user.test-instagram-image', [
+                'accounts' => $this->instagramAccountsForPanelUser($user),
+                'error' => 'This account has no Instagram user id. Reconnect it in Accounts.',
+                'steps' => [],
+            ]);
+        }
+
+        $fileName = saveImage($request->file('image'));
+        $caption = $validated['caption'] ?? '';
+
+        $post = PostService::create([
+            'user_id' => $user->id,
+            'account_id' => $ig->id,
+            'social_type' => 'instagram',
+            'type' => 'photo',
+            'source' => 'test',
+            'title' => 'Instagram image test',
+            'comment' => $caption,
+            'image' => $fileName,
+            'publish_date' => now()->format('Y-m-d H:i'),
+            'scheduled' => 0,
+        ]);
+
+        $post->load('instagramAccount');
+
+        $steps[] = [
+            'id' => $stepId++,
+            'title' => 'Step 1: Post created',
+            'status' => 'success',
+            'data' => [
+                'post_id' => $post->id,
+                'image_file' => $fileName,
+                'social_type' => $post->social_type,
+                'type' => $post->type,
+                'account_id' => $post->account_id,
+                'instagram_username' => $ig->username,
+                'publish_date_utc' => $post->publish_date,
+            ],
+        ];
+
+        $imageUrl = PostService::instagramGraphImageUrl($post);
+        $payload = PostService::postTypeBody($post);
+
+        $steps[] = [
+            'id' => $stepId++,
+            'title' => 'Step 2: Image URL for Graph API (must be public HTTPS)',
+            'status' => $imageUrl ? 'success' : 'error',
+            'data' => [
+                'image_url' => $imageUrl,
+                'hint' => 'Set APP_URL or INSTAGRAM_IMAGE_PUBLIC_BASE_URL so Meta can fetch the file.',
+            ],
+        ];
+
+        $steps[] = [
+            'id' => $stepId++,
+            'title' => 'Step 3: Publish payload (caption + image_url)',
+            'status' => 'info',
+            'data' => $payload,
+        ];
+
+        $tokenResponse = FacebookService::validateToken($ig);
+        $steps[] = [
+            'id' => $stepId++,
+            'title' => 'Step 4: Access token',
+            'status' => $tokenResponse['success'] ? 'success' : 'error',
+            'data' => [
+                'success' => $tokenResponse['success'],
+                'message' => $tokenResponse['message'] ?? null,
+                'access_token_preview' => ($tokenResponse['success'] ?? false)
+                    ? substr((string) $tokenResponse['access_token'], 0, 24).'...'
+                    : null,
+            ],
+        ];
+
+        if (! ($tokenResponse['success'] ?? false)) {
+            return view('user.test-instagram-image', [
+                'accounts' => $this->instagramAccountsForPanelUser($user),
+                'steps' => $steps,
+                'post' => $post->fresh(),
+            ]);
+        }
+
+        PublishInstagramPost::dispatchSync($post->id, $tokenResponse['access_token']);
+
+        $post->refresh();
+        $responseDecoded = json_decode((string) $post->response, true);
+
+        $steps[] = [
+            'id' => $stepId++,
+            'title' => 'Step 5: Publish job finished',
+            'status' => (int) $post->status === 1 ? 'success' : 'error',
+            'data' => [
+                'status' => $post->status,
+                'post_id_graph' => $post->post_id,
+                'response' => $responseDecoded ?? $post->response,
+            ],
+        ];
+
+        return view('user.test-instagram-image', [
+            'accounts' => $this->instagramAccountsForPanelUser($user),
+            'steps' => $steps,
+            'post' => $post,
+        ]);
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, InstagramAccount>
+     */
+    private function instagramAccountsForPanelUser(User $user)
+    {
+        $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
+        $q = InstagramAccount::query()->where('user_id', $ownerId);
+
+        if ($user->isTeamMember()) {
+            $igIds = $user->getTeamMemberAccountIdsByType('instagram');
+            if (empty($igIds)) {
+                return collect();
+            }
+            $q->whereIn('id', array_map('intval', $igIds));
+        }
+
+        return $q->orderBy('username')->get();
+    }
+
+    private function userOwnsInstagramAccount(User $user, InstagramAccount $ig): bool
+    {
+        $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
+        if ((int) $ig->user_id !== $ownerId) {
+            return false;
+        }
+        if ($user->isTeamMember()) {
+            $igIds = $user->getTeamMemberAccountIdsByType('instagram');
+
+            return in_array((int) $ig->id, array_map('intval', $igIds), true);
+        }
+
+        return true;
     }
 }

@@ -129,7 +129,14 @@ class InstagramGraphService
                 return false;
             }
 
-            $code = $statusResp->json('status_code');
+            $payload = $statusResp->json();
+            $code = is_array($payload)
+                ? ($payload['status_code'] ?? data_get($payload, 'status.status_code') ?? data_get($payload, 'status'))
+                : null;
+            if (is_string($code)) {
+                $code = strtoupper($code);
+            }
+
             if ($code === 'FINISHED') {
                 return true;
             }

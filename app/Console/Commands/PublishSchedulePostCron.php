@@ -89,7 +89,7 @@ class PublishSchedulePostCron extends Command
                     $this->processFacebookPost($post);
                 } elseif ($post->social_type == "pinterest") {
                     $this->processPinterestPost($post);
-                } elseif ($post->social_type == "instagram") {
+                } elseif (str_contains(strtolower(trim((string) $post->social_type)), 'instagram')) {
                     $this->processInstagramPost($post);
                 }
             } catch (\Exception $e) {

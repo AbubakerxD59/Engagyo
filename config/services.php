@@ -37,6 +37,14 @@ return [
         'redirect' => env('FACEBOOK_REDIRECT_URL'),
     ],
 
+    /*
+    | Base URL Meta can use to fetch post images (HTTPS, public). Defaults to APP_URL.
+    | Set INSTAGRAM_IMAGE_PUBLIC_BASE_URL when APP_URL is internal but assets are on a public host/CDN.
+    */
+    'instagram' => [
+        'image_public_base_url' => env('INSTAGRAM_IMAGE_PUBLIC_BASE_URL'),
+    ],
+
     'stripe' => [
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),

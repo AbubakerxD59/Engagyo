@@ -24,7 +24,9 @@ class PublishInstagramPost implements ShouldQueue
 
     public function handle(InstagramGraphService $instagramGraphService): void
     {
-        $post = Post::with('instagramAccount')->find($this->postId);
+        $post = Post::withoutGlobalScopes()
+            ->with('instagramAccount')
+            ->find($this->postId);
         if (! $post) {
             Log::error('PublishInstagramPost: post not found', ['post_id' => $this->postId]);
 
