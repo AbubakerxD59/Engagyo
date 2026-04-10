@@ -113,6 +113,7 @@
                                                 $facebookAccounts = $accounts->where('type', 'page');
                                                 $pinterestAccounts = $accounts->where('type', 'board');
                                                 $tiktokAccounts = $accounts->where('type', 'tiktok');
+                                                $instagramAccounts = $accounts->where('type', 'instagram');
                                             @endphp
 
                                             @if ($facebookAccounts->count() > 0)
@@ -243,6 +244,57 @@
                                                                             <span
                                                                                 class="platform-indicator tiktok-indicator">
                                                                                 <i class="fab fa-tiktok"></i>
+                                                                            </span>
+                                                                        </div>
+                                                                        <div class="account-info">
+                                                                            <div class="account-name">
+                                                                                {{ Str::limit($account['name'], 18) }}
+                                                                            </div>
+                                                                            <div class="account-username">
+                                                                                {{ Str::limit($account['username'], 15) }}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="account-card-checkbox">
+                                                                        <input type="checkbox" class="account-checkbox"
+                                                                            name="accounts[{{ $account['id'] }}][type]"
+                                                                            value="{{ $account['type'] }}"
+                                                                            id="acc_{{ $account['type'] }}_{{ $account['id'] }}"
+                                                                            data-account-id="{{ $account['id'] }}">
+                                                                        <input type="hidden"
+                                                                            name="accounts[{{ $account['id'] }}][id]"
+                                                                            value="{{ $account['id'] }}">
+                                                                    </div>
+                                                                </article>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            @if ($instagramAccounts->count() > 0)
+                                                <div class="mb-4">
+                                                    <h6 class="mb-3">
+                                                        <img src="{{ social_logo('instagram') }}" loading="lazy"
+                                                            style="width: 24px; height: 24px; margin-right: 8px;">
+                                                        Instagram Accounts
+                                                    </h6>
+                                                    <div class="accounts-grid-wrapper">
+                                                        <div class="accounts-grid" data-platform="instagram">
+                                                            @foreach ($instagramAccounts as $account)
+                                                                <article
+                                                                    class="account-card account-select-card has-tooltip"
+                                                                    data-account-id="{{ $account['id'] }}"
+                                                                    data-account-type="{{ $account['type'] }}"
+                                                                    data-tooltip="{{ $account['username'] }}">
+                                                                    <div class="account-card-accent"></div>
+                                                                    <div class="account-card-content">
+                                                                        <div class="account-avatar-wrapper">
+                                                                            <img src="{{ $account['profile_image'] }}"
+                                                                                class="account-avatar"
+                                                                                onerror="this.onerror=null; this.src='{{ social_logo('instagram') }}';" loading="lazy">
+                                                                            <span class="platform-indicator">
+                                                                                <i class="fab fa-instagram"></i>
                                                                             </span>
                                                                         </div>
                                                                         <div class="account-info">

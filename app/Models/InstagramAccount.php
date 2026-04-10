@@ -22,9 +22,20 @@ class InstagramAccount extends Model
         'profile_image',
         'access_token',
         'expires_in',
+        'schedule_status',
+        'url_shortener_enabled',
+        'last_fetch',
+        'shuffle',
+        'rss_paused',
     ];
 
-    protected $appends = ['type', 'schedule_status'];
+    protected $casts = [
+        'url_shortener_enabled' => 'boolean',
+        'rss_paused' => 'boolean',
+        'last_fetch' => 'datetime',
+    ];
+
+    protected $appends = ['type'];
 
     public function user()
     {
@@ -37,7 +48,7 @@ class InstagramAccount extends Model
     }
 
     /**
-     * Facebook Page row (same Graph page_id as this Instagram Business link).
+     * Optional Facebook Page row (same Graph page_id). Used only to inherit timeslots until Instagram has its own.
      */
     public function linkedPage()
     {
@@ -52,15 +63,9 @@ class InstagramAccount extends Model
         return $this->linkedPage?->timeslots ?? collect();
     }
 
-    protected function scheduleStatus(): Attribute
+    public function scopeWhereScheduledActive($query)
     {
-        return Attribute::make(
-            get: function () {
-                $this->loadMissing('linkedPage');
-
-                return $this->linkedPage?->schedule_status ?? 'inactive';
-            }
-        );
+        $query->where('schedule_status', 'active');
     }
 
     public function scopeSearch($query, $search)

@@ -29,6 +29,8 @@ class TeamMemberAccount extends Model
                 return Board::find($this->account_id);
             case 'tiktok':
                 return Tiktok::find($this->account_id);
+            case 'instagram':
+                return InstagramAccount::find($this->account_id);
             default:
                 return null;
         }

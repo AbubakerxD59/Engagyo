@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\InstagramAccount;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\Notification;
@@ -216,18 +217,12 @@ class FacebookService
         return $response;
     }
 
-    public function refreshAccessToken($access_token, $page_id)
+    public function refreshAccessToken($access_token, Page|InstagramAccount $account)
     {
+        $accountId = $account->id;
+        $platform = $account instanceof InstagramAccount ? 'instagram' : 'facebook';
+
         try {
-            $page = Page::find($page_id);
-
-            if (!$page) {
-                return [
-                    "success" => false,
-                    "message" => "Facebook page not found. Please reconnect your Facebook account.",
-                ];
-            }
-
             $getOAuth2Client = $this->facebook->getOAuth2Client();
 
             $longLivedToken = $getOAuth2Client->getLongLivedAccessToken($access_token);
@@ -252,7 +247,7 @@ class FacebookService
 
             $expiresAt = $tokenMetadata->getField("data_access_expires_at");
 
-            $page->update([
+            $account->update([
                 "access_token" => $newAccessToken,
                 "expires_in" => $expiresAt,
             ]);
@@ -264,28 +259,28 @@ class FacebookService
                     "access_token" => $newAccessToken
                 ],
             ];
-            $this->logService->logTokenRefresh('facebook', $page_id, 'success', 'Token refreshed successfully');
+            $this->logService->logTokenRefresh($platform, $accountId, 'success', 'Token refreshed successfully');
         } catch (FacebookResponseException $e) {
             $error = $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => "Facebook API error: " . $error,
             ];
-            $this->logService->logTokenRefresh('facebook', $page_id, 'failed', $error);
+            $this->logService->logTokenRefresh($platform, $accountId, 'failed', $error);
         } catch (FacebookSDKException $e) {
             $error = $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => "Facebook SDK error: " . $error,
             ];
-            $this->logService->logTokenRefresh('facebook', $page_id, 'failed', $error);
+            $this->logService->logTokenRefresh($platform, $accountId, 'failed', $error);
         } catch (\Exception $e) {
             $error = $e->getMessage();
             $response = [
                 "success" => false,
                 "message" => "Unexpected error while refreshing token: " . $error,
             ];
-            $this->logService->logTokenRefresh('facebook', $page_id, 'failed', $error);
+            $this->logService->logTokenRefresh($platform, $accountId, 'failed', $error);
         }
         return $response;
     }
@@ -1451,7 +1446,7 @@ class FacebookService
         return $posts;
     }
 
-    public static function validateToken($account)
+    public static function validateToken(Page|InstagramAccount|null $account)
     {
         try {
             if (!$account) {
@@ -1474,7 +1469,7 @@ class FacebookService
             if (!$account->validToken()) {
 
                 $service = new FacebookService();
-                $token = $service->refreshAccessToken($access_token, $account->id);
+                $token = $service->refreshAccessToken($access_token, $account);
 
                 if ($token["success"]) {
                     $data = $token["data"];

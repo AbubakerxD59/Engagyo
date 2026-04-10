@@ -78,7 +78,7 @@ class PublishSchedulePostCron extends Command
     {
         // $now = date('Y-m-d H:i');
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
-        $query = $post->with("user.timezone", "page.facebook", "board.pinterest", "instagramAccount.linkedPage")->past($now)->notPublished()->schedule();
+        $query = $post->with("user.timezone", "page.facebook", "board.pinterest", "instagramAccount")->past($now)->notPublished()->schedule();
         $posts = $query->orderBy('publish_date')->get();
 
         foreach ($posts as $key => $post) {
@@ -237,10 +237,9 @@ class PublishSchedulePostCron extends Command
         $social_type = $post->social_type;
         $account_image = $post->account_profile;
         $ig = $post->instagramAccount;
-        $page = $ig?->linkedPage;
 
-        if (! $ig || ! $page) {
-            $errorMessage = 'Error: Instagram account or linked Facebook Page not found.';
+        if (! $ig) {
+            $errorMessage = 'Error: Instagram account not found.';
             $post->update([
                 'status' => -1,
                 'response' => $errorMessage,
@@ -250,7 +249,7 @@ class PublishSchedulePostCron extends Command
             return;
         }
 
-        $tokenResponse = FacebookService::validateToken($page);
+        $tokenResponse = FacebookService::validateToken($ig);
 
         if (! $tokenResponse['success']) {
             $errorMessage = $tokenResponse['message'] ?? 'Error: Failed to validate Facebook access token.';

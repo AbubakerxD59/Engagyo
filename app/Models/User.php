@@ -245,17 +245,16 @@ class User extends Authenticatable
     public function getAccounts()
     {
         $pages = Page::with("facebook", "timeslots")->orderBy("name")->get();
-        $instagrams = $this->collectInstagramAccountsForUser(false);
+        $insta_accounts = InstagramAccount::with("linkedPage.timeslots")->orderBy("username")->get();
         $boards = Board::with("pinterest", "timeslots")->orderBy("name")->get();
         $tiktoks = Tiktok::with("timeslots")->orderBy("username")->get();
-
-        return $pages->concat($instagrams)->concat($boards)->concat($tiktoks);
+        return $pages->concat($insta_accounts)->concat($boards)->concat($tiktoks);
     }
 
     /**
      * Instagram accounts for scheduling UI and post creation.
      *
-     * @param  bool  $onlyScheduleActive  When true, only accounts whose linked Page has schedule_status active.
+     * @param  bool  $onlyScheduleActive  When true, only accounts with schedule_status active on the Instagram row.
      * @return \Illuminate\Support\Collection<int, InstagramAccount>
      */
     protected function collectInstagramAccountsForUser(bool $onlyScheduleActive = false): \Illuminate\Support\Collection
@@ -266,15 +265,15 @@ class User extends Authenticatable
             ->where('user_id', $ownerId);
 
         if ($this->isTeamMember()) {
-            $pageIds = $this->getTeamMemberAccountIdsByType('page');
-            if (empty($pageIds)) {
+            $igIds = $this->getTeamMemberAccountIdsByType('instagram');
+            if (empty($igIds)) {
                 return collect();
             }
-            $q->whereHas('linkedPage', fn ($qq) => $qq->whereIn('id', $pageIds));
+            $q->whereIn('id', array_map('intval', $igIds));
         }
 
         if ($onlyScheduleActive) {
-            $q->whereHas('linkedPage', fn ($qq) => $qq->where('schedule_status', 'active'));
+            $q->where('schedule_status', 'active');
         }
 
         return $q->orderBy('username')->get();
@@ -339,9 +338,10 @@ class User extends Authenticatable
         $pages = Page::with("facebook", "timeslots")->whereScheduledActive()->get();
         // TikTok Accounts
         $tiktoks = Tiktok::with("timeslots")->whereScheduledActive()->get();
-        $instagrams = $this->collectInstagramAccountsForUser(true);
+        // Instagram Accounts
+        $insta_accounts = InstagramAccount::with("linkedPage.timeslots")->whereScheduledActive()->get();
         $accounts = collect();
-        $accounts = $boards->concat($pages)->concat($tiktoks)->concat($instagrams);
+        $accounts = $boards->concat($pages)->concat($tiktoks)->concat($insta_accounts);
 
         return $accounts;
     }
@@ -388,9 +388,8 @@ class User extends Authenticatable
                         continue;
                     }
                     if ($this->isTeamMember()) {
-                        $pageIds = $this->getTeamMemberAccountIdsByType('page');
-                        $pid = $ig->linkedPage?->id;
-                        if (! $pid || ! in_array((int) $pid, array_map('intval', $pageIds), true)) {
+                        $igIds = $this->getTeamMemberAccountIdsByType('instagram');
+                        if (! in_array((int) $ig->id, array_map('intval', $igIds), true)) {
                             continue;
                         }
                     }
@@ -854,7 +853,7 @@ class User extends Authenticatable
         if (!$teamMember) {
             return [];
         }
-        $social_types = ['page', 'board', 'tiktok'];
+        $social_types = ['page', 'board', 'tiktok', 'instagram'];
         return TeamMemberAccount::where('team_member_id', $teamMember->id)
             ->whereIn('account_type', $social_types)
             ->pluck('account_id')
@@ -864,7 +863,7 @@ class User extends Authenticatable
     /**
      * Get account IDs for a specific type from team_member_accounts for the current user
      *
-     * @param string $accountType One of: 'page', 'board', 'tiktok'
+     * @param string $accountType One of: 'page', 'board', 'tiktok', 'instagram'
      * @return array Array of account IDs that the user has access to for the given type
      */
     public function getTeamMemberAccountIdsByType(string $accountType): array

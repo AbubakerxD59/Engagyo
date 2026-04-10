@@ -107,8 +107,20 @@ class TeamMemberController extends BaseController
                 'account_id' => $tiktok->tiktok_id ?? $tiktok->id,
             ];
         });
+
+        // Instagram Accounts
+        $instagramAccounts = $user->instagramAccounts()->get()->map(function ($ig) {
+            return [
+                'id' => $ig->id,
+                'type' => 'instagram',
+                'name' => $ig->name ?? $ig->username ?? 'Instagram',
+                'username' => $ig->username ?? 'Instagram',
+                'profile_image' => $ig->profile_image ?? social_logo('instagram'),
+                'account_id' => $ig->ig_user_id ?? $ig->id,
+            ];
+        });
         
-        $accounts = $accounts->concat($pages)->concat($boards)->concat($tiktoks);
+        $accounts = $accounts->concat($pages)->concat($boards)->concat($tiktoks)->concat($instagramAccounts);
 
         return view('user.team-members.create', compact('menuItems', 'features', 'accounts'));
     }
@@ -230,8 +242,20 @@ class TeamMemberController extends BaseController
                 'account_id' => $tiktok->tiktok_id ?? $tiktok->id,
             ];
         });
+
+        // Instagram Accounts
+        $instagramAccounts = $user->instagramAccounts()->get()->map(function ($ig) {
+            return [
+                'id' => $ig->id,
+                'type' => 'instagram',
+                'name' => $ig->name ?? $ig->username ?? 'Instagram',
+                'username' => $ig->username ?? 'Instagram',
+                'profile_image' => $ig->profile_image ?? social_logo('instagram'),
+                'account_id' => $ig->ig_user_id ?? $ig->id,
+            ];
+        });
         
-        $accounts = $accounts->concat($pages)->concat($boards)->concat($tiktoks);
+        $accounts = $accounts->concat($pages)->concat($boards)->concat($tiktoks)->concat($instagramAccounts);
         
         // Load team member relationships
         $teamMember->load('menus', 'featureLimits', 'accounts');

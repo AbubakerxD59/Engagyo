@@ -19,7 +19,7 @@ class InstagramPublishCron extends Command
     {
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
 
-        $posts = $post->with('instagramAccount.linkedPage')
+        $posts = $post->with('instagramAccount')
             ->notPublished()
             ->past($now)
             ->instagram()
@@ -31,18 +31,17 @@ class InstagramPublishCron extends Command
             try {
                 sleep(3);
                 $ig = $post->instagramAccount;
-                $page = $ig?->linkedPage;
 
-                if (! $ig || ! $page) {
+                if (! $ig) {
                     $post->update([
                         'status' => -1,
-                        'response' => 'Instagram account or linked Facebook Page not found.',
+                        'response' => 'Instagram account not found.',
                         'published_at' => date('Y-m-d H:i:s'),
                     ]);
                     continue;
                 }
 
-                $tokenResponse = FacebookService::validateToken($page);
+                $tokenResponse = FacebookService::validateToken($ig);
                 if (! $tokenResponse['success']) {
                     $post->update([
                         'status' => -1,

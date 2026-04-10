@@ -353,18 +353,17 @@ class  ScheduleController extends Controller
                 ]);
             });
             $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
-            InstagramAccount::with('linkedPage')->where('user_id', $ownerId)->get()->each(function ($ig) use ($accountsStatus, $user) {
+            InstagramAccount::where('user_id', $ownerId)->get()->each(function ($ig) use ($accountsStatus, $user) {
                 if ($user->isTeamMember()) {
-                    $pageIds = $user->getTeamMemberAccountIdsByType('page');
-                    $pid = $ig->linkedPage?->id;
-                    if (! $pid || ! in_array((int) $pid, array_map('intval', $pageIds), true)) {
+                    $igIds = $user->getTeamMemberAccountIdsByType('instagram');
+                    if (! in_array((int) $ig->id, array_map('intval', $igIds), true)) {
                         return;
                     }
                 }
                 $accountsStatus->push([
                     'id' => $ig->id,
                     'type' => 'instagram',
-                    'schedule_status' => $ig->linkedPage?->schedule_status ?? 'inactive',
+                    'schedule_status' => $ig->schedule_status ?? 'inactive',
                 ]);
             });
         }
@@ -407,18 +406,17 @@ class  ScheduleController extends Controller
             ]);
         });
         $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
-        InstagramAccount::with('linkedPage')->where('user_id', $ownerId)->get()->each(function ($ig) use ($accountsStatus, $user) {
+        InstagramAccount::where('user_id', $ownerId)->get()->each(function ($ig) use ($accountsStatus, $user) {
             if ($user->isTeamMember()) {
-                $pageIds = $user->getTeamMemberAccountIdsByType('page');
-                $pid = $ig->linkedPage?->id;
-                if (! $pid || ! in_array((int) $pid, array_map('intval', $pageIds), true)) {
+                $igIds = $user->getTeamMemberAccountIdsByType('instagram');
+                if (! in_array((int) $ig->id, array_map('intval', $igIds), true)) {
                     return;
                 }
             }
             $accountsStatus->push([
                 'id' => $ig->id,
                 'type' => 'instagram',
-                'schedule_status' => $ig->linkedPage?->schedule_status ?? 'inactive',
+                'schedule_status' => $ig->schedule_status ?? 'inactive',
             ]);
         });
 
@@ -641,10 +639,10 @@ class  ScheduleController extends Controller
                 );
             }
         } else if ($type == "instagram") {
-            $ig = InstagramAccount::with('linkedPage')->find($id);
-            if ($ig && $ig->linkedPage) {
-                $ig->linkedPage->schedule_status = $status == 1 ? "active" : "inactive";
-                $ig->linkedPage->save();
+            $ig = InstagramAccount::find($id);
+            if ($ig) {
+                $ig->schedule_status = $status == 1 ? "active" : "inactive";
+                $ig->save();
                 $response = [
                     "success" => true,
                     "message" => "Status changed Successfully!",
@@ -925,7 +923,7 @@ class  ScheduleController extends Controller
             if ($isVideo || empty($image)) {
                 return;
             }
-            InstagramAccount::with('linkedPage')->where('id', $account->id)->firstOrFail();
+            InstagramAccount::where('id', $account->id)->firstOrFail();
             $nextTime = (new Post)->nextScheduleTime(
                 ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
                 $account->timeslots,
@@ -1390,15 +1388,8 @@ class  ScheduleController extends Controller
                     }
                 }
                 if ($account->type == "instagram" && $file && ! empty($image) && empty($video)) {
-                    $ig = InstagramAccount::with('linkedPage')->where('id', $account->id)->firstOrFail();
-                    $page = $ig->linkedPage;
-                    if (! $page) {
-                        return [
-                            'success' => false,
-                            'message' => 'Linked Facebook Page not found for this Instagram account.',
-                        ];
-                    }
-                    $tokenResponse = FacebookService::validateToken($page);
+                    $ig = InstagramAccount::where('id', $account->id)->firstOrFail();
+                    $tokenResponse = FacebookService::validateToken($ig);
                     if (! $tokenResponse['success']) {
                         return [
                             'success' => false,
@@ -1838,7 +1829,7 @@ class  ScheduleController extends Controller
                         }
                     }
                     if ($account->type == "instagram" && $file && ! empty($image) && empty($video)) {
-                        $ig = InstagramAccount::with('linkedPage')->where('id', $account->id)->firstOrFail();
+                        InstagramAccount::where('id', $account->id)->firstOrFail();
                         $nextTime = (new Post)->nextScheduleTime(
                             ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
                             $account->timeslots,
@@ -2023,7 +2014,7 @@ class  ScheduleController extends Controller
                     }
                 }
                 if ($account->type == "instagram" && $file && ! empty($image) && empty($video)) {
-                    InstagramAccount::with('linkedPage')->where('id', $account->id)->firstOrFail();
+                    InstagramAccount::where('id', $account->id)->firstOrFail();
                     $data = [
                         'user_id' => $user->id,
                         'account_id' => $account->id,

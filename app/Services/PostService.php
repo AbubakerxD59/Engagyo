@@ -78,7 +78,7 @@ class PostService
     {
         try {
             $user = Auth::user();
-            $post = Post::with("page.facebook", "board.pinterest", "instagramAccount.linkedPage")->where("status", "!=", 1)->where("id", $id)->firstOrFail();
+            $post = Post::with("page.facebook", "board.pinterest", "instagramAccount")->where("status", "!=", 1)->where("id", $id)->firstOrFail();
             if ($post->social_type == "facebook") {
                 $page = $post->page;
                 $response = FacebookService::validateToken($page);
@@ -95,14 +95,13 @@ class PostService
             }
             if ($post->social_type == "instagram") {
                 $ig = $post->instagramAccount;
-                $page = $ig?->linkedPage;
-                if (! $ig || ! $page) {
+                if (! $ig) {
                     return [
                         'success' => false,
-                        'message' => 'Instagram account or linked Facebook Page not found.',
+                        'message' => 'Instagram account not found.',
                     ];
                 }
-                $tokenResponse = FacebookService::validateToken($page);
+                $tokenResponse = FacebookService::validateToken($ig);
                 if (! $tokenResponse['success']) {
                     return $tokenResponse;
                 }
