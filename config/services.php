@@ -44,8 +44,6 @@ return [
     */
     'instagram' => [
         'image_public_base_url' => env('INSTAGRAM_IMAGE_PUBLIC_BASE_URL'),
-        /** When true, registers GET /panel/schedule/dev/instagram-carousel-test (auth required). */
-        'carousel_test_enabled' => true,
     ],
 
     'stripe' => [
