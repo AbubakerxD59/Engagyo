@@ -24,7 +24,7 @@ class InstagramAccount extends Model
         'expires_in',
     ];
 
-    protected $appends = ['type'];
+    protected $appends = ['type', 'schedule_status'];
 
     public function user()
     {
@@ -34,6 +34,33 @@ class InstagramAccount extends Model
     public function facebook()
     {
         return $this->belongsTo(Facebook::class, 'facebook_id', 'id');
+    }
+
+    /**
+     * Facebook Page row (same Graph page_id as this Instagram Business link).
+     */
+    public function linkedPage()
+    {
+        return $this->belongsTo(Page::class, 'page_id', 'page_id')
+            ->whereColumn('pages.user_id', 'instagram_accounts.user_id');
+    }
+
+    public function getTimeslotsAttribute()
+    {
+        $this->loadMissing('linkedPage.timeslots');
+
+        return $this->linkedPage?->timeslots ?? collect();
+    }
+
+    protected function scheduleStatus(): Attribute
+    {
+        return Attribute::make(
+            get: function () {
+                $this->loadMissing('linkedPage');
+
+                return $this->linkedPage?->schedule_status ?? 'inactive';
+            }
+        );
     }
 
     public function scopeSearch($query, $search)

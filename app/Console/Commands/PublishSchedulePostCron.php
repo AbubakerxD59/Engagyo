@@ -8,6 +8,7 @@ use Carbon\Carbon;
 use App\Services\PostService;
 use Illuminate\Console\Command;
 use App\Jobs\PublishFacebookPost;
+use App\Jobs\PublishInstagramPost;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
 use App\Services\PinterestService;
@@ -77,20 +78,19 @@ class PublishSchedulePostCron extends Command
     {
         // $now = date('Y-m-d H:i');
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
-        $query = $post->with("user.timezone", "page.facebook", "board.pinterest")->past($now)->notPublished()->schedule();
+        $query = $post->with("user.timezone", "page.facebook", "board.pinterest", "instagramAccount.linkedPage")->past($now)->notPublished()->schedule();
         $posts = $query->orderBy('publish_date')->get();
 
         foreach ($posts as $key => $post) {
             $social_type = $post->social_type;
             $account_image = $post->account_profile;
             try {
-                // for facebook posts
                 if ($post->social_type == "facebook") {
                     $this->processFacebookPost($post);
-                }
-                // for pinterest posts
-                if ($post->social_type == "pinterest") {
+                } elseif ($post->social_type == "pinterest") {
                     $this->processPinterestPost($post);
+                } elseif ($post->social_type == "instagram") {
+                    $this->processInstagramPost($post);
                 }
             } catch (\Exception $e) {
                 $errorMessage = $e->getMessage();
@@ -229,6 +229,49 @@ class PublishSchedulePostCron extends Command
             ]);
             // Create error notification (cron job)
             $this->errorNotification($post->user_id, "Scheduled Post Publishing Failed", "Failed to publish scheduled Pinterest post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+        }
+    }
+
+    private function processInstagramPost(Post $post): void
+    {
+        $social_type = $post->social_type;
+        $account_image = $post->account_profile;
+        $ig = $post->instagramAccount;
+        $page = $ig?->linkedPage;
+
+        if (! $ig || ! $page) {
+            $errorMessage = 'Error: Instagram account or linked Facebook Page not found.';
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+
+            return;
+        }
+
+        $tokenResponse = FacebookService::validateToken($page);
+
+        if (! $tokenResponse['success']) {
+            $errorMessage = $tokenResponse['message'] ?? 'Error: Failed to validate Facebook access token.';
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+
+            return;
+        }
+
+        try {
+            PublishInstagramPost::dispatch($post->id, $tokenResponse['access_token']);
+        } catch (\Exception $e) {
+            $errorMessage = 'Error preparing post: '.$e->getMessage();
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
         }
     }
 }

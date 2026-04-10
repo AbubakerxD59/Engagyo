@@ -13,6 +13,7 @@ use App\Console\Commands\PublishRssPostsCron;
 use App\Console\Commands\PinterestPublishCron;
 use App\Console\Commands\FacebookPublishCron;
 use App\Console\Commands\TikTokPublishCron;
+use App\Console\Commands\InstagramPublishCron;
 use App\Console\Commands\PublishSchedulePostCron;
 use App\Console\Commands\DownloadPhotoCron;
 use App\Console\Commands\RunFacebookTests;
@@ -44,6 +45,7 @@ class Kernel extends ConsoleKernel
         PinterestPublishCron::class, //pinterest:publish
         FacebookPublishCron::class, //facebook:publish
         TikTokPublishCron::class, //tiktok:publish
+        InstagramPublishCron::class, //instagram:publish
         PublishSchedulePostCron::class, //schedule:publish
         DownloadPhotoCron::class, //download:photo
         RunFacebookTests::class, //facebook:run-tests
@@ -75,6 +77,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('facebook:publish')->everyFiveMinutes();
         // Command to publish TikTok posts
         $schedule->command('tiktok:publish')->everyFiveMinutes();
+        // Command to publish Instagram posts (queue / immediate)
+        $schedule->command('instagram:publish')->everyFiveMinutes();
         // Command to publish Scheduled posts
         $schedule->command('schedule:publish')->everyMinute();
         // Command to download photos

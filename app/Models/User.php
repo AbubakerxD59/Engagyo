@@ -245,10 +245,39 @@ class User extends Authenticatable
     public function getAccounts()
     {
         $pages = Page::with("facebook", "timeslots")->orderBy("name")->get();
+        $instagrams = $this->collectInstagramAccountsForUser(false);
         $boards = Board::with("pinterest", "timeslots")->orderBy("name")->get();
         $tiktoks = Tiktok::with("timeslots")->orderBy("username")->get();
 
-        return $pages->concat($boards)->concat($tiktoks);
+        return $pages->concat($instagrams)->concat($boards)->concat($tiktoks);
+    }
+
+    /**
+     * Instagram accounts for scheduling UI and post creation.
+     *
+     * @param  bool  $onlyScheduleActive  When true, only accounts whose linked Page has schedule_status active.
+     * @return \Illuminate\Support\Collection<int, InstagramAccount>
+     */
+    protected function collectInstagramAccountsForUser(bool $onlyScheduleActive = false): \Illuminate\Support\Collection
+    {
+        $ownerId = (int) ($this->getEffectiveUser()?->id ?? $this->id);
+        $q = InstagramAccount::query()
+            ->with(['facebook', 'linkedPage.timeslots'])
+            ->where('user_id', $ownerId);
+
+        if ($this->isTeamMember()) {
+            $pageIds = $this->getTeamMemberAccountIdsByType('page');
+            if (empty($pageIds)) {
+                return collect();
+            }
+            $q->whereHas('linkedPage', fn ($qq) => $qq->whereIn('id', $pageIds));
+        }
+
+        if ($onlyScheduleActive) {
+            $q->whereHas('linkedPage', fn ($qq) => $qq->where('schedule_status', 'active'));
+        }
+
+        return $q->orderBy('username')->get();
     }
 
     public function getDomains($id, $type)
@@ -310,8 +339,10 @@ class User extends Authenticatable
         $pages = Page::with("facebook", "timeslots")->whereScheduledActive()->get();
         // TikTok Accounts
         $tiktoks = Tiktok::with("timeslots")->whereScheduledActive()->get();
+        $instagrams = $this->collectInstagramAccountsForUser(true);
         $accounts = collect();
-        $accounts = $boards->concat($pages)->concat($tiktoks);
+        $accounts = $boards->concat($pages)->concat($tiktoks)->concat($instagrams);
+
         return $accounts;
     }
 
@@ -319,7 +350,7 @@ class User extends Authenticatable
      * Get accounts for post creation. When account_ids are provided (e.g. from create post modal
      * when user selected specific accounts), use those. Otherwise use getScheduledActiveAccounts().
      *
-     * @param array|null $accountIds Array of ['id' => int, 'type' => string] (facebook|pinterest|tiktok)
+     * @param array|null $accountIds Array of ['id' => int, 'type' => string] (facebook|pinterest|tiktok|instagram)
      * @return \Illuminate\Support\Collection
      */
     public function getAccountsForPostCreation(?array $accountIds = null)
@@ -347,6 +378,23 @@ class User extends Authenticatable
                     if ($tiktok) {
                         $accounts->push($tiktok);
                     }
+                } elseif ($type === 'instagram') {
+                    $ig = InstagramAccount::with(['facebook', 'linkedPage.timeslots'])->where('id', $id)->first();
+                    if (! $ig) {
+                        continue;
+                    }
+                    $ownerId = (int) ($this->getEffectiveUser()?->id ?? $this->id);
+                    if ((int) $ig->user_id !== $ownerId) {
+                        continue;
+                    }
+                    if ($this->isTeamMember()) {
+                        $pageIds = $this->getTeamMemberAccountIdsByType('page');
+                        $pid = $ig->linkedPage?->id;
+                        if (! $pid || ! in_array((int) $pid, array_map('intval', $pageIds), true)) {
+                            continue;
+                        }
+                    }
+                    $accounts->push($ig);
                 }
             }
             return $accounts;

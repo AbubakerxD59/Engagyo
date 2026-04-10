@@ -7,8 +7,10 @@ use App\Models\Post;
 use App\Models\Page;
 use App\Models\Board;
 use App\Models\Tiktok;
+use App\Models\InstagramAccount;
 use App\Jobs\DeleteFacebookPostJob;
 use App\Jobs\PublishFacebookPost;
+use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishPinterestPost;
 use App\Models\User;
 use App\Services\UtmService;
@@ -48,7 +50,7 @@ class PostService
     }
     public static function delete($post_id)
     {
-        $post = Post::with("page", "board.pinterest", "tiktok")->where("id", $post_id)->first();
+        $post = Post::with("page", "board.pinterest", "tiktok", "instagramAccount")->where("id", $post_id)->first();
         if ($post) {
             $status = $post->status;
             $social_type = $post->social_type;
@@ -76,7 +78,7 @@ class PostService
     {
         try {
             $user = Auth::user();
-            $post = Post::with("page.facebook", "board.pinterest")->where("status", "!=", 1)->where("id", $id)->firstOrFail();
+            $post = Post::with("page.facebook", "board.pinterest", "instagramAccount.linkedPage")->where("status", "!=", 1)->where("id", $id)->firstOrFail();
             if ($post->social_type == "facebook") {
                 $page = $post->page;
                 $response = FacebookService::validateToken($page);
@@ -90,6 +92,21 @@ class PostService
             if ($post->social_type == "pinterest") {
                 $postData = self::postTypeBody($post);
                 PublishPinterestPost::dispatch($post->id, $postData, $post->board->pinterest->access_token, $post->type);
+            }
+            if ($post->social_type == "instagram") {
+                $ig = $post->instagramAccount;
+                $page = $ig?->linkedPage;
+                if (! $ig || ! $page) {
+                    return [
+                        'success' => false,
+                        'message' => 'Instagram account or linked Facebook Page not found.',
+                    ];
+                }
+                $tokenResponse = FacebookService::validateToken($page);
+                if (! $tokenResponse['success']) {
+                    return $tokenResponse;
+                }
+                PublishInstagramPost::dispatch($post->id, $tokenResponse['access_token']);
             }
             $response = array(
                 "success" => true,
@@ -140,6 +157,7 @@ class PostService
             'facebook' => Page::find($data['account_id']),
             'pinterest' => Board::find($data['account_id']),
             'tiktok' => Tiktok::find($data['account_id']),
+            'instagram' => InstagramAccount::find($data['account_id']),
             default => null,
         };
 
@@ -175,9 +193,26 @@ class PostService
                 return self::pinterestPostTypeBody($post);
             case 'tiktok':
                 return self::tiktokPostTypeBody($post);
+            case 'instagram':
+                return self::instagramPostTypeBody($post);
             default:
                 return [];
         }
+    }
+
+    public static function instagramPostTypeBody(Post $post): array
+    {
+        $postData = [];
+        if ($post->type === 'photo') {
+            $postData['image_url'] = $post->image;
+            $captionParts = array_filter([(string) ($post->title ?? ''), (string) ($post->comment ?? '')]);
+            $caption = trim(implode("\n\n", $captionParts));
+            if ($caption !== '') {
+                $postData['caption'] = $caption;
+            }
+        }
+
+        return $postData;
     }
 
     public static function facebookPostTypeBody($post)

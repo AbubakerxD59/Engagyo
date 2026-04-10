@@ -64,6 +64,11 @@ class Post extends Model
         return $this->belongsTo(Tiktok::class, 'account_id', 'id');
     }
 
+    public function instagramAccount()
+    {
+        return $this->belongsTo(InstagramAccount::class, 'account_id', 'id');
+    }
+
     public function domain()
     {
         return $this->belongsTo(Domain::class, 'domain_id', 'id');
@@ -117,7 +122,7 @@ class Post extends Model
 
     public function scopeAccountExist($query)
     {
-        $query->has("page")->orHas("board")->orHas("tiktok");
+        $query->has("page")->orHas("board")->orHas("tiktok")->orHas("instagramAccount");
     }
 
     public function scopePageExist($query)
@@ -171,6 +176,11 @@ class Post extends Model
     public function scopeTiktok($query)
     {
         $query->where("social_type", "like", "%tiktok%");
+    }
+
+    public function scopeInstagram($query)
+    {
+        $query->where("social_type", "like", "%instagram%");
     }
 
     public function scopePast($query, $date_time)
@@ -789,6 +799,9 @@ class Post extends Model
         if ($social_type == "tiktok") {
             $account_name = $this->tiktok?->display_name;
         }
+        if ($social_type == "instagram") {
+            $account_name = $this->instagramAccount?->name ?? $this->instagramAccount?->username;
+        }
         return $account_name;
     }
 
@@ -806,6 +819,9 @@ class Post extends Model
         }
         if ($social_type === 'tiktok') {
             return $this->tiktok?->username ?? $this->tiktok?->display_name ?? '';
+        }
+        if ($social_type === 'instagram') {
+            return $this->instagramAccount?->username ?? '';
         }
         return '';
     }
@@ -827,6 +843,9 @@ class Post extends Model
         }
         if ($social_type == "tiktok") {
             $profile_image = $this->tiktok?->profile_image ?? null;
+        }
+        if ($social_type == "instagram") {
+            $profile_image = $this->instagramAccount?->profile_image ?? null;
         }
         return $profile_image;
     }
