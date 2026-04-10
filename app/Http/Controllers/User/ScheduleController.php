@@ -1034,6 +1034,51 @@ class  ScheduleController extends Controller
     }
 
     /**
+     * Schedule queue timeslots for an account. Instagram uses the linked Facebook page's schedule slots.
+     *
+     * @return array<int, string> Timeslot strings (e.g. "09:00")
+     */
+    private function queueScheduleTimeslotStringsForAccount(User $user, int $accountId, string $accountType): array
+    {
+        $accountType = strtolower((string) $accountType);
+
+        if ($accountType === 'instagram') {
+            $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
+            $ig = InstagramAccount::query()
+                ->where('id', $accountId)
+                ->where('user_id', $ownerId)
+                ->first();
+
+            if (! $ig) {
+                return [];
+            }
+
+            $ig->loadMissing('linkedPage');
+            $page = $ig->linkedPage;
+
+            if (! $page) {
+                return [];
+            }
+
+            return Timeslot::where('account_id', $page->id)
+                ->where('account_type', 'facebook')
+                ->where('type', 'schedule')
+                ->pluck('timeslot')
+                ->sort()
+                ->values()
+                ->toArray();
+        }
+
+        return Timeslot::where('account_id', $accountId)
+            ->where('account_type', $accountType)
+            ->where('type', 'schedule')
+            ->pluck('timeslot')
+            ->sort()
+            ->values()
+            ->toArray();
+    }
+
+    /**
      * Public URL for a post's stored video file (S3 key or absolute URL).
      */
     private function postStoredVideoUrl(Post $post): ?string
@@ -2871,7 +2916,7 @@ class  ScheduleController extends Controller
         $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::guard('user')->id()];
 
         $posts = Post::withoutGlobalScopes()
-            ->with("page.facebook", "board.pinterest", "user.timezone")
+            ->with("page.facebook", "board.pinterest", "instagramAccount", "user.timezone")
             ->isScheduled()
             ->whereIn('user_id', $postCreatorIds);
 
@@ -3073,8 +3118,39 @@ class  ScheduleController extends Controller
             return response()->json(['timeslots' => []]);
         }
 
-        $timeslots = Timeslot::where('account_id', $accountId)
-            ->where('account_type', $accountType)
+        /** @var User|null $user */
+        $user = Auth::guard('user')->user();
+        if (! $user instanceof User) {
+            return response()->json(['timeslots' => []]);
+        }
+
+        $resolvedId = (int) $accountId;
+        $resolvedType = (string) $accountType;
+
+        if (strtolower($resolvedType) === 'instagram') {
+            $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
+            $ig = InstagramAccount::query()
+                ->where('id', $resolvedId)
+                ->where('user_id', $ownerId)
+                ->first();
+
+            if (! $ig) {
+                return response()->json(['timeslots' => []]);
+            }
+
+            $ig->loadMissing('linkedPage');
+            $page = $ig->linkedPage;
+
+            if (! $page) {
+                return response()->json(['timeslots' => []]);
+            }
+
+            $resolvedId = (int) $page->id;
+            $resolvedType = 'facebook';
+        }
+
+        $timeslots = Timeslot::where('account_id', $resolvedId)
+            ->where('account_type', $resolvedType)
             ->pluck('timeslot')
             ->sort()
             ->values()
@@ -3100,15 +3176,18 @@ class  ScheduleController extends Controller
         $user = Auth::guard('user')->user();
         $userTz = TimezoneService::getUserTimezone($user);
 
-        $timeslots = Timeslot::where('account_id', $accountId)
-            ->where('account_type', $accountType)
-            ->where('type', 'schedule')
-            ->pluck('timeslot')
-            ->sort()
-            ->values()
-            ->toArray();
+        $timeslots = $this->queueScheduleTimeslotStringsForAccount(
+            $user,
+            (int) $accountId,
+            (string) $accountType
+        );
 
-        $socialType = $accountType === 'pinterest' ? 'pinterest' : ($accountType === 'tiktok' ? 'tiktok' : 'facebook');
+        $socialType = match (strtolower((string) $accountType)) {
+            'pinterest' => 'pinterest',
+            'tiktok' => 'tiktok',
+            'instagram' => 'instagram',
+            default => 'facebook',
+        };
 
         $startDate = Carbon::now($userTz)->addDays($offset)->startOfDay();
         $endDate = $startDate->copy()->addDays($days - 1)->endOfDay();
@@ -3116,7 +3195,7 @@ class  ScheduleController extends Controller
         $postCreatorIds = $user->schedulePostCreatorUserIds();
 
         $postsQuery = Post::withoutGlobalScopes()
-            ->with('page.facebook', 'board.pinterest', 'tiktok', 'user')
+            ->with('page.facebook', 'board.pinterest', 'tiktok', 'instagramAccount', 'user')
             ->whereIn('user_id', $postCreatorIds)
             ->where('account_id', $accountId)
             ->where('social_type', 'like', "%{$socialType}%")
