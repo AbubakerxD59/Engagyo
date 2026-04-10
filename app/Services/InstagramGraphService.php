@@ -233,7 +233,7 @@ class InstagramGraphService
             $statusResp = Http::acceptJson()
                 ->timeout(90)
                 ->get("{$base}/{$creationId}", [
-                    'fields' => 'id,status_code,status',
+                    'fields' => 'id,status_code,status,copyright_check_status',
                     'access_token' => $accessToken,
                 ]);
 
@@ -261,9 +261,35 @@ class InstagramGraphService
                 return null;
             }
             if (in_array($code, ['ERROR', 'EXPIRED'], true)) {
-                Log::warning('Instagram container status error', ['creation_id' => $creationId, 'status_code' => $code]);
+                // Meta sometimes briefly reports ERROR while transcoding; one short recheck for video.
+                if ($isVideo && $code === 'ERROR') {
+                    sleep(10);
+                    $recheck = Http::acceptJson()
+                        ->timeout(90)
+                        ->get("{$base}/{$creationId}", [
+                            'fields' => 'id,status_code,status,copyright_check_status',
+                            'access_token' => $accessToken,
+                        ]);
+                    if ($recheck->successful()) {
+                        $recheckPayload = $recheck->json();
+                        if (is_array($recheckPayload)) {
+                            $lastPayload = $recheckPayload;
+                            $retryCode = $this->normalizeInstagramContainerStatusCode($recheckPayload);
+                            if ($retryCode === 'FINISHED') {
+                                return null;
+                            }
+                            $lastCode = $retryCode ?? $lastCode;
+                        }
+                    }
+                }
 
-                return 'Instagram media container failed during processing (status: '.$code.').';
+                Log::warning('Instagram container status error', [
+                    'creation_id' => $creationId,
+                    'status_code' => $code,
+                    'payload' => $lastPayload,
+                ]);
+
+                return $this->formatInstagramContainerProcessingFailure($lastPayload ?? [], $code);
             }
 
             sleep($sleepSec);
@@ -288,6 +314,63 @@ class InstagramGraphService
     }
 
     /**
+     * When status_code is ERROR/EXPIRED, Meta may put an error subcode or object in "status" (see IG Container docs).
+     *
+     * @param  array<string, mixed>  $payload
+     */
+    private function formatInstagramContainerProcessingFailure(array $payload, string $statusCode): string
+    {
+        $parts = ['Instagram media container failed during processing.', 'status_code: '.$statusCode.'.'];
+
+        $st = $payload['status'] ?? null;
+        if (is_int($st) || (is_string($st) && is_numeric($st) && $st !== '')) {
+            $sub = (int) $st;
+            $parts[] = 'Meta error subcode: '.$sub.'.';
+            $hint = $this->instagramContainerErrorSubcodeHint($sub);
+            if ($hint !== null) {
+                $parts[] = $hint;
+            }
+        } elseif (is_string($st) && $st !== '' && strtoupper(trim($st)) !== strtoupper($statusCode)) {
+            $parts[] = 'status: '.$st.'.';
+        } elseif (is_array($st)) {
+            $encoded = json_encode($st, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+            if ($encoded !== false) {
+                $parts[] = 'details: '.$encoded.'.';
+            }
+        }
+
+        $cc = $payload['copyright_check_status'] ?? null;
+        if (is_array($cc)) {
+            $matches = $cc['matches_found'] ?? null;
+            if ($matches === true || $matches === 'true') {
+                $parts[] = 'Copyright check: possible rights conflict reported for this video.';
+            }
+            $parts[] = 'copyright_check_status: '.json_encode($cc, JSON_UNESCAPED_SLASHES).'.';
+        }
+
+        $parts[] = 'For Reels: direct HTTPS MP4 (no login/HTML interstitials), H.264 + AAC, duration/aspect/size within Instagram limits.';
+
+        $raw = json_encode($payload, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+        if ($raw !== false && $raw !== '' && $raw !== '[]') {
+            $parts[] = (strlen($raw) > 900 ? substr($raw, 0, 900).'…' : $raw);
+        }
+
+        return implode(' ', $parts);
+    }
+
+    private function instagramContainerErrorSubcodeHint(int $subcode): ?string
+    {
+        return match ($subcode) {
+            2207001 => 'Meta could not process the media (server/transcode). Retry later or re-encode.',
+            2207003 => 'Meta timed out downloading video_url — use a fast public URL; avoid slow hosts and auth redirects.',
+            2207004 => 'Media format or specs rejected — use MP4 H.264, AAC audio; check duration, dimensions, and file size.',
+            2207010 => 'Invalid media — confirm the file opens as video and meets Reels technical requirements.',
+            2207050, 2207051, 2207052, 2207053 => 'Upload/processing failed — re-encode or use a smaller/shorter clip; verify video_url is stable.',
+            default => null,
+        };
+    }
+
+    /**
      * @param  array<string, mixed>|null  $payload
      */
     private function normalizeInstagramContainerStatusCode(?array $payload): ?string
@@ -301,6 +384,9 @@ class InstagramGraphService
         }
 
         $status = $payload['status'] ?? null;
+        if (is_int($status)) {
+            return null;
+        }
         if (is_string($status) && $status !== '') {
             return strtoupper(trim($status));
         }

@@ -16,31 +16,8 @@ use App\Http\Controllers\User\TeamMemberController;
 use App\Http\Controllers\User\UrlTrackingController;
 use App\Http\Controllers\User\LinkShortenerController;
 use App\Http\Controllers\User\AnalyticsController;
-use App\Http\Controllers\User\TestPublishController;
 
 Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone", "redirect_if_admin", "team.menu"])->group(function () {
-    // Test routes for publishing Facebook posts (displays payload, response, etc.)
-    Route::get("test/publish-facebook/{id}", [TestPublishController::class, 'publishFacebook'])
-        ->name("test.publish.facebook")
-        ->middleware(['feature:' . Feature::$features_list[1]]);
-    Route::get("test/story-upload", [TestPublishController::class, 'showStoryUploadForm'])
-        ->name("test.story-upload")
-        ->middleware(['feature:' . Feature::$features_list[1]]);
-    Route::post("test/story-upload", [TestPublishController::class, 'handleStoryUpload'])
-        ->name("test.story-upload.post")
-        ->middleware(['feature:' . Feature::$features_list[1]]);
-    Route::get("test/instagram-image", [TestPublishController::class, 'showInstagramImageTestForm'])
-        ->name("test.instagram-image")
-        ->middleware(['feature:' . Feature::$features_list[1]]);
-    Route::post("test/instagram-image", [TestPublishController::class, 'handleInstagramImageTest'])
-        ->name("test.instagram-image.post")
-        ->middleware(['feature:' . Feature::$features_list[1]]);
-    Route::get("test/instagram-video", [TestPublishController::class, 'showInstagramVideoTestForm'])
-        ->name("test.instagram-video")
-        ->middleware(['feature:' . Feature::$features_list[1]]);
-    Route::post("test/instagram-video", [TestPublishController::class, 'handleInstagramVideoTest'])
-        ->name("test.instagram-video.post")
-        ->middleware(['feature:' . Feature::$features_list[1]]);
     // Schedule Routes
     Route::controller(ScheduleController::class)->middleware(['feature:' . Feature::$features_list[1]])->group(function () {
         Route::get("schedule", "index")->name("schedule");
