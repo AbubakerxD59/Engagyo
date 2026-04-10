@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Relations\BelongsToInstagramLinkedPage;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -52,8 +53,15 @@ class InstagramAccount extends Model
      */
     public function linkedPage()
     {
-        return $this->belongsTo(Page::class, 'page_id', 'page_id')
-            ->whereColumn('pages.user_id', 'instagram_accounts.user_id');
+        $instance = $this->newRelatedInstance(Page::class);
+
+        return new BelongsToInstagramLinkedPage(
+            $instance->newQuery(),
+            $this,
+            'page_id',
+            'page_id',
+            __FUNCTION__
+        );
     }
 
     public function getTimeslotsAttribute()
