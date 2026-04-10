@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use Illuminate\Support\Facades\Session;
 use Laravel\Socialite\Facades\Socialite;
 
 class FacebookSocialiteService
@@ -23,6 +24,18 @@ class FacebookSocialiteService
     ];
 
     /**
+     * Scopes for connecting Instagram Business accounts (still Facebook OAuth).
+     */
+    protected array $instagramScopes = [
+        'pages_show_list',
+        'business_management',
+        'pages_read_engagement',
+        'instagram_basic',
+        'instagram_manage_insights',
+        'instagram_content_publish',
+    ];
+
+    /**
      * Redirect the user to Facebook for authentication.
      *
      * Note: Do not pass config_id here. When config_id (Facebook Login for Business) is used,
@@ -34,10 +47,28 @@ class FacebookSocialiteService
      */
     public function redirect()
     {
+        Session::forget('facebook_oauth_intent');
+
         return Socialite::driver('facebook')
             ->scopes($this->scopes)
             ->with([
                 'auth_type' => 'rerequest'
+            ])
+            ->redirectUrl(route('facebook.callback'))
+            ->redirect();
+    }
+
+    /**
+     * Facebook OAuth with Instagram-related permissions; callback branches on session intent.
+     */
+    public function redirectForInstagram()
+    {
+        Session::put('facebook_oauth_intent', 'instagram');
+
+        return Socialite::driver('facebook')
+            ->scopes($this->instagramScopes)
+            ->with([
+                'auth_type' => 'rerequest',
             ])
             ->redirectUrl(route('facebook.callback'))
             ->redirect();

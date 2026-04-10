@@ -5,8 +5,11 @@ namespace App\Http\Controllers\FrontEnd;
 use App\Models\Page;
 use App\Models\User;
 use App\Models\Facebook;
+use App\Models\Feature;
+use App\Models\InstagramAccount;
 use Illuminate\Http\Request;
 use App\Services\FacebookService;
+use App\Services\FeatureUsageService;
 use App\Services\SocialMediaLogService;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
@@ -103,6 +106,8 @@ class FacebookController extends Controller
         }
 
         if ($access_token && $fb_id) {
+            $oauthIntent = session()->pull('facebook_oauth_intent', 'facebook');
+
             $data = [
                 "fb_id" => $fb_id,
                 "username" => $username,
@@ -113,6 +118,12 @@ class FacebookController extends Controller
             $facebookAccount = $user->facebook()->updateOrCreate(["fb_id" => $fb_id], $data);
             $facebook = Facebook::with('pages')->where('fb_id', $fb_id)->first();
             $this->logService->logAccountConnection('facebook', $facebookAccount->id, $username, 'connected');
+
+            if ($oauthIntent === 'instagram') {
+                $response = $this->syncInstagramBusinessAccounts($user, $facebookAccount, $access_token);
+
+                return redirect(route("panel.accounts"))->with($response["success"], $response["message"]);
+            }
 
             $pages = $this->facebookService->pages($access_token);
             if ($pages["success"]) {
@@ -157,6 +168,160 @@ class FacebookController extends Controller
 
         return redirect(route("panel.accounts"))->with($response["success"], $response["message"]);
     }
+
+    /**
+     * Persist Instagram Business accounts discovered via /me/accounts after Instagram-intent OAuth.
+     *
+     * @return array{success: string, message: string}
+     */
+    private function syncInstagramBusinessAccounts(User $user, Facebook $facebookAccount, string $userAccessToken): array
+    {
+        /** @var FeatureUsageService $featureUsageService */
+        $featureUsageService = app(FeatureUsageService::class);
+
+        $pagesResult = $this->facebookService->meAccountsWithInstagram($userAccessToken);
+        if (! $pagesResult['success']) {
+            $msg = $pagesResult['message'] ?? 'Failed to load Facebook Pages.';
+            $this->logService->logApiError('facebook', '/me/accounts', $msg, ['user_id' => $user->id, 'flow' => 'instagram']);
+
+            return [
+                'success' => 'error',
+                'message' => $msg.' Your Facebook login was saved. Confirm Instagram permissions in your Meta app and that your Instagram Business profile is linked to a Facebook Page.',
+            ];
+        }
+
+        $edge = $pagesResult['data'];
+        $eligiblePages = 0;
+        $newlyConnected = 0;
+        $updated = 0;
+        $skippedQuota = false;
+        $seenIgIds = [];
+
+        foreach ($edge as $page) {
+            $pageId = $page->getField('id');
+            $pageToken = $page->getField('access_token');
+            $igNode = $page->getField('instagram_business_account');
+
+            if (! $igNode || ! $pageId || ! $pageToken) {
+                continue;
+            }
+
+            $igId = null;
+            $igUsername = null;
+            $igName = null;
+            $igPicUrl = null;
+
+            if ($igNode instanceof \Facebook\GraphNodes\GraphNode) {
+                $igId = $igNode->getField('id');
+                $igUsername = $igNode->getField('username');
+                $igName = $igNode->getField('name');
+                $igPicUrl = $igNode->getField('profile_picture_url');
+            } elseif (is_array($igNode)) {
+                $igId = $igNode['id'] ?? null;
+                $igUsername = $igNode['username'] ?? null;
+                $igName = $igNode['name'] ?? null;
+                $igPicUrl = $igNode['profile_picture_url'] ?? null;
+            }
+
+            if (! $igId) {
+                continue;
+            }
+
+            if (isset($seenIgIds[$igId])) {
+                continue;
+            }
+            $seenIgIds[$igId] = true;
+
+            $eligiblePages++;
+
+            $existing = InstagramAccount::where('user_id', $user->id)->where('ig_user_id', $igId)->first();
+            $didIncrement = false;
+            if (! $existing) {
+                $result = $featureUsageService->checkAndIncrement($user, Feature::$features_list[0], 1);
+                if (! $result['allowed']) {
+                    $skippedQuota = true;
+
+                    continue;
+                }
+                $didIncrement = true;
+            }
+
+            $profileFile = null;
+            if (! empty($igPicUrl)) {
+                $profileFile = saveImageFromUrl($igPicUrl) ?: null;
+            }
+
+            try {
+                $row = InstagramAccount::updateOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'ig_user_id' => $igId,
+                    ],
+                    [
+                        'facebook_id' => $facebookAccount->id,
+                        'page_id' => (string) $pageId,
+                        'username' => $igUsername ?: ($igName ?: $igId),
+                        'name' => $igName,
+                        'profile_image' => $profileFile,
+                        'access_token' => $pageToken,
+                        'expires_in' => time(),
+                    ]
+                );
+
+                if ($row->wasRecentlyCreated) {
+                    $newlyConnected++;
+                } else {
+                    $updated++;
+                }
+
+                $this->logService->logAccountConnection('instagram', $row->id, $row->username ?? $igId, 'connected');
+            } catch (\Throwable $e) {
+                if ($didIncrement) {
+                    $user->decrementFeatureUsage(Feature::$features_list[0], 1);
+                }
+                $this->logService->log('instagram', 'connect_failed', $e->getMessage(), [
+                    'user_id' => $user->id,
+                    'ig_user_id' => $igId,
+                ], 'error');
+            }
+        }
+
+        if ($eligiblePages === 0) {
+            return [
+                'success' => 'success',
+                'message' => 'Facebook connected. No Instagram Business accounts are linked to your Facebook Pages. Link Instagram to a Page in Meta Business Suite, then use Connect Instagram again.',
+            ];
+        }
+
+        if ($skippedQuota && $newlyConnected === 0 && $updated === 0) {
+            return [
+                'success' => 'error',
+                'message' => 'Your plan does not allow more social accounts. Upgrade your package to connect Instagram.',
+            ];
+        }
+
+        $parts = [];
+        if ($newlyConnected > 0) {
+            $parts[] = $newlyConnected === 1
+                ? '1 new Instagram account connected.'
+                : "{$newlyConnected} new Instagram accounts connected.";
+        }
+        if ($updated > 0) {
+            $parts[] = $updated === 1
+                ? '1 Instagram account refreshed.'
+                : "{$updated} Instagram accounts refreshed.";
+        }
+        $message = implode(' ', $parts);
+        if ($skippedQuota) {
+            $message .= ' Some Instagram profiles were skipped because you reached your social account limit.';
+        }
+
+        return [
+            'success' => 'success',
+            'message' => $message ?: 'Instagram connection completed.',
+        ];
+    }
+
     public function facebookCallbackOld(Request $request)
     {
         $code = $request->code;

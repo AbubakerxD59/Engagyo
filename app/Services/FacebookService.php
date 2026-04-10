@@ -341,6 +341,36 @@ class FacebookService
         return $response;
     }
 
+    /**
+     * List Facebook Pages with linked Instagram Business accounts (Graph nested fields).
+     */
+    public function meAccountsWithInstagram($access_token)
+    {
+        try {
+            $path = '/me/accounts?fields=id,name,access_token,instagram_business_account{id,username,name,profile_picture_url}';
+            $accounts = $this->facebook->get($path, $access_token);
+            $getGraphEdge = $accounts->getGraphEdge();
+            $response = [
+                'success' => true,
+                'data' => $getGraphEdge,
+            ];
+        } catch (FacebookResponseException $e) {
+            $error = $e->getMessage();
+            $response = [
+                'success' => false,
+                'message' => $error,
+            ];
+        } catch (FacebookSDKException $e) {
+            $error = $e->getMessage();
+            $response = [
+                'success' => false,
+                'message' => $error,
+            ];
+        }
+
+        return $response;
+    }
+
     public function pageProfileImage($access_token, $page_id)
     {
         $profile_picture = $this->facebook->get('/' . $page_id . '/picture?redirect=0&', $access_token);

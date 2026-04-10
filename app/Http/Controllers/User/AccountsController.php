@@ -11,11 +11,13 @@ use App\Models\Domain;
 use App\Models\Tiktok;
 use App\Models\Feature;
 use App\Models\Facebook;
+use App\Models\InstagramAccount;
 use App\Models\Timeslot;
 use App\Models\Pinterest;
 use Illuminate\Http\Request;
 use App\Services\TikTokService;
 use App\Services\FacebookService;
+use App\Services\FacebookSocialiteService;
 use App\Services\PinterestService;
 use App\Services\SocialMediaLogService;
 use App\Http\Controllers\Controller;
@@ -36,7 +38,8 @@ class AccountsController extends Controller
     private $post;
     private $domain;
     private $logService;
-    public function __construct(Pinterest $pinterest, Facebook $facebook, Tiktok $tiktok, Board $board, Page $page, Post $post, Domain $domain, FeatureUsageService $featureUsageService)
+    private $instagramAccount;
+    public function __construct(Pinterest $pinterest, Facebook $facebook, Tiktok $tiktok, Board $board, Page $page, Post $post, Domain $domain, FeatureUsageService $featureUsageService, InstagramAccount $instagramAccount)
     {
         $this->pinterestService = new PinterestService();
         $this->facebookService = new FacebookService();
@@ -50,14 +53,24 @@ class AccountsController extends Controller
         $this->post = $post;
         $this->domain = $domain;
         $this->logService = new SocialMediaLogService();
+        $this->instagramAccount = $instagramAccount;
     }
     public function index()
     {
-        $user = User::with("facebook", "pinterest", "tiktok")->findOrFail(Auth::guard('user')->id());
+        $user = User::with("facebook", "pinterest", "tiktok", "instagramAccounts")->findOrFail(Auth::guard('user')->id());
         $facebookUrl = route('panel.accounts.facebook.socialite');
+        $instagramUrl = route('panel.accounts.instagram.socialite');
         $pinterestUrl = $this->pinterestService->getLoginUrl();
         $tiktokUrl = $this->tiktokService->getLoginUrl();
-        return view("user.accounts.index", compact("user", "facebookUrl", "pinterestUrl", "tiktokUrl"));
+        return view("user.accounts.index", compact("user", "facebookUrl", "instagramUrl", "pinterestUrl", "tiktokUrl"));
+    }
+
+    /**
+     * Start Facebook OAuth with Instagram-related scopes (same callback as Facebook connect).
+     */
+    public function instagramSocialite(FacebookSocialiteService $facebookSocialiteService)
+    {
+        return $facebookSocialiteService->redirectForInstagram();
     }
 
     public function pinterestDelete($id = null)
@@ -267,8 +280,17 @@ class AccountsController extends Controller
                     $user->decrementFeatureUsage(Feature::$features_list[1], $totalScheduledPosts);
                 }
 
-                // Decrement feature usage for social_accounts (Facebook account + all pages)
-                $user->decrementFeatureUsage(Feature::$features_list[0], 1 + $totalPages);
+                // Instagram profiles linked to this Facebook login (each counted when connected)
+                $instagramRows = InstagramAccount::where('user_id', $user->id)->where('facebook_id', $facebook->id)->get();
+                $igCount = $instagramRows->count();
+
+                // Decrement feature usage for social_accounts (Facebook account + all pages + Instagram profiles)
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1 + $totalPages + $igCount);
+
+                foreach ($instagramRows as $ig) {
+                    $this->logService->logAccountConnection('instagram', $ig->id, $ig->username ?? $ig->ig_user_id, 'disconnected');
+                    $ig->delete();
+                }
 
                 // Delete Facebook account
                 $facebookId = $facebook->id;
@@ -478,6 +500,58 @@ class AccountsController extends Controller
                 "message" => $e->getMessage()
             ]);
         }
+    }
+
+    public function instagram($id = null)
+    {
+        if (! empty($id)) {
+            $instagramUrl = route('panel.accounts.instagram.socialite');
+            $user = User::find(Auth::guard('user')->id());
+            $instagram = $this->instagramAccount->where('user_id', $user->id)->search($id)->first();
+            if ($instagram) {
+                return view('user.accounts.instagram', compact('instagramUrl', 'instagram'));
+            }
+
+            return back()->with('error', 'Something went Wrong!');
+        }
+
+        return back()->with('error', 'Something went Wrong!');
+    }
+
+    public function instagramDelete($id = null)
+    {
+        if (! empty($id)) {
+            $user = User::find(Auth::guard('user')->id());
+            $instagram = $this->instagramAccount->where('user_id', $user->id)->search($id)->first();
+            if ($instagram) {
+                $igId = $instagram->id;
+                $igUsername = $instagram->username ?? $instagram->ig_user_id;
+
+                $scheduledPostsCount = Post::where('account_id', $instagram->id)
+                    ->where('social_type', 'instagram')
+                    ->count();
+
+                Post::where('account_id', $instagram->id)
+                    ->where('social_type', 'instagram')
+                    ->delete();
+
+                if ($scheduledPostsCount > 0) {
+                    $user->decrementFeatureUsage(Feature::$features_list[1], $scheduledPostsCount);
+                }
+
+                $instagram->delete();
+
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1);
+
+                $this->logService->logAccountConnection('instagram', $igId, $igUsername, 'disconnected');
+
+                return back()->with('success', 'Instagram account deleted successfully!');
+            }
+
+            return back()->with('error', 'Something went Wrong!');
+        }
+
+        return back()->with('error', 'Something went Wrong!');
     }
 
     public function tiktok($id = null)

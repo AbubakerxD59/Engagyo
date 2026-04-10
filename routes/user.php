@@ -88,6 +88,10 @@ Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone
             Route::post("add-page", "addPage")->name("addPage");
             Route::delete('facebook-delete/{id?}', 'facebookDelete')->name('facebook.delete');
             Route::delete('page-delete/{id?}', 'pageDelete')->name("page.delete");
+            // Instagram (Facebook OAuth + Graph discovery)
+            Route::get("instagram/{id?}", "instagram")->name("instagram");
+            Route::get("instagram-socialite", "instagramSocialite")->name("instagram.socialite");
+            Route::delete('instagram-delete/{id?}', 'instagramDelete')->name('instagram.delete');
             // TikTok
             Route::get("tiktok/{id?}", "tiktok")->name("tiktok");
             Route::delete('tiktok-delete/{id?}', 'tiktokDelete')->name('tiktok.delete');

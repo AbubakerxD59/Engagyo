@@ -31,6 +31,11 @@ class Facebook extends Model
         return $this->hasMany(Page::class, 'fb_id', 'id');
     }
 
+    public function instagramAccounts()
+    {
+        return $this->hasMany(InstagramAccount::class, 'facebook_id', 'id');
+    }
+
     public function scopeSearch($query, $search)
     {
         $query->where('fb_id', $search)->orWhere("username", "%{$search}%");

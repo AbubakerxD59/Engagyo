@@ -82,6 +82,82 @@
                         </div>
                     </div>
                 </div>
+                {{-- Instagram (via Facebook Login) --}}
+                <div class="card platform-card">
+                    <div class="card-header with-border clearfix">
+                        <div class="card-title">
+                            <img src="{{ social_logo('instagram') }}" loading="lazy">
+                            <span>Instagram</span>
+                        </div>
+                        <a href="{{ $instagramUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect Instagram</a>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="accounts-grid-wrapper">
+                            <div class="accounts-grid" data-platform="instagram">
+                                @forelse ($user->instagramAccounts as $index => $ig)
+                                    <article class="account-card instagram-card has-tooltip" @style(['display:none;' => $index >= 12])
+                                        data-tooltip="{{ $ig->username }}" data-index="{{ $index }}">
+                                        <div class="account-card-accent"></div>
+                                        <a href="{{ route('panel.accounts.instagram', $ig->ig_user_id) }}"
+                                            class="account-card-link">
+                                            <div class="account-card-content">
+                                                <div class="account-avatar-wrapper">
+                                                    <img src="{{ $ig->profile_image }}" class="account-avatar" loading="lazy"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('instagram') }}';">
+                                                    <span class="platform-indicator instagram-indicator">
+                                                        <i class="fab fa-instagram"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-info">
+                                                    <div class="account-username">
+                                                        {{ Str::limit($ig->username, 12) }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                        <div class="account-card-actions">
+                                            <button class="btn-account-delete delete-btn" title="Delete Account">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                            <form action="{{ route('panel.accounts.instagram.delete', $ig->ig_user_id) }}"
+                                                method="POST" class="delete_form">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
+                                        </div>
+                                    </article>
+                                @empty
+                                    <div class="empty-state-wrapper">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon instagram-empty">
+                                                <i class="fab fa-instagram"></i>
+                                            </div>
+                                            <h4>No Instagram Business Account Connected</h4>
+                                            <p>Connect with Facebook to discover Instagram Business profiles linked to your
+                                                Pages.</p>
+                                            <a href="{{ $instagramUrl }}" class="btn btn-outline-primary">
+                                                <i class="fab fa-instagram mr-2"></i> Connect Instagram
+                                            </a>
+                                        </div>
+                                    </div>
+                                @endforelse
+                            </div>
+                            @if (count($user->instagramAccounts) > 12)
+                                <div class="accounts-toggle-wrapper">
+                                    <button class="btn-accounts-toggle" data-platform="instagram" type="button">
+                                        <span class="toggle-text">Show All</span>
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
                 {{-- Pinterest --}}
                 <div class="card platform-card">
                     <div class="card-header with-border clearfix">
@@ -381,6 +457,10 @@
             background: linear-gradient(180deg, #e60023, #bd081c);
         }
 
+        .instagram-card .account-card-accent {
+            background: linear-gradient(180deg, #f09433, #bc1888, #833ab4);
+        }
+
         .account-card:hover .account-card-accent {
             width: 6px;
         }
@@ -425,6 +505,10 @@
             border-color: #e60023;
         }
 
+        .instagram-card:hover .account-avatar {
+            border-color: #bc1888;
+        }
+
         .platform-indicator {
             position: absolute;
             bottom: -2px;
@@ -447,6 +531,10 @@
 
         .pinterest-indicator {
             background: #e60023;
+        }
+
+        .instagram-indicator {
+            background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
         }
 
         .account-info {
@@ -530,6 +618,11 @@
         .empty-state-icon.pinterest-empty {
             background: linear-gradient(135deg, #fce8eb, #fcd4da);
             color: #e60023;
+        }
+
+        .empty-state-icon.instagram-empty {
+            background: linear-gradient(135deg, #fdf2f8, #fce7f3);
+            color: #bc1888;
         }
 
         .empty-state h4 {

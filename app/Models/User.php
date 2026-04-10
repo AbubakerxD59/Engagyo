@@ -89,6 +89,11 @@ class User extends Authenticatable
         return $this->hasMany(Tiktok::class, 'user_id', 'id');
     }
 
+    public function instagramAccounts()
+    {
+        return $this->hasMany(InstagramAccount::class, 'user_id', 'id');
+    }
+
     public function domains()
     {
         return $this->hasMany(Domain::class, 'user_id', 'id');
