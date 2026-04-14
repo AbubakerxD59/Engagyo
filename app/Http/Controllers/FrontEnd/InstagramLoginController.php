@@ -13,6 +13,22 @@ class InstagramLoginController extends Controller
 {
     public function callback(Request $request, InstagramLoginService $instagramLoginService)
     {
+        if (config('services.instagram.callback_debug_view')) {
+            $sessionState = session()->get('instagram_oauth_state');
+            $stateFromRequest = (string) $request->input('state', '');
+
+            return response()->view('debug.instagram-oauth-callback', [
+                'query' => $request->query(),
+                'all' => $request->all(),
+                'fullUrl' => $request->fullUrl(),
+                'method' => $request->method(),
+                'stateFromRequest' => $stateFromRequest,
+                'sessionState' => is_string($sessionState) ? $sessionState : null,
+                'stateMatches' => is_string($sessionState) && $sessionState !== '' && hash_equals($sessionState, $stateFromRequest),
+                'authenticated' => Auth::guard('user')->check(),
+            ]);
+        }
+
         $log = app(SocialMediaLogService::class);
 
         if ($request->filled('error')) {

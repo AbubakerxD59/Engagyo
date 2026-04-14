@@ -47,6 +47,8 @@ return [
         'oauth_force_reauth' => filter_var(env('INSTAGRAM_OAUTH_FORCE_REAUTH', true), FILTER_VALIDATE_BOOLEAN),
         'oauth_enable_fb_login' => env('INSTAGRAM_OAUTH_ENABLE_FB_LOGIN', '0'),
         'graph_version' => ltrim((string) env('FACEBOOK_GRAPH_VERSION', 'v21.0'), '/'),
+        /** When true, GET /instagram-callback renders a debug page instead of completing OAuth. Do not enable in production. */
+        'callback_debug_view' => filter_var(env('INSTAGRAM_LOGIN_CALLBACK_DEBUG', false), FILTER_VALIDATE_BOOLEAN),
     ],
 
     'stripe' => [
