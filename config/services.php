@@ -37,20 +37,12 @@ return [
         'redirect' => env('FACEBOOK_REDIRECT_URL'),
     ],
 
-    /*
-    | Base URL Meta can use to fetch post media for Content Publishing (HTTPS, public). Defaults to APP_URL.
-    | Used for image_url (photos). Videos typically use S3 public URLs from fetchFromS3.
-    | Set INSTAGRAM_IMAGE_PUBLIC_BASE_URL when APP_URL is internal but assets are on a public host/CDN.
-    */
     'instagram' => [
-        /** Instagram API with Instagram Login — OAuth client (falls back to FACEBOOK_* if unset). */
         'app_id' => env('INSTAGRAM_APP_ID') ?: env('FACEBOOK_APP_ID', env('FACEBOOK_CLIENT_ID')),
         'app_secret' => env('INSTAGRAM_APP_SECRET') ?: env('FACEBOOK_APP_SECRET', env('FACEBOOK_CLIENT_SECRET')),
         'image_public_base_url' => env('INSTAGRAM_IMAGE_PUBLIC_BASE_URL'),
-        /** Absolute URL registered under Meta app → Instagram → OAuth redirect URIs (defaults to route instagram.callback). */
         'login_redirect' => env('INSTAGRAM_LOGIN_REDIRECT_URI'),
         'oauth_authorize_url' => env('INSTAGRAM_OAUTH_AUTHORIZE_URL', 'https://www.instagram.com/oauth/authorize'),
-        /** When "0", Meta may hide the option to continue with Facebook on the Instagram OAuth screen (see Meta changelog). */
         'oauth_enable_fb_login' => env('INSTAGRAM_OAUTH_ENABLE_FB_LOGIN', '0'),
         'graph_version' => ltrim((string) env('FACEBOOK_GRAPH_VERSION', 'v21.0'), '/'),
     ],

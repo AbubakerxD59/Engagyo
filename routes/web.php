@@ -1,13 +1,8 @@
 <?php
 
-use App\Models\Page;
-use App\Models\Post;
-use App\Models\Board;
-use App\Models\Tiktok;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\GeneralController;
 use App\Http\Controllers\ShortLinkRedirectController;
-use Illuminate\Support\Facades\DB;
 
 // Short link redirect (public)
 Route::get('/s/{code}', ShortLinkRedirectController::class)->name('short.redirect')->where('code', '[a-zA-Z0-9]+');
