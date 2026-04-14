@@ -831,16 +831,23 @@
         var perPage = 9;
         var totalPosts = 0;
 
+        function postsGridSkeletonHtml() {
+            var tpl = document.getElementById('schedule-posts-skeleton-template');
+            if (tpl && tpl.innerHTML) {
+                return tpl.innerHTML;
+            }
+            return (
+                '<div class="loading-state text-center py-5" style="grid-column: 1/-1;">' +
+                '<i class="fas fa-spinner fa-spin fa-2x text-muted"></i>' +
+                '<p class="mt-2 text-muted">Loading posts...</p></div>'
+            );
+        }
+
         // Load posts
         function loadPosts(page = 1) {
             currentPage = page;
 
-            $('#postsGrid').html(`
-                <div class="loading-state text-center py-5" style="grid-column: 1/-1;">
-                    <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-                    <p class="mt-2 text-muted">Loading posts...</p>
-                </div>
-            `);
+            $('#postsGrid').html(postsGridSkeletonHtml());
 
             // Get selected accounts from account cards
             var selectedAccounts = getSelectedAccounts();

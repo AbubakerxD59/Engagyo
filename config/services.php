@@ -44,6 +44,12 @@ return [
     */
     'instagram' => [
         'image_public_base_url' => env('INSTAGRAM_IMAGE_PUBLIC_BASE_URL'),
+        /** Absolute URL registered under Meta app → Instagram → OAuth redirect URIs (defaults to route instagram.callback). */
+        'login_redirect' => env('INSTAGRAM_LOGIN_REDIRECT_URI'),
+        'oauth_authorize_url' => env('INSTAGRAM_OAUTH_AUTHORIZE_URL', 'https://www.instagram.com/oauth/authorize'),
+        /** When "0", Meta may hide the option to continue with Facebook on the Instagram OAuth screen (see Meta changelog). */
+        'oauth_enable_fb_login' => env('INSTAGRAM_OAUTH_ENABLE_FB_LOGIN', '0'),
+        'graph_version' => ltrim((string) env('FACEBOOK_GRAPH_VERSION', 'v21.0'), '/'),
     ],
 
     'stripe' => [

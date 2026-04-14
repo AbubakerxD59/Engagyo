@@ -1,186 +1,185 @@
 <?php
 
-use App\Models\Feature;
-use App\Services\FacebookSocialiteService;
-use Illuminate\Support\Facades\Artisan;
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\User\ApiKeysController;
-use App\Http\Controllers\User\PaymentController;
 use App\Http\Controllers\User\AccountsController;
+use App\Http\Controllers\User\AnalyticsController;
+use App\Http\Controllers\User\ApiKeysController;
 use App\Http\Controllers\User\ApiPostsController;
+use App\Http\Controllers\User\AutomationController;
+use App\Http\Controllers\User\LinkShortenerController;
+use App\Http\Controllers\User\NotificationController;
+use App\Http\Controllers\User\PaymentController;
 use App\Http\Controllers\User\ScheduleController;
 use App\Http\Controllers\User\SettingsController;
-use App\Http\Controllers\User\AutomationController;
-use App\Http\Controllers\User\NotificationController;
 use App\Http\Controllers\User\TeamMemberController;
 use App\Http\Controllers\User\UrlTrackingController;
-use App\Http\Controllers\User\LinkShortenerController;
-use App\Http\Controllers\User\AnalyticsController;
+use App\Models\Feature;
+use App\Services\FacebookSocialiteService;
+use Illuminate\Support\Facades\Route;
 
-Route::name("panel.")->prefix("panel/")->middleware(["user_auth", "user.timezone", "redirect_if_admin", "team.menu"])->group(function () {
+Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.timezone', 'redirect_if_admin', 'team.menu'])->group(function () {
     // Schedule Routes
-    Route::controller(ScheduleController::class)->middleware(['feature:' . Feature::$features_list[1]])->group(function () {
-        Route::get("schedule", "index")->name("schedule");
+    Route::controller(ScheduleController::class)->middleware(['feature:'.Feature::$features_list[1]])->group(function () {
+        Route::get('schedule', 'index')->name('schedule');
         // Route::get("schedule/new-design", "newDesign")->name("schedule.new-design");
-        Route::controller(ScheduleController::class)->prefix("schedule/")->name("schedule.")->group(function () {
-            Route::get("account/status", "accountStatus")->name("account.status");
-            Route::post("process/post", "processPost")->name("process.post");
-            Route::post("process/chain-posts", "processChainPosts")->name("process.chain-posts");
-            Route::get("get/setting", "getSetting")->name("get.setting");
-            Route::get("queue-settings", "getQueueSettings")->name("queue-settings");
-            Route::post("timeslot/setting", "timeslotSetting")->name("timeslot.setting");
-            Route::post("timeslot/setting/save", "saveTimeslotSettings")->name("timeslot.setting.save");
-            Route::post("shuffle-status", "updateShuffleStatus")->name("shuffle-status");
-            Route::get("posts/listing", "postsListing")->name("posts.listing");
-            Route::get("posts/status-counts", "postsStatusCounts")->name("posts.status.counts");
-            Route::get("posts/sent-page-posts", "getPageSentPosts")->name("posts.sent.page");
-            Route::get("posts/pinterest-sent", "getPinterestSentPosts")->name("posts.pinterest.sent");
-            Route::get("posts/tiktok-sent", "getTikTokSentPosts")->name("posts.tiktok.sent");
-            Route::post("refresh-page-posts", "refreshPagePosts")->name("refresh-page-posts");
-            Route::post("delete-sent-post", "deleteSentPost")->name("delete-sent-post");
-            Route::get("queue-timeline", "getQueueTimeline")->name("queue.timeline");
-            Route::get("next-queue-slot", "getNextQueueSlot")->name("next-queue-slot");
-            Route::get("last-used-account", "getLastUsedAccount")->name("last-used-account");
-            Route::get("accounts-with-status", "getAccountsWithStatus")->name("accounts-with-status");
-            Route::get("tiktok/creator-info", "getTikTokCreatorInfo")->name("tiktok.creator-info");
-            Route::get("selected-account", "getSelectedAccount")->name("selected-account");
-            Route::post("selected-account", "saveSelectedAccount")->name("selected-account.save");
-            Route::get("timeslots", "getTimeslots")->name("timeslots");
-            Route::prefix("post/")->name("post.")->group(function () {
-                Route::get("delete/{id?}", "postDelete")->name('delete');
-                Route::get("edit/{id?}", "postEdit")->name("edit");
-                Route::post("update/{id?}", "postUpdate")->name("update");
-                Route::post("update-comment/{id?}", "postUpdateComment")->name("update.comment");
-                Route::post("publish/now/{id?}", "postPublishNow")->name("publish.now");
+        Route::controller(ScheduleController::class)->prefix('schedule/')->name('schedule.')->group(function () {
+            Route::get('account/status', 'accountStatus')->name('account.status');
+            Route::post('process/post', 'processPost')->name('process.post');
+            Route::post('process/chain-posts', 'processChainPosts')->name('process.chain-posts');
+            Route::get('get/setting', 'getSetting')->name('get.setting');
+            Route::get('queue-settings', 'getQueueSettings')->name('queue-settings');
+            Route::post('timeslot/setting', 'timeslotSetting')->name('timeslot.setting');
+            Route::post('timeslot/setting/save', 'saveTimeslotSettings')->name('timeslot.setting.save');
+            Route::post('shuffle-status', 'updateShuffleStatus')->name('shuffle-status');
+            Route::get('posts/listing', 'postsListing')->name('posts.listing');
+            Route::get('posts/status-counts', 'postsStatusCounts')->name('posts.status.counts');
+            Route::get('posts/sent-page-posts', 'getPageSentPosts')->name('posts.sent.page');
+            Route::get('posts/pinterest-sent', 'getPinterestSentPosts')->name('posts.pinterest.sent');
+            Route::get('posts/tiktok-sent', 'getTikTokSentPosts')->name('posts.tiktok.sent');
+            Route::post('refresh-page-posts', 'refreshPagePosts')->name('refresh-page-posts');
+            Route::post('delete-sent-post', 'deleteSentPost')->name('delete-sent-post');
+            Route::get('queue-timeline', 'getQueueTimeline')->name('queue.timeline');
+            Route::get('next-queue-slot', 'getNextQueueSlot')->name('next-queue-slot');
+            Route::get('last-used-account', 'getLastUsedAccount')->name('last-used-account');
+            Route::get('accounts-with-status', 'getAccountsWithStatus')->name('accounts-with-status');
+            Route::get('tiktok/creator-info', 'getTikTokCreatorInfo')->name('tiktok.creator-info');
+            Route::get('selected-account', 'getSelectedAccount')->name('selected-account');
+            Route::post('selected-account', 'saveSelectedAccount')->name('selected-account.save');
+            Route::get('timeslots', 'getTimeslots')->name('timeslots');
+            Route::prefix('post/')->name('post.')->group(function () {
+                Route::get('delete/{id?}', 'postDelete')->name('delete');
+                Route::get('edit/{id?}', 'postEdit')->name('edit');
+                Route::post('update/{id?}', 'postUpdate')->name('update');
+                Route::post('update-comment/{id?}', 'postUpdateComment')->name('update.comment');
+                Route::post('publish/now/{id?}', 'postPublishNow')->name('publish.now');
             });
         });
     });
     // Analytics Routes - requires social_accounts feature
-    Route::get("analytics", [AnalyticsController::class, "index"])->name("analytics")->middleware(['feature:' . Feature::$features_list[0]]);
-    Route::get("analytics/data", [AnalyticsController::class, "data"])->name("analytics.data")->middleware(['feature:' . Feature::$features_list[0]]);
-    Route::get("analytics/test", [AnalyticsController::class, "testPageInsights"])->name("analytics.test")->middleware(['feature:' . Feature::$features_list[0]]);
-    Route::get("test/page-insights/{page_id}", [AnalyticsController::class, "testPagePostsInsights"])->name("test.page-insights")->middleware(['feature:' . Feature::$features_list[0]]);
+    Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics')->middleware(['feature:'.Feature::$features_list[0]]);
+    Route::get('analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data')->middleware(['feature:'.Feature::$features_list[0]]);
+    Route::get('analytics/test', [AnalyticsController::class, 'testPageInsights'])->name('analytics.test')->middleware(['feature:'.Feature::$features_list[0]]);
+    Route::get('test/page-insights/{page_id}', [AnalyticsController::class, 'testPagePostsInsights'])->name('test.page-insights')->middleware(['feature:'.Feature::$features_list[0]]);
 
     // Accounts Routes - Protected by feature middleware
-    Route::controller(AccountsController::class)->middleware(['feature:' . Feature::$features_list[0]])->group(function () {
-        Route::get("accounts", "index")->name("accounts");
+    Route::controller(AccountsController::class)->middleware(['feature:'.Feature::$features_list[0]])->group(function () {
+        Route::get('accounts', 'index')->name('accounts');
         // Accounts sub Routes
-        Route::name("accounts.")->group(function () {
+        Route::name('accounts.')->group(function () {
             // Pinterest
-            Route::get("pinterest/{id?}", "pinterest")->name("pinterest");
-            Route::post("add-board", "addBoard")->name("addBoard");
+            Route::get('pinterest/{id?}', 'pinterest')->name('pinterest');
+            Route::post('add-board', 'addBoard')->name('addBoard');
             Route::delete('pinterest-delete/{id?}', 'pinterestDelete')->name('pinterest.delete');
-            Route::delete('board-delete/{id?}', 'boardDelete')->name("board.delete");
+            Route::delete('board-delete/{id?}', 'boardDelete')->name('board.delete');
             // Facebook
-            Route::get("facebook/{id?}", "facebook")->name("facebook");
-            Route::get("facebook-socialite", fn(FacebookSocialiteService $fb) => $fb->redirect())->name("facebook.socialite");
-            Route::post("add-page", "addPage")->name("addPage");
+            Route::get('facebook/{id?}', 'facebook')->name('facebook');
+            Route::get('facebook-socialite', fn (FacebookSocialiteService $fb) => $fb->redirect())->name('facebook.socialite');
+            Route::post('add-page', 'addPage')->name('addPage');
             Route::delete('facebook-delete/{id?}', 'facebookDelete')->name('facebook.delete');
-            Route::delete('page-delete/{id?}', 'pageDelete')->name("page.delete");
-            // Instagram (Facebook OAuth + Graph discovery)
-            Route::get("instagram/{id?}", "instagram")->name("instagram");
-            Route::get("instagram-socialite", "instagramSocialite")->name("instagram.socialite");
+            Route::delete('page-delete/{id?}', 'pageDelete')->name('page.delete');
+            // Instagram (Meta Instagram Login OAuth)
+            Route::get('instagram/{id?}', 'instagram')->name('instagram');
+            Route::get('instagram-socialite', 'instagramSocialite')->name('instagram.socialite');
             Route::delete('instagram-delete/{id?}', 'instagramDelete')->name('instagram.delete');
             // TikTok
-            Route::get("tiktok/{id?}", "tiktok")->name("tiktok");
+            Route::get('tiktok/{id?}', 'tiktok')->name('tiktok');
             Route::delete('tiktok-delete/{id?}', 'tiktokDelete')->name('tiktok.delete');
             // Toggle RSS Pause
-            Route::post("toggle-rss-pause", "toggleRssPause")->name("toggleRssPause");
+            Route::post('toggle-rss-pause', 'toggleRssPause')->name('toggleRssPause');
         });
     });
     // Automation Routes
-    Route::controller(AutomationController::class)->middleware(['feature:' . Feature::$features_list[2]])->group(function () {
-        Route::get("automation", "index")->name("automation");
-        Route::name("automation.")->group(function () {
-            Route::post("feed-url", "feedUrl")->name("feedUrl");
-            Route::get("get-domain", "getDomain")->name("getDomain");
-            Route::post("save-filters", "saveFilters")->name("saveFilters");
-            Route::post("delete-domain", "deleteDomain")->name("deleteDomain");
+    Route::controller(AutomationController::class)->middleware(['feature:'.Feature::$features_list[2]])->group(function () {
+        Route::get('automation', 'index')->name('automation');
+        Route::name('automation.')->group(function () {
+            Route::post('feed-url', 'feedUrl')->name('feedUrl');
+            Route::get('get-domain', 'getDomain')->name('getDomain');
+            Route::post('save-filters', 'saveFilters')->name('saveFilters');
+            Route::post('delete-domain', 'deleteDomain')->name('deleteDomain');
             // Posts Routes
-            Route::name("posts.")->group(function () {
-                Route::get("posts-dataTable", "posts")->name("dataTable");
-                Route::post("post-delete", "postDelete")->name("destroy");
-                Route::post("post-update/{id?}", "postUpdate")->name("update");
-                Route::post("post-publish/{id?}", "postPublish")->name("publish");
-                Route::post("posts-shuffle", "postShuffle")->name("shuffle");
-                Route::post("posts-delete-all", "deleteAll")->name("deleteAll");
-                Route::post("post-fix", "postFix")->name("fix");
-                Route::post("save-changes", "saveChanges")->name("saveChanges");
+            Route::name('posts.')->group(function () {
+                Route::get('posts-dataTable', 'posts')->name('dataTable');
+                Route::post('post-delete', 'postDelete')->name('destroy');
+                Route::post('post-update/{id?}', 'postUpdate')->name('update');
+                Route::post('post-publish/{id?}', 'postPublish')->name('publish');
+                Route::post('posts-shuffle', 'postShuffle')->name('shuffle');
+                Route::post('posts-delete-all', 'deleteAll')->name('deleteAll');
+                Route::post('post-fix', 'postFix')->name('fix');
+                Route::post('save-changes', 'saveChanges')->name('saveChanges');
             });
         });
     });
     // API Keys Routes
-    Route::controller(ApiKeysController::class)->middleware(['feature:' . Feature::$features_list[5]])->group(function () {
-        Route::get("api-keys", "index")->name("api-keys");
-        Route::name("api-keys.")->prefix("api-keys/")->group(function () {
-            Route::post("store", "store")->name("store");
-            Route::post("refresh/{id}", "refresh")->name("refresh");
-            Route::post("toggle/{id}", "toggle")->name("toggle");
-            Route::delete("destroy/{id}", "destroy")->name("destroy");
+    Route::controller(ApiKeysController::class)->middleware(['feature:'.Feature::$features_list[5]])->group(function () {
+        Route::get('api-keys', 'index')->name('api-keys');
+        Route::name('api-keys.')->prefix('api-keys/')->group(function () {
+            Route::post('store', 'store')->name('store');
+            Route::post('refresh/{id}', 'refresh')->name('refresh');
+            Route::post('toggle/{id}', 'toggle')->name('toggle');
+            Route::delete('destroy/{id}', 'destroy')->name('destroy');
         });
     });
     // URL Tracking Routes
-    Route::controller(UrlTrackingController::class)->middleware(['feature:' . Feature::$features_list[6]])->group(function () {
-        Route::get("url-tracking", "index")->name("url-tracking");
-        Route::name("url-tracking.")->prefix("url-tracking/")->group(function () {
-            Route::post("store", "store")->name("store");
-            Route::get("{id}", "show")->name("show");
-            Route::post("update/{id}", "update")->name("update");
-            Route::delete("destroy/{id}", "destroy")->name("destroy");
-            Route::post("delete-all-domain", "deleteAllForDomain")->name("deleteAllDomain");
-            Route::post("get-by-domain", "getByDomain")->name("getByDomain");
+    Route::controller(UrlTrackingController::class)->middleware(['feature:'.Feature::$features_list[6]])->group(function () {
+        Route::get('url-tracking', 'index')->name('url-tracking');
+        Route::name('url-tracking.')->prefix('url-tracking/')->group(function () {
+            Route::post('store', 'store')->name('store');
+            Route::get('{id}', 'show')->name('show');
+            Route::post('update/{id}', 'update')->name('update');
+            Route::delete('destroy/{id}', 'destroy')->name('destroy');
+            Route::post('delete-all-domain', 'deleteAllForDomain')->name('deleteAllDomain');
+            Route::post('get-by-domain', 'getByDomain')->name('getByDomain');
         });
     });
     // Link Shortener Routes
-    Route::controller(LinkShortenerController::class)->middleware(['feature:' . Feature::$features_list[7]])->group(function () {
-        Route::get("link-shortener", "index")->name("link-shortener");
-        Route::name("link-shortener.")->prefix("link-shortener/")->group(function () {
-            Route::get("account/url-shortener-status", "accountUrlShortenerStatus")->name("account.urlShortenerStatus");
-            Route::post("account/url-shortener-status-bulk", "accountUrlShortenerStatusBulk")->name("account.urlShortenerStatusBulk");
-            Route::post("platform/url-shortener-status", "platformUrlShortenerStatus")->name("platform.urlShortenerStatus");
-            Route::post("store", "store")->name("store");
-            Route::post("update/{id}", "update")->name("update");
-            Route::delete("destroy/{id}", "destroy")->name("destroy");
+    Route::controller(LinkShortenerController::class)->middleware(['feature:'.Feature::$features_list[7]])->group(function () {
+        Route::get('link-shortener', 'index')->name('link-shortener');
+        Route::name('link-shortener.')->prefix('link-shortener/')->group(function () {
+            Route::get('account/url-shortener-status', 'accountUrlShortenerStatus')->name('account.urlShortenerStatus');
+            Route::post('account/url-shortener-status-bulk', 'accountUrlShortenerStatusBulk')->name('account.urlShortenerStatusBulk');
+            Route::post('platform/url-shortener-status', 'platformUrlShortenerStatus')->name('platform.urlShortenerStatus');
+            Route::post('store', 'store')->name('store');
+            Route::post('update/{id}', 'update')->name('update');
+            Route::delete('destroy/{id}', 'destroy')->name('destroy');
         });
     });
     // API Posts Routes
     Route::controller(ApiPostsController::class)->group(function () {
-        Route::get("api-posts", "index")->name("api-posts");
-        Route::name("api-posts.")->prefix("api-posts/")->group(function () {
-            Route::get("posts/listing", "postsListing")->name("posts.listing");
-            Route::get("queue-timeline", "getQueueTimeline")->name("queue.timeline");
-            Route::prefix("post/")->name("post.")->group(function () {
-                Route::get("delete", "postDelete")->name('delete');
-                Route::get("edit", "postEdit")->name("edit");
-                Route::post("update/{id?}", "postUpdate")->name("update");
-                Route::post("publish/now", "postPublishNow")->name("publish.now");
+        Route::get('api-posts', 'index')->name('api-posts');
+        Route::name('api-posts.')->prefix('api-posts/')->group(function () {
+            Route::get('posts/listing', 'postsListing')->name('posts.listing');
+            Route::get('queue-timeline', 'getQueueTimeline')->name('queue.timeline');
+            Route::prefix('post/')->name('post.')->group(function () {
+                Route::get('delete', 'postDelete')->name('delete');
+                Route::get('edit', 'postEdit')->name('edit');
+                Route::post('update/{id?}', 'postUpdate')->name('update');
+                Route::post('publish/now', 'postPublishNow')->name('publish.now');
             });
         });
     });
     // Settings Routes
     Route::controller(SettingsController::class)->group(function () {
-        Route::get("settings", "index")->name("settings");
-        Route::get("timezones", "timezones")->name("timezones");
-        Route::name("settings.")->prefix("settings/")->group(function () {
-            Route::post("update", "update")->name("update");
-            Route::post("update-profile-pic", "updateProfilePic")->name("updateProfilePic");
-            Route::post("remove-profile-pic", "removeProfilePic")->name("removeProfilePic");
-            Route::post("update-password", "updatePassword")->name("updatePassword");
-            Route::post("update-timezone", "updateTimezone")->name("updateTimezone");
+        Route::get('settings', 'index')->name('settings');
+        Route::get('timezones', 'timezones')->name('timezones');
+        Route::name('settings.')->prefix('settings/')->group(function () {
+            Route::post('update', 'update')->name('update');
+            Route::post('update-profile-pic', 'updateProfilePic')->name('updateProfilePic');
+            Route::post('remove-profile-pic', 'removeProfilePic')->name('removeProfilePic');
+            Route::post('update-password', 'updatePassword')->name('updatePassword');
+            Route::post('update-timezone', 'updateTimezone')->name('updateTimezone');
         });
     });
     // Plan & Billing Routes
     Route::controller(App\Http\Controllers\User\PlanBillingController::class)->middleware(['feature'])->group(function () {
-        Route::get("plan-billing", "index")->name("plan.billing");
+        Route::get('plan-billing', 'index')->name('plan.billing');
     });
     // Notifications Routes
-    Route::controller(NotificationController::class)->name("notifications.")->prefix("notifications/")->group(function () {
-        Route::get("fetch", "fetch")->name("fetch");
-        Route::post("mark-read/{id}", "markAsRead")->name("markRead");
-        Route::post("mark-all-read", "markAllAsRead")->name("markAllRead");
+    Route::controller(NotificationController::class)->name('notifications.')->prefix('notifications/')->group(function () {
+        Route::get('fetch', 'fetch')->name('fetch');
+        Route::post('mark-read/{id}', 'markAsRead')->name('markRead');
+        Route::post('mark-all-read', 'markAllAsRead')->name('markAllRead');
     });
     // Upgrade Packages (AJAX endpoint)
-    Route::get("packages/upgrade", [PaymentController::class, "getUpgradePackages"])->name("packages.upgrade");
+    Route::get('packages/upgrade', [PaymentController::class, 'getUpgradePackages'])->name('packages.upgrade');
 
     // Team Members Routes
     Route::resource('team-members', TeamMemberController::class)->except(['show']);

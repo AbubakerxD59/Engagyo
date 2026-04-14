@@ -2,23 +2,26 @@
 
 namespace App\Services;
 
+use App\Classes\FacebookSDK\LaravelSessionPersistentDataHandler;
 use App\Models\InstagramAccount;
+use App\Models\Notification;
 use App\Models\Page;
 use App\Models\Post;
-use App\Models\Notification;
-use Facebook\Facebook;
-use Facebook\Exceptions\FacebookSDKException;
 use Facebook\Exceptions\FacebookResponseException;
-use App\Classes\FacebookSDK\LaravelSessionPersistentDataHandler;
-use App\Services\SocialMediaLogService;
+use Facebook\Exceptions\FacebookSDKException;
+use Facebook\Facebook;
 use Illuminate\Support\Facades\Http;
 
 class FacebookService
 {
     private $facebook;
+
     private $post;
+
     private $helper;
-    private $response = "Post Published Successfully!";
+
+    private $response = 'Post Published Successfully!';
+
     private $logService;
 
     private function successNotification($userId, $title, $message, $post = null)
@@ -31,9 +34,9 @@ class FacebookService
             $socialType = 'facebook';
 
             if ($post->page) {
-                if (!empty($post->page->profile_image)) {
+                if (! empty($post->page->profile_image)) {
                     $accountImage = $post->page->profile_image;
-                } elseif ($post->page->facebook && !empty($post->page->facebook->profile_image)) {
+                } elseif ($post->page->facebook && ! empty($post->page->facebook->profile_image)) {
                     $accountImage = $post->page->facebook->profile_image;
                 }
             }
@@ -63,9 +66,9 @@ class FacebookService
             $socialType = 'facebook';
 
             if ($post->page) {
-                if (!empty($post->page->profile_image)) {
+                if (! empty($post->page->profile_image)) {
                     $accountImage = $post->page->profile_image;
-                } elseif ($post->page->facebook && !empty($post->page->facebook->profile_image)) {
+                } elseif ($post->page->facebook && ! empty($post->page->facebook->profile_image)) {
                     $accountImage = $post->page->facebook->profile_image;
                 }
             }
@@ -86,9 +89,7 @@ class FacebookService
     }
 
     /**
-     * @param Post $post
-     * @param array $response
-     * @param string $postType link|photo|video|reel|story|content|quote
+     * @param  string  $postType  link|photo|video|reel|story|content|quote
      */
     private function handlePostPublishResult(Post $post, array $response, string $postType = 'post')
     {
@@ -105,43 +106,43 @@ class FacebookService
         $typeLabel = $postTypeLabels[$postType] ?? 'post';
         $typeLabelCapitalized = ucfirst($typeLabel);
 
-        if ($response["success"]) {
-            $graphNode = $response["data"]->getGraphNode();
+        if ($response['success']) {
+            $graphNode = $response['data']->getGraphNode();
             $post_id = $graphNode['id'];
 
             $post->update([
-                "post_id" => $post_id,
-                "status" => 1,
-                "published_at" => date('Y-m-d H:i:s'),
-                "response" => json_encode([
-                    "success" => true,
-                    "post_id" => $post_id,
-                    "message" => "{$typeLabelCapitalized} published successfully to Facebook"
+                'post_id' => $post_id,
+                'status' => 1,
+                'published_at' => date('Y-m-d H:i:s'),
+                'response' => json_encode([
+                    'success' => true,
+                    'post_id' => $post_id,
+                    'message' => "{$typeLabelCapitalized} published successfully to Facebook",
                 ]),
             ]);
 
             $this->successNotification(
                 $post->user_id,
-                "Post Published",
+                'Post Published',
                 "Your Facebook {$typeLabel} has been published successfully.",
                 $post
             );
         } else {
-            $errorMessage = $response["message"] ?? "Failed to publish {$typeLabel} to Facebook.";
+            $errorMessage = $response['message'] ?? "Failed to publish {$typeLabel} to Facebook.";
 
             $post->update([
-                "status" => -1,
-                "published_at" => date('Y-m-d H:i:s'),
-                "response" => json_encode([
-                    "success" => false,
-                    "error" => $errorMessage
-                ])
+                'status' => -1,
+                'published_at' => date('Y-m-d H:i:s'),
+                'response' => json_encode([
+                    'success' => false,
+                    'error' => $errorMessage,
+                ]),
             ]);
 
             $this->errorNotification(
                 $post->user_id,
-                "Post Publishing Failed",
-                "Failed to publish Facebook {$typeLabel}. " . $errorMessage,
+                'Post Publishing Failed',
+                "Failed to publish Facebook {$typeLabel}. ".$errorMessage,
                 $post
             );
         }
@@ -150,14 +151,14 @@ class FacebookService
     public function __construct()
     {
         $this->facebook = new Facebook([
-            'app_id' => env("FACEBOOK_APP_ID"),
-            'app_secret' => env("FACEBOOK_APP_SECRET"),
-            'default_graph_version' => env("FACEBOOK_GRAPH_VERSION"),
-            'persistent_data_handler' => new LaravelSessionPersistentDataHandler()
+            'app_id' => env('FACEBOOK_APP_ID'),
+            'app_secret' => env('FACEBOOK_APP_SECRET'),
+            'default_graph_version' => env('FACEBOOK_GRAPH_VERSION'),
+            'persistent_data_handler' => new LaravelSessionPersistentDataHandler,
         ]);
         $this->helper = $this->facebook->getRedirectLoginHelper();
-        $this->post = new Post();
-        $this->logService = new SocialMediaLogService();
+        $this->post = new Post;
+        $this->logService = new SocialMediaLogService;
     }
 
     public function getAccessToken()
@@ -171,25 +172,26 @@ class FacebookService
             $tokenMetadata = $getOAuth2Client->debugToken($access_token);
             $access_token = $access_token->getValue();
             $response = [
-                "success" => true,
-                "data" => [
-                    "metadata" => $tokenMetadata,
-                    "access_token" => $access_token
+                'success' => true,
+                'data' => [
+                    'metadata' => $tokenMetadata,
+                    'access_token' => $access_token,
                 ],
             ];
         } catch (FacebookResponseException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error,
+                'success' => false,
+                'message' => $error,
             ];
         } catch (FacebookSDKException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error,
+                'success' => false,
+                'message' => $error,
             ];
         }
+
         return $response;
     }
 
@@ -198,22 +200,23 @@ class FacebookService
         try {
             $tokenMetadata = $this->facebook->getOAuth2Client()->debugToken($access_token);
             $response = [
-                "success" => true,
-                "data" => $tokenMetadata,
+                'success' => true,
+                'data' => $tokenMetadata,
             ];
         } catch (FacebookResponseException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error,
+                'success' => false,
+                'message' => $error,
             ];
         } catch (FacebookSDKException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error,
+                'success' => false,
+                'message' => $error,
             ];
         }
+
         return $response;
     }
 
@@ -222,66 +225,71 @@ class FacebookService
         $accountId = $account->id;
         $platform = $account instanceof InstagramAccount ? 'instagram' : 'facebook';
 
+        if ($account instanceof InstagramAccount && $account->usesInstagramLogin()) {
+            return app(InstagramLoginService::class)->refreshAccessToken($account);
+        }
+
         try {
             $getOAuth2Client = $this->facebook->getOAuth2Client();
 
             $longLivedToken = $getOAuth2Client->getLongLivedAccessToken($access_token);
 
-            if (!$longLivedToken) {
+            if (! $longLivedToken) {
                 return [
-                    "success" => false,
-                    "message" => "Failed to refresh access token. The token may have expired. Please reconnect your Facebook account.",
+                    'success' => false,
+                    'message' => 'Failed to refresh access token. The token may have expired. Please reconnect your Facebook account.',
                 ];
             }
 
             $tokenMetadata = $getOAuth2Client->debugToken($longLivedToken);
 
-            if (!$tokenMetadata->getIsValid()) {
+            if (! $tokenMetadata->getIsValid()) {
                 return [
-                    "success" => false,
-                    "message" => "The refreshed token is invalid. Please reconnect your Facebook account.",
+                    'success' => false,
+                    'message' => 'The refreshed token is invalid. Please reconnect your Facebook account.',
                 ];
             }
 
             $newAccessToken = $longLivedToken->getValue();
 
-            $expiresAt = $tokenMetadata->getField("data_access_expires_at");
+            $expiresAt = $tokenMetadata->getField('data_access_expires_at');
 
             $account->update([
-                "access_token" => $newAccessToken,
-                "expires_in" => $expiresAt,
+                'access_token' => $newAccessToken,
+                'expires_in' => $expiresAt,
             ]);
 
             $response = [
-                "success" => true,
-                "data" => [
-                    "metadata" => $tokenMetadata,
-                    "access_token" => $newAccessToken
+                'success' => true,
+                'data' => [
+                    'metadata' => $tokenMetadata,
+                    'access_token' => $newAccessToken,
                 ],
             ];
             $this->logService->logTokenRefresh($platform, $accountId, 'success', 'Token refreshed successfully');
         } catch (FacebookResponseException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => "Facebook API error: " . $error,
+                'success' => false,
+                'message' => 'Facebook API error: '.$error,
             ];
             $this->logService->logTokenRefresh($platform, $accountId, 'failed', $error);
         } catch (FacebookSDKException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => "Facebook SDK error: " . $error,
+                'success' => false,
+                'message' => 'Facebook SDK error: '.$error,
             ];
             $this->logService->logTokenRefresh($platform, $accountId, 'failed', $error);
         } catch (\Exception $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => "Unexpected error while refreshing token: " . $error,
+                'success' => false,
+                'message' => 'Unexpected error while refreshing token: '.$error,
             ];
             $this->logService->logTokenRefresh($platform, $accountId, 'failed', $error);
         }
+
         return $response;
     }
 
@@ -292,22 +300,23 @@ class FacebookService
             $user = $me->getGraphUser();
 
             $response = [
-                "success" => true,
-                "data" => $user
+                'success' => true,
+                'data' => $user,
             ];
         } catch (FacebookResponseException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error,
+                'success' => false,
+                'message' => $error,
             ];
         } catch (FacebookSDKException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error,
+                'success' => false,
+                'message' => $error,
             ];
         }
+
         return $response;
     }
 
@@ -317,22 +326,23 @@ class FacebookService
             $accounts = $this->facebook->get('/me/accounts', $access_token);
             $getGraphEdge = $accounts->getGraphEdge();
             $response = [
-                "success" => true,
-                "data" => $getGraphEdge
+                'success' => true,
+                'data' => $getGraphEdge,
             ];
         } catch (FacebookResponseException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error,
+                'success' => false,
+                'message' => $error,
             ];
         } catch (FacebookSDKException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error,
+                'success' => false,
+                'message' => $error,
             ];
         }
+
         return $response;
     }
 
@@ -398,54 +408,56 @@ class FacebookService
 
     public function pageProfileImage($access_token, $page_id)
     {
-        $profile_picture = $this->facebook->get('/' . $page_id . '/picture?redirect=0&', $access_token);
+        $profile_picture = $this->facebook->get('/'.$page_id.'/picture?redirect=0&', $access_token);
         try {
             $getGraphEdge = $profile_picture->getGraphNode();
             $response = [
-                "success" => true,
-                "data" => $getGraphEdge
+                'success' => true,
+                'data' => $getGraphEdge,
             ];
         } catch (FacebookResponseException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error,
+                'success' => false,
+                'message' => $error,
             ];
         } catch (FacebookSDKException $e) {
             $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error,
+                'success' => false,
+                'message' => $error,
             ];
         }
+
         return $response;
     }
 
     public function createLink($id, $access_token, $postData)
     {
         try {
-            $post = Post::with("page.facebook")->findOrFail($id);
+            $post = Post::with('page.facebook')->findOrFail($id);
             $page_id = $post->page ? $post->page->page_id : null;
-            $publish = $this->facebook->post('/' . $page_id . '/feed', $postData, $access_token);
+            $publish = $this->facebook->post('/'.$page_id.'/feed', $postData, $access_token);
             $response = [
-                "success" => true,
-                "data" => $publish
+                'success' => true,
+                'data' => $publish,
             ];
         } catch (FacebookResponseException $e) {
-            $error =  $e->getMessage();
+            $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
         } catch (FacebookSDKException $e) {
-            $error =  $e->getMessage();
+            $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
         }
-        $post = Post::with("page.facebook")->find($id);
+        $post = Post::with('page.facebook')->find($id);
         $this->handlePostPublishResult($post, $response, 'link');
+
         return $response;
     }
 
@@ -454,89 +466,92 @@ class FacebookService
         try {
             $publish = $this->facebook->post('/me/feed', $post, $access_token);
             $response = [
-                "success" => true,
-                "data" => $publish
+                'success' => true,
+                'data' => $publish,
             ];
         } catch (FacebookResponseException $e) {
-            $error =  $e->getMessage();
+            $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
         } catch (FacebookSDKException $e) {
-            $error =  $e->getMessage();
+            $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
         }
-        $post = Post::with("page.facebook")->find($id);
+        $post = Post::with('page.facebook')->find($id);
         $this->handlePostPublishResult($post, $response, 'content');
+
         return $response;
     }
 
     public function photo($id, $access_token, $postData)
     {
         try {
-            $post = Post::with("page.facebook")->findOrFail($id);
+            $post = Post::with('page.facebook')->findOrFail($id);
             $page_id = $post->page ? $post->page->page_id : null;
-            $publish = $this->facebook->post('/' . $page_id . '/photos', $postData, $access_token);
+            $publish = $this->facebook->post('/'.$page_id.'/photos', $postData, $access_token);
             $response = [
-                "success" => true,
-                "data" => $publish
+                'success' => true,
+                'data' => $publish,
             ];
             $this->logService->logPost('facebook', 'photo', $id, ['page_id' => $page_id], 'success');
         } catch (FacebookResponseException $e) {
-            $error =  $e->getMessage();
+            $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
             $this->logService->logApiError('facebook', '/photos', $error, ['post_id' => $id, 'page_id' => $page_id ?? null]);
         } catch (FacebookSDKException $e) {
-            $error =  $e->getMessage();
+            $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
             $this->logService->logApiError('facebook', '/photos', $error, ['post_id' => $id, 'page_id' => $page_id ?? null]);
         }
-        $post = Post::with("page.facebook")->find($id);
+        $post = Post::with('page.facebook')->find($id);
         $this->handlePostPublishResult($post, $response, 'photo');
+
         return $response;
     }
 
     public function video($id, $access_token, $post)
     {
-        $post_row = Post::with("page.facebook")->find($id);
+        $post_row = Post::with('page.facebook')->find($id);
         $page_id = $post_row->page ? $post_row->page->page_id : null;
         $this->logService->log('facebook', 'publish_video', 'page_id', ['page_id' => $page_id]);
         try {
-            $publish = $this->facebook->post('/' . $page_id . '/videos', $post, $access_token);
+            $publish = $this->facebook->post('/'.$page_id.'/videos', $post, $access_token);
             $response = [
-                "success" => true,
-                "data" => $publish
+                'success' => true,
+                'data' => $publish,
             ];
             $this->logService->logPost('facebook', 'video', $id, ['account_id' => $post_row->account_id], 'success');
         } catch (FacebookResponseException $e) {
-            $error =  $e->getMessage();
+            $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
             $this->logService->logApiError('facebook', '/videos', $error, ['post_id' => $id, 'account_id' => $post_row->account_id ?? null]);
         } catch (FacebookSDKException $e) {
-            $error =  $e->getMessage();
+            $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
             $this->logService->logApiError('facebook', '/videos', $error, ['post_id' => $id, 'account_id' => $post_row->account_id ?? null]);
         }
         $this->handlePostPublishResult($post_row, $response, 'video');
-        if ($post_row->source !== 'test' && !empty($post_row->video)) {
+        if ($post_row->source !== 'test' && ! empty($post_row->video)) {
             removeFile($post_row->video);
         }
+
         return $response;
     }
 
@@ -548,17 +563,19 @@ class FacebookService
         if (empty($page_id)) {
             $msg = 'Facebook page not found for this post.';
             $this->handleStoryPublishFailure($post_row, $msg);
+
             return ['success' => false, 'message' => $msg];
         }
 
         $mediaKind = (string) ($postData['media_kind'] ?? '');
-        $isPhotoStory = $mediaKind === 'photo' || !empty($postData['photo_url']);
+        $isPhotoStory = $mediaKind === 'photo' || ! empty($postData['photo_url']);
 
         if ($isPhotoStory) {
             $photoUrl = $postData['photo_url'] ?? null;
             if (empty($photoUrl)) {
                 $msg = 'Story media URL is missing.';
                 $this->handleStoryPublishFailure($post_row, $msg);
+
                 return ['success' => false, 'message' => $msg];
             }
 
@@ -575,6 +592,7 @@ class FacebookService
                 $msg = $this->formatHttpGraphError($uploadResp);
                 $this->logService->logApiError('facebook', '/photos', $msg, ['post_id' => $id, 'page_id' => $page_id]);
                 $this->handleStoryPublishFailure($post_row, $msg);
+
                 return ['success' => false, 'message' => $msg];
             }
 
@@ -583,6 +601,7 @@ class FacebookService
             if (! $photoId) {
                 $msg = 'Invalid /photos response for story (missing photo id).';
                 $this->handleStoryPublishFailure($post_row, $msg);
+
                 return ['success' => false, 'message' => $msg];
             }
 
@@ -598,13 +617,15 @@ class FacebookService
                 $msg = $this->formatHttpGraphError($publishResp);
                 $this->logService->logApiError('facebook', '/photo_stories', $msg, ['post_id' => $id, 'page_id' => $page_id, 'photo_id' => $photoId]);
                 $this->handleStoryPublishFailure($post_row, $msg);
+
                 return ['success' => false, 'message' => $msg];
             }
 
             $published = $publishResp->json();
             if (! ($published['success'] ?? false) || empty($published['post_id'])) {
-                $msg = 'Facebook photo story publish was not successful: ' . $publishResp->body();
+                $msg = 'Facebook photo story publish was not successful: '.$publishResp->body();
                 $this->handleStoryPublishFailure($post_row, $msg);
+
                 return ['success' => false, 'message' => $msg];
             }
 
@@ -626,6 +647,7 @@ class FacebookService
         if (empty($videoUrl)) {
             $msg = 'Story media URL is missing.';
             $this->handleStoryPublishFailure($post_row, $msg);
+
             return ['success' => false, 'message' => $msg];
         }
 
@@ -633,7 +655,7 @@ class FacebookService
         $startResp = Http::asJson()
             ->acceptJson()
             ->timeout(120)
-            ->post("{$graphBase}/{$page_id}/video_stories?access_token=" . urlencode($access_token), [
+            ->post("{$graphBase}/{$page_id}/video_stories?access_token=".urlencode($access_token), [
                 'upload_phase' => 'start',
             ]);
 
@@ -641,6 +663,7 @@ class FacebookService
             $msg = $this->formatHttpGraphError($startResp);
             $this->logService->logApiError('facebook', '/video_stories', $msg, ['post_id' => $id, 'phase' => 'start', 'page_id' => $page_id]);
             $this->handleStoryPublishFailure($post_row, $msg);
+
             return ['success' => false, 'message' => $msg];
         }
 
@@ -650,27 +673,30 @@ class FacebookService
         if (! $videoId || ! $uploadUrl) {
             $msg = 'Invalid /video_stories start response (missing video_id or upload_url).';
             $this->handleStoryPublishFailure($post_row, $msg);
+
             return ['success' => false, 'message' => $msg];
         }
 
         $rupload = Http::withHeaders([
-            'Authorization' => 'OAuth ' . $access_token,
+            'Authorization' => 'OAuth '.$access_token,
             'file_url' => $videoUrl,
         ])
             ->timeout(600)
             ->post($uploadUrl);
 
         if (! $rupload->successful()) {
-            $msg = 'Story video rupload failed: ' . ($rupload->body() ?: $rupload->reason());
+            $msg = 'Story video rupload failed: '.($rupload->body() ?: $rupload->reason());
             $this->logService->logApiError('facebook', 'rupload.facebook.com', $msg, ['post_id' => $id, 'video_id' => $videoId]);
             $this->handleStoryPublishFailure($post_row, $msg);
+
             return ['success' => false, 'message' => $msg];
         }
 
         $ruploadJson = $rupload->json();
         if (! ($ruploadJson['success'] ?? false)) {
-            $msg = 'Story video upload did not complete: ' . $rupload->body();
+            $msg = 'Story video upload did not complete: '.$rupload->body();
             $this->handleStoryPublishFailure($post_row, $msg);
+
             return ['success' => false, 'message' => $msg];
         }
 
@@ -689,13 +715,15 @@ class FacebookService
             $msg = $this->formatHttpGraphError($finishResp);
             $this->logService->logApiError('facebook', '/video_stories', $msg, ['post_id' => $id, 'phase' => 'finish', 'video_id' => $videoId]);
             $this->handleStoryPublishFailure($post_row, $msg);
+
             return ['success' => false, 'message' => $msg];
         }
 
         $finish = $finishResp->json();
         if (! ($finish['success'] ?? false) || empty($finish['post_id'])) {
-            $msg = 'Facebook video story publish finish was not successful: ' . $finishResp->body();
+            $msg = 'Facebook video story publish finish was not successful: '.$finishResp->body();
             $this->handleStoryPublishFailure($post_row, $msg);
+
             return ['success' => false, 'message' => $msg];
         }
 
@@ -730,17 +758,19 @@ class FacebookService
 
         if (empty($page_id)) {
             $this->handleReelPublishFailure($post_row, 'Facebook page not found for this post.');
+
             return ['success' => false, 'message' => 'Facebook page not found for this post.'];
         }
 
         $fileUrl = $postData['file_url'] ?? null;
         if (empty($fileUrl)) {
             $this->handleReelPublishFailure($post_row, 'Missing file_url for reel (public video URL required).');
+
             return ['success' => false, 'message' => 'Missing file_url for reel (public video URL required).'];
         }
 
         $graphBase = $this->graphBaseUrl();
-        $startUrl = "{$graphBase}/{$page_id}/video_reels?access_token=" . urlencode($access_token);
+        $startUrl = "{$graphBase}/{$page_id}/video_reels?access_token=".urlencode($access_token);
 
         $startResp = Http::asJson()
             ->acceptJson()
@@ -777,14 +807,14 @@ class FacebookService
         }
 
         $rupload = Http::withHeaders([
-            'Authorization' => 'OAuth ' . $access_token,
+            'Authorization' => 'OAuth '.$access_token,
             'file_url' => $fileUrl,
         ])
             ->timeout(600)
             ->post($upload_url);
 
         if (! $rupload->successful()) {
-            $msg = 'Reel rupload failed: ' . ($rupload->body() ?: $rupload->reason());
+            $msg = 'Reel rupload failed: '.($rupload->body() ?: $rupload->reason());
             $this->logService->logApiError('facebook', 'rupload.facebook.com', $msg, ['post_id' => $id, 'video_id' => $video_id]);
             $this->handleReelPublishFailure($post_row, $msg);
 
@@ -793,7 +823,7 @@ class FacebookService
 
         $ruploadJson = $rupload->json();
         if (! ($ruploadJson['success'] ?? false)) {
-            $msg = 'Reel upload did not complete: ' . $rupload->body();
+            $msg = 'Reel upload did not complete: '.$rupload->body();
             $this->logService->logApiError('facebook', 'rupload.facebook.com', $msg, ['post_id' => $id, 'video_id' => $video_id]);
             $this->handleReelPublishFailure($post_row, $msg);
 
@@ -838,7 +868,7 @@ class FacebookService
         }
 
         if (! ($finish['success'] ?? false)) {
-            $msg = 'Facebook reel publish finish was not successful: ' . $finishResp->body();
+            $msg = 'Facebook reel publish finish was not successful: '.$finishResp->body();
             $this->handleReelPublishFailure($post_row, $msg);
 
             return ['success' => false, 'message' => $msg];
@@ -868,7 +898,7 @@ class FacebookService
         $v = (string) env('FACEBOOK_GRAPH_VERSION', 'v21.0');
         $v = ltrim($v, '/');
 
-        return 'https://graph.facebook.com/' . $v;
+        return 'https://graph.facebook.com/'.$v;
     }
 
     /**
@@ -883,7 +913,7 @@ class FacebookService
 
         $body = $response->body();
 
-        return $body !== '' ? $body : ('HTTP ' . $response->status());
+        return $body !== '' ? $body : ('HTTP '.$response->status());
     }
 
     private function waitForVideoUploadPhaseComplete(string $graphBase, string $video_id, string $access_token): void
@@ -949,7 +979,7 @@ class FacebookService
         $this->errorNotification(
             $post->user_id,
             'Post Publishing Failed',
-            'Failed to publish Facebook reel. ' . $message,
+            'Failed to publish Facebook reel. '.$message,
             $post
         );
     }
@@ -989,7 +1019,7 @@ class FacebookService
         $this->errorNotification(
             $post->user_id,
             'Post Publishing Failed',
-            'Failed to publish Facebook story. ' . $message,
+            'Failed to publish Facebook story. '.$message,
             $post
         );
     }
@@ -997,24 +1027,25 @@ class FacebookService
     public function postComment($post_id, $access_token, $comment)
     {
         try {
-            $publish = $this->facebook->post('/' . $post_id . '/comments', ["message" => $comment], $access_token);
+            $publish = $this->facebook->post('/'.$post_id.'/comments', ['message' => $comment], $access_token);
             $response = [
-                "success" => true,
-                "data" => $publish
+                'success' => true,
+                'data' => $publish,
             ];
         } catch (FacebookResponseException $e) {
-            $error =  $e->getMessage();
+            $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
         } catch (FacebookSDKException $e) {
-            $error =  $e->getMessage();
+            $error = $e->getMessage();
             $response = [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
         }
+
         return $response;
     }
 
@@ -1024,39 +1055,42 @@ class FacebookService
     }
 
     /**
-     * @param string $facebookPostId Graph post id (e.g. {page_id}_{post_id})
+     * @param  string  $facebookPostId  Graph post id (e.g. {page_id}_{post_id})
      */
     public function deleteFromFacebook(string $facebookPostId, Page $page, ?int $dbPostId = null): array
     {
         $logId = $dbPostId ?? $facebookPostId;
         try {
-            $publish = $this->facebook->delete('/' . $facebookPostId, [], $page->access_token);
+            $publish = $this->facebook->delete('/'.$facebookPostId, [], $page->access_token);
             $this->logService->logPostDeletion('facebook', $logId, 'success');
+
             return [
-                "success" => true,
-                "data" => $publish
+                'success' => true,
+                'data' => $publish,
             ];
         } catch (FacebookResponseException $e) {
             $error = $e->getMessage();
             $this->logService->logPostDeletion('facebook', $logId, 'failed');
             $this->logService->logApiError('facebook', '/delete', $error, ['post_id' => $logId]);
+
             return [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
         } catch (FacebookSDKException $e) {
             $error = $e->getMessage();
             $this->logService->logPostDeletion('facebook', $logId, 'failed');
             $this->logService->logApiError('facebook', '/delete', $error, ['post_id' => $logId]);
+
             return [
-                "success" => false,
-                "message" => $error
+                'success' => false,
+                'message' => $error,
             ];
         }
     }
 
     /**
-     * @param array $metrics Default: post_impressions, post_impressions_unique, post_engaged_users
+     * @param  array  $metrics  Default: post_impressions, post_impressions_unique, post_engaged_users
      * @return array impressions, reach, engaged_users
      */
     public function getPostInsights($postId, $accessToken, $metrics = ['post_impressions', 'post_impressions_unique', 'post_engaged_users'])
@@ -1072,7 +1106,7 @@ class FacebookService
         }
 
         $metricParam = implode(',', $metrics);
-        $endpoint = '/' . $postId . '/insights?metric=' . urlencode($metricParam) . '&period=lifetime';
+        $endpoint = '/'.$postId.'/insights?metric='.urlencode($metricParam).'&period=lifetime';
 
         try {
             $response = $this->facebook->get($endpoint, $accessToken);
@@ -1082,7 +1116,7 @@ class FacebookService
                 $name = $insightNode->getField('name');
                 $values = $insightNode->getField('values');
                 $value = 0;
-                if (!empty($values) && is_array($values)) {
+                if (! empty($values) && is_array($values)) {
                     $first = reset($values);
                     $value = is_array($first) && isset($first['value']) ? (int) $first['value'] : 0;
                 } elseif ($values instanceof \Facebook\GraphNodes\GraphNode) {
@@ -1137,8 +1171,8 @@ class FacebookService
         ];
 
         $metricParam = implode(',', $metrics);
-        $endpoint = '/' . $pageId . '/insights?metric=' . urlencode($metricParam)
-            . '&period=day&since=' . $since . '&until=' . $until;
+        $endpoint = '/'.$pageId.'/insights?metric='.urlencode($metricParam)
+            .'&period=day&since='.$since.'&until='.$until;
 
         try {
             $response = $this->facebook->get($endpoint, $accessToken);
@@ -1153,7 +1187,7 @@ class FacebookService
 
             foreach ($graphEdge as $insightNode) {
                 $name = $insightNode->getField('name');
-                if (!array_key_exists($name, $totals)) {
+                if (! array_key_exists($name, $totals)) {
                     continue;
                 }
 
@@ -1250,7 +1284,7 @@ class FacebookService
 
             $comparison[$metric] = ['change' => null, 'direction' => null];
 
-            if ($curr === null || $prev === null || !is_numeric($curr) || !is_numeric($prev)) {
+            if ($curr === null || $prev === null || ! is_numeric($curr) || ! is_numeric($prev)) {
                 continue;
             }
 
@@ -1265,6 +1299,7 @@ class FacebookService
                     'direction' => $curr > 0 ? 'up' : null,
                     'diff' => $curr > 0 ? $diff : 0,
                 ];
+
                 continue;
             }
 
@@ -1277,6 +1312,7 @@ class FacebookService
         }
 
         $current['comparison'] = $comparison;
+
         return $current;
     }
 
@@ -1293,14 +1329,14 @@ class FacebookService
         $until = $until ?: date('Y-m-d');
         $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
-        $sinceIso = $since . 'T00:00:00+0000';
-        $untilIso = $until . 'T23:59:59+0000';
+        $sinceIso = $since.'T00:00:00+0000';
+        $untilIso = $until.'T23:59:59+0000';
 
         $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story,comments.limit(0).summary(true)';
-        $endpoint = '/' . $pageId . '/feed?fields=' . urlencode($fields)
-            . '&since=' . urlencode($sinceIso)
-            . '&until=' . urlencode($untilIso)
-            . '&limit=' . min($limit, 100);
+        $endpoint = '/'.$pageId.'/feed?fields='.urlencode($fields)
+            .'&since='.urlencode($sinceIso)
+            .'&until='.urlencode($untilIso)
+            .'&limit='.min($limit, 100);
 
         try {
             $response = $this->facebook->get($endpoint, $accessToken);
@@ -1354,7 +1390,7 @@ class FacebookService
     }
 
     /**
-     * @param string $insightsPreset default|sent_tab (same metrics; normalization below)
+     * @param  string  $insightsPreset  default|sent_tab (same metrics; normalization below)
      */
     public function getPagePostsWithInsights(string $pageId, string $accessToken, ?string $since = null, ?string $until = null, string $insightsPreset = 'default'): array
     {
@@ -1375,7 +1411,7 @@ class FacebookService
                 foreach ($chunk as $post) {
                     $insightsBatch[] = [
                         'method' => 'GET',
-                        'relative_url' => $post['id'] . '/insights?metric=' . $metrics . '&period=lifetime',
+                        'relative_url' => $post['id'].'/insights?metric='.$metrics.'&period=lifetime',
                     ];
                 }
                 $params = ['batch' => json_encode($insightsBatch)];
@@ -1384,7 +1420,7 @@ class FacebookService
                 $insightsResponses = is_array($insightsResponses) ? array_values($insightsResponses) : [];
                 foreach ($chunk as $i => $post) {
                     $postIndex = $offset + $i;
-                    if (!isset($posts[$postIndex])) {
+                    if (! isset($posts[$postIndex])) {
                         continue;
                     }
                     $insightsResp = $insightsResponses[$i] ?? null;
@@ -1397,7 +1433,7 @@ class FacebookService
                             foreach ($data['data'] as $metricNode) {
                                 $name = $metricNode['name'] ?? null;
                                 $values = $metricNode['values'] ?? [];
-                                if ($name && !empty($values)) {
+                                if ($name && ! empty($values)) {
                                     $first = reset($values);
                                     $val = $first['value'] ?? 0;
                                     if ($name === 'post_reactions_by_type_total' && is_array($val)) {
@@ -1424,7 +1460,7 @@ class FacebookService
                 foreach ($chunk as $post) {
                     $commentsBatch[] = [
                         'method' => 'GET',
-                        'relative_url' => $post['id'] . '?fields=comments.limit(0).summary(true)',
+                        'relative_url' => $post['id'].'?fields=comments.limit(0).summary(true)',
                     ];
                 }
                 $params = ['batch' => json_encode($commentsBatch)];
@@ -1433,7 +1469,7 @@ class FacebookService
                 $commentsResponses = is_array($commentsResponses) ? array_values($commentsResponses) : [];
                 foreach ($chunk as $i => $post) {
                     $postIndex = $offset + $i;
-                    if (!isset($posts[$postIndex])) {
+                    if (! isset($posts[$postIndex])) {
                         continue;
                     }
                     $commentsResp = $commentsResponses[$i] ?? null;
@@ -1459,16 +1495,16 @@ class FacebookService
             $insights = $post['insights'] ?? [];
             $clicks = (int) ($insights['post_clicks'] ?? 0);
             $reactions = (int) ($insights['post_reactions_by_type_total'] ?? 0);
-                $impressions = (int) ($insights['post_media_view'] ?? 0);
-                $reach = (int) ($insights['post_media_view'] ?? 0);
-                $insights['post_clicks'] = $clicks;
-                $insights['post_reactions'] = $reactions;
-                $insights['post_impressions'] = $impressions;
-                $insights['post_reach'] = $reach;
-                $insights['post_engagement_rate'] = $impressions > 0
-                    ? round((($clicks + $reactions) / $impressions) * 100, 2)
-                    : 0;
-                unset($insights['post_media_view'], $insights['post_impressions_unique'], $insights['post_reactions_by_type_total']);
+            $impressions = (int) ($insights['post_media_view'] ?? 0);
+            $reach = (int) ($insights['post_media_view'] ?? 0);
+            $insights['post_clicks'] = $clicks;
+            $insights['post_reactions'] = $reactions;
+            $insights['post_impressions'] = $impressions;
+            $insights['post_reach'] = $reach;
+            $insights['post_engagement_rate'] = $impressions > 0
+                ? round((($clicks + $reactions) / $impressions) * 100, 2)
+                : 0;
+            unset($insights['post_media_view'], $insights['post_impressions_unique'], $insights['post_reactions_by_type_total']);
             $post['insights'] = $insights;
         }
         unset($post);
@@ -1479,35 +1515,37 @@ class FacebookService
     public static function validateToken(Page|InstagramAccount|null $account)
     {
         try {
-            if (!$account) {
+            if (! $account) {
                 return [
-                    "success" => false,
-                    "message" => "Facebook account not found."
+                    'success' => false,
+                    'message' => 'Account not found.',
                 ];
             }
 
             if (empty($account->access_token)) {
                 return [
-                    "success" => false,
-                    "message" => "Facebook access token is missing. Please reconnect your Facebook account."
+                    'success' => false,
+                    'message' => $account instanceof InstagramAccount
+                        ? 'Instagram access token is missing. Please reconnect your Instagram account.'
+                        : 'Facebook access token is missing. Please reconnect your Facebook account.',
                 ];
             }
 
             $access_token = $account->access_token;
-            $response = ["success" => true, "access_token" => $access_token];
+            $response = ['success' => true, 'access_token' => $access_token];
 
-            if (!$account->validToken()) {
+            if (! $account->validToken()) {
 
-                $service = new FacebookService();
+                $service = new FacebookService;
                 $token = $service->refreshAccessToken($access_token, $account);
 
-                if ($token["success"]) {
-                    $data = $token["data"];
-                    $response = ["success" => true, "access_token" => $data["access_token"]];
+                if ($token['success']) {
+                    $data = $token['data'];
+                    $response = ['success' => true, 'access_token' => $data['access_token']];
                 } else {
                     $response = [
-                        "success" => false,
-                        "message" => $token["message"] ?? "Failed to refresh Facebook token. Please reconnect your account."
+                        'success' => false,
+                        'message' => $token['message'] ?? 'Failed to refresh Facebook token. Please reconnect your account.',
                     ];
                 }
             }
@@ -1515,8 +1553,8 @@ class FacebookService
             return $response;
         } catch (\Exception $e) {
             return [
-                "success" => false,
-                "message" => "Error validating Facebook token: " . $e->getMessage()
+                'success' => false,
+                'message' => 'Error validating Facebook token: '.$e->getMessage(),
             ];
         }
     }

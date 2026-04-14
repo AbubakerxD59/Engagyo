@@ -82,7 +82,7 @@
                         </div>
                     </div>
                 </div>
-                {{-- Instagram (via Facebook Login) --}}
+                    {{-- Instagram (Instagram API with Instagram Login) --}}
                 <div class="card platform-card">
                     <div class="card-header with-border clearfix">
                         <div class="card-title">

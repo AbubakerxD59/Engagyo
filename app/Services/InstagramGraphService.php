@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\InstagramAccount;
 use App\Models\Notification;
 use App\Models\Post;
 use Illuminate\Support\Facades\Http;
@@ -9,10 +10,13 @@ use Illuminate\Support\Facades\Log;
 
 class InstagramGraphService
 {
-    private function graphBaseUrl(): string
+    private function graphBaseUrl(InstagramAccount $ig): string
     {
-        $v = (string) env('FACEBOOK_GRAPH_VERSION', 'v21.0');
-        $v = ltrim($v, '/');
+        $v = ltrim((string) config('services.instagram.graph_version', 'v21.0'), '/');
+
+        if ($ig->usesInstagramLogin()) {
+            return 'https://graph.instagram.com/'.$v;
+        }
 
         return 'https://graph.facebook.com/'.$v;
     }
@@ -102,7 +106,7 @@ class InstagramGraphService
         }
         $imageUrl = $prepared['url'];
 
-        $base = $this->graphBaseUrl();
+        $base = $this->graphBaseUrl($ig);
         $igUserId = $ig->ig_user_id;
 
         $create = Http::asForm()
@@ -136,7 +140,7 @@ class InstagramGraphService
             return;
         }
 
-        $this->finishMediaPublish($post, $igUserId, (string) $creationId, $accessToken, 'Photo published successfully to Instagram', null);
+        $this->finishMediaPublish($post, $ig, $igUserId, (string) $creationId, $accessToken, 'Photo published successfully to Instagram', null);
     }
 
     /**
@@ -160,7 +164,7 @@ class InstagramGraphService
             return;
         }
 
-        $base = $this->graphBaseUrl();
+        $base = $this->graphBaseUrl($ig);
         $igUserId = $ig->ig_user_id;
 
         $payload = [
@@ -205,7 +209,7 @@ class InstagramGraphService
             ? 'Reel published successfully to Instagram'
             : 'Video published successfully to Instagram';
 
-        $this->finishMediaPublish($post, $igUserId, (string) $creationId, $accessToken, $successMsg, null);
+        $this->finishMediaPublish($post, $ig, $igUserId, (string) $creationId, $accessToken, $successMsg, null);
     }
 
     /**
@@ -247,7 +251,7 @@ class InstagramGraphService
             'types' => array_values(array_map(fn ($it) => is_array($it) ? ($it['type'] ?? 'image') : '?', $items)),
         ]);
 
-        $base = $this->graphBaseUrl();
+        $base = $this->graphBaseUrl($ig);
         $childIds = [];
 
         foreach ($items as $idx => $item) {
@@ -387,15 +391,15 @@ class InstagramGraphService
             return;
         }
 
-        $this->finishMediaPublish($post, $igUserId, (string) $carouselCreationId, $accessToken, 'Carousel published successfully to Instagram', $onStep);
+        $this->finishMediaPublish($post, $ig, $igUserId, (string) $carouselCreationId, $accessToken, 'Carousel published successfully to Instagram', $onStep);
     }
 
     /**
      * @param  callable(array<string, mixed>): void|null  $onStep
      */
-    private function finishMediaPublish(Post $post, string $igUserId, string $creationId, string $accessToken, string $successMessage, ?callable $onStep = null): void
+    private function finishMediaPublish(Post $post, InstagramAccount $ig, string $igUserId, string $creationId, string $accessToken, string $successMessage, ?callable $onStep = null): void
     {
-        $base = $this->graphBaseUrl();
+        $base = $this->graphBaseUrl($ig);
 
         $this->emitStep($onStep, 'instagram.media_publish', 'Calling media_publish…', 'running', ['creation_id' => $creationId]);
 

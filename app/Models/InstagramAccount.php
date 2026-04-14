@@ -3,9 +3,10 @@
 namespace App\Models;
 
 use App\Models\Relations\BelongsToInstagramLinkedPage;
-use Illuminate\Database\Eloquent\Model;
+use App\Services\InstagramLoginService;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class InstagramAccount extends Model
@@ -18,6 +19,7 @@ class InstagramAccount extends Model
         'user_id',
         'facebook_id',
         'page_id',
+        'connection_source',
         'ig_user_id',
         'username',
         'name',
@@ -151,6 +153,11 @@ class InstagramAccount extends Model
         $expires_in = $this->expires_in;
 
         return $expires_in >= $now;
+    }
+
+    public function usesInstagramLogin(): bool
+    {
+        return $this->connection_source === InstagramLoginService::CONNECTION_INSTAGRAM_LOGIN;
     }
 
     public function getAccountIdAttribute()

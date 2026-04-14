@@ -1,6 +1,127 @@
 @extends('user.layout.main')
 @section('title', 'Schedule')
+@section('critical_css')
+    <style>
+        @keyframes schedule-shimmer {
+            0% { background-position: 100% 0; }
+            100% { background-position: -100% 0; }
+        }
+        .schedule-sk-base {
+            background: linear-gradient(90deg, #e9ecef 0%, #f4f6f8 45%, #e9ecef 90%);
+            background-size: 200% 100%;
+            animation: schedule-shimmer 1.25s ease-in-out infinite;
+            border-radius: 8px;
+        }
+        #schedule-page-skeleton {
+            min-height: 72vh;
+            background: #f4f6f9;
+        }
+        .schedule-page-skeleton-inner .schedule-sk-card-shell {
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+            padding: 1.25rem 1.5rem;
+            border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        .schedule-sk-card-header.schedule-sk-line-lg {
+            height: 22px;
+            max-width: 220px;
+            border-radius: 6px;
+        }
+        .schedule-sk-account-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .schedule-sk-account-pill {
+            width: 168px;
+            height: 64px;
+            border-radius: 10px;
+        }
+        .schedule-sk-line {
+            height: 14px;
+            width: 100%;
+            border-radius: 6px;
+        }
+        .schedule-sk-textarea {
+            height: 88px;
+            width: 100%;
+        }
+        .schedule-sk-dropzone {
+            height: 120px;
+            width: 100%;
+            border-radius: 10px;
+        }
+        .schedule-sk-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .schedule-sk-btn {
+            width: 108px;
+            height: 36px;
+            border-radius: 6px;
+        }
+        .schedule-sk-label {
+            height: 12px;
+            width: 88px;
+        }
+        .schedule-sk-line.h-38 { height: 38px; }
+        .schedule-sk-line.w-35 { width: 35%; }
+        .schedule-sk-line.w-45 { width: 45%; }
+        .schedule-sk-line.w-60 { width: 60%; }
+        .schedule-sk-line.w-85 { width: 85%; }
+        .schedule-post-skeleton-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            height: 580px;
+            border: 1px solid rgba(0, 0, 0, 0.04);
+        }
+        .schedule-post-skeleton-preview {
+            height: 320px;
+            width: 100%;
+            border-radius: 0;
+            animation: schedule-shimmer 1.25s ease-in-out infinite;
+        }
+        .schedule-post-skeleton-meta {
+            padding: 14px 16px;
+            background: #f8f9fa;
+            flex: 1;
+        }
+        .schedule-page-skeleton-inner .schedule-posts-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+        @media (max-width: 1200px) {
+            .schedule-page-skeleton-inner .schedule-posts-grid {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+        @media (max-width: 768px) {
+            .schedule-page-skeleton-inner .schedule-posts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .schedule-sk-base,
+            .schedule-post-skeleton-preview {
+                animation: none;
+                background: #e9ecef;
+            }
+        }
+    </style>
+@endsection
 @section('page_content')
+    <div id="schedule-page-skeleton" class="schedule-page-skeleton-outer" aria-busy="true" aria-label="Loading schedule">
+        @include('user.schedule.partials.schedule-page-skeleton-inner')
+    </div>
+
+    <div id="schedule-page-root" hidden>
     <div class="page-content">
         @include('user.layout.feature-limit-alert')
         <div class="content-header clearfix"></div>
@@ -174,12 +295,9 @@
                             </div>
                         </div>
 
-                        {{-- Posts Grid --}}
+                        {{-- Posts Grid (skeleton until AJAX loads; same markup as template below) --}}
                         <div id="postsGrid" class="schedule-posts-grid">
-                            <div class="loading-state text-center py-5">
-                                <i class="fas fa-spinner fa-spin fa-2x text-muted"></i>
-                                <p class="mt-2 text-muted">Loading posts...</p>
-                            </div>
+                            @include('user.schedule.partials.posts-grid-skeleton-items')
                         </div>
 
                         {{-- Pagination --}}
@@ -210,6 +328,33 @@
             <div class="lightbox-caption" id="lightboxCaption"></div>
         </div>
     </div>
+
+    <template id="schedule-posts-skeleton-template">
+        @include('user.schedule.partials.posts-grid-skeleton-items')
+    </template>
+    </div>{{-- /#schedule-page-root --}}
+
+    <script>
+        (function () {
+            function revealScheduleShell() {
+                var sk = document.getElementById('schedule-page-skeleton');
+                var root = document.getElementById('schedule-page-root');
+                if (sk) {
+                    sk.style.display = 'none';
+                    sk.removeAttribute('aria-busy');
+                }
+                if (root) {
+                    root.removeAttribute('hidden');
+                    root.setAttribute('aria-hidden', 'false');
+                }
+            }
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', revealScheduleShell);
+            } else {
+                revealScheduleShell();
+            }
+        })();
+    </script>
 @endsection
 
 @push('styles')

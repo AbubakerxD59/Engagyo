@@ -2,48 +2,61 @@
 
 namespace App\Http\Controllers\User;
 
-use Exception;
-use App\Models\Page;
-use App\Models\Post;
-use App\Models\User;
+use App\Http\Controllers\Controller;
 use App\Models\Board;
 use App\Models\Domain;
-use App\Models\Tiktok;
-use App\Models\Feature;
 use App\Models\Facebook;
+use App\Models\Feature;
 use App\Models\InstagramAccount;
-use App\Models\Timeslot;
+use App\Models\Page;
 use App\Models\Pinterest;
-use Illuminate\Http\Request;
-use App\Services\TikTokService;
+use App\Models\Post;
+use App\Models\Tiktok;
+use App\Models\Timeslot;
+use App\Models\User;
 use App\Services\FacebookService;
-use App\Services\FacebookSocialiteService;
+use App\Services\FeatureUsageService;
+use App\Services\InstagramLoginService;
 use App\Services\PinterestService;
 use App\Services\SocialMediaLogService;
-use App\Http\Controllers\Controller;
+use App\Services\TikTokService;
+use Exception;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use App\Services\FeatureUsageService;
 
 class AccountsController extends Controller
 {
     private $pinterestService;
+
     private $facebookService;
+
     private $tiktokService;
+
     private $featureUsageService;
+
     private $pinterest;
+
     private $facebook;
+
     private $tiktok;
+
     private $board;
+
     private $page;
+
     private $post;
+
     private $domain;
+
     private $logService;
+
     private $instagramAccount;
+
     public function __construct(Pinterest $pinterest, Facebook $facebook, Tiktok $tiktok, Board $board, Page $page, Post $post, Domain $domain, FeatureUsageService $featureUsageService, InstagramAccount $instagramAccount)
     {
-        $this->pinterestService = new PinterestService();
-        $this->facebookService = new FacebookService();
-        $this->tiktokService = new TikTokService();
+        $this->pinterestService = new PinterestService;
+        $this->facebookService = new FacebookService;
+        $this->tiktokService = new TikTokService;
         $this->featureUsageService = $featureUsageService;
         $this->pinterest = $pinterest;
         $this->facebook = $facebook;
@@ -52,55 +65,61 @@ class AccountsController extends Controller
         $this->page = $page;
         $this->post = $post;
         $this->domain = $domain;
-        $this->logService = new SocialMediaLogService();
+        $this->logService = new SocialMediaLogService;
         $this->instagramAccount = $instagramAccount;
     }
+
     public function index()
     {
-        $user = User::with("facebook", "pinterest", "tiktok", "instagramAccounts")->findOrFail(Auth::guard('user')->id());
+        $user = User::with('facebook', 'pinterest', 'tiktok', 'instagramAccounts')->findOrFail(Auth::guard('user')->id());
         $facebookUrl = route('panel.accounts.facebook.socialite');
         $instagramUrl = route('panel.accounts.instagram.socialite');
         $pinterestUrl = $this->pinterestService->getLoginUrl();
         $tiktokUrl = $this->tiktokService->getLoginUrl();
-        return view("user.accounts.index", compact("user", "facebookUrl", "instagramUrl", "pinterestUrl", "tiktokUrl"));
+
+        return view('user.accounts.index', compact('user', 'facebookUrl', 'instagramUrl', 'pinterestUrl', 'tiktokUrl'));
     }
 
     /**
-     * Start Facebook OAuth with Instagram-related scopes (same callback as Facebook connect).
+     * Start Instagram API with Instagram Login (Meta OAuth on instagram.com).
      */
-    public function instagramSocialite(FacebookSocialiteService $facebookSocialiteService)
+    public function instagramSocialite(InstagramLoginService $instagramLoginService)
     {
-        return $facebookSocialiteService->redirectForInstagram();
+        try {
+            return redirect()->away($instagramLoginService->authorizeUrl());
+        } catch (\Throwable $e) {
+            return redirect()->route('panel.accounts')->with('error', $e->getMessage());
+        }
     }
 
     public function pinterestDelete($id = null)
     {
-        if (!empty($id)) {
+        if (! empty($id)) {
             $user = User::find(Auth::guard('user')->id());
             $pinterest = $this->pinterest->where('user_id', $user->id)->search($id)->first();
             if ($pinterest) {
-                $boards = Board::where("pin_id", $pinterest->id)->get();
+                $boards = Board::where('pin_id', $pinterest->id)->get();
                 $totalScheduledPosts = 0;
                 $totalBoards = 0;
 
                 // posts,domains,timeslots,board
                 foreach ($boards as $board) {
                     // Count scheduled posts before deletion
-                    $scheduledPostsCount = Post::where("account_id", $board->id)->count();
+                    $scheduledPostsCount = Post::where('account_id', $board->id)->count();
                     $totalScheduledPosts += $scheduledPostsCount;
                     $totalBoards++;
 
                     // Delete Posts
-                    $postsToDelete = Post::where("account_id", $board->id)->get();
+                    $postsToDelete = Post::where('account_id', $board->id)->get();
                     foreach ($postsToDelete as $post) {
                         $post->delete();
                     }
                     // Delete Domains
-                    Domain::where("account_id", $board->id)->delete();
+                    Domain::where('account_id', $board->id)->delete();
                     // Delete Timeslots
-                    Timeslot::where("account_id", $board->id)->delete();
+                    Timeslot::where('account_id', $board->id)->delete();
                     // Delete Board
-                    Board::where("id", $board->id)->delete();
+                    Board::where('id', $board->id)->delete();
                 }
 
                 // Decrement feature usage for scheduled posts
@@ -115,22 +134,22 @@ class AccountsController extends Controller
                 $pinterestId = $pinterest->id;
                 $pinterestUsername = $pinterest->username;
                 $pinterest->delete();
-                
+
                 // Log account deletion
                 $this->logService->logAccountConnection('pinterest', $pinterestId, $pinterestUsername, 'disconnected');
-                
-                return back()->with("success", "Pinterest Account deleted Successfully!");
+
+                return back()->with('success', 'Pinterest Account deleted Successfully!');
             } else {
-                return back()->with("error", "Something went Wrong!");
+                return back()->with('error', 'Something went Wrong!');
             }
         } else {
-            return back()->with("error", "Something went Wrong!");
+            return back()->with('error', 'Something went Wrong!');
         }
     }
 
     public function pinterest($id = null)
     {
-        if (!empty($id)) {
+        if (! empty($id)) {
             $user = User::find(Auth::guard('user')->id());
             $pinterestUrl = $this->pinterestService->getLoginUrl();
             $pinterest = $this->pinterest->where('user_id', $user->id)->search($id)->firstOrFail();
@@ -152,13 +171,13 @@ class AccountsController extends Controller
             // Check and track feature usage for social_accounts
             $result = $this->featureUsageService->checkAndIncrement($user, Feature::$features_list[0], 1);
 
-            if (!$result['allowed']) {
+            if (! $result['allowed']) {
                 return response()->json([
-                    "success" => false,
-                    "message" => $result['message'],
-                    "usage" => $result['usage'],
-                    "limit" => $result['limit'],
-                    "remaining" => $result['remaining']
+                    'success' => false,
+                    'message' => $result['message'],
+                    'usage' => $result['usage'],
+                    'limit' => $result['limit'],
+                    'remaining' => $result['remaining'],
                 ]);
             }
 
@@ -166,42 +185,44 @@ class AccountsController extends Controller
             if ($board) {
                 $pinterest = $this->pinterest->where('user_id', $user->id)->search($request->pin_id)->firstOrfail();
                 $urlShortenerEnabled = in_array('pinterest', $user->url_shorten_platforms ?? []);
-                $boardModel = $pinterest->boards()->updateOrCreate(["user_id" => $user->id, "board_id" => $board["id"]], [
-                    "name" => $board["name"],
-                    "status" => 1,
-                    "url_shortener_enabled" => $urlShortenerEnabled,
+                $boardModel = $pinterest->boards()->updateOrCreate(['user_id' => $user->id, 'board_id' => $board['id']], [
+                    'name' => $board['name'],
+                    'status' => 1,
+                    'url_shortener_enabled' => $urlShortenerEnabled,
                 ]);
-                
+
                 // Log board connection
-                $this->logService->log('pinterest', 'board_connected', "Board '{$board["name"]}' connected", [
+                $this->logService->log('pinterest', 'board_connected', "Board '{$board['name']}' connected", [
                     'board_id' => $boardModel->id,
                     'pinterest_id' => $pinterest->id,
-                    'user_id' => $user->id
+                    'user_id' => $user->id,
                 ], 'info');
-                
+
                 return response()->json([
-                    "success" => true,
-                    "message" => "Board connected Successfully!",
-                    "usage" => $result['usage'],
-                    "remaining" => $result['remaining']
+                    'success' => true,
+                    'message' => 'Board connected Successfully!',
+                    'usage' => $result['usage'],
+                    'remaining' => $result['remaining'],
                 ]);
             } else {
                 // Rollback usage if board creation fails
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1);
-                return response()->json(["success" => false, "message" => "Something went Wrong!"]);
+
+                return response()->json(['success' => false, 'message' => 'Something went Wrong!']);
             }
         } catch (Exception $e) {
             // Rollback usage on error
             if (isset($user)) {
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1);
             }
-            return response()->json(["success" => false, "message" => $e->getMessage()]);
+
+            return response()->json(['success' => false, 'message' => $e->getMessage()]);
         }
     }
 
     public function boardDelete($id = null)
     {
-        if (!empty($id)) {
+        if (! empty($id)) {
             $user = User::find(Auth::guard('user')->id());
             $board = $this->board->search($id)->first();
             if ($board) {
@@ -233,10 +254,10 @@ class AccountsController extends Controller
                 // Log board deletion
                 $this->logService->log('pinterest', 'board_deleted', "Board '{$boardName}' deleted", [
                     'board_id' => $boardId,
-                    'user_id' => $user->id
+                    'user_id' => $user->id,
                 ], 'info');
 
-                return back()->with("success", "Board deleted Successfully!");
+                return back()->with('success', 'Board deleted Successfully!');
             } else {
                 return back()->with('error', 'Something went Wrong!');
             }
@@ -247,32 +268,32 @@ class AccountsController extends Controller
 
     public function facebookDelete($id = null)
     {
-        if (!empty($id)) {
+        if (! empty($id)) {
             $user = User::find(Auth::guard('user')->id());
             $facebook = $this->facebook->where('user_id', $user->id)->search($id)->first();
             if ($facebook) {
-                $pages = Page::with("posts", "domains", "timeslots")->where('fb_id', $facebook->id)->get();
+                $pages = Page::with('posts', 'domains', 'timeslots')->where('fb_id', $facebook->id)->get();
                 $totalScheduledPosts = 0;
                 $totalPages = 0;
 
                 // posts,domains,timeslots,page
                 foreach ($pages as $page) {
                     // Count scheduled posts before deletion
-                    $scheduledPostsCount = Post::where("account_id", $page->id)->count();
+                    $scheduledPostsCount = Post::where('account_id', $page->id)->count();
                     $totalScheduledPosts += $scheduledPostsCount;
                     $totalPages++;
 
                     // Delete Posts
-                    $postsToDelete = Post::where("account_id", $page->id)->get();
+                    $postsToDelete = Post::where('account_id', $page->id)->get();
                     foreach ($postsToDelete as $post) {
                         $post->delete();
                     }
                     // Delete Domains
-                    Domain::where("account_id", $page->id)->delete();
+                    Domain::where('account_id', $page->id)->delete();
                     // Delete Timeslots
-                    Timeslot::where("account_id", $page->id)->delete();
+                    Timeslot::where('account_id', $page->id)->delete();
                     // Delete Page
-                    Page::where("id", $page->id)->delete();
+                    Page::where('id', $page->id)->delete();
                 }
 
                 // Decrement feature usage for scheduled posts
@@ -300,18 +321,18 @@ class AccountsController extends Controller
                 // Log account deletion
                 $this->logService->logAccountConnection('facebook', $facebookId, $facebookUsername, 'disconnected');
 
-                return back()->with("success", "Facebook Account deleted Successfully!");
+                return back()->with('success', 'Facebook Account deleted Successfully!');
             } else {
-                return back()->with("error", "Something went Wrong!");
+                return back()->with('error', 'Something went Wrong!');
             }
         } else {
-            return back()->with("error", "Something went Wrong!");
+            return back()->with('error', 'Something went Wrong!');
         }
     }
 
     public function facebook($id = null)
     {
-        if (!empty($id)) {
+        if (! empty($id)) {
             $user = User::find(Auth::guard('user')->id());
             $facebookUrl = route('panel.accounts.facebook.socialite');
             $facebook = $this->facebook->where('user_id', $user->id)->search($id)->first();
@@ -335,13 +356,13 @@ class AccountsController extends Controller
                 // Check and track feature usage for social_accounts
                 $result = $this->featureUsageService->checkAndIncrement($user, Feature::$features_list[0], 1);
 
-                if (!$result['allowed']) {
+                if (! $result['allowed']) {
                     return response()->json([
-                        "success" => false,
-                        "message" => $result['message'],
-                        "usage" => $result['usage'],
-                        "limit" => $result['limit'],
-                        "remaining" => $result['remaining']
+                        'success' => false,
+                        'message' => $result['message'],
+                        'usage' => $result['usage'],
+                        'limit' => $result['limit'],
+                        'remaining' => $result['remaining'],
                     ]);
                 }
 
@@ -352,14 +373,14 @@ class AccountsController extends Controller
 
                 // If profile_image already exists in page_data as a filename, use it
                 // (profile_image is already downloaded and saved when pages are fetched)
-                if (!empty($page["profile_image"])) {
-                    $profileImage = $page["profile_image"];
+                if (! empty($page['profile_image'])) {
+                    $profileImage = $page['profile_image'];
                 } else {
                     // Fetch profile image from Facebook API and download it as fallback
-                    $profileImageResponse = $this->facebookService->pageProfileImage($page["access_token"], $page["id"]);
-                    if ($profileImageResponse["success"]) {
-                        $profileImageData = $profileImageResponse["data"];
-                        $profileImageUrl = $profileImageData->getField("url");
+                    $profileImageResponse = $this->facebookService->pageProfileImage($page['access_token'], $page['id']);
+                    if ($profileImageResponse['success']) {
+                        $profileImageData = $profileImageResponse['data'];
+                        $profileImageUrl = $profileImageData->getField('url');
 
                         // Download the image
                         if ($profileImageUrl) {
@@ -370,48 +391,49 @@ class AccountsController extends Controller
 
                 $urlShortenerEnabled = in_array('facebook', $user->url_shorten_platforms ?? []);
                 $pageData = [
-                    "name" => $page["name"],
-                    "status" => 1,
-                    "access_token" => $page["access_token"],
-                    "expires_in" => time(),
-                    "url_shortener_enabled" => $urlShortenerEnabled,
+                    'name' => $page['name'],
+                    'status' => 1,
+                    'access_token' => $page['access_token'],
+                    'expires_in' => time(),
+                    'url_shortener_enabled' => $urlShortenerEnabled,
                 ];
 
                 // Add profile_image if we have it
                 if ($profileImage) {
-                    $pageData["profile_image"] = $profileImage;
+                    $pageData['profile_image'] = $profileImage;
                 }
 
-                $pageModel = $facebook->pages()->updateOrCreate(["user_id" => $user->id, "page_id" => $page["id"]], $pageData);
+                $pageModel = $facebook->pages()->updateOrCreate(['user_id' => $user->id, 'page_id' => $page['id']], $pageData);
 
                 // Log page connection
-                $this->logService->log('facebook', 'page_connected', "Page '{$page["name"]}' connected", [
+                $this->logService->log('facebook', 'page_connected', "Page '{$page['name']}' connected", [
                     'page_id' => $pageModel->id,
                     'facebook_id' => $facebook->id,
-                    'user_id' => $user->id
+                    'user_id' => $user->id,
                 ], 'info');
 
                 return response()->json([
-                    "success" => true,
-                    "message" => "Page connected Successfully!",
-                    "usage" => $result['usage'],
-                    "remaining" => $result['remaining']
+                    'success' => true,
+                    'message' => 'Page connected Successfully!',
+                    'usage' => $result['usage'],
+                    'remaining' => $result['remaining'],
                 ]);
             } catch (Exception $e) {
                 // Rollback usage on error
                 if (isset($user)) {
                     $user->decrementFeatureUsage(Feature::$features_list[0], 1);
                 }
-                return response()->json(["success" => false, "message" => "Failed to connect page: " . $e->getMessage()]);
+
+                return response()->json(['success' => false, 'message' => 'Failed to connect page: '.$e->getMessage()]);
             }
         } else {
-            return response()->json(["success" => false, "message" => "Something went Wrong!"]);
+            return response()->json(['success' => false, 'message' => 'Something went Wrong!']);
         }
     }
 
     public function pageDelete($id = null)
     {
-        if (!empty($id)) {
+        if (! empty($id)) {
             $user = User::find(Auth::guard('user')->id());
             $page = $this->page->search($id)->first();
             if ($page) {
@@ -443,10 +465,10 @@ class AccountsController extends Controller
                 // Log page deletion
                 $this->logService->log('facebook', 'page_deleted', "Page '{$pageName}' deleted", [
                     'page_id' => $pageId,
-                    'user_id' => $user->id
+                    'user_id' => $user->id,
                 ], 'info');
 
-                return back()->with("success", "Page deleted Successfully!");
+                return back()->with('success', 'Page deleted Successfully!');
             } else {
                 return back()->with('error', 'Something went Wrong!');
             }
@@ -466,38 +488,38 @@ class AccountsController extends Controller
 
             if ($type === 'facebook') {
                 $page = $this->page->findOrFail($id);
-                $page->rss_paused = !$page->rss_paused;
+                $page->rss_paused = ! $page->rss_paused;
                 $page->save();
 
                 return response()->json([
-                    "success" => true,
-                    "message" => $page->rss_paused
-                        ? "RSS automation paused for this page."
-                        : "RSS automation resumed for this page.",
-                    "paused" => $page->rss_paused
+                    'success' => true,
+                    'message' => $page->rss_paused
+                        ? 'RSS automation paused for this page.'
+                        : 'RSS automation resumed for this page.',
+                    'paused' => $page->rss_paused,
                 ]);
             } elseif ($type === 'pinterest') {
                 $board = $this->board->findOrFail($id);
-                $board->rss_paused = !$board->rss_paused;
+                $board->rss_paused = ! $board->rss_paused;
                 $board->save();
 
                 return response()->json([
-                    "success" => true,
-                    "message" => $board->rss_paused
-                        ? "RSS automation paused for this board."
-                        : "RSS automation resumed for this board.",
-                    "paused" => $board->rss_paused
+                    'success' => true,
+                    'message' => $board->rss_paused
+                        ? 'RSS automation paused for this board.'
+                        : 'RSS automation resumed for this board.',
+                    'paused' => $board->rss_paused,
                 ]);
             }
 
             return response()->json([
-                "success" => false,
-                "message" => "Invalid account type."
+                'success' => false,
+                'message' => 'Invalid account type.',
             ]);
         } catch (Exception $e) {
             return response()->json([
-                "success" => false,
-                "message" => $e->getMessage()
+                'success' => false,
+                'message' => $e->getMessage(),
             ]);
         }
     }
@@ -556,7 +578,7 @@ class AccountsController extends Controller
 
     public function tiktok($id = null)
     {
-        if (!empty($id)) {
+        if (! empty($id)) {
             $tiktokUrl = $this->tiktokService->getLoginUrl();
             $tiktok = $this->tiktok->search($id)->first();
             if ($tiktok) {
@@ -571,7 +593,7 @@ class AccountsController extends Controller
 
     public function tiktokDelete($id = null)
     {
-        if (!empty($id)) {
+        if (! empty($id)) {
             $user = User::find(Auth::guard('user')->id());
             $tiktok = $this->tiktok->search($id)->first();
             if ($tiktok) {
@@ -594,12 +616,12 @@ class AccountsController extends Controller
                 // Decrement feature usage for social_accounts
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1);
 
-                return back()->with("success", "TikTok Account deleted Successfully!");
+                return back()->with('success', 'TikTok Account deleted Successfully!');
             } else {
-                return back()->with("error", "Something went Wrong!");
+                return back()->with('error', 'Something went Wrong!');
             }
         } else {
-            return back()->with("error", "Something went Wrong!");
+            return back()->with('error', 'Something went Wrong!');
         }
     }
 }

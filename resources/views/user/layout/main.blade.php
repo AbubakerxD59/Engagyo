@@ -19,6 +19,7 @@
     <title>
         {{ env('APP_NAME', 'Engagyo') . ' | ' }}@yield('title')
     </title>
+    @yield('critical_css')
     <!--favicon-->
     <link class="rounded-pill" rel="icon" href="{{ site_logo() }}" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com">
