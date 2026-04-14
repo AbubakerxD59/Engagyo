@@ -43,6 +43,9 @@ return [
     | Set INSTAGRAM_IMAGE_PUBLIC_BASE_URL when APP_URL is internal but assets are on a public host/CDN.
     */
     'instagram' => [
+        /** Instagram API with Instagram Login — OAuth client (falls back to FACEBOOK_* if unset). */
+        'app_id' => env('INSTAGRAM_APP_ID') ?: env('FACEBOOK_APP_ID', env('FACEBOOK_CLIENT_ID')),
+        'app_secret' => env('INSTAGRAM_APP_SECRET') ?: env('FACEBOOK_APP_SECRET', env('FACEBOOK_CLIENT_SECRET')),
         'image_public_base_url' => env('INSTAGRAM_IMAGE_PUBLIC_BASE_URL'),
         /** Absolute URL registered under Meta app → Instagram → OAuth redirect URIs (defaults to route instagram.callback). */
         'login_redirect' => env('INSTAGRAM_LOGIN_REDIRECT_URI'),

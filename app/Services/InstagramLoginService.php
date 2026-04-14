@@ -40,14 +40,24 @@ class InstagramLoginService
             : route('instagram.callback', [], true);
     }
 
+    public function oauthAppId(): string
+    {
+        return (string) config('services.instagram.app_id', '');
+    }
+
+    public function oauthAppSecret(): string
+    {
+        return (string) config('services.instagram.app_secret', '');
+    }
+
     public function authorizeUrl(): string
     {
         $state = Str::random(40);
         session(['instagram_oauth_state' => $state]);
 
-        $appId = (string) config('services.facebook.client_id', '');
+        $appId = $this->oauthAppId();
         if ($appId === '') {
-            throw new \RuntimeException('FACEBOOK_APP_ID / services.facebook.client_id is not configured.');
+            throw new \RuntimeException('INSTAGRAM_APP_ID (or FACEBOOK_APP_ID fallback) is not configured.');
         }
 
         $base = rtrim((string) config('services.instagram.oauth_authorize_url', 'https://www.instagram.com/oauth/authorize'), '?');
@@ -101,10 +111,10 @@ class InstagramLoginService
      */
     public function exchangeCodeForShortLivedToken(string $code): array
     {
-        $secret = (string) config('services.facebook.client_secret', '');
-        $appId = (string) config('services.facebook.client_id', '');
+        $secret = $this->oauthAppSecret();
+        $appId = $this->oauthAppId();
         if ($appId === '' || $secret === '') {
-            return ['success' => false, 'message' => 'Instagram OAuth is not configured (app id / secret missing).'];
+            return ['success' => false, 'message' => 'Instagram OAuth is not configured (INSTAGRAM_APP_ID / INSTAGRAM_APP_SECRET or FACEBOOK_* fallback missing).'];
         }
 
         /** @var Response $resp */
@@ -164,9 +174,9 @@ class InstagramLoginService
      */
     public function exchangeShortLivedForLongLived(string $shortLivedUserAccessToken): array
     {
-        $secret = (string) config('services.facebook.client_secret', '');
+        $secret = $this->oauthAppSecret();
         if ($secret === '') {
-            return ['success' => false, 'message' => 'App secret is not configured.'];
+            return ['success' => false, 'message' => 'Instagram app secret is not configured (INSTAGRAM_APP_SECRET or FACEBOOK_APP_SECRET fallback).'];
         }
 
         $resp = Http::acceptJson()
