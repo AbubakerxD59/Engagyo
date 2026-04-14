@@ -43,6 +43,8 @@ return [
         'image_public_base_url' => env('INSTAGRAM_IMAGE_PUBLIC_BASE_URL'),
         'login_redirect' => env('INSTAGRAM_LOGIN_REDIRECT_URI'),
         'oauth_authorize_url' => env('INSTAGRAM_OAUTH_AUTHORIZE_URL', 'https://www.instagram.com/oauth/authorize'),
+        /** Match Instagram authorize URL: force_reauth=true (see Meta OAuth authorize). */
+        'oauth_force_reauth' => filter_var(env('INSTAGRAM_OAUTH_FORCE_REAUTH', true), FILTER_VALIDATE_BOOLEAN),
         'oauth_enable_fb_login' => env('INSTAGRAM_OAUTH_ENABLE_FB_LOGIN', '0'),
         'graph_version' => ltrim((string) env('FACEBOOK_GRAPH_VERSION', 'v21.0'), '/'),
     ],

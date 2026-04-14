@@ -69,11 +69,15 @@ class AccountsController extends Controller
         $this->instagramAccount = $instagramAccount;
     }
 
-    public function index()
+    public function index(InstagramLoginService $instagramLoginService)
     {
         $user = User::with('facebook', 'pinterest', 'tiktok', 'instagramAccounts')->findOrFail(Auth::guard('user')->id());
         $facebookUrl = route('panel.accounts.facebook.socialite');
-        $instagramUrl = route('panel.accounts.instagram.socialite');
+        try {
+            $instagramUrl = $instagramLoginService->authorizeUrl();
+        } catch (\Throwable $e) {
+            $instagramUrl = route('panel.accounts.instagram.socialite');
+        }
         $pinterestUrl = $this->pinterestService->getLoginUrl();
         $tiktokUrl = $this->tiktokService->getLoginUrl();
 
@@ -524,10 +528,14 @@ class AccountsController extends Controller
         }
     }
 
-    public function instagram($id = null)
+    public function instagram($id = null, InstagramLoginService $instagramLoginService)
     {
         if (! empty($id)) {
-            $instagramUrl = route('panel.accounts.instagram.socialite');
+            try {
+                $instagramUrl = $instagramLoginService->authorizeUrl();
+            } catch (\Throwable $e) {
+                $instagramUrl = route('panel.accounts.instagram.socialite');
+            }
             $user = User::find(Auth::guard('user')->id());
             $instagram = $this->instagramAccount->where('user_id', $user->id)->search($id)->first();
             if ($instagram) {

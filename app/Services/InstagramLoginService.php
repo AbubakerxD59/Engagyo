@@ -25,18 +25,19 @@ class InstagramLoginService
     {
         return [
             'instagram_business_basic',
-            'instagram_business_content_publish',
-            'instagram_business_manage_comments',
             'instagram_business_manage_messages',
+            'instagram_business_manage_comments',
+            'instagram_business_content_publish',
+            'instagram_business_manage_insights',
         ];
     }
 
-    /*
-     * @description Must match a redirect URI listed under Meta → your app → Instagram → OAuth redirect URIs
+    /**
+     * Must match a redirect URI under Meta → App → Instagram → OAuth redirect URIs (exact string).
      */
     public function redirectUri(): string
     {
-        $configured = route('instagram.callback', [], true);
+        $configured = config('services.instagram.login_redirect');
         if (is_string($configured)) {
             $configured = trim($configured);
             if ($configured !== '') {
@@ -69,15 +70,26 @@ class InstagramLoginService
 
         $base = rtrim((string) config('services.instagram.oauth_authorize_url', 'https://www.instagram.com/oauth/authorize'), '?');
 
-        $query = http_build_query([
+        $params = [
             'client_id' => $appId,
             'redirect_uri' => $this->redirectUri(),
             'response_type' => 'code',
             'scope' => implode(',', $this->scopes()),
             'state' => $state,
-        ], '', '&', PHP_QUERY_RFC3986);
+        ];
 
-        return $base . '?' . $query;
+        if (config('services.instagram.oauth_force_reauth', true)) {
+            $params['force_reauth'] = 'true';
+        }
+
+        $enableFb = (string) config('services.instagram.oauth_enable_fb_login', '0');
+        if ($enableFb !== '') {
+            $params['enable_fb_login'] = $enableFb;
+        }
+
+        $query = http_build_query($params, '', '&', PHP_QUERY_RFC3986);
+
+        return $base.'?'.$query;
     }
 
     /**
