@@ -3866,6 +3866,121 @@ class  ScheduleController extends Controller
     }
 
     /**
+     * Instagram Sent tab: published schedule posts for selected accounts (same card payload as TikTok/Pinterest sent).
+     */
+    public function getInstagramSentPosts(Request $request)
+    {
+        $viewer = Auth::guard('user')->user();
+        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::id()];
+        $accountIds = (array) $request->input('account_id', []);
+        if (empty($accountIds)) {
+            return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
+        }
+
+        $ownerId = (int) ($viewer?->getEffectiveUser()?->id ?? $viewer?->id ?? Auth::id());
+        $accounts = InstagramAccount::query()
+            ->whereIn('id', $accountIds)
+            ->where('user_id', $ownerId)
+            ->get();
+
+        if ($accounts->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No Instagram accounts found', 'posts' => []]);
+        }
+
+        $igIds = $accounts->pluck('id')->all();
+        $accountsById = $accounts->keyBy('id');
+
+        $dbPosts = Post::withoutGlobalScopes()
+            ->whereIn('user_id', $postCreatorIds)
+            ->where('social_type', 'like', '%instagram%')
+            ->whereIn('account_id', $igIds)
+            ->where('status', 1)
+            ->whereNotNull('published_at')
+            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
+            ->where('source', 'schedule')
+            ->with('user', 'instagramAccount')
+            ->orderByDesc('published_at')
+            ->get();
+
+        $allPosts = [];
+        foreach ($dbPosts as $dbPost) {
+            $account = $accountsById->get($dbPost->account_id) ?? $dbPost->instagramAccount;
+            if (! $account) {
+                continue;
+            }
+            $allPosts[] = $this->sentTabPostFromInstagramRecord($dbPost, $account);
+        }
+
+        return response()->json(['success' => true, 'posts' => $allPosts]);
+    }
+
+    /**
+     * Minimal Sent-tab payload from a published Instagram Post row (same keys as TikTok / Pinterest sent cards).
+     */
+    private function sentTabPostFromInstagramRecord(Post $dbPost, InstagramAccount $account): array
+    {
+        $published = Carbon::parse($dbPost->published_at);
+        $createdTime = $published->toIso8601String();
+
+        $postType = strtolower((string) ($dbPost->getAttributes()['type'] ?? $dbPost->type ?? ''));
+        $isVideoLike = in_array($postType, ['video', 'reel'], true);
+
+        $fullPicture = '';
+        $rawImage = $dbPost->getAttributes()['image'] ?? null;
+        if (! empty($rawImage)) {
+            $img = (string) $rawImage;
+            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                $fullPicture = $img;
+            } elseif ($isVideoLike) {
+                $fullPicture = fetchFromS3($img);
+            } else {
+                $fullPicture = url(getImage('', $img));
+            }
+        }
+
+        $videoUrl = $this->postStoredVideoUrl($dbPost);
+
+        $username = (string) ($account->username ?? '');
+        $usernameForUrl = ltrim($username, '@');
+        $permalink = $usernameForUrl !== ''
+            ? 'https://www.instagram.com/' . rawurlencode($usernameForUrl) . '/'
+            : null;
+
+        $profileImage = $account->profile_image ?? '';
+
+        $payload = [
+            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-' . $dbPost->id),
+            'created_time' => $createdTime,
+            'message' => (string) ($dbPost->title ?? ''),
+            'story' => '',
+            'type' => (string) ($dbPost->type ?? ''),
+            'full_picture' => $fullPicture,
+            'permalink_url' => $permalink,
+            'account_name' => (string) ($account->name ?: $username ?: 'Instagram'),
+            'account_profile' => $profileImage,
+            'social_type' => 'instagram',
+            'page_db_id' => $account->id,
+            'db_post_id' => $dbPost->id,
+            'insights' => [
+                'post_reactions' => 0,
+                'post_impressions' => 0,
+                'post_clicks' => 0,
+            ],
+            'comments' => 0,
+            'shares' => 0,
+            'from_local_db' => true,
+            'video_url' => $videoUrl,
+        ];
+
+        if ($dbPost->user) {
+            $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
+            $payload['publisher_email'] = $dbPost->user->email ?? '';
+        }
+
+        return $payload;
+    }
+
+    /**
      * Minimal Sent-tab payload from a published TikTok Post row (same keys as Pinterest / Facebook sent cards).
      */
     private function sentTabPostFromTikTokRecord(Post $dbPost, Tiktok $account): array
