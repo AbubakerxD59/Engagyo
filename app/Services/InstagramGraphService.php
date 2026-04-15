@@ -474,10 +474,10 @@ class InstagramGraphService
             ]);
         }
 
-        // copyright_check_status is video-only; requesting it on image containers returns 400 (e.g. error_subcode 1452042).
-        $statusFields = $isVideo
-            ? 'id,status_code,status,copyright_check_status'
-            : 'id,status_code,status';
+        // copyright_check_status is only on graph.facebook.com video containers. Image containers400 if included.
+        // graph.instagram.com (Instagram Login) does not expose this field — requesting it fails immediately.
+        $includeCopyrightCheck = $isVideo && str_contains($base, 'graph.facebook.com');
+        $statusFields = 'id,status_code,status'.($includeCopyrightCheck ? ',copyright_check_status' : '');
 
         for ($i = 0; $i < $maxAttempts; $i++) {
             $statusResp = Http::acceptJson()
@@ -531,7 +531,7 @@ class InstagramGraphService
                     $recheck = Http::acceptJson()
                         ->timeout(90)
                         ->get("{$base}/{$creationId}", [
-                            'fields' => 'id,status_code,status,copyright_check_status',
+                            'fields' => $statusFields,
                             'access_token' => $accessToken,
                         ]);
                     if ($recheck->successful()) {
