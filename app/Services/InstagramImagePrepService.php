@@ -187,6 +187,7 @@ class InstagramImagePrepService
      */
     public static function normalizeImageToJpegForInstagramPublish(?string $localAbsolutePath, string $publicUrl, Post $post): array
     {
+        dd('1');
         $publicUrl = trim($publicUrl);
         if ($publicUrl === '') {
             return ['error' => 'Image URL is empty.', 'url' => ''];
@@ -234,7 +235,6 @@ class InstagramImagePrepService
             }
 
             $converted = self::convertFileToJpegOnDisk($workPath, $post);
-            dd($converted);
             if ($converted['error'] !== null) {
                 return ['error' => $converted['error'], 'url' => ''];
             }
