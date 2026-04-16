@@ -314,10 +314,11 @@
                 } else {
                     $parentName.hide();
                 }
-                var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok').addClass(type);
+                var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok instagram').addClass(type);
                 var headerIconClass = 'fab fa-facebook-f';
                 if (type === 'pinterest') headerIconClass = 'fab fa-pinterest-p';
                 else if (type === 'tiktok') headerIconClass = 'fab fa-tiktok';
+                else if (type === 'instagram') headerIconClass = 'fab fa-instagram';
                 $badge.find('i').attr('class', headerIconClass);
                 $headerBtns.show();
             } else if ($realActive.length > 1) {

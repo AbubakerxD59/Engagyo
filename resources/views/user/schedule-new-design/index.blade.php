@@ -123,6 +123,32 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    @elseif ($account->type == 'instagram')
+                                        @php
+                                            $igProfile = $account->profile_image ?? '';
+                                            $igUsernameRaw = $account->username ?? '';
+                                            $igName = $account->name ?: ($igUsernameRaw !== '' ? '@'.$igUsernameRaw : 'Instagram');
+                                            $igUsernameLine = ($igUsernameRaw !== '' && $account->name)
+                                                ? (str_starts_with($igUsernameRaw, '@') ? $igUsernameRaw : '@'.$igUsernameRaw)
+                                                : '';
+                                        @endphp
+                                        <div class="account-card {{ ($hasSelectedAccount && $selectedAccountId == (string) $account->id && ($saved['type'] ?? '') === 'instagram') ? 'active' : (!$hasSelectedAccount ? 'active' : '') }}" data-type="instagram"
+                                            data-id="{{ $account->id }}">
+                                            <div class="account-card-inner">
+                                                <div class="account-avatar">
+                                                    <img src="{{ $igProfile }}"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('instagram') }}';"
+                                                        loading="lazy" alt="">
+                                                    <span class="platform-badge instagram">
+                                                        <i class="fab fa-instagram"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-details">
+                                                    <span class="account-name">{{ Str::limit($igName, 18) }}</span>
+                                                    <span class="account-username">{{ Str::limit($igUsernameLine, 15) }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     @endif
                                 @endforeach
                             </div>
