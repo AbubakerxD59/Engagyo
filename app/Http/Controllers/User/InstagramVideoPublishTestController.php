@@ -99,6 +99,11 @@ class InstagramVideoPublishTestController extends Controller
         try {
             /** @var UploadedFile $uploaded */
             $uploaded = $request->file('video');
+            // Read metadata before move(): after move() the PHP temp file is gone and getMimeType()/getSize() can fail.
+            $uploadOriginalName = $uploaded->getClientOriginalName();
+            $uploadMime = $uploaded->getClientMimeType() ?: $uploaded->getMimeType();
+            $uploadSizeBytes = $uploaded->getSize();
+
             $stored = $this->storeTestVideoUpload($uploaded);
             $tempAbsolutePath = $stored['absolute_path'];
             $videoUrl = $stored['public_https_url'];
@@ -110,9 +115,9 @@ class InstagramVideoPublishTestController extends Controller
                 '0. Save upload → public video_url (Meta fetches this URL)',
                 $videoUrl,
                 [
-                    'original_name' => $uploaded->getClientOriginalName(),
-                    'mime' => $uploaded->getMimeType(),
-                    'size_bytes' => $uploaded->getSize(),
+                    'original_name' => $uploadOriginalName,
+                    'mime' => $uploadMime,
+                    'size_bytes' => $uploadSizeBytes,
                     'saved_path' => $stored['public_relative_path'],
                     'note' => 'APP_URL must be HTTPS and reachable from the public internet so Instagram can download the file.',
                 ]
