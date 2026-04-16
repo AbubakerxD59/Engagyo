@@ -7,12 +7,28 @@ use Illuminate\Support\Facades\Http;
 
 /**
  * Instagram Content Publishing expects publicly reachable HTTPS media URLs.
- * Feed images: JPEG is the only officially supported still-image format (see Meta docs).
+ * Feed images: JPEG; aspect ratio must be within Meta limits (roughly 4:5 … 1.91:1).
+ * Story images: normalized toward 9:16 when possible.
  *
  * @see https://developers.facebook.com/docs/instagram-platform/content-publishing/
  */
 class InstagramImagePrepService
 {
+    /** Feed photo: min width/height ratio (portrait 4:5). */
+    private const FEED_ASPECT_MIN = 0.8;
+
+    /** Feed photo: max width/height ratio (landscape 1.91:1). */
+    private const FEED_ASPECT_MAX = 1.91;
+
+    /** Story image target width / height. */
+    private const STORY_ASPECT = 0.5625; // 9:16
+
+    private const MIN_SHORT_EDGE = 320;
+
+    private const FEED_MAX_LONG_EDGE = 2160;
+
+    private const STORY_MAX_LONG_EDGE = 1920;
+
     /**
      * If the URL path ends with an extension other than .jpg / .jpeg, rewrite it to .jpg
      * (path only; query string and fragment are preserved).
@@ -86,6 +102,146 @@ class InstagramImagePrepService
         return in_array($mime, ['image/jpeg', 'image/jpg', 'image/pjpeg'], true);
     }
 
+    private static function useStoryAspectRules(Post $post): bool
+    {
+        return (string) $post->type === 'story';
+    }
+
+    /**
+     * True when raster already meets Instagram rules (no GD pipeline needed).
+     */
+    private static function rasterMeetsInstagramRules(int $w, int $h, bool $forStory, string $mime): bool
+    {
+        if ($w < 1 || $h < 1) {
+            return false;
+        }
+        if (! self::isJpegMimeType($mime)) {
+            return false;
+        }
+
+        $r = $w / $h;
+        $short = min($w, $h);
+        $long = max($w, $h);
+
+        if ($forStory) {
+            if (abs($r - self::STORY_ASPECT) > 0.02) {
+                return false;
+            }
+            if ($short < self::MIN_SHORT_EDGE || $long > self::STORY_MAX_LONG_EDGE) {
+                return false;
+            }
+
+            return true;
+        }
+
+        if ($r < self::FEED_ASPECT_MIN - 1e-4 || $r > self::FEED_ASPECT_MAX + 1e-4) {
+            return false;
+        }
+        if ($short < self::MIN_SHORT_EDGE || $long > self::FEED_MAX_LONG_EDGE) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Center-crop to satisfy aspect ratio rules (feed: band4:5…1.91:1; story: 9:16).
+     *
+     * @param \GdImage|resource $im
+     * @return \GdImage|resource
+     */
+    private static function applyInstagramAspectCenterCrop($im, bool $forStory)
+    {
+        $w = imagesx($im);
+        $h = imagesy($im);
+        if ($w < 1 || $h < 1) {
+            return $im;
+        }
+
+        $r = $w / $h;
+        if ($forStory) {
+            $minR = self::STORY_ASPECT;
+            $maxR = self::STORY_ASPECT;
+        } else {
+            $minR = self::FEED_ASPECT_MIN;
+            $maxR = self::FEED_ASPECT_MAX;
+        }
+
+        $srcX = 0;
+        $srcY = 0;
+        $cropW = $w;
+        $cropH = $h;
+
+        if ($r > $maxR + 1e-6) {
+            $cropW = max(1, (int) round($h * $maxR));
+            $cropH = $h;
+            $srcX = (int) (($w - $cropW) / 2);
+            $srcY = 0;
+        } elseif ($r < $minR - 1e-6) {
+            $cropW = $w;
+            $cropH = max(1, (int) round($w / $minR));
+            $srcX = 0;
+            $srcY = (int) (($h - $cropH) / 2);
+        }
+
+        if ($cropW === $w && $cropH === $h) {
+            return $im;
+        }
+
+        $dest = imagecreatetruecolor($cropW, $cropH);
+        if ($dest === false) {
+            return $im;
+        }
+
+        $white = imagecolorallocate($dest, 255, 255, 255);
+        imagefill($dest, 0, 0, $white);
+        imagecopy($dest, $im, 0, 0, $srcX, $srcY, $cropW, $cropH);
+        imagedestroy($im);
+
+        return $dest;
+    }
+
+    /**
+     * Scale so short edge ≥ MIN_SHORT_EDGE and long edge ≤ max for feed/story.
+     *
+     * @param \GdImage|resource $im
+     * @return \GdImage|resource
+     */
+    private static function scaleInstagramRasterBounds($im, bool $forStory)
+    {
+        $w = imagesx($im);
+        $h = imagesy($im);
+        if ($w < 1 || $h < 1) {
+            return $im;
+        }
+
+        $short = min($w, $h);
+        $long = max($w, $h);
+        $maxLong = $forStory ? self::STORY_MAX_LONG_EDGE : self::FEED_MAX_LONG_EDGE;
+
+        $scale = 1.0;
+        if ($short < self::MIN_SHORT_EDGE) {
+            $scale = self::MIN_SHORT_EDGE / $short;
+        }
+        if ($long * $scale > $maxLong) {
+            $scale = min($scale, $maxLong / $long);
+        }
+
+        if ($scale >= 0.999 && $scale <= 1.001) {
+            return $im;
+        }
+
+        $nw = max(1, (int) round($w * $scale));
+        $nh = max(1, (int) round($h * $scale));
+        $scaled = imagescale($im, $nw, $nh, IMG_BILINEAR_FIXED);
+        if ($scaled === false) {
+            return $im;
+        }
+        imagedestroy($im);
+
+        return $scaled;
+    }
+
     /**
      * Decode raster image bytes to a truecolor GD image (JPEG, PNG, GIF, WebP when supported).
      *
@@ -117,7 +273,7 @@ class InstagramImagePrepService
     /**
      * Flatten alpha onto white and write JPEG.
      *
-     * @param \GdImage|resource  $im
+     * @param \GdImage|resource $im
      */
     private static function writeTruecolorImageAsJpeg($im, string $destPath, int $quality = 90): bool
     {
@@ -144,20 +300,24 @@ class InstagramImagePrepService
     }
 
     /**
-     * Convert any supported raster file to JPEG on disk.
+     * Decode → aspect crop → scale → write JPEG under public/uploads/instagram_jpeg.
      *
      * @return array{error: ?string, path: ?string}
      */
-    private static function convertFileToJpegOnDisk(string $srcPath, Post $post): array
+    private static function processImageFileToInstagramJpeg(string $srcPath, Post $post): array
     {
         if (! extension_loaded('gd')) {
-            return ['error' => 'PHP GD extension is required to convert images for Instagram.', 'path' => null];
+            return ['error' => 'PHP GD extension is required to prepare images for Instagram.', 'path' => null];
         }
 
         $im = self::createGdImageFromFile($srcPath);
         if ($im === null) {
             return ['error' => 'Could not decode image for Instagram (unsupported or corrupt file).', 'path' => null];
         }
+
+        $forStory = self::useStoryAspectRules($post);
+        $im = self::applyInstagramAspectCenterCrop($im, $forStory);
+        $im = self::scaleInstagramRasterBounds($im, $forStory);
 
         $dir = public_path('uploads/instagram_jpeg');
         if (! is_dir($dir) && ! mkdir($dir, 0755, true) && ! is_dir($dir)) {
@@ -181,7 +341,7 @@ class InstagramImagePrepService
     }
 
     /**
-     * Ensure image is available as a public JPEG URL for Instagram (MIME not JPEG → convert + .jpg file).
+     * Ensure image is available as a public JPEG URL for Instagram (format + aspect + size).
      *
      * @return array{error: ?string, url: string}
      */
@@ -225,7 +385,10 @@ class InstagramImagePrepService
                 return ['error' => 'URL does not point to an image ('.$mime.').', 'url' => ''];
             }
 
-            if (self::isJpegMimeType($mime)) {
+            $info = @getimagesize($workPath);
+            $forStory = self::useStoryAspectRules($post);
+            if ($info !== false
+                && self::rasterMeetsInstagramRules((int) $info[0], (int) $info[1], $forStory, $mime)) {
                 if ($deleteTmp) {
                     @unlink($tmpPath);
                 }
@@ -233,8 +396,7 @@ class InstagramImagePrepService
                 return ['error' => null, 'url' => self::rewriteImagePathExtensionToJpg($publicUrl)];
             }
 
-            $converted = self::convertFileToJpegOnDisk($workPath, $post);
-            dd($converted);
+            $converted = self::processImageFileToInstagramJpeg($workPath, $post);
             if ($converted['error'] !== null) {
                 return ['error' => $converted['error'], 'url' => ''];
             }
