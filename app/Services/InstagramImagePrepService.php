@@ -108,15 +108,6 @@ class InstagramImagePrepService
             return ['relative_path' => $relativePath, 'error' => 'Image not found: '.$relativePath];
         }
 
-        $dir = dirname($relativePath);
-        $base = pathinfo($relativePath, PATHINFO_FILENAME);
-        $outRelative = ($dir === '.' || $dir === '') ? $base.'.igfeed.jpg' : $dir.'/'.$base.'.igfeed.jpg';
-        $outFull = public_path($outRelative);
-
-        if (is_file($outFull) && @filemtime($outFull) >= @filemtime($full)) {
-            return ['relative_path' => $outRelative, 'error' => null];
-        }
-
         $info = @getimagesize($full);
         if ($info === false) {
             return ['relative_path' => $relativePath, 'error' => 'Could not read image (unsupported or corrupt file). Use JPEG or PNG.'];
@@ -128,8 +119,19 @@ class InstagramImagePrepService
             return ['relative_path' => $relativePath, 'error' => 'Invalid image dimensions.'];
         }
 
+        $dir = dirname($relativePath);
+        $base = pathinfo($relativePath, PATHINFO_FILENAME);
+        $outExt = self::outputExtensionForType($relativePath, $type);
+        $outRelative = ($dir === '.' || $dir === '') ? $base.'.igfeed.'.$outExt : $dir.'/'.$base.'.igfeed.'.$outExt;
+        $outFull = public_path($outRelative);
+
+        if (is_file($outFull) && @filemtime($outFull) >= @filemtime($full)) {
+            return ['relative_path' => $outRelative, 'error' => null];
+        }
+
         $ratio = $w / $h;
-        $jpegOk = $type === IMAGETYPE_JPEG
+        $supported = in_array($type, [IMAGETYPE_JPEG, IMAGETYPE_PNG, IMAGETYPE_GIF, IMAGETYPE_WEBP], true);
+        $feedGeometryOk = $supported
             && $ratio >= self::MIN_RATIO - 0.004
             && $ratio <= self::MAX_RATIO + 0.004
             && $w >= 320
@@ -137,10 +139,10 @@ class InstagramImagePrepService
             && $w <= self::MAX_EDGE
             && $h <= self::MAX_EDGE;
 
-        if ($jpegOk) {
+        if ($feedGeometryOk) {
             $sz = @filesize($full);
             if ($sz !== false && $sz > self::MAX_PUBLISH_BYTES) {
-                return ['relative_path' => $relativePath, 'error' => 'Image exceeds Instagram 8 MB limit for published JPEG.'];
+                return ['relative_path' => $relativePath, 'error' => 'Image exceeds Instagram 8 MB limit for published media.'];
             }
 
             return ['relative_path' => $relativePath, 'error' => null];
@@ -199,30 +201,125 @@ class InstagramImagePrepService
                 return ['relative_path' => $relativePath, 'error' => 'Could not create output directory.'];
             }
 
-            $quality = 90;
-            while (true) {
-                if (! @imagejpeg($dst, $outFull, $quality)) {
-                    imagedestroy($dst);
-
-                    return ['relative_path' => $relativePath, 'error' => 'Failed to write prepared JPEG.'];
-                }
-                $size = @filesize($outFull);
-                if ($size !== false && $size <= self::MAX_PUBLISH_BYTES) {
-                    break;
-                }
-                if ($quality <= 55) {
-                    imagedestroy($dst);
-
-                    return ['relative_path' => $relativePath, 'error' => 'Prepared image still exceeds Instagram 8 MB limit. Use a smaller or simpler source image.'];
-                }
-                $quality -= 8;
-            }
+            $writeErr = self::savePreparedRasterUnderSizeLimit($dst, $outFull, $type);
             imagedestroy($dst);
+            if ($writeErr !== null) {
+                return ['relative_path' => $relativePath, 'error' => $writeErr];
+            }
         } catch (\Throwable $e) {
             return ['relative_path' => $relativePath, 'error' => 'Image processing failed: '.$e->getMessage()];
         }
 
         return ['relative_path' => $outRelative, 'error' => null];
+    }
+
+    /**
+     * Preserve the source file extension (e.g. png stays png); normalize jpeg variants.
+     */
+    private static function outputExtensionForType(string $relativePath, int $imagetype): string
+    {
+        $ext = strtolower((string) pathinfo($relativePath, PATHINFO_EXTENSION));
+
+        return match ($imagetype) {
+            IMAGETYPE_JPEG => in_array($ext, ['jpg', 'jpeg'], true) ? $ext : 'jpg',
+            IMAGETYPE_PNG => 'png',
+            IMAGETYPE_GIF => 'gif',
+            IMAGETYPE_WEBP => 'webp',
+            default => $ext !== '' && preg_match('/^[a-z0-9]{1,10}$/', $ext) ? $ext : 'jpg',
+        };
+    }
+
+    /**
+     * @param  \GdImage|resource  $dst
+     */
+    private static function savePreparedRasterUnderSizeLimit($dst, string $outFull, int $imagetype): ?string
+    {
+        return match ($imagetype) {
+            IMAGETYPE_JPEG => self::saveJpegUnderSizeLimit($dst, $outFull),
+            IMAGETYPE_PNG => self::savePngUnderSizeLimit($dst, $outFull),
+            IMAGETYPE_GIF => self::saveGifUnderSizeLimit($dst, $outFull),
+            IMAGETYPE_WEBP => self::saveWebpUnderSizeLimit($dst, $outFull),
+            default => 'Unsupported image type for Instagram preparation.',
+        };
+    }
+
+    /**
+     * @param  \GdImage|resource  $dst
+     */
+    private static function saveJpegUnderSizeLimit($dst, string $outFull): ?string
+    {
+        $quality = 90;
+        while (true) {
+            if (! @imagejpeg($dst, $outFull, $quality)) {
+                return 'Failed to write prepared JPEG.';
+            }
+            $size = @filesize($outFull);
+            if ($size !== false && $size <= self::MAX_PUBLISH_BYTES) {
+                return null;
+            }
+            if ($quality <= 55) {
+                return 'Prepared image still exceeds Instagram 8 MB limit. Use a smaller or simpler source image.';
+            }
+            $quality -= 8;
+        }
+    }
+
+    /**
+     * @param  \GdImage|resource  $dst
+     */
+    private static function savePngUnderSizeLimit($dst, string $outFull): ?string
+    {
+        for ($level = 6; $level <= 9; $level++) {
+            if (! @imagepng($dst, $outFull, $level)) {
+                return 'Failed to write prepared PNG.';
+            }
+            $size = @filesize($outFull);
+            if ($size !== false && $size <= self::MAX_PUBLISH_BYTES) {
+                return null;
+            }
+        }
+
+        return 'Prepared PNG still exceeds Instagram 8 MB limit. Use a smaller or simpler source image.';
+    }
+
+    /**
+     * @param  \GdImage|resource  $dst
+     */
+    private static function saveGifUnderSizeLimit($dst, string $outFull): ?string
+    {
+        if (! @imagegif($dst, $outFull)) {
+            return 'Failed to write prepared GIF.';
+        }
+        $size = @filesize($outFull);
+        if ($size !== false && $size > self::MAX_PUBLISH_BYTES) {
+            return 'Prepared GIF exceeds Instagram 8 MB limit.';
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  \GdImage|resource  $dst
+     */
+    private static function saveWebpUnderSizeLimit($dst, string $outFull): ?string
+    {
+        if (! function_exists('imagewebp')) {
+            return 'WebP output is not available (imagewebp missing).';
+        }
+        $quality = 90;
+        while (true) {
+            if (! @imagewebp($dst, $outFull, $quality)) {
+                return 'Failed to write prepared WebP.';
+            }
+            $size = @filesize($outFull);
+            if ($size !== false && $size <= self::MAX_PUBLISH_BYTES) {
+                return null;
+            }
+            if ($quality <= 40) {
+                return 'Prepared WebP still exceeds Instagram 8 MB limit. Use a smaller or simpler source image.';
+            }
+            $quality -= 10;
+        }
     }
 
     /**

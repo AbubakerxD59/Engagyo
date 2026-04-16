@@ -106,6 +106,14 @@ class InstagramGraphService
         }
         $imageUrl = $prepared['url'];
 
+        $staged = InstagramPublishMediaStorageService::ensureStoredPublicUrl($imageUrl, $post, 'image');
+        if ($staged['error'] !== null) {
+            $this->failPost($post, $staged['error']);
+
+            return;
+        }
+        $imageUrl = $staged['url'];
+
         $base = $this->graphBaseUrl($ig);
         $igUserId = $ig->ig_user_id;
 
@@ -174,6 +182,14 @@ class InstagramGraphService
 
             return;
         }
+
+        $staged = InstagramPublishMediaStorageService::ensureStoredPublicUrl((string) $videoUrl, $post, 'video');
+        if ($staged['error'] !== null) {
+            $this->failPost($post, $staged['error']);
+
+            return;
+        }
+        $videoUrl = $staged['url'];
 
         $base = $this->graphBaseUrl($ig);
         $igUserId = $ig->ig_user_id;
@@ -283,6 +299,15 @@ class InstagramGraphService
             }
 
             if ($kind === 'video') {
+                $staged = InstagramPublishMediaStorageService::ensureStoredPublicUrl($mediaUrl, $post, 'video');
+                if ($staged['error'] !== null) {
+                    $this->emitStep($onStep, $stepChild.'.stage', $staged['error'], 'error', []);
+                    $this->failPost($post, $staged['error']);
+
+                    return;
+                }
+                $mediaUrl = $staged['url'];
+
                 $payload = [
                     'media_type' => 'VIDEO',
                     'video_url' => $mediaUrl,
@@ -299,6 +324,15 @@ class InstagramGraphService
                     return;
                 }
                 $mediaUrl = $prepared['url'];
+
+                $staged = InstagramPublishMediaStorageService::ensureStoredPublicUrl($mediaUrl, $post, 'image');
+                if ($staged['error'] !== null) {
+                    $this->emitStep($onStep, $stepChild.'.stage', $staged['error'], 'error', []);
+                    $this->failPost($post, $staged['error']);
+
+                    return;
+                }
+                $mediaUrl = $staged['url'];
 
                 $payload = array_filter([
                     'image_url' => $mediaUrl,
