@@ -1367,6 +1367,18 @@
         background: #f59e0b;
     }
 
+    .queue-post-format-badge.carousel {
+        background: #7c3aed;
+    }
+
+    .queue-post-format-badge.photo {
+        background: #2563eb;
+    }
+
+    .queue-post-format-badge.video {
+        background: #0f766e;
+    }
+
     .queue-post-account-name {
         font-weight: 600;
         font-size: 14px;

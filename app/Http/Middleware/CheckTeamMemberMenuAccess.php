@@ -106,6 +106,8 @@ class CheckTeamMemberMenuAccess
                     'panel.schedule.timeslot.setting.save',
                     'panel.schedule.posts.listing',
                     'panel.schedule.posts.pinterest.sent',
+                    'panel.schedule.posts.tiktok.sent',
+                    'panel.schedule.posts.instagram.sent',
                     'panel.schedule.post.delete',
                     'panel.schedule.post.edit',
                     'panel.schedule.post.update',

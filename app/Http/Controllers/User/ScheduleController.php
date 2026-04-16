@@ -1308,22 +1308,62 @@ class ScheduleController extends Controller
     private function queueTimelinePostImageUrl(Post $post): ?string
     {
         $rawImage = $post->getAttributes()['image'] ?? null;
-        if ($rawImage === null || $rawImage === '') {
-            return null;
-        }
+        if ($rawImage !== null && $rawImage !== '') {
+            $rawImage = (string) $rawImage;
+            if (str_starts_with($rawImage, 'http://') || str_starts_with($rawImage, 'https://')) {
+                return $rawImage;
+            }
 
-        $rawImage = (string) $rawImage;
-        if (str_starts_with($rawImage, 'http://') || str_starts_with($rawImage, 'https://')) {
-            return $rawImage;
+            $type = strtolower((string) ($post->getAttributes()['type'] ?? ''));
+            $social = strtolower((string) ($post->getAttributes()['social_type'] ?? ''));
+            if (str_contains($social, 'tiktok') && $type === 'video') {
+                return fetchFromS3($rawImage);
+            }
+
+            return url(getImage('', $rawImage));
         }
 
         $type = strtolower((string) ($post->getAttributes()['type'] ?? ''));
         $social = strtolower((string) ($post->getAttributes()['social_type'] ?? ''));
-        if (str_contains($social, 'tiktok') && $type === 'video') {
-            return fetchFromS3($rawImage);
+        if (str_contains($social, 'instagram') && $type === 'carousel') {
+            $fromCarousel = $this->instagramCarouselFirstStillPreviewUrl($post);
+
+            return ($fromCarousel !== null && $fromCarousel !== '') ? $fromCarousel : null;
         }
 
-        return url(getImage('', $rawImage));
+        return null;
+    }
+
+    /**
+     * First image URL from ig_carousel metadata (queue/sent preview when root image column is empty).
+     */
+    private function instagramCarouselFirstStillPreviewUrl(Post $post): ?string
+    {
+        $raw = $post->getAttributes()['metadata'] ?? null;
+        if ($raw === null || $raw === '') {
+            return null;
+        }
+        $meta = is_string($raw) ? json_decode($raw, true) : $raw;
+        if (! is_array($meta)) {
+            return null;
+        }
+        $items = $meta['ig_carousel'] ?? [];
+        if (! is_array($items)) {
+            return null;
+        }
+        foreach ($items as $it) {
+            if (! is_array($it) || empty($it['image'])) {
+                continue;
+            }
+            $img = (string) $it['image'];
+            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                return $img;
+            }
+
+            return url(getImage('', $img));
+        }
+
+        return null;
     }
 
     /**
@@ -3887,6 +3927,118 @@ class ScheduleController extends Controller
         }
 
         return response()->json(['success' => true, 'posts' => $allPosts]);
+    }
+
+    /**
+     * Instagram Sent tab: published schedule posts for selected accounts (same card payload as Facebook/Pinterest sent).
+     */
+    public function getInstagramSentPosts(Request $request)
+    {
+        $viewer = Auth::guard('user')->user();
+        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::guard('user')->id()];
+        $accountIds = (array) $request->input('account_id', []);
+        if (empty($accountIds)) {
+            return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
+        }
+
+        $ownerId = (int) ($viewer instanceof User ? ($viewer->getEffectiveUser()?->id ?? $viewer->id) : Auth::guard('user')->id());
+        $accounts = InstagramAccount::query()
+            ->whereIn('id', $accountIds)
+            ->where('user_id', $ownerId)
+            ->get();
+        if ($accounts->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No Instagram accounts found', 'posts' => []]);
+        }
+
+        $igIds = $accounts->pluck('id')->all();
+        $accountsById = $accounts->keyBy('id');
+
+        $dbPosts = Post::withoutGlobalScopes()
+            ->whereIn('user_id', $postCreatorIds)
+            ->where('social_type', 'like', '%instagram%')
+            ->whereIn('account_id', $igIds)
+            ->where('status', 1)
+            ->whereNotNull('published_at')
+            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
+            ->where('source', 'schedule')
+            ->with('user', 'instagramAccount')
+            ->orderByDesc('published_at')
+            ->get();
+
+        $allPosts = [];
+        foreach ($dbPosts as $dbPost) {
+            $account = $accountsById->get($dbPost->account_id) ?? $dbPost->instagramAccount;
+            if (! $account instanceof InstagramAccount) {
+                continue;
+            }
+            $allPosts[] = $this->sentTabPostFromInstagramRecord($dbPost, $account);
+        }
+
+        return response()->json(['success' => true, 'posts' => $allPosts]);
+    }
+
+    /**
+     * Minimal Sent-tab payload from a published Instagram Post row (same keys as Pinterest / Facebook sent cards).
+     */
+    private function sentTabPostFromInstagramRecord(Post $dbPost, InstagramAccount $account): array
+    {
+        $published = Carbon::parse($dbPost->published_at);
+        $createdTime = $published->toIso8601String();
+
+        $fullPicture = '';
+        $rawImage = $dbPost->getAttributes()['image'] ?? null;
+        if (! empty($rawImage)) {
+            $img = (string) $rawImage;
+            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                $fullPicture = $img;
+            } else {
+                $fullPicture = url(getImage('', $img));
+            }
+        }
+        if ($fullPicture === '' && strtolower((string) ($dbPost->getAttributes()['type'] ?? '')) === 'carousel') {
+            $fullPicture = (string) ($this->instagramCarouselFirstStillPreviewUrl($dbPost) ?? '');
+        }
+
+        $videoUrl = $this->postStoredVideoUrl($dbPost);
+
+        $usernameRaw = (string) ($account->username ?? '');
+        $username = ltrim($usernameRaw, '@');
+        $permalink = $username !== ''
+            ? 'https://www.instagram.com/'.rawurlencode($username).'/'
+            : null;
+
+        $profileImage = (string) ($account->profile_image ?? '');
+
+        $payload = [
+            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-'.$dbPost->id),
+            'created_time' => $createdTime,
+            'message' => (string) ($dbPost->title ?? ''),
+            'story' => '',
+            'type' => (string) ($dbPost->getAttributes()['type'] ?? $dbPost->type ?? ''),
+            'full_picture' => $fullPicture,
+            'permalink_url' => $permalink,
+            'account_name' => $account->name ?: ($username !== '' ? '@'.$username : 'Instagram'),
+            'account_profile' => $profileImage,
+            'social_type' => 'instagram',
+            'page_db_id' => $account->id,
+            'db_post_id' => $dbPost->id,
+            'insights' => [
+                'post_reactions' => 0,
+                'post_impressions' => 0,
+                'post_clicks' => 0,
+            ],
+            'comments' => 0,
+            'shares' => 0,
+            'from_local_db' => true,
+            'video_url' => $videoUrl,
+        ];
+
+        if ($dbPost->user) {
+            $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
+            $payload['publisher_email'] = $dbPost->user->email ?? '';
+        }
+
+        return $payload;
     }
 
     /**

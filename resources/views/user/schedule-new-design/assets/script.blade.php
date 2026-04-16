@@ -387,6 +387,16 @@
             return true;
         }
 
+        /** Selected accounts are all Instagram (sent tab: same timeline card layout as Facebook). */
+        function isInstagramOnlySelection() {
+            var selected = getSelectedAccounts();
+            if (selected.accountIds.length === 0) return false;
+            for (var i = 0; i < selected.accountTypes.length; i++) {
+                if (selected.accountTypes[i] !== 'instagram') return false;
+            }
+            return true;
+        }
+
         function refreshSentTabView() {
             if (isAllChannelsActive()) {
                 showSentPosts();
@@ -397,6 +407,8 @@
             } else if (isPinterestOnlySelection()) {
                 showSentPosts();
             } else if (isTikTokOnlySelection()) {
+                showSentPosts();
+            } else if (isInstagramOnlySelection()) {
                 showSentPosts();
             } else {
                 loadPosts(1);
@@ -411,6 +423,7 @@
         var sentPostsRequest = null;
         var pinterestSentRequest = null;
         var tiktokSentRequest = null;
+        var instagramSentRequest = null;
         var queueSectionRequest = null;
         var queueSectionMultiRequests = [];
         var queueTimelineIsAllChannelsQueue = false;
@@ -427,7 +440,7 @@
         }
 
         /**
-         * All channels: load sent posts from every Facebook page, Pinterest board, and TikTok account,
+         * All channels: load sent posts from every Facebook page, Pinterest board, TikTok, and Instagram account,
          * merge by time, same card shape as single-account Sent tab (showSentPosts / renderSentPagePostCard).
          */
         function loadAllChannelsSentPostsAggregated(selectedAccounts) {
@@ -436,16 +449,19 @@
             if (sentPostsRequest && sentPostsRequest.readyState !== 4) sentPostsRequest.abort();
             if (pinterestSentRequest && pinterestSentRequest.readyState !== 4) pinterestSentRequest.abort();
             if (tiktokSentRequest && tiktokSentRequest.readyState !== 4) tiktokSentRequest.abort();
+            if (instagramSentRequest && instagramSentRequest.readyState !== 4) instagramSentRequest.abort();
 
             var pairs = selectedAccounts.pairs || [];
             var fbIds = [];
             var pinIds = [];
             var ttIds = [];
+            var igIds = [];
             pairs.forEach(function(p) {
                 var t = (p.type || '').toString().toLowerCase();
                 if (t === 'facebook') fbIds.push(p.id);
                 else if (t === 'pinterest') pinIds.push(p.id);
                 else if (t === 'tiktok') ttIds.push(p.id);
+                else if (t === 'instagram') igIds.push(p.id);
             });
 
             cachedSentPagePosts = null;
@@ -548,6 +564,28 @@
                 });
                 mixedSentRequests.push(rtt);
             }
+            if (igIds.length) {
+                pending++;
+                var igPostsResult = [];
+                var rig = $.ajax({
+                    url: "{{ route('panel.schedule.posts.instagram.sent') }}",
+                    type: "GET",
+                    data: { account_id: igIds },
+                    success: function(response) {
+                        if (gen !== allChannelsSentLoadGeneration) return;
+                        igPostsResult = (response.success && response.posts) ? response.posts : [];
+                    },
+                    error: function(xhr, textStatus) {
+                        if (textStatus === 'abort' || gen !== allChannelsSentLoadGeneration) return;
+                        igPostsResult = [];
+                    },
+                    complete: function() {
+                        if (gen === allChannelsSentLoadGeneration) chunks.push(igPostsResult);
+                        onRequestDone();
+                    }
+                });
+                mixedSentRequests.push(rig);
+            }
 
             if (pending === 0) {
                 cachedSentPagePosts = [];
@@ -604,8 +642,8 @@
                 },
                 success: function(data) {
                     $('#posts-status-tabs [data-count="queue"]').text(data.queue);
-                    // Sent badge: all-channels merged sent load; FB/Pin/TT dedicated APIs; else DB counts.
-                    if (!isAllChannelsActive() && !shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection()) {
+                    // Sent badge: all-channels merged sent load; FB/Pin/TT/IG dedicated APIs; else DB counts.
+                    if (!isAllChannelsActive() && !shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection() && !isInstagramOnlySelection()) {
                         $('#posts-status-tabs [data-count="sent"]').text(data.sent);
                     }
                 },
@@ -621,6 +659,8 @@
                 loadPinterestSentPagePostsCached(selectedAccounts);
             } else if (isTikTokOnlySelection()) {
                 loadTikTokSentPagePostsCached(selectedAccounts);
+            } else if (isInstagramOnlySelection()) {
+                loadInstagramSentPagePostsCached(selectedAccounts);
             } else {
                 cachedSentPagePosts = null;
             }
@@ -725,6 +765,40 @@
                 },
                 complete: function() {
                     tiktokSentRequest = null;
+                }
+            });
+        }
+
+        function loadInstagramSentPagePostsCached(selectedAccounts) {
+            if (!isInstagramOnlySelection()) {
+                return;
+            }
+            cachedSentPagePosts = null;
+            if (instagramSentRequest && instagramSentRequest.readyState !== 4) {
+                instagramSentRequest.abort();
+            }
+            instagramSentRequest = $.ajax({
+                url: "{{ route('panel.schedule.posts.instagram.sent') }}",
+                type: "GET",
+                data: { account_id: selectedAccounts.accountIds },
+                success: function(response) {
+                    var posts = (response.success && response.posts) ? response.posts : [];
+                    cachedSentPagePosts = posts;
+                    $('#posts-status-tabs [data-count="sent"]').text(posts.length);
+                    if (currentPostStatusTab === 'sent') {
+                        showSentPosts();
+                    }
+                },
+                error: function(xhr, textStatus) {
+                    if (textStatus === 'abort') return;
+                    cachedSentPagePosts = [];
+                    $('#posts-status-tabs [data-count="sent"]').text(0);
+                    if (currentPostStatusTab === 'sent') {
+                        showSentPosts();
+                    }
+                },
+                complete: function() {
+                    instagramSentRequest = null;
                 }
             });
         }
@@ -865,7 +939,7 @@
             var linkDesc = (post.description || post.title || '').trim();
             var videoSrc = (post.video || '').toString().trim();
             var postTypeNorm = (post.type || '').toString().toLowerCase();
-            var isVideoMedia = !!videoSrc && postTypeNorm === 'video';
+            var isVideoMedia = !!videoSrc && (postTypeNorm === 'video' || postTypeNorm === 'reel');
 
             var cardHtml = '<div class="queue-post-card' + (isLinkPost ? ' queue-post-card-link' : '') + '" data-post-id="' + postId + '">';
             cardHtml += '<div class="queue-post-card-inner">';
@@ -976,17 +1050,23 @@
             var posts = slot.posts || (slot.post ? [slot.post] : []);
             var postsHtml = '';
             if (posts.length > 0) {
-                // Show Reel/Story badge(s) under the time column for this timeslot row.
+                // Format badges under the time column (Facebook + Instagram queue types).
+                var badgeOrder = ['carousel', 'photo', 'video', 'reel', 'story'];
+                var badgeLabels = { carousel: 'Carousel', photo: 'Post', video: 'Video', reel: 'Reel', story: 'Story' };
                 var formatTypes = [];
                 posts.forEach(function(post) {
-                    if (post && post.type === 'reel' && formatTypes.indexOf('reel') === -1) formatTypes.push('reel');
-                    if (post && post.type === 'story' && formatTypes.indexOf('story') === -1) formatTypes.push('story');
+                    if (!post || !post.type) return;
+                    var t = (post.type || '').toString().toLowerCase();
+                    if (badgeLabels[t] && formatTypes.indexOf(t) === -1) formatTypes.push(t);
+                });
+                formatTypes.sort(function(a, b) {
+                    return badgeOrder.indexOf(a) - badgeOrder.indexOf(b);
                 });
                 var formatBadgesHtml = '';
                 if (formatTypes.length > 0) {
                     formatBadgesHtml = '<div class="queue-timeslots-format-badges">' +
                         formatTypes.map(function(t) {
-                            return '<span class="queue-post-format-badge ' + t + '">' + (t === 'reel' ? 'Reel' : 'Story') + '</span>';
+                            return '<span class="queue-post-format-badge ' + t + '">' + badgeLabels[t] + '</span>';
                         }).join('') +
                         '</div>';
                 }
@@ -4348,6 +4428,16 @@
                 return;
             }
 
+            if (currentPostStatusTab === 'sent' && isTikTokOnlySelection()) {
+                loadTikTokSentPagePostsCached(getSelectedAccounts());
+                return;
+            }
+
+            if (currentPostStatusTab === 'sent' && isInstagramOnlySelection()) {
+                loadInstagramSentPagePostsCached(getSelectedAccounts());
+                return;
+            }
+
             var requestStart = (page - 1) * perPage;
             var requestLength = perPage;
 
@@ -4477,7 +4567,11 @@
             } else if (postType === 'story') {
                 formatBadgesHtml = '<div class="sent-post-format-badges"><span class="queue-post-format-badge story">Story</span></div>';
             } else if (postType === 'video') {
-                formatBadgesHtml = '<div class="sent-post-format-badges"><span class="queue-post-format-badge reel">Video</span></div>';
+                formatBadgesHtml = '<div class="sent-post-format-badges"><span class="queue-post-format-badge video">Video</span></div>';
+            } else if (postType === 'carousel') {
+                formatBadgesHtml = '<div class="sent-post-format-badges"><span class="queue-post-format-badge carousel">Carousel</span></div>';
+            } else if (postType === 'photo') {
+                formatBadgesHtml = '<div class="sent-post-format-badges"><span class="queue-post-format-badge photo">Post</span></div>';
             }
 
             var profileImg = post.account_profile || '';
@@ -4486,7 +4580,7 @@
 
             var videoUrl = (post.video_url || '').toString().trim();
             var imageHtml = '';
-            if (videoUrl && (postType === 'video' || postType === 'reel')) {
+            if (videoUrl && (postType === 'video' || postType === 'reel' || postType === 'story')) {
                 var vSrc = $('<span>').text(videoUrl).html();
                 var posterAttr = '';
                 if (post.full_picture) {
@@ -4954,6 +5048,9 @@
                 } else if (isTikTokOnlySelection()) {
                     cachedSentPagePosts = null;
                     loadTikTokSentPagePostsCached(getSelectedAccounts());
+                } else if (isInstagramOnlySelection()) {
+                    cachedSentPagePosts = null;
+                    loadInstagramSentPagePostsCached(getSelectedAccounts());
                 } else {
                     loadPosts(1);
                 }
@@ -4988,7 +5085,7 @@
                             if (currentPostStatusTab === 'sent') {
                                 if (isAllChannelsActive()) {
                                     loadAllChannelsSentPostsAggregated(getSelectedAccounts());
-                                } else if (!shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection()) {
+                                } else if (!shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection() && !isInstagramOnlySelection()) {
                                     loadPosts(1);
                                 }
                             }
