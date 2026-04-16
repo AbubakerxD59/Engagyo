@@ -1367,6 +1367,67 @@ class ScheduleController extends Controller
     }
 
     /**
+     * Public URL for a single stored path (image via getImage, video via S3).
+     */
+    private function resolveInstagramCarouselStoredPathUrl(string $path, bool $isVideo): string
+    {
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+            return $path;
+        }
+        if ($isVideo) {
+            return fetchFromS3($path);
+        }
+
+        return url(getImage('', $path));
+    }
+
+    /**
+     * All Instagram carousel slides for queue/sent UI (images + videos from metadata.ig_carousel).
+     *
+     * @return list<array{type: string, url: string}>
+     */
+    private function instagramCarouselGalleryItemsFromPost(Post $post): array
+    {
+        $type = strtolower((string) ($post->getAttributes()['type'] ?? ''));
+        if ($type !== 'carousel') {
+            return [];
+        }
+        $raw = $post->getAttributes()['metadata'] ?? null;
+        if ($raw === null || $raw === '') {
+            return [];
+        }
+        $meta = is_string($raw) ? json_decode($raw, true) : $raw;
+        if (! is_array($meta)) {
+            return [];
+        }
+        $items = $meta['ig_carousel'] ?? [];
+        if (! is_array($items)) {
+            return [];
+        }
+        $out = [];
+        foreach ($items as $it) {
+            if (! is_array($it)) {
+                continue;
+            }
+            $img = isset($it['image']) ? trim((string) $it['image']) : '';
+            $vid = isset($it['video']) ? trim((string) $it['video']) : '';
+            if ($img !== '') {
+                $out[] = [
+                    'type' => 'image',
+                    'url' => $this->resolveInstagramCarouselStoredPathUrl($img, false),
+                ];
+            } elseif ($vid !== '') {
+                $out[] = [
+                    'type' => 'video',
+                    'url' => $this->resolveInstagramCarouselStoredPathUrl($vid, true),
+                ];
+            }
+        }
+
+        return $out;
+    }
+
+    /**
      * Schedule queue timeslots for an account.
      *
      * @return array<int, string> Timeslot strings (e.g. "09:00")
@@ -3553,6 +3614,7 @@ class ScheduleController extends Controller
                 'status' => (int) $post->status,
                 'image' => $this->queueTimelinePostImageUrl($post),
                 'video' => $this->postStoredVideoUrl($post),
+                'carousel_items' => $this->instagramCarouselGalleryItemsFromPost($post),
                 'account_name' => $post->account_name ?? ucfirst($post->social_type),
                 'account_profile' => $post->account_profile ? (str_starts_with($post->account_profile, 'http') ? $post->account_profile : asset($post->account_profile)) : null,
                 'social_type' => $post->social_type,
@@ -4016,6 +4078,7 @@ class ScheduleController extends Controller
             'story' => '',
             'type' => (string) ($dbPost->getAttributes()['type'] ?? $dbPost->type ?? ''),
             'full_picture' => $fullPicture,
+            'carousel_items' => $this->instagramCarouselGalleryItemsFromPost($dbPost),
             'permalink_url' => $permalink,
             'account_name' => $account->name ?: ($username !== '' ? '@'.$username : 'Instagram'),
             'account_profile' => $profileImage,

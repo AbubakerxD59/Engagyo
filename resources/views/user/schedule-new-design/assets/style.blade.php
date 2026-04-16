@@ -1406,9 +1406,48 @@
 
     .queue-post-card-body {
         display: flex;
+        flex-wrap: wrap;
         gap: 16px;
         margin-bottom: 12px;
         min-height: 60px;
+    }
+
+    .queue-post-ig-carousel-wrap {
+        flex: 1 1 100%;
+        width: 100%;
+        min-width: 0;
+    }
+
+    .queue-post-ig-carousel-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        gap: 6px;
+        width: 100%;
+    }
+
+    .queue-post-ig-carousel-slide {
+        aspect-ratio: 1;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #f3f4f6;
+    }
+
+    .queue-post-ig-carousel-slide img,
+    .queue-post-ig-carousel-slide-video video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .queue-post-ig-carousel-slide-video {
+        background: #000;
+    }
+
+    .queue-post-ig-carousel-video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
     }
 
     .queue-post-text-wrap {
@@ -1866,6 +1905,38 @@
     }
 
     .sent-card-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .sent-card-ig-carousel-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+        gap: 6px;
+        width: 100%;
+    }
+
+    .sent-card-ig-carousel-slide {
+        aspect-ratio: 1;
+        border-radius: 8px;
+        overflow: hidden;
+        background: #f3f4f6;
+    }
+
+    .sent-card-ig-carousel-slide img,
+    .sent-card-ig-carousel-slide-video video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+    }
+
+    .sent-card-ig-carousel-slide-video {
+        background: #000;
+    }
+
+    .sent-card-ig-carousel-video {
         width: 100%;
         height: 100%;
         object-fit: cover;

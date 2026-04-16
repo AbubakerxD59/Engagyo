@@ -925,6 +925,26 @@
 
         var queuePostTextLimit = 120;
 
+        /** Instagram carousel: grid of images/videos from `carousel_items` (metadata.ig_carousel). */
+        function renderIgCarouselGalleryHtml(items, variant) {
+            variant = variant || 'queue';
+            var baseClass = variant === 'sent' ? 'sent-card-ig-carousel' : 'queue-post-ig-carousel';
+            var slides = '';
+            for (var i = 0; i < items.length; i++) {
+                var it = items[i];
+                if (!it || !it.url) continue;
+                var esc = $('<span>').text(String(it.url)).html();
+                var t = (it.type || 'image').toString().toLowerCase();
+                if (t === 'video') {
+                    slides += '<div class="' + baseClass + '-slide ' + baseClass + '-slide-video"><video class="' + baseClass + '-video" preload="metadata" playsinline controls><source src="' + esc + '" type="video/mp4"></video></div>';
+                } else {
+                    slides += '<div class="' + baseClass + '-slide"><img src="' + esc + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>';
+                }
+            }
+            if (!slides) return '';
+            return '<div class="' + baseClass + '-grid">' + slides + '</div>';
+        }
+
         function renderQueuePostCard(slot, post) {
             var isLinkPost = post.type === 'link';
             var title = (post.title || '').trim();
@@ -940,6 +960,8 @@
             var videoSrc = (post.video || '').toString().trim();
             var postTypeNorm = (post.type || '').toString().toLowerCase();
             var isVideoMedia = !!videoSrc && (postTypeNorm === 'video' || postTypeNorm === 'reel');
+            var carouselItems = Array.isArray(post.carousel_items) ? post.carousel_items : [];
+            var isIgCarouselGallery = postTypeNorm === 'carousel' && carouselItems.length > 0;
 
             var cardHtml = '<div class="queue-post-card' + (isLinkPost ? ' queue-post-card-link' : '') + '" data-post-id="' + postId + '">';
             cardHtml += '<div class="queue-post-card-inner">';
@@ -994,7 +1016,9 @@
                         cardHtml += '<div class="queue-post-text">' + textFull + '</div>';
                     }
                 }
-                if (isVideoMedia) {
+                if (isIgCarouselGallery) {
+                    cardHtml += '<div class="queue-post-ig-carousel-wrap">' + renderIgCarouselGalleryHtml(carouselItems, 'queue') + '</div>';
+                } else if (isVideoMedia) {
                     var vEsc = $('<span>').text(videoSrc).html();
                     var posterEsc = imgSrc ? $('<span>').text(imgSrc).html() : '';
                     cardHtml += '<div class="queue-post-video-wrap">' +
@@ -4574,13 +4598,19 @@
                 formatBadgesHtml = '<div class="sent-post-format-badges"><span class="queue-post-format-badge photo">Post</span></div>';
             }
 
+            var carouselItems = Array.isArray(post.carousel_items) ? post.carousel_items : [];
+            var carouselGalleryHtml = '';
+            if (postType === 'carousel' && carouselItems.length > 0) {
+                carouselGalleryHtml = renderIgCarouselGalleryHtml(carouselItems, 'sent');
+            }
+
             var profileImg = post.account_profile || '';
             var socialLogo = socialLogos[st] || socialLogos.facebook;
             var accountName = post.account_name || (st === 'pinterest' ? 'Pinterest board' : (st === 'tiktok' ? 'TikTok' : (st === 'instagram' ? 'Instagram' : 'Facebook Page')));
 
             var videoUrl = (post.video_url || '').toString().trim();
             var imageHtml = '';
-            if (videoUrl && (postType === 'video' || postType === 'reel' || postType === 'story')) {
+            if (!carouselGalleryHtml && videoUrl && (postType === 'video' || postType === 'reel' || postType === 'story')) {
                 var vSrc = $('<span>').text(videoUrl).html();
                 var posterAttr = '';
                 if (post.full_picture) {
@@ -4588,7 +4618,7 @@
                 }
                 imageHtml = '<div class="sent-card-video-wrap"><video class="sent-card-video" preload="metadata" playsinline controls' +
                     posterAttr + '><source src="' + vSrc + '" type="video/mp4"></video></div>';
-            } else if (post.full_picture) {
+            } else if (!carouselGalleryHtml && post.full_picture) {
                 var picSrc = $('<span>').text(post.full_picture).html();
                 imageHtml = '<div class="sent-card-image"><img src="' + picSrc + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>';
             }
@@ -4681,6 +4711,7 @@
                                         <span class="sent-card-account-name">${$('<span>').text(accountName).html()}</span>
                                     </div>
                                     ${titleHtml}
+                                    ${carouselGalleryHtml}
                                 </div>
                                 ${imageHtml}
                             </div>
