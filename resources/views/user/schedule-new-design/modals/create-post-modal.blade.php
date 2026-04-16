@@ -247,11 +247,6 @@
                                         </label>
                                         <label class="create-post-format-option">
                                             <input type="checkbox" name="create_post_instagram_formats[]"
-                                                id="createPostFormatIgReel" value="reel">
-                                            <span>Reel</span>
-                                        </label>
-                                        <label class="create-post-format-option">
-                                            <input type="checkbox" name="create_post_instagram_formats[]"
                                                 id="createPostFormatIgStory" value="story">
                                             <span>Story</span>
                                         </label>
@@ -270,7 +265,6 @@
                                             aria-hidden="true">
                                             <ul class="create-post-format-help-list">
                                                 <li><strong>Post</strong>: One image or video per post.</li>
-                                                <li><strong>Reel</strong>: Single video only.</li>
                                                 <li><strong>Story</strong>: Image or video; media only when Story is the only type selected.</li>
                                                 <li><strong>Carousel</strong>: 2–10 images and/or videos in one post.</li>
                                             </ul>

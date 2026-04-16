@@ -2213,21 +2213,10 @@
         function updateCreatePostInstagramFormatRow() {
             var show = createPostHasOnlyInstagramChannelsSelected() && !is_link;
             var $wrap = pm$('InstagramFormatWrap');
-            var hasVideo = createPostHasVideoInQueue();
             var nFiles = createPostFiles.length;
-            var $reelOpt = pm$('FormatIgReel').closest('.create-post-format-option');
             var $carouselOpt = pm$('FormatIgCarousel').closest('.create-post-format-option');
             if (show) {
                 $wrap.show();
-                if (hasVideo) {
-                    $reelOpt.show();
-                } else {
-                    $reelOpt.hide();
-                    if (pm$('FormatIgReel').is(':checked')) {
-                        pm$('FormatIgReel').prop('checked', false);
-                        pm$('FormatIgPost').prop('checked', true);
-                    }
-                }
                 if (nFiles >= 2) {
                     $carouselOpt.show();
                 } else {
@@ -2239,10 +2228,9 @@
                 }
             } else {
                 $wrap.hide();
-                $reelOpt.show();
                 $carouselOpt.show();
                 pm$('FormatIgPost').prop('checked', true);
-                pm$('FormatIgReel').add(pm$('FormatIgStory')).add(pm$('FormatIgCarousel')).prop('checked', false);
+                pm$('FormatIgStory').add(pm$('FormatIgCarousel')).prop('checked', false);
             }
         }
 
@@ -2264,7 +2252,7 @@
                 var igSel = activeComposeModal$().find('input[name="create_post_instagram_formats[]"]:checked').map(function() {
                     return $(this).val();
                 }).get();
-                var hasCap = igSel.indexOf('post') !== -1 || igSel.indexOf('reel') !== -1 || igSel.indexOf('carousel') !== -1;
+                var hasCap = igSel.indexOf('post') !== -1 || igSel.indexOf('carousel') !== -1;
                 var hasStory = igSel.indexOf('story') !== -1;
                 if (hasCap) {
                     pm$('CommentWrap').show();

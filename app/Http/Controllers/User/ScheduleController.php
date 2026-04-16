@@ -253,25 +253,14 @@ class ScheduleController extends Controller
         }
 
         $format = strtolower((string) ($formatForced ?? $request->input('instagram_content_format', 'post')));
+        if ($format === 'reel') {
+            $format = 'post';
+        }
         if ($format === 'carousel' && empty($upload['instagram_carousel_items'])) {
             return ['success' => false, 'message' => 'Instagram carousel requires at least 2 media files.'];
         }
         $hasVideo = ! empty($upload['video']);
         $hasImage = ! empty($upload['image']);
-
-        if ($format === 'reel') {
-            if (! $hasVideo || $hasImage) {
-                return ['success' => false, 'message' => 'Instagram Reels require a single video file.'];
-            }
-
-            return [
-                'success' => true,
-                'type' => 'reel',
-                'image' => null,
-                'video' => $upload['video'],
-                'metadata' => null,
-            ];
-        }
 
         if ($format === 'story') {
             if (! $hasVideo && ! $hasImage) {
@@ -344,10 +333,6 @@ class ScheduleController extends Controller
                 continue;
             }
             if ($f === 'reel') {
-                if ($hasVideo && ! $hasImage) {
-                    $out[] = 'reel';
-                }
-
                 continue;
             }
             if ($f === 'story') {
@@ -363,7 +348,14 @@ class ScheduleController extends Controller
         $out = array_values(array_unique($out));
 
         if ($out === []) {
-            return $selected === [] ? ['post'] : [];
+            if ($selected === []) {
+                return ['post'];
+            }
+            $nonReel = array_values(array_filter($selected, function ($f) {
+                return strtolower(trim((string) $f)) !== 'reel';
+            }));
+
+            return $nonReel === [] ? ['post'] : [];
         }
 
         return $out;
