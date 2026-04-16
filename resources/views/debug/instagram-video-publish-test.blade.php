@@ -13,9 +13,10 @@
         .ok { background: #ecfdf5; border: 1px solid #10b981; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.25rem; }
         .err { background: #fef2f2; border: 1px solid #ef4444; padding: 0.75rem 1rem; border-radius: 8px; margin-bottom: 1.25rem; }
         label { display: block; font-weight: 600; font-size: 0.875rem; margin-top: 1rem; }
-        input[type="text"], input[type="url"], input[type="number"], select, textarea {
+        input[type="text"], input[type="file"], input[type="number"], select, textarea {
             width: 100%; max-width: 40rem; padding: 0.5rem 0.65rem; border: 1px solid #d4d4d8; border-radius: 6px; font-size: 0.9375rem; box-sizing: border-box;
         }
+        input[type="file"] { padding: 0.4rem; background: #fff; }
         textarea { min-height: 4rem; font-family: inherit; }
         .row-inline { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 0.5rem; }
         .row-inline > div label { margin-top: 0; font-weight: 500; }
@@ -49,7 +50,11 @@
 </head>
 <body>
     <h1>Instagram video / Reels — Content Publishing API test</h1>
-    <p class="muted">Runs: <code>POST …/media</code> (REELS + <code>share_to_feed</code>) → poll <code>GET …/{container-id}</code> → optional <code>POST …/media_publish</code>. Tokens are redacted below.</p>
+    <p class="muted">Your file is saved under <code>public/uploads/instagram-video-test/</code> and exposed as <code>APP_URL</code> + that path so Meta can use it as <code>video_url</code>. Then: <code>POST …/media</code> → poll → optional <code>media_publish</code>. Tokens are redacted below.</p>
+
+    <div class="warn">
+        <strong>HTTPS &amp; reachability.</strong> <code>APP_URL</code> must be a URL Instagram’s servers can load (production domain or a tunnel such as ngrok). Local <code>http://127.0.0.1</code> will not work. The uploaded file is deleted after this request finishes.
+    </div>
 
     <div class="warn">
         <strong>Use a test account.</strong> Unchecking “stop before media_publish” posts to Instagram. The browser may wait a long time while Meta transcodes video.
@@ -81,7 +86,7 @@
     @if ($accounts->isEmpty())
         <p class="err">No Instagram accounts for this user. Connect one under <a href="{{ route('panel.accounts.instagram') }}">Accounts → Instagram</a>.</p>
     @else
-        <form method="post" action="{{ route('panel.debug.instagram-video-publish-test.run') }}">
+        <form method="post" action="{{ route('panel.debug.instagram-video-publish-test.run') }}" enctype="multipart/form-data">
             @csrf
             <label for="instagram_account_id">Instagram account</label>
             <select name="instagram_account_id" id="instagram_account_id" required>
@@ -92,8 +97,12 @@
                 @endforeach
             </select>
 
-            <label for="video_url">Public HTTPS video URL</label>
-            <input type="url" name="video_url" id="video_url" required placeholder="https://…" value="{{ old('video_url') }}">
+            <label for="video">Video file</label>
+            <input type="file" name="video" id="video" required accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm">
+            <p class="muted">Max 100&nbsp;MB. MP4 (H.264) recommended for Instagram.</p>
+            @error('video')
+                <p class="err" style="margin-top:0.5rem;padding:0.5rem">{{ $message }}</p>
+            @enderror
 
             <label for="caption">Caption (optional)</label>
             <textarea name="caption" id="caption" maxlength="2200" placeholder="Optional caption">{{ old('caption') }}</textarea>

@@ -7,6 +7,7 @@ use App\Models\InstagramAccount;
 use App\Models\User;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 
@@ -47,7 +48,12 @@ class InstagramVideoPublishTestController extends Controller
 
         $validated = $request->validate([
             'instagram_account_id' => ['required', 'integer'],
-            'video_url' => ['required', 'url'],
+            'video' => [
+                'required',
+                'file',
+                'max:'.(100 * 1024),
+                'mimes:mp4,mov,webm,m4v',
+            ],
             'caption' => ['nullable', 'string', 'max:2200'],
             'stop_before_media_publish' => ['sometimes', 'boolean'],
             'max_poll_attempts' => ['nullable', 'integer', 'min:1', 'max:200'],
@@ -80,173 +86,239 @@ class InstagramVideoPublishTestController extends Controller
 
         set_time_limit(min(3600, $maxPoll * $sleepSec + 600));
 
-        $base = $this->graphBaseUrl($ig);
-        $igUserId = (string) $ig->ig_user_id;
-        $steps = [];
+        $tempAbsolutePath = null;
 
-        $includeCopyrightCheck = str_contains($base, 'graph.facebook.com');
-        $statusFields = 'id,status_code,status'.($includeCopyrightCheck ? ',copyright_check_status' : '');
+        try {
+            /** @var UploadedFile $uploaded */
+            $uploaded = $request->file('video');
+            $stored = $this->storeTestVideoUpload($uploaded);
+            $tempAbsolutePath = $stored['absolute_path'];
+            $videoUrl = $stored['public_https_url'];
 
-        // --- Step 1: create REELS container ---
-        $createPayload = [
-            'media_type' => 'REELS',
-            'video_url' => $validated['video_url'],
-            'share_to_feed' => 'true',
-            'access_token' => $token,
-        ];
-        $caption = isset($validated['caption']) ? trim((string) $validated['caption']) : '';
-        if ($caption !== '') {
-            $createPayload['caption'] = $caption;
-        }
+            $base = $this->graphBaseUrl($ig);
+            $igUserId = (string) $ig->ig_user_id;
+            $steps = [];
 
-        $createUrl = "{$base}/{$igUserId}/media";
-        $t0 = microtime(true);
-        $createResp = Http::asForm()
-            ->acceptJson()
-            ->timeout(120)
-            ->post($createUrl, $createPayload);
-        $steps[] = $this->stepFromHttp(
-            '1. Create media container (REELS)',
-            'POST',
-            $createUrl,
-            $this->redactToken($createPayload),
-            $createResp,
-            microtime(true) - $t0
-        );
-
-        if (! $createResp->successful()) {
-            return view('debug.instagram-video-publish-test', [
-                'accounts' => InstagramAccount::query()->where('user_id', $ownerId)->orderBy('username')->get(),
-                'steps' => $steps,
-                'fatalError' => 'Create container failed — see last step response.',
-            ]);
-        }
-
-        $creationId = $createResp->json('id');
-        if (empty($creationId)) {
-            return view('debug.instagram-video-publish-test', [
-                'accounts' => InstagramAccount::query()->where('user_id', $ownerId)->orderBy('username')->get(),
-                'steps' => $steps,
-                'fatalError' => 'Create response missing container id.',
-            ]);
-        }
-
-        $creationId = (string) $creationId;
-
-        // --- Steps 2+: poll container status ---
-        $lastPayload = null;
-        $lastCode = null;
-        $pollError = null;
-
-        for ($i = 0; $i < $maxPoll; $i++) {
-            $statusUrl = "{$base}/{$creationId}";
-            $query = [
-                'fields' => $statusFields,
-                'access_token' => $token,
-            ];
-            $t1 = microtime(true);
-            $statusResp = Http::acceptJson()
-                ->timeout(90)
-                ->get($statusUrl, $query);
-            $steps[] = $this->stepFromHttp(
-                '2.'.($i + 1).'. Poll container status (attempt '.($i + 1).' / '.$maxPoll.')',
-                'GET',
-                $statusUrl.'?'.$this->queryStringForLog($query),
-                ['fields' => $statusFields, 'access_token' => '***REDACTED***'],
-                $statusResp,
-                microtime(true) - $t1
-            );
-
-            if (! $statusResp->successful()) {
-                $pollError = 'Status poll HTTP error — see step response.';
-                break;
-            }
-
-            $payload = $statusResp->json();
-            $lastPayload = is_array($payload) ? $payload : null;
-            $code = $this->normalizeContainerStatusCode($lastPayload);
-            $lastCode = $code;
-
-            if ($code === 'FINISHED') {
-                $pollError = null;
-                break;
-            }
-
-            if (in_array($code, ['ERROR', 'EXPIRED'], true)) {
-                $pollError = 'Container reported '.$code.' — see last response body.';
-                break;
-            }
-
-            sleep($sleepSec);
-        }
-
-        if ($pollError !== null) {
-            return view('debug.instagram-video-publish-test', [
-                'accounts' => InstagramAccount::query()->where('user_id', $ownerId)->orderBy('username')->get(),
-                'steps' => $steps,
-                'fatalError' => $pollError,
-            ]);
-        }
-
-        if ($lastCode !== 'FINISHED') {
-            return view('debug.instagram-video-publish-test', [
-                'accounts' => InstagramAccount::query()->where('user_id', $ownerId)->orderBy('username')->get(),
-                'steps' => $steps,
-                'fatalError' => 'Timed out waiting for FINISHED. Last status: '.($lastCode ?? 'unknown').'.',
-            ]);
-        }
-
-        if ($stopBeforePublish) {
             $steps[] = [
-                'title' => '3. media_publish (skipped)',
+                'title' => '0. Store upload (local) → public video_url for Meta',
                 'method' => '—',
-                'url' => "{$base}/{$igUserId}/media_publish",
-                'request' => ['creation_id' => $creationId, 'access_token' => '***REDACTED***'],
+                'url' => $videoUrl,
+                'request' => [
+                    'original_name' => $uploaded->getClientOriginalName(),
+                    'mime' => $uploaded->getMimeType(),
+                    'size_bytes' => $uploaded->getSize(),
+                    'saved_path' => $stored['public_relative_path'],
+                    'note' => 'Instagram requires a URL Meta can fetch. File is saved under public/; APP_URL must be HTTPS and reachable from the internet (use ngrok/tunnel for local dev).',
+                ],
                 'response_status' => null,
-                'response_body' => 'You enabled “Stop before media_publish”. The container is ready; no publish call was made.',
+                'response_body' => 'File saved. The URL above is sent as video_url in step 1.',
                 'ok' => true,
                 'duration_ms' => null,
             ];
 
+            $includeCopyrightCheck = str_contains($base, 'graph.facebook.com');
+            $statusFields = 'id,status_code,status'.($includeCopyrightCheck ? ',copyright_check_status' : '');
+
+            // --- Step 1: create REELS container ---
+            $createPayload = [
+                'media_type' => 'REELS',
+                'video_url' => $videoUrl,
+                'share_to_feed' => 'true',
+                'access_token' => $token,
+            ];
+            $caption = isset($validated['caption']) ? trim((string) $validated['caption']) : '';
+            if ($caption !== '') {
+                $createPayload['caption'] = $caption;
+            }
+
+            $createUrl = "{$base}/{$igUserId}/media";
+            $t0 = microtime(true);
+            $createResp = Http::asForm()
+                ->acceptJson()
+                ->timeout(120)
+                ->post($createUrl, $createPayload);
+            $steps[] = $this->stepFromHttp(
+                '1. Create media container (REELS)',
+                'POST',
+                $createUrl,
+                $this->redactToken($createPayload),
+                $createResp,
+                microtime(true) - $t0
+            );
+
+            if (! $createResp->successful()) {
+                return view('debug.instagram-video-publish-test', [
+                    'accounts' => InstagramAccount::query()->where('user_id', $ownerId)->orderBy('username')->get(),
+                    'steps' => $steps,
+                    'fatalError' => 'Create container failed — see last step response.',
+                ]);
+            }
+
+            $creationId = $createResp->json('id');
+            if (empty($creationId)) {
+                return view('debug.instagram-video-publish-test', [
+                    'accounts' => InstagramAccount::query()->where('user_id', $ownerId)->orderBy('username')->get(),
+                    'steps' => $steps,
+                    'fatalError' => 'Create response missing container id.',
+                ]);
+            }
+
+            $creationId = (string) $creationId;
+
+            // --- Steps 2+: poll container status ---
+            $lastPayload = null;
+            $lastCode = null;
+            $pollError = null;
+
+            for ($i = 0; $i < $maxPoll; $i++) {
+                $statusUrl = "{$base}/{$creationId}";
+                $query = [
+                    'fields' => $statusFields,
+                    'access_token' => $token,
+                ];
+                $t1 = microtime(true);
+                $statusResp = Http::acceptJson()
+                    ->timeout(90)
+                    ->get($statusUrl, $query);
+                $steps[] = $this->stepFromHttp(
+                    '2.'.($i + 1).'. Poll container status (attempt '.($i + 1).' / '.$maxPoll.')',
+                    'GET',
+                    $statusUrl.'?'.$this->queryStringForLog($query),
+                    ['fields' => $statusFields, 'access_token' => '***REDACTED***'],
+                    $statusResp,
+                    microtime(true) - $t1
+                );
+
+                if (! $statusResp->successful()) {
+                    $pollError = 'Status poll HTTP error — see step response.';
+                    break;
+                }
+
+                $payload = $statusResp->json();
+                $lastPayload = is_array($payload) ? $payload : null;
+                $code = $this->normalizeContainerStatusCode($lastPayload);
+                $lastCode = $code;
+
+                if ($code === 'FINISHED') {
+                    $pollError = null;
+                    break;
+                }
+
+                if (in_array($code, ['ERROR', 'EXPIRED'], true)) {
+                    $pollError = 'Container reported '.$code.' — see last response body.';
+                    break;
+                }
+
+                sleep($sleepSec);
+            }
+
+            if ($pollError !== null) {
+                return view('debug.instagram-video-publish-test', [
+                    'accounts' => InstagramAccount::query()->where('user_id', $ownerId)->orderBy('username')->get(),
+                    'steps' => $steps,
+                    'fatalError' => $pollError,
+                ]);
+            }
+
+            if ($lastCode !== 'FINISHED') {
+                return view('debug.instagram-video-publish-test', [
+                    'accounts' => InstagramAccount::query()->where('user_id', $ownerId)->orderBy('username')->get(),
+                    'steps' => $steps,
+                    'fatalError' => 'Timed out waiting for FINISHED. Last status: '.($lastCode ?? 'unknown').'.',
+                ]);
+            }
+
+            if ($stopBeforePublish) {
+                $steps[] = [
+                    'title' => '3. media_publish (skipped)',
+                    'method' => '—',
+                    'url' => "{$base}/{$igUserId}/media_publish",
+                    'request' => ['creation_id' => $creationId, 'access_token' => '***REDACTED***'],
+                    'response_status' => null,
+                    'response_body' => 'You enabled “Stop before media_publish”. The container is ready; no publish call was made.',
+                    'ok' => true,
+                    'duration_ms' => null,
+                ];
+
+                return view('debug.instagram-video-publish-test', [
+                    'accounts' => InstagramAccount::query()->where('user_id', $ownerId)->orderBy('username')->get(),
+                    'steps' => $steps,
+                    'fatalError' => null,
+                ]);
+            }
+
+            // --- Final: media_publish ---
+            $publishUrl = "{$base}/{$igUserId}/media_publish";
+            $publishPayload = [
+                'creation_id' => $creationId,
+                'access_token' => $token,
+            ];
+            $t2 = microtime(true);
+            $publishResp = Http::asForm()
+                ->acceptJson()
+                ->timeout(120)
+                ->post($publishUrl, $publishPayload);
+            $steps[] = $this->stepFromHttp(
+                '3. media_publish',
+                'POST',
+                $publishUrl,
+                $this->redactToken($publishPayload),
+                $publishResp,
+                microtime(true) - $t2
+            );
+
+            $fatal = null;
+            if (! $publishResp->successful()) {
+                $fatal = 'media_publish failed — see last step.';
+            } elseif (empty($publishResp->json('id'))) {
+                $fatal = 'media_publish response missing published media id.';
+            }
+
             return view('debug.instagram-video-publish-test', [
                 'accounts' => InstagramAccount::query()->where('user_id', $ownerId)->orderBy('username')->get(),
                 'steps' => $steps,
-                'fatalError' => null,
+                'fatalError' => $fatal,
             ]);
+        } finally {
+            if ($tempAbsolutePath !== null && is_file($tempAbsolutePath)) {
+                @unlink($tempAbsolutePath);
+            }
+        }
+    }
+
+    /**
+     * @return array{absolute_path: string, public_relative_path: string, public_https_url: string}
+     */
+    private function storeTestVideoUpload(UploadedFile $file): array
+    {
+        $relativeDir = 'uploads/instagram-video-test';
+        $dir = public_path($relativeDir);
+        if (! is_dir($dir)) {
+            if (! mkdir($dir, 0755, true) && ! is_dir($dir)) {
+                throw new \RuntimeException('Could not create directory: '.$dir);
+            }
         }
 
-        // --- Final: media_publish ---
-        $publishUrl = "{$base}/{$igUserId}/media_publish";
-        $publishPayload = [
-            'creation_id' => $creationId,
-            'access_token' => $token,
+        $ext = strtolower((string) $file->getClientOriginalExtension());
+        if ($ext === '' || ! in_array($ext, ['mp4', 'mov', 'webm', 'mpeg', 'm4v'], true)) {
+            $ext = 'mp4';
+        }
+
+        $basename = uniqid('igtest_', true).'.'.$ext;
+        $file->move($dir, $basename);
+
+        $absolutePath = $dir.DIRECTORY_SEPARATOR.$basename;
+        $publicRelative = $relativeDir.'/'.$basename;
+        $url = rtrim((string) config('app.url'), '/').'/'.$publicRelative;
+        if (preg_match('#^http://#i', $url) === 1) {
+            $url = preg_replace('#^http://#i', 'https://', $url);
+        }
+
+        return [
+            'absolute_path' => $absolutePath,
+            'public_relative_path' => $publicRelative,
+            'public_https_url' => $url,
         ];
-        $t2 = microtime(true);
-        $publishResp = Http::asForm()
-            ->acceptJson()
-            ->timeout(120)
-            ->post($publishUrl, $publishPayload);
-        $steps[] = $this->stepFromHttp(
-            '3. media_publish',
-            'POST',
-            $publishUrl,
-            $this->redactToken($publishPayload),
-            $publishResp,
-            microtime(true) - $t2
-        );
-
-        $fatal = null;
-        if (! $publishResp->successful()) {
-            $fatal = 'media_publish failed — see last step.';
-        } elseif (empty($publishResp->json('id'))) {
-            $fatal = 'media_publish response missing published media id.';
-        }
-
-        return view('debug.instagram-video-publish-test', [
-            'accounts' => InstagramAccount::query()->where('user_id', $ownerId)->orderBy('username')->get(),
-            'steps' => $steps,
-            'fatalError' => $fatal,
-        ]);
     }
 
     private function graphBaseUrl(InstagramAccount $ig): string
