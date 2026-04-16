@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Jobs\DeleteFacebookPostJob;
 use App\Jobs\DeleteSentPostJob;
 use App\Jobs\PublishFacebookPost;
+use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishPinterestPost;
 use App\Jobs\PublishTikTokPost;
 use App\Models\Board;
@@ -109,9 +110,9 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Normalize create-post uploads: single file from request.
+     * Normalize create-post uploads: single file, or multiple files for Instagram carousel.
      *
-     * @return array{error: ?array, has_files: bool, image: ?string, images: array<int, string>, video: ?string}
+     * @return array{error: ?array, has_files: bool, image: ?string, images: array<int, string>, video: ?string, instagram_carousel_items: array<int, array{type: string, path: string}>}
      */
     private function normalizeCreatePostFileUploads(Request $request): array
     {
@@ -121,13 +122,79 @@ class ScheduleController extends Controller
             'image' => null,
             'images' => [],
             'video' => null,
+            'instagram_carousel_items' => [],
         ];
 
         $raw = $request->file('files');
         if ($raw === null) {
             return $empty;
         }
-        $file = is_array($raw) ? ($raw[0] ?? null) : $raw;
+
+        $igFormat = strtolower((string) $request->input('instagram_content_format', ''));
+        $files = is_array($raw) ? array_values(array_filter($raw)) : [$raw];
+
+        if ($igFormat === 'carousel') {
+            if (count($files) < 2) {
+                return [
+                    'error' => [
+                        'success' => false,
+                        'message' => 'Instagram carousel requires at least 2 media files.',
+                    ],
+                    'has_files' => false,
+                    'image' => null,
+                    'images' => [],
+                    'video' => null,
+                    'instagram_carousel_items' => [],
+                ];
+            }
+            if (count($files) > 10) {
+                return [
+                    'error' => [
+                        'success' => false,
+                        'message' => 'Instagram carousel allows at most 10 media files.',
+                    ],
+                    'has_files' => false,
+                    'image' => null,
+                    'images' => [],
+                    'video' => null,
+                    'instagram_carousel_items' => [],
+                ];
+            }
+            $items = [];
+            foreach ($files as $file) {
+                if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                    return [
+                        'error' => [
+                            'success' => false,
+                            'message' => 'One or more carousel uploads are invalid.',
+                        ],
+                        'has_files' => false,
+                        'image' => null,
+                        'images' => [],
+                        'video' => null,
+                        'instagram_carousel_items' => [],
+                    ];
+                }
+                $ext = strtolower((string) ($file->getClientOriginalExtension() ?: ''));
+                $isVideo = in_array($ext, ['mp4', 'mkv', 'mov', 'mpeg', 'webm'], true);
+                if ($isVideo) {
+                    $items[] = ['type' => 'video', 'path' => saveToS3($file)];
+                } else {
+                    $items[] = ['type' => 'image', 'path' => saveImage($file)];
+                }
+            }
+
+            return [
+                'error' => null,
+                'has_files' => true,
+                'image' => null,
+                'images' => [],
+                'video' => null,
+                'instagram_carousel_items' => $items,
+            ];
+        }
+
+        $file = $files[0] ?? null;
         if (! $file instanceof UploadedFile || ! $file->isValid()) {
             return $empty;
         }
@@ -138,6 +205,7 @@ class ScheduleController extends Controller
                 'image' => null,
                 'images' => [],
                 'video' => saveToS3($file),
+                'instagram_carousel_items' => [],
             ];
         }
         $img = saveImage($file);
@@ -148,7 +216,154 @@ class ScheduleController extends Controller
             'image' => $img,
             'images' => [$img],
             'video' => null,
+            'instagram_carousel_items' => [],
         ];
+    }
+
+    /**
+     * Map Instagram format + uploads to post row (type, image, video, metadata).
+     *
+     * @param  array<string, mixed>  $upload Output of normalizeCreatePostFileUploads()
+     * @return array{success: bool, message?: string, type?: string, image?: ?string, video?: ?string, metadata?: ?string}
+     */
+    private function instagramComposePlan(Request $request, array $upload): array
+    {
+        if (empty($upload['has_files'])) {
+            return ['success' => false, 'message' => 'Instagram posts require an image or video.'];
+        }
+
+        if (! empty($upload['instagram_carousel_items'])) {
+            $items = $upload['instagram_carousel_items'];
+            $metaRows = [];
+            foreach ($items as $it) {
+                if (($it['type'] ?? '') === 'video') {
+                    $metaRows[] = ['image' => null, 'video' => $it['path']];
+                } else {
+                    $metaRows[] = ['image' => $it['path'], 'video' => null];
+                }
+            }
+
+            return [
+                'success' => true,
+                'type' => 'carousel',
+                'image' => null,
+                'video' => null,
+                'metadata' => json_encode(['ig_carousel' => $metaRows]),
+            ];
+        }
+
+        $format = strtolower((string) $request->input('instagram_content_format', 'post'));
+        $hasVideo = ! empty($upload['video']);
+        $hasImage = ! empty($upload['image']);
+
+        if ($format === 'reel') {
+            if (! $hasVideo || $hasImage) {
+                return ['success' => false, 'message' => 'Instagram Reels require a single video file.'];
+            }
+
+            return [
+                'success' => true,
+                'type' => 'reel',
+                'image' => null,
+                'video' => $upload['video'],
+                'metadata' => null,
+            ];
+        }
+
+        if ($format === 'story') {
+            if (! $hasVideo && ! $hasImage) {
+                return ['success' => false, 'message' => 'Instagram stories require an image or video.'];
+            }
+
+            return [
+                'success' => true,
+                'type' => 'story',
+                'image' => $upload['image'],
+                'video' => $upload['video'],
+                'metadata' => null,
+            ];
+        }
+
+        if ($hasVideo) {
+            return [
+                'success' => true,
+                'type' => 'video',
+                'image' => null,
+                'video' => $upload['video'],
+                'metadata' => null,
+            ];
+        }
+
+        if ($hasImage) {
+            return [
+                'success' => true,
+                'type' => 'photo',
+                'image' => $upload['image'],
+                'video' => null,
+                'metadata' => null,
+            ];
+        }
+
+        return ['success' => false, 'message' => 'Instagram posts require an image or video.'];
+    }
+
+    /**
+     * Create a Post row for Instagram from the compose modal / queue flows.
+     *
+     * @param  object  $account  InstagramAccount model (has ->id)
+     * @return array{error: ?string, post: ?Post, plan: ?array<string, mixed>}
+     */
+    private function createInstagramPostFromCompose(User $user, object $account, Request $request, array $upload, string $publishDateTime, int $scheduled = 0): array
+    {
+        if (! $upload['has_files']) {
+            return ['error' => 'Instagram publishing requires an image or video.', 'post' => null, 'plan' => null];
+        }
+
+        $plan = $this->instagramComposePlan($request, $upload);
+        if (! $plan['success']) {
+            return ['error' => $plan['message'] ?? 'Invalid Instagram post.', 'post' => null, 'plan' => null];
+        }
+
+        $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
+        $igRow = InstagramAccount::query()
+            ->where('id', $account->id)
+            ->where('user_id', $ownerId)
+            ->first();
+
+        if (! $igRow) {
+            return ['error' => 'Instagram account not found.', 'post' => null, 'plan' => null];
+        }
+
+        if (! $igRow->validToken()) {
+            return ['error' => 'Instagram access token expired. Reconnect your Instagram account.', 'post' => null, 'plan' => null];
+        }
+
+        $data = [
+            'user_id' => $user->id,
+            'account_id' => $account->id,
+            'social_type' => 'instagram',
+            'type' => $plan['type'],
+            'source' => $this->source,
+            'title' => $request->get('content'),
+            'comment' => $request->get('comment'),
+            'image' => $plan['image'] ?? null,
+            'video' => $plan['video'] ?? null,
+            'status' => 0,
+            'publish_date' => $publishDateTime,
+            'scheduled' => $scheduled,
+        ];
+
+        if (! empty($plan['metadata'])) {
+            $data['metadata'] = $plan['metadata'];
+        }
+
+        $post = PostService::create($data);
+
+        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+        }
+
+        return ['error' => null, 'post' => $post, 'plan' => $plan];
     }
 
     /**
@@ -285,8 +500,9 @@ class ScheduleController extends Controller
         $facebook = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'facebook'));
         $pinterest = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'pinterest'));
         $tiktok = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'tiktok'));
+        $instagram = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'instagram'));
 
-        return $facebook->concat($pinterest)->concat($tiktok);
+        return $facebook->concat($pinterest)->concat($tiktok)->concat($instagram);
     }
 
     /**
@@ -334,6 +550,16 @@ class ScheduleController extends Controller
                         'profile_image' => $tiktok->profile_image ?? '',
                     ];
                 }
+            } elseif (str_contains($st, 'instagram')) {
+                $ig = InstagramAccount::find($post->account_id);
+                if ($ig) {
+                    $account = [
+                        'id' => $ig->id,
+                        'type' => 'instagram',
+                        'name' => $ig->name ?: ($ig->username ? '@'.$ig->username : 'Instagram'),
+                        'profile_image' => $ig->profile_image ?? '',
+                    ];
+                }
             }
         }
 
@@ -358,6 +584,13 @@ class ScheduleController extends Controller
                     'id' => $tiktokRow->id,
                     'type' => 'tiktok',
                     'schedule_status' => $tiktokRow->schedule_status ?? 'inactive',
+                ]);
+            });
+            $user->instagramAccounts()->get(['id', 'schedule_status'])->each(function ($igRow) use ($accountsStatus) {
+                $accountsStatus->push([
+                    'id' => $igRow->id,
+                    'type' => 'instagram',
+                    'schedule_status' => $igRow->schedule_status ?? 'inactive',
                 ]);
             });
         }
@@ -399,6 +632,13 @@ class ScheduleController extends Controller
                 'schedule_status' => $tiktok->schedule_status ?? 'inactive',
             ]);
         });
+        $user->instagramAccounts()->get(['id', 'schedule_status'])->each(function ($ig) use ($accountsStatus) {
+            $accountsStatus->push([
+                'id' => $ig->id,
+                'type' => 'instagram',
+                'schedule_status' => $ig->schedule_status ?? 'inactive',
+            ]);
+        });
 
         $account = null;
         $post = Post::where('user_id', $user->id)
@@ -434,6 +674,16 @@ class ScheduleController extends Controller
                         'type' => 'tiktok',
                         'name' => $tiktokRow->display_name ?? $tiktokRow->username,
                         'profile_image' => $tiktokRow->profile_image ?? '',
+                    ];
+                }
+            } elseif (str_contains($st, 'instagram')) {
+                $igRow = InstagramAccount::find($post->account_id);
+                if ($igRow) {
+                    $account = [
+                        'id' => $igRow->id,
+                        'type' => 'instagram',
+                        'name' => $igRow->name ?: ($igRow->username ? '@'.$igRow->username : 'Instagram'),
+                        'profile_image' => $igRow->profile_image ?? '',
                     ];
                 }
             }
@@ -539,7 +789,7 @@ class ScheduleController extends Controller
     public function saveSelectedAccount(Request $request)
     {
         $request->validate([
-            'type' => 'required|string|in:all,facebook,pinterest,tiktok',
+            'type' => 'required|string|in:all,facebook,pinterest,tiktok,instagram',
             'id' => 'nullable|string',
         ]);
         $user = User::find(Auth::guard('user')->id());
@@ -763,7 +1013,7 @@ class ScheduleController extends Controller
 
     private function countQueuePostsForChainFileAndAccount($account, UploadedFile $file, Request $request): int
     {
-        if ($account->type === 'facebook' || $account->type === 'pinterest' || $account->type === 'tiktok') {
+        if ($account->type === 'facebook' || $account->type === 'pinterest' || $account->type === 'tiktok' || $account->type === 'instagram') {
             return 1;
         }
 
@@ -887,6 +1137,30 @@ class ScheduleController extends Controller
 
             return;
         }
+
+        if ($account->type === 'instagram') {
+            $igRequest = $request->duplicate(null, array_merge($request->all(), ['instagram_content_format' => 'post']));
+            $uploadPayload = [
+                'error' => null,
+                'has_files' => true,
+                'image' => $image,
+                'images' => $image ? [$image] : [],
+                'video' => $video,
+                'instagram_carousel_items' => [],
+            ];
+            $nextTime = (new Post)->nextScheduleTime(
+                ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
+                $account->timeslots,
+                $user
+            );
+            $created = $this->createInstagramPostFromCompose($user, $account, $igRequest, $uploadPayload, $nextTime, 0);
+            if ($created['error'] !== null) {
+                throw new Exception($created['error']);
+            }
+            $this->logService->logQueuedPost('instagram', $created['post']->id, ['type' => $created['plan']['type'], 'publish_date' => $nextTime]);
+
+            return;
+        }
     }
 
     /**
@@ -981,7 +1255,12 @@ class ScheduleController extends Controller
         $accountType = strtolower((string) $accountType);
 
         if ($accountType === 'instagram') {
-            return [];
+            $ig = InstagramAccount::query()->find($accountId);
+            if (! $ig) {
+                return [];
+            }
+
+            return $ig->timeslots->pluck('timeslot')->sort()->values()->toArray();
         }
 
         return Timeslot::where('account_id', $accountId)
@@ -1101,6 +1380,8 @@ class ScheduleController extends Controller
                 } elseif ($account->type == 'pinterest' && $file) {
                     $totalPostsToCreate++;
                 } elseif ($account->type == 'tiktok' && $file) {
+                    $totalPostsToCreate++;
+                } elseif ($account->type === 'instagram' && $file) {
                     $totalPostsToCreate++;
                 }
             }
@@ -1339,6 +1620,22 @@ class ScheduleController extends Controller
                         $postData = PostService::postTypeBody($post);
                         PublishTikTokPost::dispatch($post->id, $postData, $access_token, $type);
                     }
+                }
+                if ($account->type === 'instagram') {
+                    if (! $file) {
+                        return [
+                            'success' => false,
+                            'message' => 'Instagram publishing requires an image or video.',
+                        ];
+                    }
+                    $created = $this->createInstagramPostFromCompose($user, $account, $request, $upload, $publishDateNow, 0);
+                    if ($created['error'] !== null) {
+                        return ['success' => false, 'message' => $created['error']];
+                    }
+                    $post = $created['post'];
+                    $plan = $created['plan'];
+                    $this->logService->logPost('instagram', $plan['type'], $post->id, ['action' => 'publish'], 'pending');
+                    PublishInstagramPost::dispatch($post->id);
                 }
             }
             $response = [
@@ -1642,6 +1939,8 @@ class ScheduleController extends Controller
                         $postsToCreate++;
                     } elseif ($account->type == 'tiktok' && $file) {
                         $postsToCreate++;
+                    } elseif ($account->type === 'instagram' && $file) {
+                        $postsToCreate++;
                     }
                 }
             }
@@ -1745,6 +2044,24 @@ class ScheduleController extends Controller
                             $this->logService->logQueuedPost('tiktok', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                         }
                     }
+                    if ($account->type === 'instagram') {
+                        if (! $file) {
+                            return [
+                                'success' => false,
+                                'message' => 'Instagram queue posts require an image or video.',
+                            ];
+                        }
+                        $nextTime = (new Post)->nextScheduleTime(
+                            ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
+                            $account->timeslots,
+                            $user
+                        );
+                        $created = $this->createInstagramPostFromCompose($user, $account, $request, $upload, $nextTime, 0);
+                        if ($created['error'] !== null) {
+                            return ['success' => false, 'message' => $created['error']];
+                        }
+                        $this->logService->logQueuedPost('instagram', $created['post']->id, ['type' => $created['plan']['type'], 'publish_date' => $nextTime]);
+                    }
                     $response = [
                         'success' => true,
                         'message' => 'Your posts are queued for Later!',
@@ -1792,6 +2109,8 @@ class ScheduleController extends Controller
                 } elseif ($account->type == 'pinterest' && $file) {
                     $postsToCreate++;
                 } elseif ($account->type == 'tiktok' && $file) {
+                    $postsToCreate++;
+                } elseif ($account->type === 'instagram' && $file) {
                     $postsToCreate++;
                 }
             }
@@ -1895,6 +2214,16 @@ class ScheduleController extends Controller
                         $this->logService->logScheduledPost('tiktok', $post->id, $scheduleDateTime, ['type' => $type]);
                     }
                 }
+                if ($account->type === 'instagram') {
+                    if (! $file) {
+                        continue;
+                    }
+                    $created = $this->createInstagramPostFromCompose($user, $account, $request, $upload, $scheduleDateTime, 1);
+                    if ($created['error'] !== null) {
+                        return ['success' => false, 'message' => $created['error']];
+                    }
+                    $this->logService->logScheduledPost('instagram', $created['post']->id, $scheduleDateTime, ['type' => $created['plan']['type']]);
+                }
                 $response = [
                     'success' => true,
                     'message' => 'Your posts are scheduled for Later!',
@@ -1921,8 +2250,13 @@ class ScheduleController extends Controller
             $url = $request->get('url') ?? null;
             $image = $request->get('image') ?? null;
             if (! empty($url)) {
-                // Count total posts to be created (link allowed without image for Facebook/Instagram per Data Policy)
-                $totalPostsToCreate = count($accounts);
+                // Instagram link posts are not supported (publishing requires public media URLs).
+                $totalPostsToCreate = 0;
+                foreach ($accounts as $acc) {
+                    if (($acc->type ?? '') !== 'instagram') {
+                        $totalPostsToCreate++;
+                    }
+                }
 
                 // Check scheduled posts limit before creating any posts
                 /** @var User $user */
@@ -2088,7 +2422,7 @@ class ScheduleController extends Controller
                 // Count how many posts will be created (link allowed without image for Facebook/Instagram)
                 $postsToCreate = 0;
                 foreach ($accounts as $account) {
-                    if (count($account->timeslots) > 0) {
+                    if (count($account->timeslots) > 0 && ($account->type ?? '') !== 'instagram') {
                         $postsToCreate++;
                     }
                 }
@@ -2228,8 +2562,12 @@ class ScheduleController extends Controller
             $url = $request->get('url') ?? null;
             $image = $request->get('image') ?? null;
             if (! empty($url)) {
-                // Count total posts to be created (link allowed without image for Facebook/Instagram)
-                $totalPostsToCreate = count($accounts);
+                $totalPostsToCreate = 0;
+                foreach ($accounts as $acc) {
+                    if (($acc->type ?? '') !== 'instagram') {
+                        $totalPostsToCreate++;
+                    }
+                }
 
                 // Check scheduled posts limit before creating any posts
                 /** @var User $user */
@@ -2388,6 +2726,9 @@ class ScheduleController extends Controller
             } elseif ($type == 'tiktok') {
                 $account = Tiktok::with('timeslots')->where('id', $id)->firstOrFail();
                 $account_id = $account->id;
+            } elseif ($type == 'instagram') {
+                $account = InstagramAccount::with('scheduleTimeslots')->where('id', $id)->where('user_id', $user->id)->firstOrFail();
+                $account_id = $account->id;
             }
             if ($account) {
                 // remove previous
@@ -2514,6 +2855,11 @@ class ScheduleController extends Controller
                     }
                 } elseif ($type == 'tiktok') {
                     $account = Tiktok::with('timeslots')->where('id', $id)->first();
+                    if ($account) {
+                        $accountId = $account->id;
+                    }
+                } elseif ($type == 'instagram') {
+                    $account = InstagramAccount::with('scheduleTimeslots')->where('id', $id)->where('user_id', $user->id)->first();
                     if ($account) {
                         $accountId = $account->id;
                     }
@@ -2964,7 +3310,15 @@ class ScheduleController extends Controller
         $resolvedType = (string) $accountType;
 
         if (strtolower($resolvedType) === 'instagram') {
-            return response()->json(['timeslots' => []]);
+            $ig = InstagramAccount::where('id', $resolvedId)->where('user_id', $user->id)->first();
+            if (! $ig) {
+                return response()->json(['timeslots' => []]);
+            }
+            $timeslots = $ig->timeslots->pluck('timeslot')->sort()->values()->map(function ($slot) {
+                return date('h:i A', strtotime($slot));
+            });
+
+            return response()->json(['timeslots' => $timeslots]);
         }
 
         $timeslots = Timeslot::where('account_id', $resolvedId)
@@ -3003,6 +3357,7 @@ class ScheduleController extends Controller
         $socialType = match (strtolower((string) $accountType)) {
             'pinterest' => 'pinterest',
             'tiktok' => 'tiktok',
+            'instagram' => 'instagram',
             default => 'facebook',
         };
 
@@ -3167,6 +3522,7 @@ class ScheduleController extends Controller
         $socialType = match ($account->type) {
             'pinterest' => 'pinterest',
             'tiktok' => 'tiktok',
+            'instagram' => 'instagram',
             default => 'facebook',
         };
         $nextLocal = (new Post)->nextScheduleTime(

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Jobs\DeleteFacebookPostJob;
 use App\Jobs\PublishFacebookPost;
+use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishPinterestPost;
 use App\Models\Board;
 use App\Models\InstagramAccount;
@@ -94,6 +95,22 @@ class PostService
                 $postData = self::postTypeBody($post);
                 PublishPinterestPost::dispatch($post->id, $postData, $post->board->pinterest->access_token, $post->type);
             }
+            if (str_contains(strtolower((string) $post->social_type), 'instagram')) {
+                $ig = $post->instagramAccount;
+                if (! $ig) {
+                    return [
+                        'success' => false,
+                        'message' => 'Instagram account not found for this post.',
+                    ];
+                }
+                if (! $ig->validToken()) {
+                    return [
+                        'success' => false,
+                        'message' => 'Instagram access token expired. Reconnect your Instagram account.',
+                    ];
+                }
+                PublishInstagramPost::dispatch($post->id);
+            }
             $response = [
                 'success' => true,
                 'message' => 'Your Post is being Published.',
@@ -176,12 +193,116 @@ class PostService
         $st = strtolower(trim((string) $post->social_type));
 
         return match (true) {
-            str_contains($st, 'instagram') => [],
+            str_contains($st, 'instagram') => self::instagramPostTypeBody($post),
             str_contains($st, 'pinterest') => self::pinterestPostTypeBody($post),
             str_contains($st, 'tiktok') => self::tiktokPostTypeBody($post),
             str_contains($st, 'facebook') => self::facebookPostTypeBody($post),
             default => [],
         };
+    }
+
+    /**
+     * Payload for Instagram Content Publishing (image_url / video_url / carousel_items / caption).
+     *
+     * @see https://developers.facebook.com/docs/instagram-platform/content-publishing/
+     */
+    public static function instagramPostTypeBody(Post $post): array
+    {
+        $attrs = $post->getAttributes();
+        $title = trim((string) ($attrs['title'] ?? ''));
+        $comment = trim((string) ($attrs['comment'] ?? ''));
+        $caption = $title;
+        if ($comment !== '') {
+            $caption = $caption !== '' ? $caption."\n\n".$comment : $comment;
+        }
+
+        $rawImage = $attrs['image'] ?? null;
+        $rawVideo = $attrs['video'] ?? null;
+
+        $resolveImage = function ($raw): ?string {
+            if ($raw === null || $raw === '') {
+                return null;
+            }
+            $raw = (string) $raw;
+            if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
+                return $raw;
+            }
+
+            return url(getImage('', $raw));
+        };
+
+        $resolveVideo = function ($raw): ?string {
+            if ($raw === null || $raw === '') {
+                return null;
+            }
+            $raw = (string) $raw;
+            if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
+                return $raw;
+            }
+
+            return fetchFromS3($raw);
+        };
+
+        $body = [];
+        if ($caption !== '') {
+            $body['caption'] = $caption;
+        }
+
+        if ($post->type === 'carousel') {
+            $meta = [];
+            if (! empty($attrs['metadata'])) {
+                $decoded = is_string($attrs['metadata']) ? json_decode($attrs['metadata'], true) : $attrs['metadata'];
+                if (is_array($decoded)) {
+                    $meta = $decoded;
+                }
+            }
+            $items = $meta['ig_carousel'] ?? [];
+            $carouselItems = [];
+            foreach ($items as $it) {
+                if (! is_array($it)) {
+                    continue;
+                }
+                if (! empty($it['video'])) {
+                    $url = $resolveVideo($it['video']);
+                    if ($url) {
+                        $carouselItems[] = ['type' => 'video', 'url' => $url];
+                    }
+                } elseif (! empty($it['image'])) {
+                    $url = $resolveImage($it['image']);
+                    if ($url) {
+                        $carouselItems[] = ['type' => 'image', 'url' => $url];
+                    }
+                }
+            }
+            $body['carousel_items'] = $carouselItems;
+
+            return $body;
+        }
+
+        if ($post->type === 'story') {
+            if (! empty($rawVideo)) {
+                $body['video_url'] = $resolveVideo($rawVideo);
+            } elseif (! empty($rawImage)) {
+                $body['image_url'] = $resolveImage($rawImage);
+            }
+
+            return $body;
+        }
+
+        if ($post->type === 'photo') {
+            $body['image_url'] = $resolveImage($rawImage);
+
+            return $body;
+        }
+
+        if ($post->type === 'reel' || $post->type === 'video') {
+            $body['video_url'] = $resolveVideo($rawVideo);
+            $body['share_to_feed'] = $post->type === 'video';
+
+            return $body;
+        }
+
+        return $body;
     }
 
     public static function facebookPostTypeBody($post)

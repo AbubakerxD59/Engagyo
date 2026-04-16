@@ -251,8 +251,36 @@ class User extends Authenticatable
         $pages = Page::with('facebook', 'timeslots')->orderBy('name')->get();
         $boards = Board::with('pinterest', 'timeslots')->orderBy('name')->get();
         $tiktoks = Tiktok::with('timeslots')->orderBy('username')->get();
+        $instagram = $this->instagramAccountsForSchedule(false);
 
-        return $pages->concat($boards)->concat($tiktoks);
+        return $pages->concat($boards)->concat($tiktoks)->concat($instagram);
+    }
+
+    /**
+     * Instagram professional accounts for the schedule UI (optional filter: schedule-active only).
+     *
+     * @return \Illuminate\Support\Collection<int, InstagramAccount>
+     */
+    protected function instagramAccountsForSchedule(bool $onlyScheduleActive): \Illuminate\Support\Collection
+    {
+        $ownerId = (int) ($this->getEffectiveUser()?->id ?? $this->id);
+        $q = InstagramAccount::query()
+            ->with(['facebook', 'linkedPage.timeslots', 'scheduleTimeslots'])
+            ->where('user_id', $ownerId);
+
+        if ($onlyScheduleActive) {
+            $q->where('schedule_status', 'active');
+        }
+
+        if ($this->isTeamMember()) {
+            $igIds = $this->getTeamMemberAccountIdsByType('instagram');
+            if (empty($igIds)) {
+                return collect();
+            }
+            $q->whereIn('id', array_map('intval', $igIds));
+        }
+
+        return $q->orderBy('username')->get();
     }
 
     public function getDomains($id, $type)
@@ -316,10 +344,9 @@ class User extends Authenticatable
         $pages = Page::with('facebook', 'timeslots')->whereScheduledActive()->get();
         // TikTok Accounts
         $tiktoks = Tiktok::with('timeslots')->whereScheduledActive()->get();
-        $accounts = collect();
-        $accounts = $boards->concat($pages)->concat($tiktoks);
+        $instagram = $this->instagramAccountsForSchedule(true);
 
-        return $accounts;
+        return $boards->concat($pages)->concat($tiktoks)->concat($instagram);
     }
 
     /**
@@ -353,6 +380,16 @@ class User extends Authenticatable
                     $tiktok = Tiktok::with('timeslots')->where('id', $id)->first();
                     if ($tiktok) {
                         $accounts->push($tiktok);
+                    }
+                } elseif ($type === 'instagram') {
+                    $ownerId = (int) ($this->getEffectiveUser()?->id ?? $this->id);
+                    $ig = InstagramAccount::query()
+                        ->with(['facebook', 'linkedPage.timeslots', 'scheduleTimeslots'])
+                        ->where('id', $id)
+                        ->where('user_id', $ownerId)
+                        ->first();
+                    if ($ig) {
+                        $accounts->push($ig);
                     }
                 }
             }

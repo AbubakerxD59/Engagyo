@@ -31,6 +31,7 @@ class FacebookSocialiteService
         'business_management',
         'pages_read_engagement',
         'instagram_basic',
+        'instagram_content_publish',
         'instagram_manage_insights',
     ];
 

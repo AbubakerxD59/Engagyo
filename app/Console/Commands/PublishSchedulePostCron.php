@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Jobs\PublishFacebookPost;
+use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishPinterestPost;
 use App\Models\Notification;
 use App\Models\Post;
@@ -77,7 +78,7 @@ class PublishSchedulePostCron extends Command
     {
         // $now = date('Y-m-d H:i');
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
-        $query = $post->with('user.timezone', 'page.facebook', 'board.pinterest')->past($now)->notPublished()->schedule();
+        $query = $post->with('user.timezone', 'page.facebook', 'board.pinterest', 'instagramAccount')->past($now)->notPublished()->schedule();
         $posts = $query->orderBy('publish_date')->get();
 
         foreach ($posts as $key => $post) {
@@ -89,7 +90,7 @@ class PublishSchedulePostCron extends Command
                 } elseif ($post->social_type == 'pinterest') {
                     $this->processPinterestPost($post);
                 } elseif (str_contains(strtolower(trim((string) $post->social_type)), 'instagram')) {
-                    $this->processInstagramPostDisabled($post);
+                    $this->processInstagramPost($post);
                 }
             } catch (\Exception $e) {
                 $errorMessage = $e->getMessage();
@@ -237,15 +238,43 @@ class PublishSchedulePostCron extends Command
         }
     }
 
-    private function processInstagramPostDisabled(Post $post): void
+    private function processInstagramPost(Post $post): void
     {
         $social_type = $post->social_type;
         $account_image = $post->account_profile;
-        $errorMessage = 'Instagram content publishing is not available. This scheduled post was skipped.';
-        $post->update([
-            'status' => -1,
-            'response' => $errorMessage,
-        ]);
-        $this->errorNotification($post->user_id, 'Scheduled Post Not Published', $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+        $ig = $post->instagramAccount;
+
+        if (! $ig) {
+            $errorMessage = 'Error: Instagram account not found.';
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+
+            return;
+        }
+
+        if (! $ig->validToken()) {
+            $errorMessage = 'Error: Instagram access token expired. Please reconnect Instagram.';
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+
+            return;
+        }
+
+        try {
+            PublishInstagramPost::dispatch($post->id);
+        } catch (\Exception $e) {
+            $errorMessage = 'Error preparing post: '.$e->getMessage();
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+        }
     }
 }
