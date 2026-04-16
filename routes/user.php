@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\User\AccountsController;
 use App\Http\Controllers\User\AnalyticsController;
+use App\Http\Controllers\User\InstagramImageTestController;
 use App\Http\Controllers\User\ApiKeysController;
 use App\Http\Controllers\User\ApiPostsController;
 use App\Http\Controllers\User\AutomationController;
@@ -60,6 +61,15 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.timezone
     Route::get('analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data')->middleware(['feature:'.Feature::$features_list[0]]);
     Route::get('analytics/test', [AnalyticsController::class, 'testPageInsights'])->name('analytics.test')->middleware(['feature:'.Feature::$features_list[0]]);
     Route::get('test/page-insights/{page_id}', [AnalyticsController::class, 'testPagePostsInsights'])->name('test.page-insights')->middleware(['feature:'.Feature::$features_list[0]]);
+
+    Route::controller(InstagramImageTestController::class)
+        ->prefix('instagram/')
+        ->name('instagram.')
+        ->middleware(['feature:'.Feature::$features_list[0]])
+        ->group(function () {
+            Route::get('image-test', 'index')->name('image-test');
+            Route::post('image-test/publish', 'publish')->name('image-test.publish');
+        });
 
     // Accounts Routes - Protected by feature middleware
     Route::controller(AccountsController::class)->middleware(['feature:'.Feature::$features_list[0]])->group(function () {

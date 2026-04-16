@@ -48,6 +48,11 @@ return [
         'graph_version' => ltrim((string) env('FACEBOOK_GRAPH_VERSION', 'v21.0'), '/'),
         /** When true, GET /instagram-callback renders a debug page instead of completing OAuth. Do not enable in production. */
         'callback_debug_view' => filter_var(env('INSTAGRAM_LOGIN_CALLBACK_DEBUG', false), FILTER_VALIDATE_BOOLEAN),
+        /**
+         * When true (or when APP_DEBUG is true), /panel/instagram/image-test is available to publish a test photo.
+         * Set INSTAGRAM_IMAGE_PUBLISH_TEST=true in .env for staging; keep false in production unless needed.
+         */
+        'allow_image_publish_test' => filter_var(env('INSTAGRAM_IMAGE_PUBLISH_TEST', false), FILTER_VALIDATE_BOOLEAN),
     ],
 
     'stripe' => [
