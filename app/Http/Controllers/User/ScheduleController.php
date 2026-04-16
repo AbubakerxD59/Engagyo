@@ -226,7 +226,7 @@ class ScheduleController extends Controller
      * @param  array<string, mixed>  $upload Output of normalizeCreatePostFileUploads()
      * @return array{success: bool, message?: string, type?: string, image?: ?string, video?: ?string, metadata?: ?string}
      */
-    private function instagramComposePlan(Request $request, array $upload): array
+    private function instagramComposePlan(Request $request, array $upload, ?string $formatForced = null): array
     {
         if (empty($upload['has_files'])) {
             return ['success' => false, 'message' => 'Instagram posts require an image or video.'];
@@ -252,7 +252,10 @@ class ScheduleController extends Controller
             ];
         }
 
-        $format = strtolower((string) $request->input('instagram_content_format', 'post'));
+        $format = strtolower((string) ($formatForced ?? $request->input('instagram_content_format', 'post')));
+        if ($format === 'carousel' && empty($upload['instagram_carousel_items'])) {
+            return ['success' => false, 'message' => 'Instagram carousel requires at least 2 media files.'];
+        }
         $hasVideo = ! empty($upload['video']);
         $hasImage = ! empty($upload['image']);
 
@@ -308,18 +311,77 @@ class ScheduleController extends Controller
     }
 
     /**
+     * Instagram targets from compose modal (instagram_content_formats JSON), before expanding to concrete plans.
+     *
+     * @param  array<string, mixed>  $upload
+     * @return list<string>
+     */
+    private function instagramContentFormatsFromRequest(Request $request, array $upload): array
+    {
+        if (! empty($upload['instagram_carousel_items'])) {
+            return ['carousel'];
+        }
+
+        $raw = $request->input('instagram_content_formats');
+        $selected = [];
+        if (is_string($raw)) {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $selected = $decoded;
+            }
+        } elseif (is_array($raw)) {
+            $selected = $raw;
+        }
+
+        $selected = array_values(array_unique(array_map('strval', $selected)));
+        $hasVideo = ! empty($upload['video']);
+        $hasImage = ! empty($upload['image']);
+        $out = [];
+
+        foreach ($selected as $f) {
+            $f = strtolower(trim($f));
+            if ($f === 'carousel') {
+                continue;
+            }
+            if ($f === 'reel') {
+                if ($hasVideo && ! $hasImage) {
+                    $out[] = 'reel';
+                }
+
+                continue;
+            }
+            if ($f === 'story') {
+                $out[] = 'story';
+
+                continue;
+            }
+            if ($f === 'post') {
+                $out[] = 'post';
+            }
+        }
+
+        $out = array_values(array_unique($out));
+
+        if ($out === []) {
+            return $selected === [] ? ['post'] : [];
+        }
+
+        return $out;
+    }
+
+    /**
      * Create a Post row for Instagram from the compose modal / queue flows.
      *
      * @param  object  $account  InstagramAccount model (has ->id)
      * @return array{error: ?string, post: ?Post, plan: ?array<string, mixed>}
      */
-    private function createInstagramPostFromCompose(User $user, object $account, Request $request, array $upload, string $publishDateTime, int $scheduled = 0): array
+    private function createInstagramPostFromCompose(User $user, object $account, Request $request, array $upload, string $publishDateTime, int $scheduled = 0, ?string $instagramFormatOverride = null): array
     {
         if (! $upload['has_files']) {
             return ['error' => 'Instagram publishing requires an image or video.', 'post' => null, 'plan' => null];
         }
 
-        $plan = $this->instagramComposePlan($request, $upload);
+        $plan = $this->instagramComposePlan($request, $upload, $instagramFormatOverride);
         if (! $plan['success']) {
             return ['error' => $plan['message'] ?? 'Invalid Instagram post.', 'post' => null, 'plan' => null];
         }
@@ -1013,7 +1075,19 @@ class ScheduleController extends Controller
 
     private function countQueuePostsForChainFileAndAccount($account, UploadedFile $file, Request $request): int
     {
-        if ($account->type === 'facebook' || $account->type === 'pinterest' || $account->type === 'tiktok' || $account->type === 'instagram') {
+        if ($account->type === 'instagram') {
+            $ext = strtolower((string) ($file->getClientOriginalExtension() ?: ''));
+            $isVideo = in_array($ext, ['mp4', 'mkv', 'mov', 'mpeg', 'webm'], true);
+            $stub = [
+                'has_files' => true,
+                'image' => $isVideo ? null : 'stub',
+                'video' => $isVideo ? 'stub' : null,
+                'instagram_carousel_items' => [],
+            ];
+
+            return count($this->instagramContentFormatsFromRequest($request, $stub));
+        }
+        if ($account->type === 'facebook' || $account->type === 'pinterest' || $account->type === 'tiktok') {
             return 1;
         }
 
@@ -1139,7 +1213,6 @@ class ScheduleController extends Controller
         }
 
         if ($account->type === 'instagram') {
-            $igRequest = $request->duplicate(null, array_merge($request->all(), ['instagram_content_format' => 'post']));
             $uploadPayload = [
                 'error' => null,
                 'has_files' => true,
@@ -1148,16 +1221,24 @@ class ScheduleController extends Controller
                 'video' => $video,
                 'instagram_carousel_items' => [],
             ];
-            $nextTime = (new Post)->nextScheduleTime(
-                ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
-                $account->timeslots,
-                $user
-            );
-            $created = $this->createInstagramPostFromCompose($user, $account, $igRequest, $uploadPayload, $nextTime, 0);
-            if ($created['error'] !== null) {
-                throw new Exception($created['error']);
+            $formats = $this->instagramContentFormatsFromRequest($request, $uploadPayload);
+            if ($formats === []) {
+                throw new Exception('Selected Instagram formats are not valid for the uploaded media.');
             }
-            $this->logService->logQueuedPost('instagram', $created['post']->id, ['type' => $created['plan']['type'], 'publish_date' => $nextTime]);
+            foreach ($formats as $fmt) {
+                $igRequest = $request->duplicate(null, array_merge($request->all(), ['instagram_content_format' => $fmt]));
+                $override = $fmt === 'carousel' ? null : $fmt;
+                $nextTime = (new Post)->nextScheduleTime(
+                    ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
+                    $account->timeslots,
+                    $user
+                );
+                $created = $this->createInstagramPostFromCompose($user, $account, $igRequest, $uploadPayload, $nextTime, 0, $override);
+                if ($created['error'] !== null) {
+                    throw new Exception($created['error']);
+                }
+                $this->logService->logQueuedPost('instagram', $created['post']->id, ['type' => $created['plan']['type'], 'publish_date' => $nextTime]);
+            }
 
             return;
         }
@@ -1382,7 +1463,7 @@ class ScheduleController extends Controller
                 } elseif ($account->type == 'tiktok' && $file) {
                     $totalPostsToCreate++;
                 } elseif ($account->type === 'instagram' && $file) {
-                    $totalPostsToCreate++;
+                    $totalPostsToCreate += count($this->instagramContentFormatsFromRequest($request, $upload));
                 }
             }
 
@@ -1628,14 +1709,24 @@ class ScheduleController extends Controller
                             'message' => 'Instagram publishing requires an image or video.',
                         ];
                     }
-                    $created = $this->createInstagramPostFromCompose($user, $account, $request, $upload, $publishDateNow, 0);
-                    if ($created['error'] !== null) {
-                        return ['success' => false, 'message' => $created['error']];
+                    $formats = $this->instagramContentFormatsFromRequest($request, $upload);
+                    if ($formats === []) {
+                        return [
+                            'success' => false,
+                            'message' => 'Selected Instagram formats are not valid for the uploaded media.',
+                        ];
                     }
-                    $post = $created['post'];
-                    $plan = $created['plan'];
-                    $this->logService->logPost('instagram', $plan['type'], $post->id, ['action' => 'publish'], 'pending');
-                    PublishInstagramPost::dispatch($post->id);
+                    foreach ($formats as $fmt) {
+                        $override = $fmt === 'carousel' ? null : $fmt;
+                        $created = $this->createInstagramPostFromCompose($user, $account, $request, $upload, $publishDateNow, 0, $override);
+                        if ($created['error'] !== null) {
+                            return ['success' => false, 'message' => $created['error']];
+                        }
+                        $post = $created['post'];
+                        $plan = $created['plan'];
+                        $this->logService->logPost('instagram', $plan['type'], $post->id, ['action' => 'publish'], 'pending');
+                        PublishInstagramPost::dispatch($post->id);
+                    }
                 }
             }
             $response = [
@@ -1940,7 +2031,7 @@ class ScheduleController extends Controller
                     } elseif ($account->type == 'tiktok' && $file) {
                         $postsToCreate++;
                     } elseif ($account->type === 'instagram' && $file) {
-                        $postsToCreate++;
+                        $postsToCreate += count($this->instagramContentFormatsFromRequest($request, $upload));
                     }
                 }
             }
@@ -2051,16 +2142,26 @@ class ScheduleController extends Controller
                                 'message' => 'Instagram queue posts require an image or video.',
                             ];
                         }
-                        $nextTime = (new Post)->nextScheduleTime(
-                            ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
-                            $account->timeslots,
-                            $user
-                        );
-                        $created = $this->createInstagramPostFromCompose($user, $account, $request, $upload, $nextTime, 0);
-                        if ($created['error'] !== null) {
-                            return ['success' => false, 'message' => $created['error']];
+                        $formats = $this->instagramContentFormatsFromRequest($request, $upload);
+                        if ($formats === []) {
+                            return [
+                                'success' => false,
+                                'message' => 'Selected Instagram formats are not valid for the uploaded media.',
+                            ];
                         }
-                        $this->logService->logQueuedPost('instagram', $created['post']->id, ['type' => $created['plan']['type'], 'publish_date' => $nextTime]);
+                        foreach ($formats as $fmt) {
+                            $nextTime = (new Post)->nextScheduleTime(
+                                ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
+                                $account->timeslots,
+                                $user
+                            );
+                            $override = $fmt === 'carousel' ? null : $fmt;
+                            $created = $this->createInstagramPostFromCompose($user, $account, $request, $upload, $nextTime, 0, $override);
+                            if ($created['error'] !== null) {
+                                return ['success' => false, 'message' => $created['error']];
+                            }
+                            $this->logService->logQueuedPost('instagram', $created['post']->id, ['type' => $created['plan']['type'], 'publish_date' => $nextTime]);
+                        }
                     }
                     $response = [
                         'success' => true,
@@ -2111,7 +2212,7 @@ class ScheduleController extends Controller
                 } elseif ($account->type == 'tiktok' && $file) {
                     $postsToCreate++;
                 } elseif ($account->type === 'instagram' && $file) {
-                    $postsToCreate++;
+                    $postsToCreate += count($this->instagramContentFormatsFromRequest($request, $upload));
                 }
             }
 
@@ -2218,11 +2319,21 @@ class ScheduleController extends Controller
                     if (! $file) {
                         continue;
                     }
-                    $created = $this->createInstagramPostFromCompose($user, $account, $request, $upload, $scheduleDateTime, 1);
-                    if ($created['error'] !== null) {
-                        return ['success' => false, 'message' => $created['error']];
+                    $formats = $this->instagramContentFormatsFromRequest($request, $upload);
+                    if ($formats === []) {
+                        return [
+                            'success' => false,
+                            'message' => 'Selected Instagram formats are not valid for the uploaded media.',
+                        ];
                     }
-                    $this->logService->logScheduledPost('instagram', $created['post']->id, $scheduleDateTime, ['type' => $created['plan']['type']]);
+                    foreach ($formats as $fmt) {
+                        $override = $fmt === 'carousel' ? null : $fmt;
+                        $created = $this->createInstagramPostFromCompose($user, $account, $request, $upload, $scheduleDateTime, 1, $override);
+                        if ($created['error'] !== null) {
+                            return ['success' => false, 'message' => $created['error']];
+                        }
+                        $this->logService->logScheduledPost('instagram', $created['post']->id, $scheduleDateTime, ['type' => $created['plan']['type']]);
+                    }
                 }
                 $response = [
                     'success' => true,

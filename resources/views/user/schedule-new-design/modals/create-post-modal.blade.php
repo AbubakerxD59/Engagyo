@@ -233,6 +233,51 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="create-post-instagram-format-wrap create-post-facebook-format-wrap"
+                                id="createPostInstagramFormatWrap" style="display: none;"
+                                role="group" aria-label="Instagram content format">
+                                <div class="create-post-facebook-format-bar">
+                                    <span class="create-post-instagram-format-instagram-icon" aria-hidden="true"><i
+                                            class="fab fa-instagram"></i></span>
+                                    <div class="create-post-instagram-format-radios create-post-facebook-format-radios">
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_instagram_formats[]"
+                                                id="createPostFormatIgPost" value="post" checked>
+                                            <span>Post</span>
+                                        </label>
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_instagram_formats[]"
+                                                id="createPostFormatIgReel" value="reel">
+                                            <span>Reel</span>
+                                        </label>
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_instagram_formats[]"
+                                                id="createPostFormatIgStory" value="story">
+                                            <span>Story</span>
+                                        </label>
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_instagram_formats[]"
+                                                id="createPostFormatIgCarousel" value="carousel">
+                                            <span>Carousel</span>
+                                        </label>
+                                    </div>
+                                    <div class="create-post-format-help-wrap" id="createPostInstagramFormatHelpWrap">
+                                        <button type="button" class="create-post-format-help-btn"
+                                            id="createPostInstagramFormatHelpBtn">
+                                            <i class="far fa-question-circle"></i>
+                                        </button>
+                                        <div class="create-post-format-help-popover" role="tooltip"
+                                            aria-hidden="true">
+                                            <ul class="create-post-format-help-list">
+                                                <li><strong>Post</strong>: One image or video per post.</li>
+                                                <li><strong>Reel</strong>: Single video only.</li>
+                                                <li><strong>Story</strong>: Image or video; media only when Story is the only type selected.</li>
+                                                <li><strong>Carousel</strong>: 2–10 images and/or videos in one post.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <textarea class="create-post-editor-textarea" id="createPostEditorTextarea"
                                 placeholder="Paste your link or write something..."></textarea>
                         </div>

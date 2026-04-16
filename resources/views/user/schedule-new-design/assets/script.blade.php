@@ -2020,6 +2020,48 @@
             return onlyFacebook;
         }
 
+        function createPostHasOnlyInstagramChannelsSelected() {
+            if (isQueueNewPostModalVisible()) {
+                var q = getSidebarSingleAccountPairForQueueModal();
+                return !!(q && (q.type || '') === 'instagram');
+            }
+            var checked = $('.channels-dropdown-checkbox:checked');
+            if (checked.length === 0) return false;
+            var onlyIg = true;
+            checked.each(function() {
+                if (($(this).data('type') || '') !== 'instagram') {
+                    onlyIg = false;
+                    return false;
+                }
+            });
+            return onlyIg;
+        }
+
+        function shouldSendInstagramContentFormats() {
+            var acc = getCreatePostSelectedAccounts();
+            for (var i = 0; i < acc.length; i++) {
+                if ((acc[i].type || '') === 'instagram') return true;
+            }
+            return false;
+        }
+
+        function getInstagramContentFormatsPayload() {
+            var fmts = ['post'];
+            if (createPostHasOnlyInstagramChannelsSelected()) {
+                fmts = activeComposeModal$().find('input[name="create_post_instagram_formats[]"]:checked').map(function() {
+                    return $(this).val();
+                }).get();
+                if (!fmts.length) fmts = ['post'];
+            }
+            return JSON.stringify(fmts);
+        }
+
+        function createPostInstagramCarouselModeActive() {
+            if (!createPostHasOnlyInstagramChannelsSelected()) return false;
+            var hasCarousel = activeComposeModal$().find('input[name="create_post_instagram_formats[]"][value="carousel"]').is(':checked');
+            return hasCarousel && createPostFiles.length >= 2;
+        }
+
         function createPostHasVideoInQueue() {
             var vids = ['mp4', 'mkv', 'mov', 'mpeg', 'webm'];
             for (var i = 0; i < createPostFiles.length; i++) {
@@ -2060,7 +2102,44 @@
                 pm$('FormatPost').prop('checked', true);
                 pm$('FormatReel').add(pm$('FormatStory')).prop('checked', false);
             }
+            updateCreatePostInstagramFormatRow();
             updateCreatePostTextareasVisibility();
+        }
+
+        function updateCreatePostInstagramFormatRow() {
+            var show = createPostHasOnlyInstagramChannelsSelected() && !is_link;
+            var $wrap = pm$('InstagramFormatWrap');
+            var hasVideo = createPostHasVideoInQueue();
+            var nFiles = createPostFiles.length;
+            var $reelOpt = pm$('FormatIgReel').closest('.create-post-format-option');
+            var $carouselOpt = pm$('FormatIgCarousel').closest('.create-post-format-option');
+            if (show) {
+                $wrap.show();
+                if (hasVideo) {
+                    $reelOpt.show();
+                } else {
+                    $reelOpt.hide();
+                    if (pm$('FormatIgReel').is(':checked')) {
+                        pm$('FormatIgReel').prop('checked', false);
+                        pm$('FormatIgPost').prop('checked', true);
+                    }
+                }
+                if (nFiles >= 2) {
+                    $carouselOpt.show();
+                } else {
+                    $carouselOpt.hide();
+                    if (pm$('FormatIgCarousel').is(':checked')) {
+                        pm$('FormatIgCarousel').prop('checked', false);
+                        pm$('FormatIgPost').prop('checked', true);
+                    }
+                }
+            } else {
+                $wrap.hide();
+                $reelOpt.show();
+                $carouselOpt.show();
+                pm$('FormatIgPost').prop('checked', true);
+                pm$('FormatIgReel').add(pm$('FormatIgStory')).add(pm$('FormatIgCarousel')).prop('checked', false);
+            }
         }
 
         function updateCreatePostTextareasVisibility() {
@@ -2073,6 +2152,28 @@
             if (checkedCount === 0) {
                 pm$('CommentWrap').hide();
                 pm$('EditorTextarea').show();
+                return;
+            }
+
+            var igFormatVisible = pm$('InstagramFormatWrap').is(':visible');
+            if (igFormatVisible) {
+                var igSel = activeComposeModal$().find('input[name="create_post_instagram_formats[]"]:checked').map(function() {
+                    return $(this).val();
+                }).get();
+                var hasCap = igSel.indexOf('post') !== -1 || igSel.indexOf('reel') !== -1 || igSel.indexOf('carousel') !== -1;
+                var hasStory = igSel.indexOf('story') !== -1;
+                if (hasCap) {
+                    pm$('CommentWrap').show();
+                } else {
+                    pm$('CommentWrap').hide();
+                }
+                if (hasStory && !hasCap) {
+                    pm$('EditorTextarea').hide();
+                    pm$('EmojiBtn').hide();
+                } else {
+                    pm$('EditorTextarea').show();
+                    pm$('EmojiBtn').show();
+                }
                 return;
             }
 
@@ -2109,6 +2210,22 @@
         }
 
         $(document).on('change', 'input[name="create_post_facebook_formats[]"]', function() {
+            updateCreatePostTextareasVisibility();
+        });
+
+        $(document).on('change', 'input[name="create_post_instagram_formats[]"]', function() {
+            var $cb = $(this);
+            var v = $cb.val();
+            var $modal = $cb.closest('.create-post-modal');
+            if ($cb.is(':checked') && v === 'carousel') {
+                $modal.find('input[name="create_post_instagram_formats[]"]').not($cb).prop('checked', false);
+            } else if ($cb.is(':checked') && v !== 'carousel') {
+                $modal.find('input[name="create_post_instagram_formats[]"][value="carousel"]').prop('checked', false);
+            }
+            var $checked = $modal.find('input[name="create_post_instagram_formats[]"]:checked');
+            if ($checked.length === 0) {
+                $modal.find('input[name="create_post_instagram_formats[]"][value="post"]').prop('checked', true);
+            }
             updateCreatePostTextareasVisibility();
         });
 
@@ -2425,6 +2542,8 @@
             $('#createPostEditorTextarea').val('').css('height', 'auto');
             $('#createPostComment').val('');
             $('#createPostFirstComment').val('');
+            $('#createPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
+            $('#createPostFormatIgPost').prop('checked', true);
             $('#createPostLinkPreview').empty();
             createPostFiles = [];
             createPostRevokeUrls();
@@ -2441,6 +2560,8 @@
             $('#queueNewPostLinkPreview').empty();
             $('#queueNewPostEditorTextarea').val('').css('height', 'auto');
             $('#queueNewPostComment').val('');
+            $('#queueNewPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
+            $('#queueNewPostFormatIgPost').prop('checked', true);
             $('#queueNewPostUploadPreviews').empty();
             createPostUploadStates = {};
             $('#queueNewPostScheduleDropdown').removeClass('is-open');
@@ -2481,6 +2602,8 @@
             $qm.find('.create-post-segmented-btn[href="publish"]').show();
             $('#queueNewPostEditorTextarea').val('').css('height', 'auto');
             $('#queueNewPostComment').val('');
+            $('#queueNewPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
+            $('#queueNewPostFormatIgPost').prop('checked', true);
             $('#queueNewPostLinkPreview').empty();
             createPostFiles = [];
             createPostRevokeUrls();
@@ -3243,6 +3366,18 @@
         function processCreatePostPhotoVideo() {
             var filesToProcess = createPostFiles.slice();
             if (filesToProcess.length === 0) return;
+            if (createPostHasOnlyInstagramChannelsSelected()) {
+                var igCarousel = activeComposeModal$().find('input[name="create_post_instagram_formats[]"][value="carousel"]').is(':checked');
+                if (igCarousel && (createPostFiles.length < 2 || createPostFiles.length > 10)) {
+                    toastr.error('Instagram carousel requires between 2 and 10 media files.');
+                    return;
+                }
+            }
+            if (createPostInstagramCarouselModeActive()) {
+                if (!validateCreatePostTikTokSettings()) return;
+                processCreatePostInstagramCarouselBatch();
+                return;
+            }
             if (createPostChainPostsMode && action_name === 'queue') {
                 if (!validateCreatePostTikTokSettings()) return;
                 processCreatePostChainQueue();
@@ -3269,6 +3404,9 @@
                 return $(this).val();
             }).get();
             formData.append("facebook_content_formats", JSON.stringify(fbFormats));
+            if (shouldSendInstagramContentFormats()) {
+                formData.append('instagram_content_formats', getInstagramContentFormatsPayload());
+            }
             var selectedAccounts = getCreatePostSelectedAccounts();
             if (selectedAccounts.length > 0) {
                 formData.append("account_ids", JSON.stringify(selectedAccounts));
@@ -3338,6 +3476,72 @@
             });
         }
 
+        function processCreatePostInstagramCarouselBatch() {
+            if (!validateCreatePostTikTokSettings()) return;
+            if (createPostFiles.length < 2 || createPostFiles.length > 10) {
+                toastr.error('Instagram carousel requires between 2 and 10 media files.');
+                return;
+            }
+            disableActionButton();
+            var formData = new FormData();
+            formData.append("_token", "{{ csrf_token() }}");
+            formData.append("content", pm$('EditorTextarea').val() || '');
+            formData.append("comment", getCreatePostCommentValue() || '');
+            formData.append("link", 0);
+            var dt = getScheduleDateTime();
+            var effectiveAction = createPostQueueUsesFixedSlot() ? 'schedule' : action_name;
+            formData.append("action", effectiveAction);
+            formData.append("schedule_date", effectiveAction === 'schedule' ? (dt.date || '') : '');
+            formData.append("schedule_time", effectiveAction === 'schedule' ? (dt.time || '') : '');
+            createPostFiles.forEach(function(file) {
+                formData.append("files[]", file);
+            });
+            formData.append("instagram_content_format", "carousel");
+            formData.append("instagram_content_formats", JSON.stringify(['carousel']));
+            var fbFormats = activeComposeModal$().find('input[name="create_post_facebook_formats[]"]:checked').map(function() {
+                return $(this).val();
+            }).get();
+            formData.append("facebook_content_formats", JSON.stringify(fbFormats));
+            var selectedAccounts = getCreatePostSelectedAccounts();
+            if (selectedAccounts.length > 0) {
+                formData.append("account_ids", JSON.stringify(selectedAccounts));
+            }
+            var tiktokAccounts = getCreatePostSelectedTikTokAccounts(selectedAccounts);
+            if (tiktokAccounts.length > 0) {
+                formData.append('tiktok_account_id', tiktokAccounts[0].id);
+                formData.append('tiktok_privacy_level', pm$('TikTokPrivacyLevel').val() || '');
+                formData.append('tiktok_allow_comment', pm$('TikTokAllowComment').is(':checked') ? 1 : 0);
+                formData.append('tiktok_allow_duet', 0);
+                formData.append('tiktok_allow_stitch', 0);
+                formData.append('tiktok_commercial_toggle', pm$('TikTokCommercialToggle').is(':checked') ? 1 : 0);
+                formData.append('tiktok_your_brand', pm$('TikTokYourBrand').is(':checked') ? 1 : 0);
+                formData.append('tiktok_branded_content', pm$('TikTokBrandedContent').is(':checked') ? 1 : 0);
+                if (pm$('TikTokAddMusic').is(':checked')) {
+                    formData.append('tiktok_auto_add_music', 1);
+                }
+            }
+            $.ajax({
+                url: "{{ route('panel.schedule.process.post') }}",
+                type: "POST",
+                data: formData,
+                processData: false,
+                contentType: false,
+                success: function(response) {
+                    if (response.success) {
+                        resetCreatePostArea();
+                        toastr.success(getCreatePostSuccessMessage(response.message, selectedAccounts));
+                    } else {
+                        toastr.error(response.message);
+                    }
+                    enableActionButton();
+                },
+                error: function() {
+                    toastr.error("Failed to process post.");
+                    enableActionButton();
+                }
+            });
+        }
+
         function processCreatePostFilesQueue(filesArray, index) {
             if (index >= filesArray.length) {
                 resetCreatePostArea();
@@ -3370,6 +3574,9 @@
             // Always send the selected formats array; backend will map to concrete media types
             // depending on whether the file is image or video.
             formData.append("facebook_content_formats", JSON.stringify(fbFormats));
+            if (shouldSendInstagramContentFormats()) {
+                formData.append('instagram_content_formats', getInstagramContentFormatsPayload());
+            }
             var selectedAccounts = getCreatePostSelectedAccounts();
             if (selectedAccounts.length > 0) {
                 formData.append("account_ids", JSON.stringify(selectedAccounts));

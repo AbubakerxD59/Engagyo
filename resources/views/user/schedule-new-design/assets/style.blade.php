@@ -4682,6 +4682,24 @@
         flex-shrink: 0;
     }
 
+    .create-post-instagram-format-instagram-icon {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+
+    .create-post-instagram-format-radios {
+        flex-wrap: wrap;
+        row-gap: 8px;
+    }
+
     .create-post-facebook-format-radios {
         display: flex;
         flex-wrap: nowrap;
