@@ -290,6 +290,21 @@ class PostService
         return $url;
     }
 
+    /**
+     * @return array<string, mixed>
+     */
+    private static function instagramDecodedMetadata(Post $post): array
+    {
+        $meta = $post->metadata;
+        if (is_string($meta) && $meta !== '') {
+            $decoded = json_decode($meta, true);
+
+            return is_array($decoded) ? $decoded : [];
+        }
+
+        return is_array($meta) ? $meta : [];
+    }
+
     public static function instagramPostTypeBody(Post $post): array
     {
         $postData = [];
@@ -304,15 +319,19 @@ class PostService
             if ($imageUrl !== null && $imageUrl !== '') {
                 $postData['image_url'] = $imageUrl;
             }
+            $meta = self::instagramDecodedMetadata($post);
+            foreach (['instagram_alt_text', 'alt_text'] as $altKey) {
+                if (empty($meta[$altKey]) || ! is_string($meta[$altKey])) {
+                    continue;
+                }
+                $alt = trim($meta[$altKey]);
+                if ($alt !== '' && mb_strlen($alt) <= 1000) {
+                    $postData['alt_text'] = $alt;
+                    break;
+                }
+            }
         } elseif ($post->type === 'carousel') {
-            $meta = $post->metadata;
-            if (is_string($meta) && $meta !== '') {
-                $decoded = json_decode($meta, true);
-                $meta = is_array($decoded) ? $decoded : [];
-            }
-            if (! is_array($meta)) {
-                $meta = [];
-            }
+            $meta = self::instagramDecodedMetadata($post);
             $items = [];
             if (! empty($meta['carousel_media']) && is_array($meta['carousel_media'])) {
                 foreach ($meta['carousel_media'] as $row) {
@@ -351,6 +370,17 @@ class PostService
             $videoUrl = self::instagramGraphVideoUrl($post);
             if ($videoUrl !== null && $videoUrl !== '') {
                 $postData['video_url'] = $videoUrl;
+            }
+            // Content Publishing: REELS + share_to_feed — see IG User Media reference.
+            if ($post->type === 'video') {
+                $postData['share_to_feed'] = true;
+            } else {
+                $postData['share_to_feed'] = false;
+                $meta = self::instagramDecodedMetadata($post);
+                $raw = $meta['instagram_share_to_feed'] ?? $meta['share_to_feed'] ?? null;
+                if ($raw === true || $raw === 1 || $raw === '1' || (is_string($raw) && strtolower($raw) === 'true')) {
+                    $postData['share_to_feed'] = true;
+                }
             }
         }
 

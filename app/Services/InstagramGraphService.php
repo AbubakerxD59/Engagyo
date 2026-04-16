@@ -109,14 +109,25 @@ class InstagramGraphService
         $base = $this->graphBaseUrl($ig);
         $igUserId = $ig->ig_user_id;
 
+        $payload = [
+            'image_url' => $imageUrl,
+            'access_token' => $accessToken,
+        ];
+        $caption = isset($body['caption']) ? trim((string) $body['caption']) : '';
+        if ($caption !== '') {
+            $payload['caption'] = $caption;
+        }
+        if (! empty($body['alt_text']) && is_string($body['alt_text'])) {
+            $alt = trim($body['alt_text']);
+            if ($alt !== '' && mb_strlen($alt) <= 1000) {
+                $payload['alt_text'] = $alt;
+            }
+        }
+
         $create = Http::asForm()
             ->acceptJson()
             ->timeout(120)
-            ->post("{$base}/{$igUserId}/media", array_filter([
-                'image_url' => $imageUrl,
-                'caption' => $body['caption'] ?? null,
-                'access_token' => $accessToken,
-            ]));
+            ->post("{$base}/{$igUserId}/media", $payload);
 
         if (! $create->successful()) {
             $msg = $this->formatGraphError($create);
@@ -167,10 +178,13 @@ class InstagramGraphService
         $base = $this->graphBaseUrl($ig);
         $igUserId = $ig->ig_user_id;
 
+        $shareToFeed = array_key_exists('share_to_feed', $body)
+            ? (bool) $body['share_to_feed']
+            : ($post->type !== 'reel');
         $payload = [
             'media_type' => 'REELS',
             'video_url' => $videoUrl,
-            'share_to_feed' => 'true',
+            'share_to_feed' => $shareToFeed ? 'true' : 'false',
             'access_token' => $accessToken,
         ];
         $caption = isset($body['caption']) ? trim((string) $body['caption']) : '';

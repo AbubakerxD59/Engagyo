@@ -17,6 +17,9 @@ class InstagramImagePrepService
 
     private const TARGET_MAX_WIDTH = 1080;
 
+    /** @see https://developers.facebook.com/docs/instagram-platform/content-publishing/ (single-image JPEG limit) */
+    private const MAX_PUBLISH_BYTES = 8 * 1024 * 1024;
+
     /**
      * If the URL points at a file under public/ on this app, normalize and return a new public HTTPS image_url.
      *
@@ -135,6 +138,11 @@ class InstagramImagePrepService
             && $h <= self::MAX_EDGE;
 
         if ($jpegOk) {
+            $sz = @filesize($full);
+            if ($sz !== false && $sz > self::MAX_PUBLISH_BYTES) {
+                return ['relative_path' => $relativePath, 'error' => 'Image exceeds Instagram 8 MB limit for published JPEG.'];
+            }
+
             return ['relative_path' => $relativePath, 'error' => null];
         }
 
@@ -191,10 +199,23 @@ class InstagramImagePrepService
                 return ['relative_path' => $relativePath, 'error' => 'Could not create output directory.'];
             }
 
-            if (! @imagejpeg($dst, $outFull, 90)) {
-                imagedestroy($dst);
+            $quality = 90;
+            while (true) {
+                if (! @imagejpeg($dst, $outFull, $quality)) {
+                    imagedestroy($dst);
 
-                return ['relative_path' => $relativePath, 'error' => 'Failed to write prepared JPEG.'];
+                    return ['relative_path' => $relativePath, 'error' => 'Failed to write prepared JPEG.'];
+                }
+                $size = @filesize($outFull);
+                if ($size !== false && $size <= self::MAX_PUBLISH_BYTES) {
+                    break;
+                }
+                if ($quality <= 55) {
+                    imagedestroy($dst);
+
+                    return ['relative_path' => $relativePath, 'error' => 'Prepared image still exceeds Instagram 8 MB limit. Use a smaller or simpler source image.'];
+                }
+                $quality -= 8;
             }
             imagedestroy($dst);
         } catch (\Throwable $e) {

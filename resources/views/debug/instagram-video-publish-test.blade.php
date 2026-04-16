@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
-    <title>Instagram video publish test</title>
+    <title>Instagram photo / video publish test</title>
     <style>
         body { font-family: system-ui, sans-serif; max-width: 64rem; margin: 2rem auto; padding: 0 1rem; line-height: 1.5; color: #18181b; }
         h1 { font-size: 1.35rem; margin-top: 0; }
@@ -49,8 +49,8 @@
     </style>
 </head>
 <body>
-    <h1>Instagram video — Content Publishing API test (live publish)</h1>
-    <p class="muted">Flow matches production: save file under <code>public/uploads/instagram-video-test/</code> → <code>POST …/media</code> (<code>REELS</code>, <code>share_to_feed</code>) → poll <code>GET …/{container-id}</code> until <code>FINISHED</code> → <code>POST …/media_publish</code>. Access tokens are redacted in the log.</p>
+    <h1>Instagram photo / video — Content Publishing API test (live publish)</h1>
+    <p class="muted">Save file under <code>public/uploads/instagram-publish-test/</code>. <strong>Photo:</strong> <code>image_url</code>, optional <code>alt_text</code> (per <a href="https://developers.facebook.com/docs/instagram-platform/instagram-graph-api/reference/ig-user/media/">IG User Media</a>), optional prep via <code>InstagramImagePrepService</code> → poll → <code>media_publish</code>. <strong>Video:</strong> <code>media_type=REELS</code> + <code>video_url</code> + <code>share_to_feed</code> (feed + Reels vs Reels-only) → poll → <code>media_publish</code>. Tokens are redacted in the log.</p>
 
     <div class="warn">
         <strong>Public URL required.</strong> Set <code>APP_URL</code> to an <strong>HTTPS</strong> origin Instagram can reach (production or a tunnel). Local-only URLs will fail when Meta downloads the video.
@@ -88,15 +88,24 @@
                 @endforeach
             </select>
 
-            <label for="video">Video file</label>
-            <input type="file" name="video" id="video" required accept="video/mp4,video/quicktime,video/webm,.mp4,.mov,.webm">
-            <p class="muted">Max 100&nbsp;MB. MP4 (H.264 + AAC) recommended.</p>
-            @error('video')
+            <label for="media">Photo or video file</label>
+            <input type="file" name="media" id="media" required accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/quicktime,video/webm,.jpg,.jpeg,.png,.webp,.gif,.mp4,.mov,.webm">
+            <p class="muted">Max 100&nbsp;MB. Images: JPEG, PNG, WebP, GIF. Video: MP4 (H.264 + AAC) recommended.</p>
+            @error('media')
                 <p class="err" style="margin-top:0.5rem;padding:0.5rem">{{ $message }}</p>
             @enderror
 
             <label for="caption">Caption (optional)</label>
             <textarea name="caption" id="caption" maxlength="2200" placeholder="Caption">{{ old('caption') }}</textarea>
+
+            <label for="alt_text">Alt text (optional, photos only, max 1000)</label>
+            <input type="text" name="alt_text" id="alt_text" maxlength="1000" value="{{ old('alt_text') }}" placeholder="Accessibility description for the image">
+
+            <div class="check">
+                <input type="hidden" name="share_video_to_feed" value="0">
+                <input type="checkbox" name="share_video_to_feed" id="share_video_to_feed" value="1" @checked((string) old('share_video_to_feed', '1') !== '0')>
+                <label for="share_video_to_feed">For video uploads: also allow the reel in the main feed (<code>share_to_feed=true</code>). Uncheck for Reels tab only.</label>
+            </div>
 
             <div class="row-inline">
                 <div>
@@ -112,7 +121,7 @@
             <div class="check">
                 <input type="hidden" name="confirm_publish" value="0">
                 <input type="checkbox" name="confirm_publish" id="confirm_publish" value="1" @checked(old('confirm_publish'))>
-                <label for="confirm_publish">I understand this will publish the video to the selected Instagram account.</label>
+                <label for="confirm_publish">I understand this will publish the photo or video to the selected Instagram account.</label>
             </div>
             @error('confirm_publish')
                 <p class="err" style="margin-top:0.5rem;padding:0.5rem">{{ $message }}</p>

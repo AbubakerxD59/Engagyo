@@ -5,6 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Http\Controllers\Controller;
 use App\Models\InstagramAccount;
 use App\Models\User;
+use App\Services\InstagramImagePrepService;
 use Illuminate\Http\Client\Response;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -12,8 +13,9 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
 
 /**
- * Debug: upload a video file, expose it as a public video_url, run Instagram Content Publishing
- * (REELS + share_to_feed → poll container → media_publish) and record each HTTP step.
+ * Debug: upload a photo or video, expose a public URL, run Instagram Content Publishing
+ * (photo: image_url → poll → media_publish | video: REELS + share_to_feed → poll → media_publish)
+ * and record each HTTP step.
  */
 class InstagramVideoPublishTestController extends Controller
 {
@@ -49,13 +51,14 @@ class InstagramVideoPublishTestController extends Controller
 
         $validated = $request->validate([
             'instagram_account_id' => ['required', 'integer'],
-            'video' => [
+            'media' => [
                 'required',
                 'file',
                 'max:'.(100 * 1024),
-                'mimes:mp4,mov,webm,m4v',
+                'mimes:jpeg,jpg,png,webp,gif,mp4,mov,webm,m4v',
             ],
             'caption' => ['nullable', 'string', 'max:2200'],
+            'alt_text' => ['nullable', 'string', 'max:1000'],
             'confirm_publish' => ['accepted'],
             'max_poll_attempts' => ['nullable', 'integer', 'min:1', 'max:200'],
             'poll_interval_seconds' => ['nullable', 'integer', 'min:1', 'max:60'],
@@ -98,43 +101,88 @@ class InstagramVideoPublishTestController extends Controller
 
         try {
             /** @var UploadedFile $uploaded */
-            $uploaded = $request->file('video');
+            $uploaded = $request->file('media');
             // Read metadata before move(): after move() the PHP temp file is gone and getMimeType()/getSize() can fail.
             $uploadOriginalName = $uploaded->getClientOriginalName();
             $uploadMime = $uploaded->getClientMimeType() ?: $uploaded->getMimeType();
             $uploadSizeBytes = $uploaded->getSize();
+            $uploadExt = strtolower((string) $uploaded->getClientOriginalExtension());
+            $imageExts = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+            $isImage = in_array($uploadExt, $imageExts, true)
+                || (is_string($uploadMime) && str_starts_with(strtolower($uploadMime), 'image/'));
+            $isVideo = ! $isImage;
 
-            $stored = $this->storeTestVideoUpload($uploaded);
+            $stored = $this->storeTestMediaUpload($uploaded);
             $tempAbsolutePath = $stored['absolute_path'];
-            $videoUrl = $stored['public_https_url'];
+            $rawPublicUrl = $stored['public_https_url'];
 
             $base = $this->graphBaseUrl($ig);
             $igUserId = (string) $ig->ig_user_id;
 
             $steps[] = $this->stepMeta(
-                '0. Save upload → public video_url (Meta fetches this URL)',
-                $videoUrl,
+                '0. Save upload → public URL (Meta fetches this URL)',
+                $rawPublicUrl,
                 [
+                    'kind' => $isImage ? 'photo' : 'video',
                     'original_name' => $uploadOriginalName,
                     'mime' => $uploadMime,
                     'size_bytes' => $uploadSizeBytes,
                     'saved_path' => $stored['public_relative_path'],
                     'note' => 'APP_URL must be HTTPS and reachable from the public internet so Instagram can download the file.',
-                ]
+                ],
+                $isImage ? 'File stored. For photos, step 0b may normalize aspect ratio / format for the feed API.' : 'File stored. This URL is sent as video_url in step 1.'
             );
 
-            $includeCopyrightCheck = str_contains($base, 'graph.facebook.com');
+            $mediaUrl = $rawPublicUrl;
+            if ($isImage) {
+                $prepared = InstagramImagePrepService::normalizeResolvedHttpsImageUrl($rawPublicUrl);
+                if ($prepared['error'] !== null) {
+                    $fatalError = 'Image preparation failed: '.$prepared['error'];
+
+                    return view('debug.instagram-video-publish-test', compact('accounts', 'steps', 'fatalError', 'publishedMediaId'));
+                }
+                if ($prepared['url'] !== $rawPublicUrl) {
+                    $mediaUrl = $prepared['url'];
+                    $steps[] = $this->stepMeta(
+                        '0b. Normalize image for Instagram feed API',
+                        $mediaUrl,
+                        [
+                            'previous_url' => $rawPublicUrl,
+                            'note' => 'Aspect ratio / format adjusted to match Content Publishing requirements (see InstagramImagePrepService).',
+                        ],
+                        'Prepared image_url used in step 1.'
+                    );
+                } else {
+                    $mediaUrl = $prepared['url'];
+                }
+            }
+
+            $includeCopyrightCheck = $isVideo && str_contains($base, 'graph.facebook.com');
             $statusFields = 'id,status_code,status'.($includeCopyrightCheck ? ',copyright_check_status' : '');
 
-            $createPayload = [
-                'media_type' => 'REELS',
-                'video_url' => $videoUrl,
-                'share_to_feed' => 'true',
-                'access_token' => $token,
-            ];
             $caption = isset($validated['caption']) ? trim((string) $validated['caption']) : '';
-            if ($caption !== '') {
-                $createPayload['caption'] = $caption;
+            $altText = isset($validated['alt_text']) ? trim((string) $validated['alt_text']) : '';
+            $shareVideoToFeed = $isVideo
+                ? $request->boolean('share_video_to_feed', true)
+                : true;
+
+            if ($isImage) {
+                $createPayload = array_filter([
+                    'image_url' => $mediaUrl,
+                    'caption' => $caption !== '' ? $caption : null,
+                    'alt_text' => ($altText !== '' && mb_strlen($altText) <= 1000) ? $altText : null,
+                    'access_token' => $token,
+                ], fn ($v) => $v !== null && $v !== '');
+            } else {
+                $createPayload = [
+                    'media_type' => 'REELS',
+                    'video_url' => $mediaUrl,
+                    'share_to_feed' => $shareVideoToFeed ? 'true' : 'false',
+                    'access_token' => $token,
+                ];
+                if ($caption !== '') {
+                    $createPayload['caption'] = $caption;
+                }
             }
 
             $createUrl = "{$base}/{$igUserId}/media";
@@ -144,7 +192,7 @@ class InstagramVideoPublishTestController extends Controller
                 ->timeout(120)
                 ->post($createUrl, $createPayload);
             $steps[] = $this->stepFromHttp(
-                '1. Create media container',
+                $isImage ? '1. Create media container (photo)' : '1. Create media container (REELS video)',
                 'POST',
                 $createUrl,
                 $this->redactToken($createPayload),
@@ -193,7 +241,7 @@ class InstagramVideoPublishTestController extends Controller
                         $pollFatal = 'Could not read container status: '.$this->formatGraphError($statusResp);
                         break;
                     }
-                    sleep($sleepSec);
+                    sleep($isVideo ? $sleepSec : min($sleepSec, 2));
 
                     continue;
                 }
@@ -209,7 +257,7 @@ class InstagramVideoPublishTestController extends Controller
                 }
 
                 if (in_array($code, ['ERROR', 'EXPIRED'], true)) {
-                    if ($code === 'ERROR') {
+                    if ($isVideo && $code === 'ERROR') {
                         sleep(10);
                         $tRec = microtime(true);
                         $recheck = Http::acceptJson()
@@ -244,7 +292,8 @@ class InstagramVideoPublishTestController extends Controller
                     }
                 }
 
-                sleep($sleepSec);
+                $pollSleep = $isVideo ? $sleepSec : min($sleepSec, 2);
+                sleep($pollSleep);
             }
 
             if ($pollFatal !== null) {
@@ -308,9 +357,9 @@ class InstagramVideoPublishTestController extends Controller
     /**
      * @return array{absolute_path: string, public_relative_path: string, public_https_url: string}
      */
-    private function storeTestVideoUpload(UploadedFile $file): array
+    private function storeTestMediaUpload(UploadedFile $file): array
     {
-        $relativeDir = 'uploads/instagram-video-test';
+        $relativeDir = 'uploads/instagram-publish-test';
         $dir = public_path($relativeDir);
         if (! is_dir($dir)) {
             if (! mkdir($dir, 0755, true) && ! is_dir($dir)) {
@@ -319,8 +368,9 @@ class InstagramVideoPublishTestController extends Controller
         }
 
         $ext = strtolower((string) $file->getClientOriginalExtension());
-        if ($ext === '' || ! in_array($ext, ['mp4', 'mov', 'webm', 'mpeg', 'm4v'], true)) {
-            $ext = 'mp4';
+        $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'mp4', 'mov', 'webm', 'mpeg', 'm4v'];
+        if ($ext === '' || ! in_array($ext, $allowed, true)) {
+            $ext = 'bin';
         }
 
         $basename = uniqid('igpub_', true).'.'.$ext;
@@ -355,7 +405,7 @@ class InstagramVideoPublishTestController extends Controller
      * @param  array<string, mixed>  $info
      * @return array<string, mixed>
      */
-    private function stepMeta(string $title, string $url, array $info): array
+    private function stepMeta(string $title, string $url, array $info, string $responseNote = 'Done.'): array
     {
         return [
             'title' => $title,
@@ -363,7 +413,7 @@ class InstagramVideoPublishTestController extends Controller
             'url' => $url,
             'request' => $info,
             'response_status' => null,
-            'response_body' => 'File stored. Use the URL above as video_url in step 1.',
+            'response_body' => $responseNote,
             'ok' => true,
             'duration_ms' => null,
         ];
