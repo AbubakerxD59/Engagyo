@@ -234,6 +234,7 @@ class InstagramImagePrepService
             }
 
             $converted = self::convertFileToJpegOnDisk($workPath, $post);
+            dd($converted);
             if ($converted['error'] !== null) {
                 return ['error' => $converted['error'], 'url' => ''];
             }
