@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\User\AccountsController;
+use App\Http\Controllers\User\InstagramVideoPublishTestController;
 use App\Http\Controllers\User\AnalyticsController;
 use App\Http\Controllers\User\ApiKeysController;
 use App\Http\Controllers\User\ApiPostsController;
@@ -88,6 +89,15 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.timezone
             Route::post('toggle-rss-pause', 'toggleRssPause')->name('toggleRssPause');
         });
     });
+
+    Route::controller(InstagramVideoPublishTestController::class)
+        ->middleware(['feature:'.Feature::$features_list[0]])
+        ->prefix('debug')
+        ->name('debug.')
+        ->group(function () {
+            Route::get('instagram-video-publish-test', 'show')->name('instagram-video-publish-test');
+            Route::post('instagram-video-publish-test', 'run')->name('instagram-video-publish-test.run');
+        });
 
     // Automation Routes
     Route::controller(AutomationController::class)->middleware(['feature:'.Feature::$features_list[2]])->group(function () {
