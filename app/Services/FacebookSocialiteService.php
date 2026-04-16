@@ -32,7 +32,6 @@ class FacebookSocialiteService
         'pages_read_engagement',
         'instagram_basic',
         'instagram_manage_insights',
-        'instagram_content_publish',
     ];
 
     /**
@@ -52,7 +51,7 @@ class FacebookSocialiteService
         return Socialite::driver('facebook')
             ->scopes($this->scopes)
             ->with([
-                'auth_type' => 'rerequest'
+                'auth_type' => 'rerequest',
             ])
             ->redirectUrl(route('facebook.callback'))
             ->redirect();

@@ -7,7 +7,6 @@ use App\Http\Controllers\Controller;
 use App\Jobs\DeleteFacebookPostJob;
 use App\Jobs\DeleteSentPostJob;
 use App\Jobs\PublishFacebookPost;
-use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishPinterestPost;
 use App\Jobs\PublishTikTokPost;
 use App\Models\Board;
@@ -38,32 +37,34 @@ use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
-class  ScheduleController extends Controller
+class ScheduleController extends Controller
 {
     private const POSTS_CACHE_TTL_HOURS = 3;
 
     protected $facebookService;
+
     protected $pinterestService;
+
     protected $tiktokService;
+
     protected $featureUsageService;
+
     protected $source;
+
     protected $logService;
+
     public function __construct(FeatureUsageService $featureUsageService)
     {
-        $this->facebookService = new FacebookService();
-        $this->pinterestService = new PinterestService();
-        $this->tiktokService = new TikTokService();
+        $this->facebookService = new FacebookService;
+        $this->pinterestService = new PinterestService;
+        $this->tiktokService = new TikTokService;
         $this->featureUsageService = $featureUsageService;
-        $this->source = "schedule";
-        $this->logService = new SocialMediaLogService();
+        $this->source = 'schedule';
+        $this->logService = new SocialMediaLogService;
     }
 
     /**
      * Verify that a post's account belongs to the user
-     * 
-     * @param Post $post
-     * @param User $user
-     * @return bool
      */
     private function verifyPostAccountBelongsToUser(Post $post, User $user): bool
     {
@@ -78,18 +79,21 @@ class  ScheduleController extends Controller
                 $board = Board::where('id', $post->account_id)
                     ->where('user_id', $user->id)
                     ->first();
+
                 return $board !== null;
 
             case 'facebook':
                 $page = Page::where('id', $post->account_id)
                     ->where('user_id', $user->id)
                     ->first();
+
                 return $page !== null;
 
             case 'tiktok':
                 $tiktok = Tiktok::where('id', $post->account_id)
                     ->where('user_id', $user->id)
                     ->first();
+
                 return $tiktok !== null;
 
             case 'instagram':
@@ -105,82 +109,19 @@ class  ScheduleController extends Controller
     }
 
     /**
-     * Normalize create-post uploads: single file (existing) or multi-file Instagram carousel (files[] + instagram_content_format=carousel).
+     * Normalize create-post uploads: single file from request.
      *
-     * @return array{error: ?array, has_files: bool, instagram_carousel: bool, image: ?string, images: array<int, string>, video: ?string, carousel_media: array<int, array{type: string, path: string}>}
+     * @return array{error: ?array, has_files: bool, image: ?string, images: array<int, string>, video: ?string}
      */
     private function normalizeCreatePostFileUploads(Request $request): array
     {
         $empty = [
             'error' => null,
             'has_files' => false,
-            'instagram_carousel' => false,
             'image' => null,
             'images' => [],
             'video' => null,
-            'carousel_media' => [],
         ];
-
-        $igFormat = strtolower(trim((string) $request->input('instagram_content_format', '')));
-        $isCarouselRequest = ($igFormat === 'carousel') || $request->boolean('instagram_carousel');
-
-        if ($isCarouselRequest) {
-            $raw = $request->file('files');
-            $files = is_array($raw) ? array_values(array_filter($raw)) : ($raw ? [$raw] : []);
-            if (count($files) < 2) {
-                return array_merge($empty, [
-                    'error' => [
-                        'success' => false,
-                        'message' => 'Select at least 2 files for an Instagram carousel.',
-                    ],
-                ]);
-            }
-            if (count($files) > 10) {
-                return array_merge($empty, [
-                    'error' => [
-                        'success' => false,
-                        'message' => 'Instagram carousels support at most 10 files.',
-                    ],
-                ]);
-            }
-            $carouselMedia = [];
-            foreach ($files as $file) {
-                if (! $file instanceof UploadedFile || ! $file->isValid()) {
-                    return array_merge($empty, [
-                        'error' => [
-                            'success' => false,
-                            'message' => 'One or more uploaded files are invalid.',
-                        ],
-                    ]);
-                }
-                $ext = strtolower((string) ($file->getClientOriginalExtension() ?: ''));
-                if (in_array($ext, ['mp4', 'mkv', 'mov', 'mpeg', 'webm'], true)) {
-                    $carouselMedia[] = ['type' => 'video', 'path' => saveToS3($file)];
-                } else {
-                    $carouselMedia[] = ['type' => 'photo', 'path' => saveImage($file)];
-                }
-            }
-            $firstPhoto = null;
-            foreach ($carouselMedia as $row) {
-                if (($row['type'] ?? '') === 'photo') {
-                    $firstPhoto = $row['path'];
-                    break;
-                }
-            }
-
-            return [
-                'error' => null,
-                'has_files' => true,
-                'instagram_carousel' => true,
-                'image' => $firstPhoto,
-                'images' => array_values(array_filter(array_map(
-                    fn ($r) => (($r['type'] ?? '') === 'photo') ? $r['path'] : null,
-                    $carouselMedia
-                ))),
-                'video' => null,
-                'carousel_media' => $carouselMedia,
-            ];
-        }
 
         $raw = $request->file('files');
         if ($raw === null) {
@@ -194,11 +135,9 @@ class  ScheduleController extends Controller
             return [
                 'error' => null,
                 'has_files' => true,
-                'instagram_carousel' => false,
                 'image' => null,
                 'images' => [],
                 'video' => saveToS3($file),
-                'carousel_media' => [],
             ];
         }
         $img = saveImage($file);
@@ -206,139 +145,22 @@ class  ScheduleController extends Controller
         return [
             'error' => null,
             'has_files' => true,
-            'instagram_carousel' => false,
             'image' => $img,
             'images' => [$img],
             'video' => null,
-            'carousel_media' => [],
         ];
-    }
-
-    private function isInstagramOnlyAccountSelection($accounts): bool
-    {
-        $total = 0;
-        $ig = 0;
-        foreach ($accounts as $account) {
-            $total++;
-            if (($account->type ?? '') === 'instagram') {
-                $ig++;
-            }
-        }
-
-        return $total > 0 && $ig === $total;
-    }
-
-    private function instagramTypeFromUpload(Request $request, array $upload, bool $instagramOnlySelection): string
-    {
-        if (! empty($upload['instagram_carousel'])) {
-            return 'carousel';
-        }
-        if (! empty($upload['video'])) {
-            if ($instagramOnlySelection && strtolower(trim((string) $request->input('instagram_content_format', 'post'))) === 'reel') {
-                return 'reel';
-            }
-
-            return 'video';
-        }
-
-        return 'photo';
-    }
-
-    /**
-     * When every selected channel is Instagram, require a media file (photo, carousel, or video), not text-only.
-     *
-     * @param  \Illuminate\Support\Collection|\Traversable  $accounts
-     * @param  array<string, mixed>  $upload from normalizeCreatePostFileUploads()
-     */
-    private function validateInstagramMediaSelection($accounts, array $upload): ?array
-    {
-        $igCount = 0;
-        $total = 0;
-        foreach ($accounts as $account) {
-            $total++;
-            if (($account->type ?? '') === 'instagram') {
-                $igCount++;
-            }
-        }
-
-        $carousel = ! empty($upload['instagram_carousel']);
-        if ($carousel && $igCount === 0) {
-            return [
-                'success' => false,
-                'message' => 'Instagram carousel requires at least one Instagram account selected.',
-            ];
-        }
-
-        if ($igCount === 0) {
-            return null;
-        }
-
-        $hasFiles = ! empty($upload['has_files']);
-        $hasVideo = ! empty($upload['video']);
-        $hasImage = ! empty($upload['image']);
-
-        if ($igCount === $total) {
-            if (! $hasFiles) {
-                return [
-                    'success' => false,
-                    'message' => 'Instagram requires a photo or video file. Text-only posts are not supported.',
-                ];
-            }
-            if ($carousel) {
-                $items = is_array($upload['carousel_media'] ?? null) ? $upload['carousel_media'] : [];
-                $n = count($items);
-                if ($n < 2 || $n > 10) {
-                    return [
-                        'success' => false,
-                        'message' => 'Instagram carousels need between 2 and 10 files.',
-                    ];
-                }
-
-                return null;
-            }
-            if ($hasImage && $hasVideo) {
-                return [
-                    'success' => false,
-                    'message' => 'Use a single photo or a single video per Instagram post.',
-                ];
-            }
-            if (! $hasImage && ! $hasVideo) {
-                return [
-                    'success' => false,
-                    'message' => 'Instagram requires a photo or video file. Text-only posts are not supported.',
-                ];
-            }
-
-            return null;
-        }
-
-        if ($carousel) {
-            return [
-                'success' => false,
-                'message' => 'Instagram carousels can only be posted when only Instagram accounts are selected.',
-            ];
-        }
-        if ($hasFiles && $hasImage && $hasVideo) {
-            return [
-                'success' => false,
-                'message' => 'Use a single photo or a single video per Instagram post.',
-            ];
-        }
-
-        return null;
     }
 
     /**
      * Check if user can create scheduled posts
-     * 
-     * @param User $user
-     * @param int $newPostsCount Number of new posts to be created
+     *
+     * @param  int  $newPostsCount  Number of new posts to be created
      * @return array ['allowed' => bool, 'message' => string, 'usage' => int, 'limit' => int|null, 'remaining' => int|null]
      */
     private function checkScheduledPostsLimit(User $user, int $newPostsCount = 1): array
     {
         // Check if user can use the feature
-        if (!$user->canUseFeature('scheduled_posts_per_account')) {
+        if (! $user->canUseFeature('scheduled_posts_per_account')) {
             return [
                 'allowed' => false,
                 'message' => 'Scheduled posts feature is not available in your package.',
@@ -381,6 +203,7 @@ class  ScheduleController extends Controller
 
         if ($totalAfterAdding > $limit) {
             $remaining = max(0, $limit - $currentUsage);
+
             return [
                 'allowed' => false,
                 'message' => "You have reached your limit of {$limit} scheduled posts per account. You have {$remaining} remaining. Please upgrade your package to schedule more posts.",
@@ -410,13 +233,14 @@ class  ScheduleController extends Controller
     // new design code
     public function index()
     {
-        $user = User::with("boards.pinterest", "pages.facebook", "tiktok", "timezone", "instagramAccounts.facebook")->find(Auth::guard('user')->id());
+        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'timezone')->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $accounts = $this->sortAccountsByRecentUsage($accounts, $user->id);
-        $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
+        $userTimezoneName = $user->timezone && ! empty($user->timezone->name) ? $user->timezone->name : 'UTC';
         $canAccessAnalytics = $user->canAccessMenu(8) && $user->hasMenuAccess('analytics');
         $scheduleSelectedAccount = $user->schedule_selected_account;
-        return view("user.schedule-new-design.index", compact("accounts", "userTimezoneName", "canAccessAnalytics", "scheduleSelectedAccount"));
+
+        return view('user.schedule-new-design.index', compact('accounts', 'userTimezoneName', 'canAccessAnalytics', 'scheduleSelectedAccount'));
     }
 
     /**
@@ -432,25 +256,25 @@ class  ScheduleController extends Controller
 
         $postCounts = [];
         foreach ($countRows as $row) {
-            $key = (string) $row->social_type . '_' . (int) $row->account_id;
+            $key = (string) $row->social_type.'_'.(int) $row->account_id;
             $postCounts[$key] = (int) $row->post_count;
         }
 
         $sortSegment = function ($segment) use ($postCounts) {
             $segment = $segment->values();
             $sorted = $segment->sortByDesc(function ($account) use ($postCounts) {
-                $key = ($account->type ?? '') . '_' . (int) $account->id;
+                $key = ($account->type ?? '').'_'.(int) $account->id;
 
                 return $postCounts[$key] ?? 0;
             })->values();
 
             $withPosts = $sorted->filter(function ($a) use ($postCounts) {
-                $key = ($a->type ?? '') . '_' . (int) $a->id;
+                $key = ($a->type ?? '').'_'.(int) $a->id;
 
                 return ($postCounts[$key] ?? 0) > 0;
             });
             $withoutPosts = $sorted->filter(function ($a) use ($postCounts) {
-                $key = ($a->type ?? '') . '_' . (int) $a->id;
+                $key = ($a->type ?? '').'_'.(int) $a->id;
 
                 return ($postCounts[$key] ?? 0) === 0;
             })->sortBy('name')->values();
@@ -458,12 +282,11 @@ class  ScheduleController extends Controller
             return $withPosts->concat($withoutPosts);
         };
 
-        $facebook = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'facebook'));
-        $instagram = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'instagram'));
-        $pinterest = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'pinterest'));
-        $tiktok = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'tiktok'));
+        $facebook = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'facebook'));
+        $pinterest = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'pinterest'));
+        $tiktok = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'tiktok'));
 
-        return $facebook->concat($instagram)->concat($pinterest)->concat($tiktok);
+        return $facebook->concat($pinterest)->concat($tiktok);
     }
 
     /**
@@ -511,16 +334,6 @@ class  ScheduleController extends Controller
                         'profile_image' => $tiktok->profile_image ?? '',
                     ];
                 }
-            } elseif (str_contains($st, 'instagram')) {
-                $igRow = InstagramAccount::find($post->account_id);
-                if ($igRow) {
-                    $account = [
-                        'id' => $igRow->id,
-                        'type' => 'instagram',
-                        'name' => $igRow->name ?? $igRow->username ?? $igRow->ig_user_id,
-                        'profile_image' => $igRow->profile_image ?? '',
-                    ];
-                }
             }
         }
 
@@ -545,20 +358,6 @@ class  ScheduleController extends Controller
                     'id' => $tiktokRow->id,
                     'type' => 'tiktok',
                     'schedule_status' => $tiktokRow->schedule_status ?? 'inactive',
-                ]);
-            });
-            $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
-            InstagramAccount::where('user_id', $ownerId)->get()->each(function ($ig) use ($accountsStatus, $user) {
-                if ($user->isTeamMember()) {
-                    $igIds = $user->getTeamMemberAccountIdsByType('instagram');
-                    if (! in_array((int) $ig->id, array_map('intval', $igIds), true)) {
-                        return;
-                    }
-                }
-                $accountsStatus->push([
-                    'id' => $ig->id,
-                    'type' => 'instagram',
-                    'schedule_status' => $ig->schedule_status ?? 'inactive',
                 ]);
             });
         }
@@ -600,20 +399,6 @@ class  ScheduleController extends Controller
                 'schedule_status' => $tiktok->schedule_status ?? 'inactive',
             ]);
         });
-        $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
-        InstagramAccount::where('user_id', $ownerId)->get()->each(function ($ig) use ($accountsStatus, $user) {
-            if ($user->isTeamMember()) {
-                $igIds = $user->getTeamMemberAccountIdsByType('instagram');
-                if (! in_array((int) $ig->id, array_map('intval', $igIds), true)) {
-                    return;
-                }
-            }
-            $accountsStatus->push([
-                'id' => $ig->id,
-                'type' => 'instagram',
-                'schedule_status' => $ig->schedule_status ?? 'inactive',
-            ]);
-        });
 
         $account = null;
         $post = Post::where('user_id', $user->id)
@@ -651,16 +436,6 @@ class  ScheduleController extends Controller
                         'profile_image' => $tiktokRow->profile_image ?? '',
                     ];
                 }
-            } elseif (str_contains($st, 'instagram')) {
-                $igRow = InstagramAccount::find($post->account_id);
-                if ($igRow) {
-                    $account = [
-                        'id' => $igRow->id,
-                        'type' => 'instagram',
-                        'name' => $igRow->name ?? $igRow->username ?? $igRow->ig_user_id,
-                        'profile_image' => $igRow->profile_image ?? '',
-                    ];
-                }
             }
         }
 
@@ -685,7 +460,7 @@ class  ScheduleController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$account) {
+        if (! $account) {
             return response()->json([
                 'success' => false,
                 'message' => 'TikTok account not found.',
@@ -693,7 +468,7 @@ class  ScheduleController extends Controller
         }
 
         $tokenResponse = TikTokService::validateToken($account);
-        if (!$tokenResponse['success']) {
+        if (! $tokenResponse['success']) {
             return response()->json([
                 'success' => false,
                 'message' => $tokenResponse['message'] ?? 'Failed to validate TikTok access token.',
@@ -701,7 +476,7 @@ class  ScheduleController extends Controller
         }
 
         $creatorInfoResponse = $this->tiktokService->queryCreatorInfo($tokenResponse['access_token']);
-        if (!$creatorInfoResponse['success']) {
+        if (! $creatorInfoResponse['success']) {
             return response()->json([
                 'success' => false,
                 'message' => $creatorInfoResponse['message'] ?? 'Failed to fetch TikTok creator info.',
@@ -710,7 +485,7 @@ class  ScheduleController extends Controller
 
         $creatorInfo = $creatorInfoResponse['data'] ?? [];
         $privacyOptions = $creatorInfo['privacy_level_options'] ?? [];
-        if (!is_array($privacyOptions)) {
+        if (! is_array($privacyOptions)) {
             $privacyOptions = [];
         }
 
@@ -721,9 +496,9 @@ class  ScheduleController extends Controller
             $canPost = (bool) $creatorInfo['can_post_content'];
         }
 
-        $canComment = (bool) ($creatorInfo['comment_enabled'] ?? !($creatorInfo['comment_disabled'] ?? false));
-        $canDuet = (bool) ($creatorInfo['duet_enabled'] ?? !($creatorInfo['duet_disabled'] ?? false));
-        $canStitch = (bool) ($creatorInfo['stitch_enabled'] ?? !($creatorInfo['stitch_disabled'] ?? false));
+        $canComment = (bool) ($creatorInfo['comment_enabled'] ?? ! ($creatorInfo['comment_disabled'] ?? false));
+        $canDuet = (bool) ($creatorInfo['duet_enabled'] ?? ! ($creatorInfo['duet_disabled'] ?? false));
+        $canStitch = (bool) ($creatorInfo['stitch_enabled'] ?? ! ($creatorInfo['stitch_disabled'] ?? false));
 
         return response()->json([
             'success' => true,
@@ -751,6 +526,7 @@ class  ScheduleController extends Controller
     {
         $user = Auth::guard('user')->user();
         $data = $user->schedule_selected_account;
+
         return response()->json([
             'success' => true,
             'data' => $data,
@@ -763,7 +539,7 @@ class  ScheduleController extends Controller
     public function saveSelectedAccount(Request $request)
     {
         $request->validate([
-            'type' => 'required|string|in:all,facebook,pinterest,tiktok,instagram',
+            'type' => 'required|string|in:all,facebook,pinterest,tiktok',
             'id' => 'nullable|string',
         ]);
         $user = User::find(Auth::guard('user')->id());
@@ -772,6 +548,7 @@ class  ScheduleController extends Controller
             'id' => $request->id,
         ];
         $user->update(['schedule_selected_account' => $data]);
+
         return response()->json([
             'success' => true,
             'data' => $data,
@@ -780,7 +557,7 @@ class  ScheduleController extends Controller
 
     /**
      * Summary of accountStatus
-     * @param Request $request
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function accountStatus(Request $request)
@@ -788,113 +565,116 @@ class  ScheduleController extends Controller
         $type = $request->type;
         $id = $request->id;
         $status = $request->status;
-        if ($type == "facebook") {
+        if ($type == 'facebook') {
             $page = Page::find($id);
             if ($page) {
-                $page->schedule_status = $status == 1 ? "active" : "inactive";
+                $page->schedule_status = $status == 1 ? 'active' : 'inactive';
                 $page->save();
                 $response = [
-                    "success" => true,
-                    "message" => "Status changed Successfully!"
+                    'success' => true,
+                    'message' => 'Status changed Successfully!',
                 ];
             } else {
-                $response = array(
-                    "success" => false,
-                    "message" => "Something went Wrong!"
-                );
+                $response = [
+                    'success' => false,
+                    'message' => 'Something went Wrong!',
+                ];
             }
-        } else if ($type == "pinterest") {
+        } elseif ($type == 'pinterest') {
             $board = Board::find($id);
             if ($board) {
-                $board->schedule_status = $status == 1 ? "active" : "inactive";
+                $board->schedule_status = $status == 1 ? 'active' : 'inactive';
                 $board->save();
                 $response = [
-                    "success" => true,
-                    "message" => "Status changed Successfully!"
+                    'success' => true,
+                    'message' => 'Status changed Successfully!',
                 ];
             } else {
-                $response = array(
-                    "success" => false,
-                    "message" => "Something went Wrong!"
-                );
+                $response = [
+                    'success' => false,
+                    'message' => 'Something went Wrong!',
+                ];
             }
-        } else if ($type == "tiktok") {
+        } elseif ($type == 'tiktok') {
             $tiktok = Tiktok::find($id);
             if ($tiktok) {
-                $tiktok->schedule_status = $status == 1 ? "active" : "inactive";
+                $tiktok->schedule_status = $status == 1 ? 'active' : 'inactive';
                 $tiktok->save();
                 $response = [
-                    "success" => true,
-                    "message" => "Status changed Successfully!"
+                    'success' => true,
+                    'message' => 'Status changed Successfully!',
                 ];
             } else {
-                $response = array(
-                    "success" => false,
-                    "message" => "Something went Wrong!"
-                );
+                $response = [
+                    'success' => false,
+                    'message' => 'Something went Wrong!',
+                ];
             }
-        } else if ($type == "instagram") {
+        } elseif ($type == 'instagram') {
             $ig = InstagramAccount::find($id);
             if ($ig) {
-                $ig->schedule_status = $status == 1 ? "active" : "inactive";
+                $ig->schedule_status = $status == 1 ? 'active' : 'inactive';
                 $ig->save();
                 $response = [
-                    "success" => true,
-                    "message" => "Status changed Successfully!",
+                    'success' => true,
+                    'message' => 'Status changed Successfully!',
                 ];
             } else {
                 $response = [
-                    "success" => false,
-                    "message" => "Something went Wrong!",
+                    'success' => false,
+                    'message' => 'Something went Wrong!',
                 ];
             }
         }
+
         return response()->json($response);
     }
+
     /**
      * Summary of processPost
-     * @param Request $request
+     *
      * @return \Illuminate\Http\JsonResponse
      */
     public function processPost(Request $request)
     {
-        $action = $request->get("action");
+        $action = $request->get('action');
         $link = $request->link;
-        if ($link) { //link post
-            if ($action == "publish") {
+        if ($link) { // link post
+            if ($action == 'publish') {
                 $response = $this->publishLink($request);
             }
-            if ($action == "queue") {
+            if ($action == 'queue') {
                 $response = $this->queueLink($request);
             }
-            if ($action == "schedule") {
+            if ($action == 'schedule') {
                 $response = $this->scheduleLink($request);
             }
-            if ($action == "draft") {
+            if ($action == 'draft') {
                 $response = $this->draftLink($request);
             }
-        } else { //no link
-            if ($action == "publish") {
+        } else { // no link
+            if ($action == 'publish') {
                 $response = $this->publishPost($request);
             }
-            if ($action == "queue") {
+            if ($action == 'queue') {
                 $response = $this->queuePost($request);
             }
-            if ($action == "schedule") {
+            if ($action == 'schedule') {
                 $response = $this->schedulePost($request);
             }
-            if ($action == "draft") {
+            if ($action == 'draft') {
                 $response = $this->draftPost($request);
             }
         }
+
         return response()->json($response);
     }
 
     public function processChainPosts(Request $request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
-            if (!$user) {
+            $user = User::with('boards.pinterest', 'pages.facebook')->find(Auth::guard('user')->id());
+            if (! $user) {
                 return response()->json(['success' => false, 'message' => 'Unauthorized.']);
             }
 
@@ -922,7 +702,7 @@ class  ScheduleController extends Controller
             $postsToCreate = $this->countChainQueuePosts($accounts, $files, $request, $postsPerRound);
             if ($postsToCreate > 0) {
                 $limitCheck = $this->checkScheduledPostsLimit($user, $postsToCreate);
-                if (!$limitCheck['allowed']) {
+                if (! $limitCheck['allowed']) {
                     return response()->json(['success' => false, 'message' => $limitCheck['message']]);
                 }
             }
@@ -938,7 +718,7 @@ class  ScheduleController extends Controller
                     }
                     for ($r = 0; $r < $postsPerRound && $fileIndex < $n; $r++) {
                         $uploaded = $files[$fileIndex];
-                        if (!$uploaded instanceof UploadedFile || !$uploaded->isValid()) {
+                        if (! $uploaded instanceof UploadedFile || ! $uploaded->isValid()) {
                             return response()->json(['success' => false, 'message' => 'One or more uploads are invalid.']);
                         }
                         $this->queueChainUploadedFileForAccount($user, $account, $request, $uploaded, $facebookTokenOk);
@@ -983,9 +763,6 @@ class  ScheduleController extends Controller
 
     private function countQueuePostsForChainFileAndAccount($account, UploadedFile $file, Request $request): int
     {
-        if ($account->type === 'instagram') {
-            return 1;
-        }
         if ($account->type === 'facebook' || $account->type === 'pinterest' || $account->type === 'tiktok') {
             return 1;
         }
@@ -1110,41 +887,6 @@ class  ScheduleController extends Controller
 
             return;
         }
-
-        if ($account->type === 'instagram') {
-            if (empty($image) && empty($video)) {
-                return;
-            }
-            if (! empty($image) && ! empty($video)) {
-                return;
-            }
-            InstagramAccount::where('id', $account->id)->firstOrFail();
-            $nextTime = (new Post)->nextScheduleTime(
-                ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
-                $account->timeslots,
-                $user
-            );
-            $fmt = strtolower(trim((string) $request->input('instagram_content_format', 'post')));
-            $mediaType = ! empty($image) ? 'photo' : (($fmt === 'reel') ? 'reel' : 'video');
-            $data = [
-                'user_id' => $user->id,
-                'account_id' => $account->id,
-                'social_type' => 'instagram',
-                'type' => $mediaType,
-                'source' => $this->source,
-                'title' => $content,
-                'comment' => $comment,
-                'image' => $image,
-                'video' => $video,
-                'status' => 0,
-                'publish_date' => $nextTime,
-            ];
-            $post = PostService::create($data);
-            if ($this->verifyPostAccountBelongsToUser($post, $user)) {
-                $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
-            }
-            $this->logService->logQueuedPost('instagram', $post->id, ['type' => $mediaType, 'publish_date' => $nextTime]);
-        }
     }
 
     /**
@@ -1152,8 +894,6 @@ class  ScheduleController extends Controller
      * When account_ids are provided in the request (from create post modal selection),
      * use those. Otherwise use getScheduledActiveAccounts().
      *
-     * @param Request $request
-     * @param User $user
      * @return \Illuminate\Support\Collection
      */
     private function resolveAccountsForPost(Request $request, User $user)
@@ -1167,6 +907,7 @@ class  ScheduleController extends Controller
                 return $user->getAccountsForPostCreation($accountIds);
             }
         }
+
         return $user->getScheduledActiveAccounts();
     }
 
@@ -1176,7 +917,7 @@ class  ScheduleController extends Controller
     private function accountLabelForQueueError(object $account): string
     {
         foreach (['name', 'display_name', 'username'] as $prop) {
-            if (!empty($account->{$prop})) {
+            if (! empty($account->{$prop})) {
                 return (string) $account->{$prop};
             }
         }
@@ -1187,7 +928,7 @@ class  ScheduleController extends Controller
     /**
      * Queue (add to posting hours) requires at least one timeslot per selected account.
      *
-     * @param \Illuminate\Support\Collection|\Traversable $accounts
+     * @param  \Illuminate\Support\Collection|\Traversable  $accounts
      * @return array|null Error payload for JSON, or null if OK
      */
     private function validateQueueAccountsHaveTimeslots($accounts): ?array
@@ -1198,7 +939,7 @@ class  ScheduleController extends Controller
 
                 return [
                     'success' => false,
-                    'message' => 'Please select at least one posting hour for ' . $label . '.',
+                    'message' => 'Please select at least one posting hour for '.$label.'.',
                 ];
             }
         }
@@ -1231,7 +972,7 @@ class  ScheduleController extends Controller
     }
 
     /**
-     * Schedule queue timeslots for an account. Instagram uses its own slots when set, else the linked Page's.
+     * Schedule queue timeslots for an account.
      *
      * @return array<int, string> Timeslot strings (e.g. "09:00")
      */
@@ -1240,42 +981,7 @@ class  ScheduleController extends Controller
         $accountType = strtolower((string) $accountType);
 
         if ($accountType === 'instagram') {
-            $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
-            $ig = InstagramAccount::query()
-                ->where('id', $accountId)
-                ->where('user_id', $ownerId)
-                ->first();
-
-            if (! $ig) {
-                return [];
-            }
-
-            $own = Timeslot::where('account_id', $ig->id)
-                ->where('account_type', 'instagram')
-                ->where('type', 'schedule')
-                ->pluck('timeslot')
-                ->sort()
-                ->values()
-                ->toArray();
-
-            if ($own !== []) {
-                return $own;
-            }
-
-            $ig->loadMissing('linkedPage');
-            $page = $ig->linkedPage;
-
-            if (! $page) {
-                return [];
-            }
-
-            return Timeslot::where('account_id', $page->id)
-                ->where('account_type', 'facebook')
-                ->where('type', 'schedule')
-                ->pluck('timeslot')
-                ->sort()
-                ->values()
-                ->toArray();
+            return [];
         }
 
         return Timeslot::where('account_id', $accountId)
@@ -1336,13 +1042,15 @@ class  ScheduleController extends Controller
             $format = strtolower(trim($format));
             if ($format === 'story') {
                 $types[] = 'story';
+
                 continue;
             }
             if ($format === 'reel') {
                 // Only valid for video posts
-                if (!$hasImage) {
+                if (! $hasImage) {
                     $types[] = 'reel';
                 }
+
                 continue;
             }
             // 'post' fallback
@@ -1363,16 +1071,16 @@ class  ScheduleController extends Controller
 
     /**
      * Publish Post
-     * @param Request $request
-     * @return array
+     *
+     * @param  Request  $request
      */
     private function publishPost($request): array
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->findOrFail(Auth::guard('user')->id());
+            $user = User::with('boards.pinterest', 'pages.facebook')->findOrFail(Auth::guard('user')->id());
             $accounts = $this->resolveAccountsForPost($request, $user);
-            $content = $request->get("content") ?? null;
-            $comment = $request->get("comment") ?? null;
+            $content = $request->get('content') ?? null;
+            $comment = $request->get('comment') ?? null;
             $upload = $this->normalizeCreatePostFileUploads($request);
             if ($upload['error'] !== null) {
                 return $upload['error'];
@@ -1380,79 +1088,69 @@ class  ScheduleController extends Controller
             $file = $upload['has_files'];
             $image = $upload['image'];
             $video = $upload['video'];
-            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $upload);
-            if ($igOnlyErr !== null) {
-                return $igOnlyErr;
-            }
             // Count total posts to be created (one per selected format per Facebook account)
             $totalPostsToCreate = 0;
             foreach ($accounts as $account) {
-                if ($account->type == "facebook") {
+                if ($account->type == 'facebook') {
                     if ($file) {
-                        $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
+                        $types = $this->facebookMediaTypesFromRequest($request, ! empty($image));
                         $totalPostsToCreate += count($types);
                     } else {
                         $totalPostsToCreate++;
                     }
-                } elseif ($account->type == "pinterest" && $file) {
+                } elseif ($account->type == 'pinterest' && $file) {
                     $totalPostsToCreate++;
-                } elseif ($account->type == "tiktok" && $file) {
-                    $totalPostsToCreate++;
-                } elseif ($account->type == "instagram" && $file && (
-                    (! empty($upload['instagram_carousel']) && count($upload['carousel_media'] ?? []) >= 2)
-                    || ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))
-                )) {
+                } elseif ($account->type == 'tiktok' && $file) {
                     $totalPostsToCreate++;
                 }
             }
-            
+
             // Check scheduled posts limit before creating any posts
             /** @var User $user */
             $limitCheck = $this->checkScheduledPostsLimit($user, $totalPostsToCreate);
-            if (!$limitCheck['allowed']) {
+            if (! $limitCheck['allowed']) {
                 return [
-                    "success" => false,
-                    "message" => $limitCheck['message']
+                    'success' => false,
+                    'message' => $limitCheck['message'],
                 ];
             }
 
             $publishDateNow = Carbon::now(TimezoneService::getUserTimezone($user))->format('Y-m-d H:i');
-            $instagramOnlySelection = $this->isInstagramOnlyAccountSelection($accounts);
 
             foreach ($accounts as $account) {
-                if ($account->type == "facebook") {
+                if ($account->type == 'facebook') {
 
-                    Facebook::where("id", $account->fb_id)->firstOrFail();
+                    Facebook::where('id', $account->fb_id)->firstOrFail();
 
                     // Validate token once per account
                     $tokenResponse = FacebookService::validateToken($account);
-                    if (!$tokenResponse['success']) {
+                    if (! $tokenResponse['success']) {
                         return [
-                            "success" => false,
-                            "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
+                            'success' => false,
+                            'message' => $tokenResponse['message'] ?? 'Failed to validate Facebook access token.',
                         ];
                     }
                     $access_token = $tokenResponse['access_token'];
 
                     if ($file) {
-                        $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
+                        $types = $this->facebookMediaTypesFromRequest($request, ! empty($image));
                     } else {
-                        $types = ["content_only"];
+                        $types = ['content_only'];
                     }
 
                     foreach ($types as $type) {
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "facebook",
-                            "type" => $type,
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "image" => $image,
-                            "video" => $video,
-                            "status" => 0,
-                            "publish_date" => $publishDateNow,
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'facebook',
+                            'type' => $type,
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'image' => $image,
+                            'video' => $video,
+                            'status' => 0,
+                            'publish_date' => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -1466,23 +1164,23 @@ class  ScheduleController extends Controller
                         PublishFacebookPost::dispatch($post->id, $postData, $access_token, $type, $post->comment);
                     }
                 }
-                if ($account->type == "pinterest") {
-                    $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
+                if ($account->type == 'pinterest') {
+                    $pinterest = Pinterest::where('id', $account->pin_id)->firstOrFail();
                     if ($file) {
                         // store in db
-                        $type = !empty($image) ? "photo" : "video";
+                        $type = ! empty($image) ? 'photo' : 'video';
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "pinterest",
-                            "type" => $type,
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "image" => $image,
-                            "video" => $video,
-                            "status" => 0,
-                            "publish_date" => $publishDateNow,
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'pinterest',
+                            'type' => $type,
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'image' => $image,
+                            'video' => $video,
+                            'status' => 0,
+                            'publish_date' => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -1493,109 +1191,109 @@ class  ScheduleController extends Controller
 
                         // Use validateToken for proper error handling
                         $tokenResponse = PinterestService::validateToken($account);
-                        if (!$tokenResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token."
-                            );
+                        if (! $tokenResponse['success']) {
+                            return [
+                                'success' => false,
+                                'message' => $tokenResponse['message'] ?? 'Failed to validate Pinterest access token.',
+                            ];
                         }
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, $type);
                     }
                 }
-                if ($account->type == "tiktok") {
-                    $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
+                if ($account->type == 'tiktok') {
+                    $tiktok = Tiktok::where('id', $account->id)->firstOrFail();
 
                     // Check if this is a TikTok-specific post (from modal)
-                    $tiktokAccountId = $request->get("tiktok_account_id");
+                    $tiktokAccountId = $request->get('tiktok_account_id');
                     if ($tiktokAccountId && $tiktokAccountId == $account->id && $file) {
                         // Validate token and query latest creator info (required by TikTok Direct Post UX rules)
                         $tokenResponse = TikTokService::validateToken($account);
-                        if (!$tokenResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
-                            );
+                        if (! $tokenResponse['success']) {
+                            return [
+                                'success' => false,
+                                'message' => $tokenResponse['message'] ?? 'Failed to validate TikTok access token.',
+                            ];
                         }
                         $access_token = $tokenResponse['access_token'];
 
                         $creatorInfoResponse = $this->tiktokService->queryCreatorInfo($access_token);
-                        if (!$creatorInfoResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $creatorInfoResponse["message"] ?? "Failed to fetch TikTok creator info."
-                            );
+                        if (! $creatorInfoResponse['success']) {
+                            return [
+                                'success' => false,
+                                'message' => $creatorInfoResponse['message'] ?? 'Failed to fetch TikTok creator info.',
+                            ];
                         }
                         $creatorInfo = $creatorInfoResponse['data'] ?? [];
                         $canPost = $creatorInfo['can_post'] ?? ($creatorInfo['can_post_content'] ?? true);
-                        if (!$canPost) {
-                            return array(
-                                "success" => false,
-                                "message" => $creatorInfo['can_not_post_reason'] ?? "TikTok cannot accept new posts for this account right now. Please try again later."
-                            );
+                        if (! $canPost) {
+                            return [
+                                'success' => false,
+                                'message' => $creatorInfo['can_not_post_reason'] ?? 'TikTok cannot accept new posts for this account right now. Please try again later.',
+                            ];
                         }
 
-                        $privacyLevel = (string) $request->get("tiktok_privacy_level");
+                        $privacyLevel = (string) $request->get('tiktok_privacy_level');
                         $privacyOptions = $creatorInfo['privacy_level_options'] ?? [];
-                        if (!is_array($privacyOptions) || empty($privacyOptions)) {
+                        if (! is_array($privacyOptions) || empty($privacyOptions)) {
                             $privacyOptions = ['FOLLOWER_OF_CREATOR', 'MUTUAL_FOLLOW_FRIENDS', 'SELF_ONLY'];
                         }
-                        if ($privacyLevel === '' || !in_array($privacyLevel, $privacyOptions, true)) {
-                            return array(
-                                "success" => false,
-                                "message" => "Invalid TikTok privacy option.",
-                            );
+                        if ($privacyLevel === '' || ! in_array($privacyLevel, $privacyOptions, true)) {
+                            return [
+                                'success' => false,
+                                'message' => 'Invalid TikTok privacy option.',
+                            ];
                         }
-                        $commercialToggle = (int) $request->get("tiktok_commercial_toggle", 0);
+                        $commercialToggle = (int) $request->get('tiktok_commercial_toggle', 0);
                         if ($commercialToggle && $privacyLevel === 'SELF_ONLY') {
-                            return array(
-                                "success" => false,
-                                "message" => "Only You is not available when disclose post content is enabled.",
-                            );
+                            return [
+                                'success' => false,
+                                'message' => 'Only You is not available when disclose post content is enabled.',
+                            ];
                         }
 
                         $isVideoPost = empty($image);
                         $maxVideoDuration = isset($creatorInfo['max_video_post_duration_sec']) ? (int) $creatorInfo['max_video_post_duration_sec'] : null;
-                        $videoDuration = (float) $request->get("tiktok_video_duration", 0);
+                        $videoDuration = (float) $request->get('tiktok_video_duration', 0);
                         if ($isVideoPost && $maxVideoDuration && $videoDuration > 0 && $videoDuration > $maxVideoDuration) {
-                            return array(
-                                "success" => false,
-                                "message" => "Video duration exceeds TikTok account limit ({$maxVideoDuration}s)."
-                            );
+                            return [
+                                'success' => false,
+                                'message' => "Video duration exceeds TikTok account limit ({$maxVideoDuration}s).",
+                            ];
                         }
 
                         // This is a TikTok post from the modal - use TikTok-specific fields
-                        $type = !empty($image) ? "photo" : "video";
+                        $type = ! empty($image) ? 'photo' : 'video';
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "tiktok",
-                            "type" => $type,
-                            "source" => $this->source,
-                            "title" => $request->get("content") ?: $content,
-                            "comment" => $comment,
-                            "image" => $image,
-                            "video" => $video,
-                            "status" => 0,
-                            "publish_date" => $publishDateNow,
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'tiktok',
+                            'type' => $type,
+                            'source' => $this->source,
+                            'title' => $request->get('content') ?: $content,
+                            'comment' => $comment,
+                            'image' => $image,
+                            'video' => $video,
+                            'status' => 0,
+                            'publish_date' => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
                         // Store TikTok-specific metadata in metadata field
                         $tiktokMetadata = [
-                            "privacy_level" => $request->get("tiktok_privacy_level"),
-                            "disable_comment" => !$request->get("tiktok_allow_comment", 0),
-                            "disable_duet" => !$request->get("tiktok_allow_duet", 0),
-                            "disable_stitch" => !$request->get("tiktok_allow_stitch", 0),
-                            "commercial_content_toggle" => $request->get("tiktok_commercial_toggle", 0),
-                            "your_brand" => $request->get("tiktok_your_brand", 0),
-                            "branded_content" => $request->get("tiktok_branded_content", 0),
+                            'privacy_level' => $request->get('tiktok_privacy_level'),
+                            'disable_comment' => ! $request->get('tiktok_allow_comment', 0),
+                            'disable_duet' => ! $request->get('tiktok_allow_duet', 0),
+                            'disable_stitch' => ! $request->get('tiktok_allow_stitch', 0),
+                            'commercial_content_toggle' => $request->get('tiktok_commercial_toggle', 0),
+                            'your_brand' => $request->get('tiktok_your_brand', 0),
+                            'branded_content' => $request->get('tiktok_branded_content', 0),
                         ];
-                        if ($type === "photo" && $request->get("tiktok_auto_add_music")) {
-                            $tiktokMetadata["auto_add_music"] = true;
+                        if ($type === 'photo' && $request->get('tiktok_auto_add_music')) {
+                            $tiktokMetadata['auto_add_music'] = true;
                         }
-                        $post->update(["metadata" => json_encode($tiktokMetadata)]);
+                        $post->update(['metadata' => json_encode($tiktokMetadata)]);
 
                         // Verify account belongs to user before incrementing
                         if ($this->verifyPostAccountBelongsToUser($post, $user)) {
@@ -1608,19 +1306,19 @@ class  ScheduleController extends Controller
                         PublishTikTokPost::dispatch($post->id, $postData, $access_token, $type);
                     } elseif ($file) {
                         // Legacy TikTok post (non-modal) - keep existing behavior
-                        $type = !empty($image) ? "photo" : "video";
+                        $type = ! empty($image) ? 'photo' : 'video';
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "tiktok",
-                            "type" => $type,
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "image" => $image,
-                            "video" => $video,
-                            "status" => 0,
-                            "publish_date" => $publishDateNow,
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'tiktok',
+                            'type' => $type,
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'image' => $image,
+                            'video' => $video,
+                            'status' => 0,
+                            'publish_date' => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -1631,81 +1329,42 @@ class  ScheduleController extends Controller
 
                         // Use validateToken for proper error handling
                         $tokenResponse = TikTokService::validateToken($account);
-                        if (!$tokenResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
-                            );
+                        if (! $tokenResponse['success']) {
+                            return [
+                                'success' => false,
+                                'message' => $tokenResponse['message'] ?? 'Failed to validate TikTok access token.',
+                            ];
                         }
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
                         PublishTikTokPost::dispatch($post->id, $postData, $access_token, $type);
                     }
                 }
-                if ($account->type == "instagram" && $file) {
-                    $igEligible = ! empty($upload['instagram_carousel'])
-                        ? (count($upload['carousel_media'] ?? []) >= 2)
-                        : ((($image && ! $video) || (! $image && $video)));
-                    if (! $igEligible) {
-                        continue;
-                    }
-                    $ig = InstagramAccount::where('id', $account->id)->firstOrFail();
-                    $tokenResponse = FacebookService::validateToken($ig);
-                    if (! $tokenResponse['success']) {
-                        return [
-                            'success' => false,
-                            'message' => $tokenResponse['message'] ?? 'Failed to validate Facebook access token for Instagram.',
-                        ];
-                    }
-                    $mediaType = $this->instagramTypeFromUpload($request, $upload, $instagramOnlySelection);
-                    $metadata = ! empty($upload['instagram_carousel'])
-                        ? json_encode(['carousel_media' => $upload['carousel_media']])
-                        : null;
-                    $data = [
-                        'user_id' => $user->id,
-                        'account_id' => $account->id,
-                        'social_type' => 'instagram',
-                        'type' => $mediaType,
-                        'source' => $this->source,
-                        'title' => $content,
-                        'comment' => $comment,
-                        'image' => $image,
-                        'video' => $video,
-                        'metadata' => $metadata,
-                        'status' => 0,
-                        'publish_date' => $publishDateNow,
-                    ];
-                    $post = PostService::create($data);
-                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
-                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
-                    }
-                    $this->logService->logPost('instagram', $mediaType, $post->id, ['action' => 'publish'], 'pending');
-                    PublishInstagramPost::dispatch($post->id, $tokenResponse['access_token']);
-                }
             }
-            $response = array(
-                "success" => true,
-                "message" => "Your posts are being Published!"
-            );
+            $response = [
+                'success' => true,
+                'message' => 'Your posts are being Published!',
+            ];
         } catch (Exception $e) {
-            $response = array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
+            $response = [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
         sleep(1);
+
         return $response;
     }
 
     /**
      * Draft Post - Upload posts as drafts to draft-active platforms
-     * @param Request $request
-     * @return array
+     *
+     * @param  Request  $request
      */
     private function draftPost($request): array
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->findOrFail(Auth::guard('user')->id());
+            $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok')->findOrFail(Auth::guard('user')->id());
             $accounts = $this->resolveAccountsForPost($request, $user);
 
             // Filter accounts for draft-active platforms only
@@ -1716,35 +1375,35 @@ class  ScheduleController extends Controller
 
             if ($draftAccounts->isEmpty()) {
                 return [
-                    "success" => false,
-                    "message" => "No draft-active accounts found. Please connect a TikTok account to use draft functionality."
+                    'success' => false,
+                    'message' => 'No draft-active accounts found. Please connect a TikTok account to use draft functionality.',
                 ];
             }
 
-            $content = $request->get("content") ?? null;
-            $comment = $request->get("comment") ?? null;
-            $file = $request->file("files") ? true : false;
+            $content = $request->get('content') ?? null;
+            $comment = $request->get('comment') ?? null;
+            $file = $request->file('files') ? true : false;
             $image = $video = null;
 
             if ($file) {
                 $is_video = $request->video;
                 if ($is_video) {
-                    $video = saveToS3($request->file("files"));
+                    $video = saveToS3($request->file('files'));
                 } else {
-                    $image = saveImage($request->file("files"));
+                    $image = saveImage($request->file('files'));
                 }
             }
 
             // Count total posts to be created
             $totalPostsToCreate = count($draftAccounts);
-            
+
             // Check scheduled posts limit before creating any posts
             /** @var User $user */
             $limitCheck = $this->checkScheduledPostsLimit($user, $totalPostsToCreate);
-            if (!$limitCheck['allowed']) {
+            if (! $limitCheck['allowed']) {
                 return [
-                    "success" => false,
-                    "message" => $limitCheck['message']
+                    'success' => false,
+                    'message' => $limitCheck['message'],
                 ];
             }
 
@@ -1752,26 +1411,26 @@ class  ScheduleController extends Controller
 
             foreach ($draftAccounts as $account) {
                 // Handle TikTok draft posts
-                if ($account->type == "tiktok" && DraftEnum::isDraftActiveFor("tiktok")) {
+                if ($account->type == 'tiktok' && DraftEnum::isDraftActiveFor('tiktok')) {
                     if ($file) {
                         // Determine post type
-                        $type = !empty($image) ? "photo" : "video";
+                        $type = ! empty($image) ? 'photo' : 'video';
 
                         // Store in db
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "tiktok",
-                            "type" => $type,
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "image" => $image,
-                            "video" => $video,
-                            "url" => $image, // For photo posts
-                            "file_url" => $video, // For video posts
-                            "status" => 0, // Draft status
-                            "publish_date" => $publishDateNow,
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'tiktok',
+                            'type' => $type,
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'image' => $image,
+                            'video' => $video,
+                            'url' => $image, // For photo posts
+                            'file_url' => $video, // For video posts
+                            'status' => 0, // Draft status
+                            'publish_date' => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -1785,55 +1444,57 @@ class  ScheduleController extends Controller
 
                         // Use validateToken for proper error handling
                         $tokenResponse = TikTokService::validateToken($account);
-                        if (!$tokenResponse['success']) {
+                        if (! $tokenResponse['success']) {
                             $this->logService->logDraft('tiktok', $type, $post->id, ['action' => 'draft'], 'failed');
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
-                            );
+
+                            return [
+                                'success' => false,
+                                'message' => $tokenResponse['message'] ?? 'Failed to validate TikTok access token.',
+                            ];
                         }
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
 
                         // Dispatch draft upload
-                        if ($type == "video") {
+                        if ($type == 'video') {
                             $this->tiktokService->uploadVideoDraft($post->id, $postData, $access_token, 'PULL_FROM_URL');
-                        } elseif ($type == "photo") {
+                        } elseif ($type == 'photo') {
                             $this->tiktokService->uploadPhotoDraft($post->id, $postData, $access_token);
                         }
                     } else {
                         // No file provided for draft post
                         return [
-                            "success" => false,
-                            "message" => "Draft posts require a file (image or video)."
+                            'success' => false,
+                            'message' => 'Draft posts require a file (image or video).',
                         ];
                     }
                 }
             }
 
-            $response = array(
-                "success" => true,
-                "message" => "Your posts are being uploaded as drafts!"
-            );
+            $response = [
+                'success' => true,
+                'message' => 'Your posts are being uploaded as drafts!',
+            ];
         } catch (Exception $e) {
-            $response = array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
+            $response = [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
         sleep(1);
+
         return $response;
     }
 
     /**
      * Draft Link - Upload link posts as drafts to draft-active platforms
-     * @param Request $request
-     * @return array
+     *
+     * @param  Request  $request
      */
     private function draftLink($request): array
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->findOrFail(Auth::guard('user')->id());
+            $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok')->findOrFail(Auth::guard('user')->id());
             $accounts = $this->resolveAccountsForPost($request, $user);
 
             // Filter accounts for draft-active platforms only
@@ -1844,31 +1505,31 @@ class  ScheduleController extends Controller
 
             if ($draftAccounts->isEmpty()) {
                 return [
-                    "success" => false,
-                    "message" => "No draft-active accounts found. Please connect a TikTok account to use draft functionality."
+                    'success' => false,
+                    'message' => 'No draft-active accounts found. Please connect a TikTok account to use draft functionality.',
                 ];
             }
 
-            $content = $request->get("content") ?? null;
-            $link = $request->get("link") ?? null;
-            $comment = $request->get("comment") ?? null;
-            $file = $request->file("files") ? true : false;
+            $content = $request->get('content') ?? null;
+            $link = $request->get('link') ?? null;
+            $comment = $request->get('comment') ?? null;
+            $file = $request->file('files') ? true : false;
             $image = null;
 
             if ($file) {
-                $image = saveImage($request->file("files"));
+                $image = saveImage($request->file('files'));
             }
 
             // Count total posts to be created
             $totalPostsToCreate = count($draftAccounts);
-            
+
             // Check scheduled posts limit before creating any posts
             /** @var User $user */
             $limitCheck = $this->checkScheduledPostsLimit($user, $totalPostsToCreate);
-            if (!$limitCheck['allowed']) {
+            if (! $limitCheck['allowed']) {
                 return [
-                    "success" => false,
-                    "message" => $limitCheck['message']
+                    'success' => false,
+                    'message' => $limitCheck['message'],
                 ];
             }
 
@@ -1876,31 +1537,31 @@ class  ScheduleController extends Controller
 
             foreach ($draftAccounts as $account) {
                 // Handle TikTok draft link posts
-                if ($account->type == "tiktok" && DraftEnum::isDraftActiveFor("tiktok")) {
+                if ($account->type == 'tiktok' && DraftEnum::isDraftActiveFor('tiktok')) {
                     if ($file && $image) {
                         // For TikTok, fetch title and thumbnail from link and convert to photo post
                         $linkInfo = $this->fetchTikTokLinkInfo($link);
-                        if (!$linkInfo || empty($linkInfo['image'])) {
+                        if (! $linkInfo || empty($linkInfo['image'])) {
                             return [
-                                "success" => false,
-                                "message" => "Failed to fetch title and thumbnail from the link. Please ensure the link is accessible."
+                                'success' => false,
+                                'message' => 'Failed to fetch title and thumbnail from the link. Please ensure the link is accessible.',
                             ];
                         }
 
                         // Store in db as photo post (not link)
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "tiktok",
-                            "type" => "photo", // Changed from "link" to "photo"
-                            "source" => $this->source,
-                            "title" => !empty($linkInfo['title']) ? $linkInfo['title'] : $content,
-                            "comment" => $comment,
-                            "url" => $linkInfo['image'], // Store thumbnail image URL
-                            "image" => $linkInfo['image'], // Store thumbnail image URL
-                            "link" => $link,
-                            "status" => 0, // Draft status
-                            "publish_date" => $publishDateNow,
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'tiktok',
+                            'type' => 'photo', // Changed from "link" to "photo"
+                            'source' => $this->source,
+                            'title' => ! empty($linkInfo['title']) ? $linkInfo['title'] : $content,
+                            'comment' => $comment,
+                            'url' => $linkInfo['image'], // Store thumbnail image URL
+                            'image' => $linkInfo['image'], // Store thumbnail image URL
+                            'link' => $link,
+                            'status' => 0, // Draft status
+                            'publish_date' => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -1911,11 +1572,11 @@ class  ScheduleController extends Controller
 
                         // Use validateToken for proper error handling
                         $tokenResponse = TikTokService::validateToken($account);
-                        if (!$tokenResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
-                            );
+                        if (! $tokenResponse['success']) {
+                            return [
+                                'success' => false,
+                                'message' => $tokenResponse['message'] ?? 'Failed to validate TikTok access token.',
+                            ];
                         }
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
@@ -1924,25 +1585,26 @@ class  ScheduleController extends Controller
                         $this->tiktokService->uploadPhotoDraft($post->id, $postData, $access_token);
                     } else {
                         return [
-                            "success" => false,
-                            "message" => "Draft link posts require an image file."
+                            'success' => false,
+                            'message' => 'Draft link posts require an image file.',
                         ];
                     }
                 }
                 // Add other draft-active platforms here in the future
             }
 
-            $response = array(
-                "success" => true,
-                "message" => "Your link posts are being uploaded as drafts!"
-            );
+            $response = [
+                'success' => true,
+                'message' => 'Your link posts are being uploaded as drafts!',
+            ];
         } catch (Exception $e) {
-            $response = array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
+            $response = [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
         sleep(1);
+
         return $response;
     }
 
@@ -1950,14 +1612,14 @@ class  ScheduleController extends Controller
     private function queuePost($request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
+            $user = User::with('boards.pinterest', 'pages.facebook')->find(Auth::guard('user')->id());
             $accounts = $this->resolveAccountsForPost($request, $user);
             $queueValidation = $this->validateQueueAccountsHaveTimeslots($accounts);
             if ($queueValidation !== null) {
                 return $queueValidation;
             }
-            $content = $request->get("content") ?? null;
-            $comment = $request->get("comment") ?? null;
+            $content = $request->get('content') ?? null;
+            $comment = $request->get('comment') ?? null;
             $upload = $this->normalizeCreatePostFileUploads($request);
             if ($upload['error'] !== null) {
                 return $upload['error'];
@@ -1966,29 +1628,19 @@ class  ScheduleController extends Controller
             $image = $upload['image'];
             $video = $upload['video'];
 
-            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $upload);
-            if ($igOnlyErr !== null) {
-                return $igOnlyErr;
-            }
-
             $postsToCreate = 0;
             foreach ($accounts as $account) {
                 if (count($account->timeslots) > 0) {
-                    if ($account->type == "facebook") {
+                    if ($account->type == 'facebook') {
                         if ($file) {
-                            $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
+                            $types = $this->facebookMediaTypesFromRequest($request, ! empty($image));
                             $postsToCreate += count($types);
                         } else {
                             $postsToCreate++;
                         }
-                    } elseif ($account->type == "pinterest" && $file) {
+                    } elseif ($account->type == 'pinterest' && $file) {
                         $postsToCreate++;
-                    } elseif ($account->type == "tiktok" && $file) {
-                        $postsToCreate++;
-                    } elseif ($account->type == "instagram" && $file && (
-                        (! empty($upload['instagram_carousel']) && count($upload['carousel_media'] ?? []) >= 2)
-                        || ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))
-                    )) {
+                    } elseif ($account->type == 'tiktok' && $file) {
                         $postsToCreate++;
                     }
                 }
@@ -1998,39 +1650,37 @@ class  ScheduleController extends Controller
             if ($postsToCreate > 0) {
                 /** @var User $user */
                 $limitCheck = $this->checkScheduledPostsLimit($user, $postsToCreate);
-                if (!$limitCheck['allowed']) {
+                if (! $limitCheck['allowed']) {
                     return [
-                        "success" => false,
-                        "message" => $limitCheck['message']
+                        'success' => false,
+                        'message' => $limitCheck['message'],
                     ];
                 }
             }
 
-            $instagramOnlySelection = $this->isInstagramOnlyAccountSelection($accounts);
-
             foreach ($accounts as $account) {
                 if (count($account->timeslots) > 0) {
-                    if ($account->type == "facebook") {
-                        Facebook::where("id", $account->fb_id)->firstOrFail();
-                        $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots, $user);
+                    if ($account->type == 'facebook') {
+                        Facebook::where('id', $account->fb_id)->firstOrFail();
+                        $nextTime = (new Post)->nextScheduleTime(['account_id' => $account->id, 'social_type' => 'facebook', 'source' => 'schedule'], $account->timeslots, $user);
                         if ($file) {
-                            $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
+                            $types = $this->facebookMediaTypesFromRequest($request, ! empty($image));
                         } else {
-                            $types = ["content_only"];
+                            $types = ['content_only'];
                         }
                         foreach ($types as $type) {
                             $data = [
-                                "user_id" => $user->id,
-                                "account_id" => $account->id,
-                                "social_type" => "facebook",
-                                "type" => $type,
-                                "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "image" => $image,
-                                "video" => $video,
-                                "status" => 0,
-                                "publish_date" => $nextTime,
+                                'user_id' => $user->id,
+                                'account_id' => $account->id,
+                                'social_type' => 'facebook',
+                                'type' => $type,
+                                'source' => $this->source,
+                                'title' => $content,
+                                'comment' => $comment,
+                                'image' => $image,
+                                'video' => $video,
+                                'status' => 0,
+                                'publish_date' => $nextTime,
                             ];
                             $post = PostService::create($data);
                             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
@@ -2039,24 +1689,24 @@ class  ScheduleController extends Controller
                             $this->logService->logQueuedPost('facebook', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                         }
                     }
-                    if ($account->type == "pinterest") {
-                        Pinterest::where("id", $account->pin_id)->firstOrFail();
+                    if ($account->type == 'pinterest') {
+                        Pinterest::where('id', $account->pin_id)->firstOrFail();
                         if ($file) {
-                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots, $user);
+                            $nextTime = (new Post)->nextScheduleTime(['account_id' => $account->id, 'social_type' => 'pinterest', 'source' => 'schedule'], $account->timeslots, $user);
                             // store in db
-                            $type = !empty($image) ? "photo" : "video";
+                            $type = ! empty($image) ? 'photo' : 'video';
                             $data = [
-                                "user_id" => $user->id,
-                                "account_id" => $account->id,
-                                "social_type" => "pinterest",
-                                "type" => $type,
-                                "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "image" => $image,
-                                "video" => $video,
-                                "status" => 0,
-                                "publish_date" => $nextTime,
+                                'user_id' => $user->id,
+                                'account_id' => $account->id,
+                                'social_type' => 'pinterest',
+                                'type' => $type,
+                                'source' => $this->source,
+                                'title' => $content,
+                                'comment' => $comment,
+                                'image' => $image,
+                                'video' => $video,
+                                'status' => 0,
+                                'publish_date' => $nextTime,
                             ];
                             $post = PostService::create($data);
                             // Verify account belongs to user before incrementing
@@ -2067,24 +1717,24 @@ class  ScheduleController extends Controller
                             $this->logService->logQueuedPost('pinterest', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                         }
                     }
-                    if ($account->type == "tiktok") {
-                        Tiktok::where("id", $account->id)->firstOrFail();
+                    if ($account->type == 'tiktok') {
+                        Tiktok::where('id', $account->id)->firstOrFail();
                         if ($file) {
-                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots, $user);
+                            $nextTime = (new Post)->nextScheduleTime(['account_id' => $account->id, 'social_type' => 'tiktok', 'source' => 'schedule'], $account->timeslots, $user);
                             // store in db
-                            $type = !empty($image) ? "photo" : "video";
+                            $type = ! empty($image) ? 'photo' : 'video';
                             $data = [
-                                "user_id" => $user->id,
-                                "account_id" => $account->id,
-                                "social_type" => "tiktok",
-                                "type" => $type,
-                                "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "image" => $image,
-                                "video" => $video,
-                                "status" => 0,
-                                "publish_date" => $nextTime,
+                                'user_id' => $user->id,
+                                'account_id' => $account->id,
+                                'social_type' => 'tiktok',
+                                'type' => $type,
+                                'source' => $this->source,
+                                'title' => $content,
+                                'comment' => $comment,
+                                'image' => $image,
+                                'video' => $video,
+                                'status' => 0,
+                                'publish_date' => $nextTime,
                             ];
                             $post = PostService::create($data);
                             // Verify account belongs to user before incrementing
@@ -2095,65 +1745,30 @@ class  ScheduleController extends Controller
                             $this->logService->logQueuedPost('tiktok', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                         }
                     }
-                    if ($account->type == "instagram" && $file) {
-                        $igEligible = ! empty($upload['instagram_carousel'])
-                            ? (count($upload['carousel_media'] ?? []) >= 2)
-                            : ((($image && ! $video) || (! $image && $video)));
-                        if (! $igEligible) {
-                            continue;
-                        }
-                        InstagramAccount::where('id', $account->id)->firstOrFail();
-                        $nextTime = (new Post)->nextScheduleTime(
-                            ['account_id' => $account->id, 'social_type' => 'instagram', 'source' => 'schedule'],
-                            $account->timeslots,
-                            $user
-                        );
-                        $mediaType = $this->instagramTypeFromUpload($request, $upload, $instagramOnlySelection);
-                        $metadata = ! empty($upload['instagram_carousel'])
-                            ? json_encode(['carousel_media' => $upload['carousel_media']])
-                            : null;
-                        $data = [
-                            'user_id' => $user->id,
-                            'account_id' => $account->id,
-                            'social_type' => 'instagram',
-                            'type' => $mediaType,
-                            'source' => $this->source,
-                            'title' => $content,
-                            'comment' => $comment,
-                            'image' => $image,
-                            'video' => $video,
-                            'metadata' => $metadata,
-                            'status' => 0,
-                            'publish_date' => $nextTime,
-                        ];
-                        $post = PostService::create($data);
-                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
-                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
-                        }
-                        $this->logService->logQueuedPost('instagram', $post->id, ['type' => $mediaType, 'publish_date' => $nextTime]);
-                    }
-                    $response = array(
-                        "success" => true,
-                        "message" => "Your posts are queued for Later!"
-                    );
+                    $response = [
+                        'success' => true,
+                        'message' => 'Your posts are queued for Later!',
+                    ];
                 }
             }
         } catch (Exception $e) {
-            $response = array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
+            $response = [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
+
         return $response;
     }
+
     // schedule post
     private function schedulePost($request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
+            $user = User::with('boards.pinterest', 'pages.facebook')->find(Auth::guard('user')->id());
             $accounts = $this->resolveAccountsForPost($request, $user);
-            $content = $request->get("content") ?? null;
-            $comment = $request->get("comment") ?? null;
+            $content = $request->get('content') ?? null;
+            $comment = $request->get('comment') ?? null;
             $schedule_date = $request->schedule_date;
             $schedule_time = $request->schedule_time;
             $upload = $this->normalizeCreatePostFileUploads($request);
@@ -2164,29 +1779,19 @@ class  ScheduleController extends Controller
             $image = $upload['image'];
             $video = $upload['video'];
 
-            $igOnlyErr = $this->validateInstagramMediaSelection($accounts, $upload);
-            if ($igOnlyErr !== null) {
-                return $igOnlyErr;
-            }
-
             // Count how many posts will be created (one per selected format per Facebook account)
             $postsToCreate = 0;
             foreach ($accounts as $account) {
-                if ($account->type == "facebook") {
+                if ($account->type == 'facebook') {
                     if ($file) {
-                        $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
+                        $types = $this->facebookMediaTypesFromRequest($request, ! empty($image));
                         $postsToCreate += count($types);
                     } else {
                         $postsToCreate++;
                     }
-                } elseif ($account->type == "pinterest" && $file) {
+                } elseif ($account->type == 'pinterest' && $file) {
                     $postsToCreate++;
-                } elseif ($account->type == "tiktok" && $file) {
-                    $postsToCreate++;
-                } elseif ($account->type == "instagram" && $file && (
-                    (! empty($upload['instagram_carousel']) && count($upload['carousel_media'] ?? []) >= 2)
-                    || ((! empty($image) && empty($video)) || (empty($image) && ! empty($video)))
-                )) {
+                } elseif ($account->type == 'tiktok' && $file) {
                     $postsToCreate++;
                 }
             }
@@ -2195,39 +1800,37 @@ class  ScheduleController extends Controller
             if ($postsToCreate > 0) {
                 /** @var User $user */
                 $limitCheck = $this->checkScheduledPostsLimit($user, $postsToCreate);
-                if (!$limitCheck['allowed']) {
+                if (! $limitCheck['allowed']) {
                     return [
-                        "success" => false,
-                        "message" => $limitCheck['message']
+                        'success' => false,
+                        'message' => $limitCheck['message'],
                     ];
                 }
             }
 
-            $instagramOnlySelection = $this->isInstagramOnlyAccountSelection($accounts);
-
             foreach ($accounts as $account) {
-                $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
-                if ($account->type == "facebook") {
-                    Facebook::where("id", $account->fb_id)->firstOrFail();
+                $scheduleDateTime = date('Y-m-d', strtotime($schedule_date)).' '.date('H:i', strtotime($schedule_time));
+                if ($account->type == 'facebook') {
+                    Facebook::where('id', $account->fb_id)->firstOrFail();
                     if ($file) {
-                        $types = $this->facebookMediaTypesFromRequest($request, !empty($image));
+                        $types = $this->facebookMediaTypesFromRequest($request, ! empty($image));
                     } else {
-                        $types = ["content_only"];
+                        $types = ['content_only'];
                     }
                     foreach ($types as $type) {
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "facebook",
-                            "type" => $type,
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "image" => $image,
-                            "video" => $video,
-                            "status" => 0,
-                            "publish_date" => $scheduleDateTime,
-                            "scheduled" => 1
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'facebook',
+                            'type' => $type,
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'image' => $image,
+                            'video' => $video,
+                            'status' => 0,
+                            'publish_date' => $scheduleDateTime,
+                            'scheduled' => 1,
                         ];
                         $post = PostService::create($data);
                         if ($this->verifyPostAccountBelongsToUser($post, $user)) {
@@ -2236,24 +1839,24 @@ class  ScheduleController extends Controller
                         $this->logService->logScheduledPost('facebook', $post->id, $scheduleDateTime, ['type' => $type]);
                     }
                 }
-                if ($account->type == "pinterest") {
-                    Pinterest::where("id", $account->pin_id)->firstOrFail();
+                if ($account->type == 'pinterest') {
+                    Pinterest::where('id', $account->pin_id)->firstOrFail();
                     if ($file) {
                         // store in db
-                        $type = !empty($image) ? "photo" : "video";
+                        $type = ! empty($image) ? 'photo' : 'video';
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "pinterest",
-                            "type" => $type,
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "image" => $image,
-                            "video" => $video,
-                            "status" => 0,
-                            "publish_date" => $scheduleDateTime,
-                            "scheduled" => 1
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'pinterest',
+                            'type' => $type,
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'image' => $image,
+                            'video' => $video,
+                            'status' => 0,
+                            'publish_date' => $scheduleDateTime,
+                            'scheduled' => 1,
                         ];
                         $post = PostService::create($data);
                         // Verify account belongs to user before incrementing
@@ -2264,24 +1867,24 @@ class  ScheduleController extends Controller
                         $this->logService->logScheduledPost('pinterest', $post->id, $scheduleDateTime, ['type' => $type]);
                     }
                 }
-                if ($account->type == "tiktok") {
-                    Tiktok::where("id", $account->id)->firstOrFail();
+                if ($account->type == 'tiktok') {
+                    Tiktok::where('id', $account->id)->firstOrFail();
                     if ($file) {
                         // store in db
-                        $type = !empty($image) ? "photo" : "video";
+                        $type = ! empty($image) ? 'photo' : 'video';
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "tiktok",
-                            "type" => $type,
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "image" => $image,
-                            "video" => $video,
-                            "status" => 0,
-                            "publish_date" => $scheduleDateTime,
-                            "scheduled" => 1
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'tiktok',
+                            'type' => $type,
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'image' => $image,
+                            'video' => $video,
+                            'status' => 0,
+                            'publish_date' => $scheduleDateTime,
+                            'scheduled' => 1,
                         ];
                         $post = PostService::create($data);
                         // Verify account belongs to user before incrementing
@@ -2292,93 +1895,62 @@ class  ScheduleController extends Controller
                         $this->logService->logScheduledPost('tiktok', $post->id, $scheduleDateTime, ['type' => $type]);
                     }
                 }
-                if ($account->type == "instagram" && $file) {
-                    $igEligible = ! empty($upload['instagram_carousel'])
-                        ? (count($upload['carousel_media'] ?? []) >= 2)
-                        : ((($image && ! $video) || (! $image && $video)));
-                    if (! $igEligible) {
-                        continue;
-                    }
-                    InstagramAccount::where('id', $account->id)->firstOrFail();
-                    $mediaType = $this->instagramTypeFromUpload($request, $upload, $instagramOnlySelection);
-                    $metadata = ! empty($upload['instagram_carousel'])
-                        ? json_encode(['carousel_media' => $upload['carousel_media']])
-                        : null;
-                    $data = [
-                        'user_id' => $user->id,
-                        'account_id' => $account->id,
-                        'social_type' => 'instagram',
-                        'type' => $mediaType,
-                        'source' => $this->source,
-                        'title' => $content,
-                        'comment' => $comment,
-                        'image' => $image,
-                        'video' => $video,
-                        'metadata' => $metadata,
-                        'status' => 0,
-                        'publish_date' => $scheduleDateTime,
-                        'scheduled' => 1,
-                    ];
-                    $post = PostService::create($data);
-                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
-                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
-                    }
-                    $this->logService->logScheduledPost('instagram', $post->id, $scheduleDateTime, ['type' => $mediaType]);
-                }
-                $response = array(
-                    "success" => true,
-                    "message" => "Your posts are scheduled for Later!"
-                );
+                $response = [
+                    'success' => true,
+                    'message' => 'Your posts are scheduled for Later!',
+                ];
             }
         } catch (Exception $e) {
-            $response = array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
+            $response = [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
+
         return $response;
     }
+
     // publish link post
     private function publishLink($request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
+            $user = User::with('boards.pinterest', 'pages.facebook')->find(Auth::guard('user')->id());
             $accounts = $this->resolveAccountsForPost($request, $user);
-            $content = $request->get("content") ?? null;
-            $comment = $request->get("comment") ?? null;
-            $url = $request->get("url") ?? null;
-            $image = $request->get("image") ?? null;
-            if (!empty($url)) {
+            $content = $request->get('content') ?? null;
+            $comment = $request->get('comment') ?? null;
+            $url = $request->get('url') ?? null;
+            $image = $request->get('image') ?? null;
+            if (! empty($url)) {
                 // Count total posts to be created (link allowed without image for Facebook/Instagram per Data Policy)
                 $totalPostsToCreate = count($accounts);
-                
+
                 // Check scheduled posts limit before creating any posts
                 /** @var User $user */
                 $limitCheck = $this->checkScheduledPostsLimit($user, $totalPostsToCreate);
-                if (!$limitCheck['allowed']) {
+                if (! $limitCheck['allowed']) {
                     return [
-                        "success" => false,
-                        "message" => $limitCheck['message']
+                        'success' => false,
+                        'message' => $limitCheck['message'],
                     ];
                 }
 
                 $publishDateNow = Carbon::now(TimezoneService::getUserTimezone($user))->format('Y-m-d H:i');
 
                 foreach ($accounts as $account) {
-                    if ($account->type == "facebook") {
+                    if ($account->type == 'facebook') {
                         // store in db (image may be empty for Facebook/Instagram links)
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "facebook",
-                            "type" => "link",
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "url" => $url,
-                            "image" => $image,
-                            "status" => 0,
-                            "publish_date" => $publishDateNow,
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'facebook',
+                            'type' => 'link',
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'url' => $url,
+                            'image' => $image,
+                            'status' => 0,
+                            'publish_date' => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -2389,30 +1961,30 @@ class  ScheduleController extends Controller
 
                         // Use validateToken for proper error handling
                         $tokenResponse = FacebookService::validateToken($account);
-                        if (!$tokenResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
-                            );
+                        if (! $tokenResponse['success']) {
+                            return [
+                                'success' => false,
+                                'message' => $tokenResponse['message'] ?? 'Failed to validate Facebook access token.',
+                            ];
                         }
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
-                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, "link", $post->comment);
+                        PublishFacebookPost::dispatch($post->id, $postData, $access_token, 'link', $post->comment);
                     }
-                    if ($account->type == "pinterest") {
+                    if ($account->type == 'pinterest') {
                         // store in db
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "pinterest",
-                            "type" => "link",
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "url" => $url,
-                            "image" => $image,
-                            "status" => 0,
-                            "publish_date" => $publishDateNow,
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'pinterest',
+                            'type' => 'link',
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'url' => $url,
+                            'image' => $image,
+                            'status' => 0,
+                            'publish_date' => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -2423,38 +1995,38 @@ class  ScheduleController extends Controller
 
                         // Use validateToken for proper error handling
                         $tokenResponse = PinterestService::validateToken($account);
-                        if (!$tokenResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate Pinterest access token."
-                            );
+                        if (! $tokenResponse['success']) {
+                            return [
+                                'success' => false,
+                                'message' => $tokenResponse['message'] ?? 'Failed to validate Pinterest access token.',
+                            ];
                         }
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
-                        PublishPinterestPost::dispatch($post->id, $postData, $access_token, "link");
+                        PublishPinterestPost::dispatch($post->id, $postData, $access_token, 'link');
                     }
-                    if ($account->type == "tiktok" && !empty($image)) {
+                    if ($account->type == 'tiktok' && ! empty($image)) {
                         $localImage = saveImageFromUrl($image, 'uploads');
                         if (empty($content) || empty($localImage)) {
-                            return array(
-                                "success" => false,
-                                "message" => "Content or image is required."
-                            );
+                            return [
+                                'success' => false,
+                                'message' => 'Content or image is required.',
+                            ];
                         }
 
                         // store in db as photo post (not link)
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "tiktok",
-                            "type" => "photo", // Changed from "link" to "photo"
-                            "source" => $this->source,
-                            "title" => $url, // Use content from modal textarea (title)
-                            "comment" => $comment,
-                            "url" => $url,
-                            "image" => $localImage, // Store thumbnail image URL
-                            "status" => 0,
-                            "publish_date" => $publishDateNow,
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'tiktok',
+                            'type' => 'photo', // Changed from "link" to "photo"
+                            'source' => $this->source,
+                            'title' => $url, // Use content from modal textarea (title)
+                            'comment' => $comment,
+                            'url' => $url,
+                            'image' => $localImage, // Store thumbnail image URL
+                            'status' => 0,
+                            'publish_date' => $publishDateNow,
                         ];
                         $post = PostService::create($data);
 
@@ -2465,47 +2037,49 @@ class  ScheduleController extends Controller
 
                         // Use validateToken for proper error handling
                         $tokenResponse = TikTokService::validateToken($account);
-                        if (!$tokenResponse['success']) {
-                            return array(
-                                "success" => false,
-                                "message" => $tokenResponse["message"] ?? "Failed to validate TikTok access token."
-                            );
+                        if (! $tokenResponse['success']) {
+                            return [
+                                'success' => false,
+                                'message' => $tokenResponse['message'] ?? 'Failed to validate TikTok access token.',
+                            ];
                         }
                         $access_token = $tokenResponse['access_token'];
                         $postData = PostService::postTypeBody($post);
-                        PublishTikTokPost::dispatch($post->id, $postData, $access_token, "photo"); // Changed from "link" to "photo"
+                        PublishTikTokPost::dispatch($post->id, $postData, $access_token, 'photo'); // Changed from "link" to "photo"
                     }
                 }
-                $response = array(
-                    "success" => true,
-                    "message" => "Your posts are being Published!"
-                );
+                $response = [
+                    'success' => true,
+                    'message' => 'Your posts are being Published!',
+                ];
             } else {
-                $response = array(
-                    "success" => false,
-                    "message" => "Invalid link provided!"
-                );
+                $response = [
+                    'success' => false,
+                    'message' => 'Invalid link provided!',
+                ];
             }
         } catch (Exception $e) {
-            $response = array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
+            $response = [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
         sleep(1);
+
         return $response;
     }
+
     // publish link post
     private function queueLink($request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
+            $user = User::with('boards.pinterest', 'pages.facebook')->find(Auth::guard('user')->id());
             $accounts = $this->resolveAccountsForPost($request, $user);
-            $content = $request->get("content") ?? null;
-            $comment = $request->get("comment") ?? null;
-            $url = $request->get("url") ?? null;
-            $image = $request->get("image") ?? null;
-            if (!empty($url)) {
+            $content = $request->get('content') ?? null;
+            $comment = $request->get('comment') ?? null;
+            $url = $request->get('url') ?? null;
+            $image = $request->get('image') ?? null;
+            if (! empty($url)) {
                 $queueValidation = $this->validateQueueAccountsHaveTimeslots($accounts);
                 if ($queueValidation !== null) {
                     return $queueValidation;
@@ -2523,32 +2097,32 @@ class  ScheduleController extends Controller
                 if ($postsToCreate > 0) {
                     /** @var User $user */
                     $limitCheck = $this->checkScheduledPostsLimit($user, $postsToCreate);
-                    if (!$limitCheck['allowed']) {
+                    if (! $limitCheck['allowed']) {
                         return [
-                            "success" => false,
-                            "message" => $limitCheck['message']
+                            'success' => false,
+                            'message' => $limitCheck['message'],
                         ];
                     }
                 }
 
                 foreach ($accounts as $account) {
                     if (count($account->timeslots) > 0) {
-                        if ($account->type == "facebook") {
-                            Facebook::where("id", $account->fb_id)->firstOrFail();
-                            $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "facebook", "source" => "schedule"], $account->timeslots, $user);
+                        if ($account->type == 'facebook') {
+                            Facebook::where('id', $account->fb_id)->firstOrFail();
+                            $nextTime = (new Post)->nextScheduleTime(['account_id' => $account->id, 'social_type' => 'facebook', 'source' => 'schedule'], $account->timeslots, $user);
                             // store in db (image may be empty for Facebook/Instagram links)
                             $data = [
-                                "user_id" => $user->id,
-                                "account_id" => $account->id,
-                                "social_type" => "facebook",
-                                "type" => "link",
-                                "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "url" => $url,
-                                "image" => $image,
-                                "status" => 0,
-                                "publish_date" => $nextTime
+                                'user_id' => $user->id,
+                                'account_id' => $account->id,
+                                'social_type' => 'facebook',
+                                'type' => 'link',
+                                'source' => $this->source,
+                                'title' => $content,
+                                'comment' => $comment,
+                                'url' => $url,
+                                'image' => $image,
+                                'status' => 0,
+                                'publish_date' => $nextTime,
                             ];
                             $post = PostService::create($data);
 
@@ -2557,23 +2131,23 @@ class  ScheduleController extends Controller
                                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                             }
                         }
-                        if ($account->type == "pinterest") {
-                            $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
+                        if ($account->type == 'pinterest') {
+                            $pinterest = Pinterest::where('id', $account->pin_id)->firstOrFail();
                             if ($pinterest) {
-                                $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "pinterest", "source" => "schedule"], $account->timeslots, $user);
+                                $nextTime = (new Post)->nextScheduleTime(['account_id' => $account->id, 'social_type' => 'pinterest', 'source' => 'schedule'], $account->timeslots, $user);
                                 // store in db
                                 $data = [
-                                    "user_id" => $user->id,
-                                    "account_id" => $account->id,
-                                    "social_type" => "pinterest",
-                                    "type" => "link",
-                                    "source" => $this->source,
-                                    "title" => $content,
-                                    "comment" => $comment,
-                                    "url" => $url,
-                                    "image" => $image,
-                                    "status" => 0,
-                                    "publish_date" => $nextTime,
+                                    'user_id' => $user->id,
+                                    'account_id' => $account->id,
+                                    'social_type' => 'pinterest',
+                                    'type' => 'link',
+                                    'source' => $this->source,
+                                    'title' => $content,
+                                    'comment' => $comment,
+                                    'url' => $url,
+                                    'image' => $image,
+                                    'status' => 0,
+                                    'publish_date' => $nextTime,
                                 ];
                                 $post = PostService::create($data);
 
@@ -2583,32 +2157,32 @@ class  ScheduleController extends Controller
                                 }
                             }
                         }
-                        if ($account->type == "tiktok" && !empty($image)) {
-                            $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
+                        if ($account->type == 'tiktok' && ! empty($image)) {
+                            $tiktok = Tiktok::where('id', $account->id)->firstOrFail();
                             if ($tiktok) {
                                 $localImage = saveImageFromUrl($image, 'uploads');
                                 if (empty($content) || empty($localImage)) {
-                                    return array(
-                                        "success" => false,
-                                        "message" => "Content or image is required."
-                                    );
+                                    return [
+                                        'success' => false,
+                                        'message' => 'Content or image is required.',
+                                    ];
                                 }
 
-                                $nextTime = (new Post)->nextScheduleTime(["account_id" => $account->id, "social_type" => "tiktok", "source" => "schedule"], $account->timeslots, $user);
+                                $nextTime = (new Post)->nextScheduleTime(['account_id' => $account->id, 'social_type' => 'tiktok', 'source' => 'schedule'], $account->timeslots, $user);
 
                                 // store in db as photo post (not link)
                                 $data = [
-                                    "user_id" => $user->id,
-                                    "account_id" => $account->id,
-                                    "social_type" => "tiktok",
-                                    "type" => "photo", // Changed from "link" to "photo"
-                                    "source" => $this->source,
-                                    "title" => $url, // Use content from modal textarea (title)
-                                    "comment" => $comment,
-                                    "url" => $url,
-                                    "image" => $localImage,
-                                    "status" => 0,
-                                    "publish_date" => $nextTime,
+                                    'user_id' => $user->id,
+                                    'account_id' => $account->id,
+                                    'social_type' => 'tiktok',
+                                    'type' => 'photo', // Changed from "link" to "photo"
+                                    'source' => $this->source,
+                                    'title' => $url, // Use content from modal textarea (title)
+                                    'comment' => $comment,
+                                    'url' => $url,
+                                    'image' => $localImage,
+                                    'status' => 0,
+                                    'publish_date' => $nextTime,
                                 ];
                                 $post = PostService::create($data);
 
@@ -2620,68 +2194,70 @@ class  ScheduleController extends Controller
                         }
                     }
                 }
-                $response = array(
-                    "success" => true,
-                    "message" => "Your posts are queued for Later!"
-                );
+                $response = [
+                    'success' => true,
+                    'message' => 'Your posts are queued for Later!',
+                ];
             } else {
-                $response = array(
-                    "success" => false,
-                    "message" => "Invalid link provided!"
-                );
+                $response = [
+                    'success' => false,
+                    'message' => 'Invalid link provided!',
+                ];
             }
         } catch (Exception $e) {
-            $response = array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
+            $response = [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
         sleep(1);
+
         return $response;
     }
+
     // publish link post
     private function scheduleLink($request)
     {
         try {
-            $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
+            $user = User::with('boards.pinterest', 'pages.facebook')->find(Auth::guard('user')->id());
             $accounts = $this->resolveAccountsForPost($request, $user);
-            $content = $request->get("content") ?? null;
-            $comment = $request->get("comment") ?? null;
+            $content = $request->get('content') ?? null;
+            $comment = $request->get('comment') ?? null;
             $schedule_date = $request->schedule_date;
             $schedule_time = $request->schedule_time;
-            $url = $request->get("url") ?? null;
-            $image = $request->get("image") ?? null;
-            if (!empty($url)) {
+            $url = $request->get('url') ?? null;
+            $image = $request->get('image') ?? null;
+            if (! empty($url)) {
                 // Count total posts to be created (link allowed without image for Facebook/Instagram)
                 $totalPostsToCreate = count($accounts);
-                
+
                 // Check scheduled posts limit before creating any posts
                 /** @var User $user */
                 $limitCheck = $this->checkScheduledPostsLimit($user, $totalPostsToCreate);
-                if (!$limitCheck['allowed']) {
+                if (! $limitCheck['allowed']) {
                     return [
-                        "success" => false,
-                        "message" => $limitCheck['message']
+                        'success' => false,
+                        'message' => $limitCheck['message'],
                     ];
                 }
 
                 foreach ($accounts as $account) {
-                    $scheduleDateTime = date("Y-m-d", strtotime($schedule_date)) . " " . date("H:i", strtotime($schedule_time));
-                    if ($account->type == "facebook") {
-                        Facebook::where("id", $account->fb_id)->firstOrFail();
+                    $scheduleDateTime = date('Y-m-d', strtotime($schedule_date)).' '.date('H:i', strtotime($schedule_time));
+                    if ($account->type == 'facebook') {
+                        Facebook::where('id', $account->fb_id)->firstOrFail();
                         // store in db (image may be empty for Facebook/Instagram links)
                         $data = [
-                            "user_id" => $user->id,
-                            "account_id" => $account->id,
-                            "social_type" => "facebook",
-                            "type" => "link",
-                            "source" => $this->source,
-                            "title" => $content,
-                            "comment" => $comment,
-                            "url" => $url,
-                            "image" => $image,
-                            "status" => 0,
-                            "publish_date" => $scheduleDateTime,
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'facebook',
+                            'type' => 'link',
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'url' => $url,
+                            'image' => $image,
+                            'status' => 0,
+                            'publish_date' => $scheduleDateTime,
                         ];
                         $post = PostService::create($data);
 
@@ -2690,22 +2266,22 @@ class  ScheduleController extends Controller
                             $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                         }
                     }
-                    if ($account->type == "pinterest") {
-                        $pinterest = Pinterest::where("id", $account->pin_id)->firstOrFail();
+                    if ($account->type == 'pinterest') {
+                        $pinterest = Pinterest::where('id', $account->pin_id)->firstOrFail();
                         if ($pinterest) {
                             // store in db
                             $data = [
-                                "user_id" => $user->id,
-                                "account_id" => $account->id,
-                                "social_type" => "pinterest",
-                                "type" => "link",
-                                "source" => $this->source,
-                                "title" => $content,
-                                "comment" => $comment,
-                                "url" => $url,
-                                "image" => $image,
-                                "status" => 0,
-                                "publish_date" => $scheduleDateTime,
+                                'user_id' => $user->id,
+                                'account_id' => $account->id,
+                                'social_type' => 'pinterest',
+                                'type' => 'link',
+                                'source' => $this->source,
+                                'title' => $content,
+                                'comment' => $comment,
+                                'url' => $url,
+                                'image' => $image,
+                                'status' => 0,
+                                'publish_date' => $scheduleDateTime,
                             ];
                             $post = PostService::create($data);
 
@@ -2715,30 +2291,30 @@ class  ScheduleController extends Controller
                             }
                         }
                     }
-                    if ($account->type == "tiktok" && !empty($image)) {
-                        $tiktok = Tiktok::where("id", $account->id)->firstOrFail();
+                    if ($account->type == 'tiktok' && ! empty($image)) {
+                        $tiktok = Tiktok::where('id', $account->id)->firstOrFail();
                         if ($tiktok) {
                             $localImage = saveImageFromUrl($image, 'uploads');
                             if (empty($content) || empty($localImage)) {
-                                return array(
-                                    "success" => false,
-                                    "message" => "Content or image is required."
-                                );
+                                return [
+                                    'success' => false,
+                                    'message' => 'Content or image is required.',
+                                ];
                             }
 
                             // store in db as photo post (not link)
                             $data = [
-                                "user_id" => $user->id,
-                                "account_id" => $account->id,
-                                "social_type" => "tiktok",
-                                "type" => "photo", // Changed from "link" to "photo"
-                                "source" => $this->source,
-                                "title" => $url, // Use content from modal textarea (title)
-                                "comment" => $comment,
-                                "url" => $url,
-                                "image" => $localImage,
-                                "status" => 0,
-                                "publish_date" => $scheduleDateTime,
+                                'user_id' => $user->id,
+                                'account_id' => $account->id,
+                                'social_type' => 'tiktok',
+                                'type' => 'photo', // Changed from "link" to "photo"
+                                'source' => $this->source,
+                                'title' => $url, // Use content from modal textarea (title)
+                                'comment' => $comment,
+                                'url' => $url,
+                                'image' => $localImage,
+                                'status' => 0,
+                                'publish_date' => $scheduleDateTime,
                             ];
                             $post = PostService::create($data);
 
@@ -2749,47 +2325,52 @@ class  ScheduleController extends Controller
                         }
                     }
                 }
-                $response = array(
-                    "success" => true,
-                    "message" => "Your posts are scheduled for Later!"
-                );
+                $response = [
+                    'success' => true,
+                    'message' => 'Your posts are scheduled for Later!',
+                ];
             } else {
-                $response = array(
-                    "success" => false,
-                    "message" => "Invalid link provided!"
-                );
+                $response = [
+                    'success' => false,
+                    'message' => 'Invalid link provided!',
+                ];
             }
         } catch (Exception $e) {
-            $response = array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
+            $response = [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
         sleep(1);
+
         return $response;
     }
+
     public function getSetting(Request $request)
     {
-        $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
+        $user = User::with('boards.pinterest', 'pages.facebook')->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
-        $view = view("user.schedule.ajax.settings", compact("accounts"));
+        $view = view('user.schedule.ajax.settings', compact('accounts'));
         $response = [
-            "success" => true,
-            "data" => $view->render()
+            'success' => true,
+            'data' => $view->render(),
         ];
+
         return response()->json($response);
     }
 
     public function getQueueSettings(Request $request)
     {
-        $user = User::with("boards.pinterest", "pages.facebook", "tiktok")->find(Auth::guard('user')->id());
+        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok')->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
-        $view = view("user.schedule.partials.queue-settings-list", compact("accounts"));
+        $view = view('user.schedule.partials.queue-settings-list', compact('accounts'));
+
         return response()->json([
-            "success" => true,
-            "data" => $view->render()
+            'success' => true,
+            'data' => $view->render(),
         ]);
     }
+
     public function timeslotSetting(Request $request)
     {
         $user = Auth::guard('user')->user();
@@ -2798,54 +2379,48 @@ class  ScheduleController extends Controller
             $id = $request->id;
             $timeslots = $request->timeslots;
             $account = null;
-            if ($type == "facebook") {
-                $account = Page::with("timeslots")->where("id", $id)->firstOrFail();
+            if ($type == 'facebook') {
+                $account = Page::with('timeslots')->where('id', $id)->firstOrFail();
                 $account_id = $account->id;
-            } else if ($type == "pinterest") {
-                $account = Board::with("timeslots")->where("id", $id)->firstOrFail();
+            } elseif ($type == 'pinterest') {
+                $account = Board::with('timeslots')->where('id', $id)->firstOrFail();
                 $account_id = $account->id;
-            } else if ($type == "tiktok") {
-                $account = Tiktok::with("timeslots")->where("id", $id)->firstOrFail();
-                $account_id = $account->id;
-            } else if ($type == "instagram") {
-                $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
-                $account = InstagramAccount::with(['scheduleTimeslots', 'linkedPage.timeslots'])
-                    ->where('id', $id)
-                    ->where('user_id', $ownerId)
-                    ->firstOrFail();
+            } elseif ($type == 'tiktok') {
+                $account = Tiktok::with('timeslots')->where('id', $id)->firstOrFail();
                 $account_id = $account->id;
             }
             if ($account) {
                 // remove previous
-                Timeslot::where("account_id", $account_id)->where("account_type", $type)->where("type", "schedule")->delete();
+                Timeslot::where('account_id', $account_id)->where('account_type', $type)->where('type', 'schedule')->delete();
                 // create new timeslots
                 if (is_array($timeslots)) {
                     foreach ($timeslots as $timeslot) {
                         Timeslot::create([
-                            "user_id" => $user->id,
-                            "account_id" => $account_id,
-                            "account_type" => $type,
-                            "timeslot" => date("H:i", strtotime($timeslot)),
-                            "type" => "schedule",
+                            'user_id' => $user->id,
+                            'account_id' => $account_id,
+                            'account_type' => $type,
+                            'timeslot' => date('H:i', strtotime($timeslot)),
+                            'type' => 'schedule',
                         ]);
                     }
                 }
-                $response = array(
-                    "success" => true,
-                    "message" => "Timeslot updated Successfully!"
-                );
+                $response = [
+                    'success' => true,
+                    'message' => 'Timeslot updated Successfully!',
+                ];
             } else {
-                $response = array(
-                    "success" => false,
-                    "message" => "Something went Wrong!"
-                );
+                $response = [
+                    'success' => false,
+                    'message' => 'Something went Wrong!',
+                ];
             }
         } catch (Exception $e) {
-            $response = array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
+            $response = [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
+
         return response()->json($response);
     }
 
@@ -2907,10 +2482,10 @@ class  ScheduleController extends Controller
         $user = Auth::guard('user')->user();
         $timeslotData = $request->timeslot_data ?? [];
 
-        if (empty($timeslotData) || !is_array($timeslotData)) {
+        if (empty($timeslotData) || ! is_array($timeslotData)) {
             return response()->json([
-                "success" => false,
-                "message" => "No timeslot data provided!"
+                'success' => false,
+                'message' => 'No timeslot data provided!',
             ]);
         }
 
@@ -2920,31 +2495,25 @@ class  ScheduleController extends Controller
                 $id = $item['id'] ?? null;
                 $timeslots = $item['timeslots'] ?? [];
 
-                if (!$type || !$id || empty($timeslots)) {
+                if (! $type || ! $id || empty($timeslots)) {
                     continue;
                 }
 
                 $account = null;
                 $accountId = null;
 
-                if ($type == "facebook") {
-                    $account = Page::with("timeslots")->where("id", $id)->first();
+                if ($type == 'facebook') {
+                    $account = Page::with('timeslots')->where('id', $id)->first();
                     if ($account) {
                         $accountId = $account->id;
                     }
-                } else if ($type == "pinterest") {
-                    $account = Board::with("timeslots")->where("id", $id)->first();
+                } elseif ($type == 'pinterest') {
+                    $account = Board::with('timeslots')->where('id', $id)->first();
                     if ($account) {
                         $accountId = $account->id;
                     }
-                } else if ($type == "tiktok") {
-                    $account = Tiktok::with("timeslots")->where("id", $id)->first();
-                    if ($account) {
-                        $accountId = $account->id;
-                    }
-                } else if ($type == "instagram") {
-                    $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
-                    $account = InstagramAccount::with('scheduleTimeslots')->where('id', $id)->where('user_id', $ownerId)->first();
+                } elseif ($type == 'tiktok') {
+                    $account = Tiktok::with('timeslots')->where('id', $id)->first();
                     if ($account) {
                         $accountId = $account->id;
                     }
@@ -2952,19 +2521,19 @@ class  ScheduleController extends Controller
 
                 if ($account && $accountId) {
                     // Remove previous timeslots
-                    Timeslot::where("account_id", $accountId)
-                        ->where("account_type", $type)
-                        ->where("type", "schedule")
+                    Timeslot::where('account_id', $accountId)
+                        ->where('account_type', $type)
+                        ->where('type', 'schedule')
                         ->delete();
 
                     // Create new timeslots
                     foreach ($timeslots as $timeslot) {
                         Timeslot::create([
-                            "user_id" => $user->id,
-                            "account_id" => $accountId,
-                            "account_type" => $type,
-                            "timeslot" => date("H:i", strtotime($timeslot)),
-                            "type" => "schedule",
+                            'user_id' => $user->id,
+                            'account_id' => $accountId,
+                            'account_type' => $type,
+                            'timeslot' => date('H:i', strtotime($timeslot)),
+                            'type' => 'schedule',
                         ]);
                     }
 
@@ -2974,11 +2543,12 @@ class  ScheduleController extends Controller
                         $allTimeslots[] = $timeslot;
                     }
 
-                    if (!empty($allTimeslots)) {
+                    if (! empty($allTimeslots)) {
                         // Sort timeslots chronologically
                         usort($allTimeslots, function ($a, $b) {
                             $timeA = strtotime($a);
                             $timeB = strtotime($b);
+
                             return $timeA - $timeB;
                         });
 
@@ -2987,9 +2557,6 @@ class  ScheduleController extends Controller
                             ->where('account_id', $accountId)
                             ->where('status', '!=', 1) // Not published
                             ->where('scheduled', 1); // Scheduled posts only
-                        if ($type === 'instagram') {
-                            $postsQuery->where('social_type', 'like', '%instagram%');
-                        }
                         $posts = $postsQuery->orderBy('publish_date', 'ASC')->get();
 
                         if ($posts->count() > 0) {
@@ -3006,7 +2573,7 @@ class  ScheduleController extends Controller
                                 $assigned = false;
 
                                 // Initialize used timeslots array for current schedule date if not exists
-                                if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                if (! isset($usedTimeslotsByDate[$currentScheduleDate])) {
                                     $usedTimeslotsByDate[$currentScheduleDate] = [];
                                 }
 
@@ -3023,7 +2590,7 @@ class  ScheduleController extends Controller
                                         // Check if timeslot is available (not passed and not used)
                                         if (
                                             $timeslot24Hour > $currentTime &&
-                                            !in_array($timeslotKey, $usedTimeslotsByDate[$currentScheduleDate])
+                                            ! in_array($timeslotKey, $usedTimeslotsByDate[$currentScheduleDate])
                                         ) {
                                             $availableTimeslotForCurrentDate = $timeslot;
                                             $availableTimeslotIndex = $idx;
@@ -3038,9 +2605,9 @@ class  ScheduleController extends Controller
                                     $timeslotKey = $timeslot24Hour;
 
                                     // Assign post to this timeslot on current date (convert to UTC for storage)
-                                    $publishDateTimeLocal = $currentScheduleDate . ' ' . $timeslot24Hour;
+                                    $publishDateTimeLocal = $currentScheduleDate.' '.$timeslot24Hour;
                                     $post->update([
-                                        'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $user)
+                                        'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $user),
                                     ]);
 
                                     // Mark timeslot as used for this date
@@ -3051,9 +2618,9 @@ class  ScheduleController extends Controller
 
                                     // If we've used all timeslots for this day, move to next day
                                     if (count($usedTimeslotsByDate[$currentScheduleDate]) >= count($allTimeslots)) {
-                                        $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                        $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate.' +1 day'));
                                         $timeslotIndex = 0;
-                                        if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                        if (! isset($usedTimeslotsByDate[$currentScheduleDate])) {
                                             $usedTimeslotsByDate[$currentScheduleDate] = [];
                                         }
                                     }
@@ -3064,7 +2631,7 @@ class  ScheduleController extends Controller
                                     $attempts = 0;
                                     $maxAttempts = count($allTimeslots) * 100; // Safety limit
 
-                                    while (!$assigned && $attempts < $maxAttempts) {
+                                    while (! $assigned && $attempts < $maxAttempts) {
                                         // Get current timeslot
                                         $timeslot = $allTimeslots[$timeslotIndex];
 
@@ -3072,7 +2639,7 @@ class  ScheduleController extends Controller
                                         $timeslot24Hour = date('H:i:s', strtotime($timeslot));
 
                                         // Initialize used timeslots array for current schedule date if not exists
-                                        if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                        if (! isset($usedTimeslotsByDate[$currentScheduleDate])) {
                                             $usedTimeslotsByDate[$currentScheduleDate] = [];
                                         }
 
@@ -3083,33 +2650,35 @@ class  ScheduleController extends Controller
                                             $timeslotIndex++;
                                             if ($timeslotIndex >= count($allTimeslots)) {
                                                 // All timeslots used for this day, move to next day and reset timeslot index
-                                                $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                                $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate.' +1 day'));
                                                 $timeslotIndex = 0;
                                                 // Reset used timeslots tracking for new date (timeslots reset on new date)
-                                                if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                                if (! isset($usedTimeslotsByDate[$currentScheduleDate])) {
                                                     $usedTimeslotsByDate[$currentScheduleDate] = [];
                                                 }
                                             }
                                             $attempts++;
+
                                             continue;
                                         }
 
                                         // Check if timeslot has passed for current day
                                         if ($currentScheduleDate == $currentDate && $timeslot24Hour <= $currentTime) {
                                             // Timeslot has passed, move to next day (keep same timeslot index since it's a new date)
-                                            $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                            $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate.' +1 day'));
                                             // Reset used timeslots tracking for new date (timeslots reset on new date)
-                                            if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                            if (! isset($usedTimeslotsByDate[$currentScheduleDate])) {
                                                 $usedTimeslotsByDate[$currentScheduleDate] = [];
                                             }
                                             $attempts++;
+
                                             continue;
                                         }
 
                                         // Timeslot is available for this date, assign post (convert to UTC for storage)
-                                        $publishDateTimeLocal = $currentScheduleDate . ' ' . $timeslot24Hour;
+                                        $publishDateTimeLocal = $currentScheduleDate.' '.$timeslot24Hour;
                                         $post->update([
-                                            'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $user)
+                                            'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $user),
                                         ]);
 
                                         // Mark timeslot as used for this date
@@ -3119,10 +2688,10 @@ class  ScheduleController extends Controller
                                         $timeslotIndex++;
                                         if ($timeslotIndex >= count($allTimeslots)) {
                                             // All timeslots used for this day, move to next day and reset timeslot index
-                                            $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
+                                            $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate.' +1 day'));
                                             $timeslotIndex = 0;
                                             // Reset used timeslots tracking for new date
-                                            if (!isset($usedTimeslotsByDate[$currentScheduleDate])) {
+                                            if (! isset($usedTimeslotsByDate[$currentScheduleDate])) {
                                                 $usedTimeslotsByDate[$currentScheduleDate] = [];
                                             }
                                         }
@@ -3137,13 +2706,13 @@ class  ScheduleController extends Controller
             }
 
             return response()->json([
-                "success" => true,
-                "message" => "Timeslot settings saved and posts rearranged successfully!"
+                'success' => true,
+                'message' => 'Timeslot settings saved and posts rearranged successfully!',
             ]);
         } catch (Exception $e) {
             return response()->json([
-                "success" => false,
-                "message" => $e->getMessage()
+                'success' => false,
+                'message' => $e->getMessage(),
             ]);
         }
     }
@@ -3155,7 +2724,7 @@ class  ScheduleController extends Controller
     {
         $types = array_values(array_filter(
             (array) $request->input('type', []),
-            fn($t) => $t !== null && $t !== ''
+            fn ($t) => $t !== null && $t !== ''
         ));
 
         return count($types) === 1 && (string) $types[0] === 'pinterest';
@@ -3176,30 +2745,30 @@ class  ScheduleController extends Controller
         $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::guard('user')->id()];
 
         $posts = Post::withoutGlobalScopes()
-            ->with("page.facebook", "board.pinterest", "instagramAccount", "user.timezone")
+            ->with('page.facebook', 'board.pinterest', 'instagramAccount', 'user.timezone')
             ->isScheduled()
             ->whereIn('user_id', $postCreatorIds);
 
-        if (!empty($request->account_id)) {
-            $posts = $posts->whereIn("account_id", $request->account_id);
+        if (! empty($request->account_id)) {
+            $posts = $posts->whereIn('account_id', $request->account_id);
         }
-        if (!empty($request->type)) {
-            $posts = $posts->whereIn("social_type", $request->type);
+        if (! empty($request->type)) {
+            $posts = $posts->whereIn('social_type', $request->type);
         }
-        if (!empty($request->post_type)) {
-            $posts = $posts->whereIn("type", $request->post_type);
+        if (! empty($request->post_type)) {
+            $posts = $posts->whereIn('type', $request->post_type);
         }
 
         $tab = $request->input('post_status_tab');
         if ($tab === 'sent') {
-            $posts = $posts->where("status", 1);
+            $posts = $posts->where('status', 1);
             $posts = $posts->where('published_at', '>=', $this->sentPostsRecentCutoffUtc());
         } elseif ($tab === 'failed') {
-            $posts = $posts->where("status", -1);
+            $posts = $posts->where('status', -1);
         } elseif ($tab === 'queue') {
-            $posts = $posts->where("status", 0);
+            $posts = $posts->where('status', 0);
         } elseif ($request->has('status')) {
-            $posts = $posts->where("status", $request->status);
+            $posts = $posts->where('status', $request->status);
         }
 
         $totalRecordswithFilter = clone $posts;
@@ -3221,13 +2790,14 @@ class  ScheduleController extends Controller
                 ->get();
         }
 
-        $posts->append(["post_details", "account_detail", "publish_datetime", "status_view", "action", "account_name", "account_profile", "published_at_formatted", "facebook_post_url"]);
+        $posts->append(['post_details', 'account_detail', 'publish_datetime', 'status_view', 'action', 'account_name', 'account_profile', 'published_at_formatted', 'facebook_post_url']);
         $response = [
-            "draw" => intval($data['draw']),
-            "iTotalRecords" => Post::count(),
-            "iTotalDisplayRecords" => $totalRecordswithFilter->count(),
-            "data" => $posts
+            'draw' => intval($data['draw']),
+            'iTotalRecords' => Post::count(),
+            'iTotalDisplayRecords' => $totalRecordswithFilter->count(),
+            'data' => $posts,
         ];
+
         return response()->json($response);
     }
 
@@ -3258,62 +2828,66 @@ class  ScheduleController extends Controller
             }
 
             $response = [
-                "success" => true,
-                "message" => "Post deleted successfully!"
+                'success' => true,
+                'message' => 'Post deleted successfully!',
             ];
         } catch (Exception $e) {
             $response = [
-                "success" => false,
-                "message" => $e->getMessage()
+                'success' => false,
+                'message' => $e->getMessage(),
             ];
         }
+
         return response()->json($response);
     }
 
     public function postEdit(Request $request)
     {
         try {
-            $post = Post::with("page.facebook", "board.pinterest")->findOrFail($request->id);
-            $view = view("user.schedule.ajax.edit-post", compact("post"));
-            $response = array(
-                "success" => true,
-                "data" => $view->render(),
-                "action" => route('panel.schedule.post.update', $post->id)
-            );
+            $post = Post::with('page.facebook', 'board.pinterest')->findOrFail($request->id);
+            $view = view('user.schedule.ajax.edit-post', compact('post'));
+            $response = [
+                'success' => true,
+                'data' => $view->render(),
+                'action' => route('panel.schedule.post.update', $post->id),
+            ];
         } catch (Exception $e) {
-            $response = array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
+            $response = [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
+
         return response()->json($response);
     }
+
     public function postUpdate($id, Request $request)
     {
         try {
             $post = Post::with('user')->findOrFail($id);
-            $publishDateTimeLocal = date("Y-m-d", strtotime($request->edit_post_publish_date)) . " " . date("H:i", strtotime($request->edit_post_publish_time));
+            $publishDateTimeLocal = date('Y-m-d', strtotime($request->edit_post_publish_date)).' '.date('H:i', strtotime($request->edit_post_publish_time));
             $data = [
-                "title" => $request->edit_post_title,
-                "url" => $request->edit_post_link,
-                "comment" => $request->edit_post_comment,
-                "publish_date" => TimezoneService::toUtc($publishDateTimeLocal, $post->user),
+                'title' => $request->edit_post_title,
+                'url' => $request->edit_post_link,
+                'comment' => $request->edit_post_comment,
+                'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $post->user),
             ];
-            if ($request->has("edit_post_publish_image") && $request->File("edit_post_publish_image")) {
-                $image = saveImage($request->file("edit_post_publish_image"));
+            if ($request->has('edit_post_publish_image') && $request->File('edit_post_publish_image')) {
+                $image = saveImage($request->file('edit_post_publish_image'));
                 $data['image'] = $image;
             }
             $post->update($data);
-            $response = array(
-                "success" => true,
-                "message" => "Post updated Successfully!"
-            );
+            $response = [
+                'success' => true,
+                'message' => 'Post updated Successfully!',
+            ];
         } catch (Exception $e) {
-            $response = array(
-                "success" => false,
-                "message" => $e->getMessage()
-            );
+            $response = [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
         }
+
         return response()->json($response);
     }
 
@@ -3322,6 +2896,7 @@ class  ScheduleController extends Controller
         try {
             $post = Post::findOrFail($id);
             $post->update(['comment' => $request->input('comment', '')]);
+
             return response()->json([
                 'success' => true,
                 'message' => 'Comment updated successfully.',
@@ -3337,6 +2912,7 @@ class  ScheduleController extends Controller
     public function postPublishNow(Request $request)
     {
         $response = PostService::publishNow($request->id);
+
         return response()->json($response);
     }
 
@@ -3374,7 +2950,7 @@ class  ScheduleController extends Controller
         $accountId = $request->input('account_id');
         $accountType = $request->input('type');
 
-        if (!$accountId || !$accountType) {
+        if (! $accountId || ! $accountType) {
             return response()->json(['timeslots' => []]);
         }
 
@@ -3388,25 +2964,7 @@ class  ScheduleController extends Controller
         $resolvedType = (string) $accountType;
 
         if (strtolower($resolvedType) === 'instagram') {
-            $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
-            $ig = InstagramAccount::query()
-                ->where('id', $resolvedId)
-                ->where('user_id', $ownerId)
-                ->first();
-
-            if (! $ig) {
-                return response()->json(['timeslots' => []]);
-            }
-
-            $ig->loadMissing('linkedPage');
-            $page = $ig->linkedPage;
-
-            if (! $page) {
-                return response()->json(['timeslots' => []]);
-            }
-
-            $resolvedId = (int) $page->id;
-            $resolvedType = 'facebook';
+            return response()->json(['timeslots' => []]);
         }
 
         $timeslots = Timeslot::where('account_id', $resolvedId)
@@ -3429,7 +2987,7 @@ class  ScheduleController extends Controller
         $offset = (int) $request->input('offset', 0);
         $source = $request->input('source', 'schedule');
 
-        if (!$accountId || !$accountType) {
+        if (! $accountId || ! $accountType) {
             return response()->json(['success' => false, 'message' => 'Account required']);
         }
 
@@ -3445,7 +3003,6 @@ class  ScheduleController extends Controller
         $socialType = match (strtolower((string) $accountType)) {
             'pinterest' => 'pinterest',
             'tiktok' => 'tiktok',
-            'instagram' => 'instagram',
             default => 'facebook',
         };
 
@@ -3507,7 +3064,7 @@ class  ScheduleController extends Controller
 
             foreach ($timeslots ?: [] as $slot) {
                 $slotNormalized = date('H:i', strtotime($slot));
-                $slotTime = Carbon::parse($dateStr . ' ' . $slotNormalized, $userTz);
+                $slotTime = Carbon::parse($dateStr.' '.$slotNormalized, $userTz);
 
                 if ($date->isToday() && $slotTime->lt($now)) {
                     continue;
@@ -3530,7 +3087,7 @@ class  ScheduleController extends Controller
 
             // Generate virtual slots for posts that don't match any configured timeslot
             foreach ($existingPostsByKey as $key => $posts) {
-                if (str_starts_with($key, $dateStr . ' ') && !isset($placedKeys[$key])) {
+                if (str_starts_with($key, $dateStr.' ') && ! isset($placedKeys[$key])) {
                     $slotTime = Carbon::parse($key, $userTz);
                     if ($date->isToday() && $slotTime->lt($now)) {
                         continue;
@@ -3545,9 +3102,9 @@ class  ScheduleController extends Controller
                 }
             }
 
-            usort($daySlots, fn($a, $b) => strcmp($a['time'], $b['time']));
+            usort($daySlots, fn ($a, $b) => strcmp($a['time'], $b['time']));
 
-            if (!empty($daySlots)) {
+            if (! empty($daySlots)) {
                 $isToday = $date->isToday();
                 $isTomorrow = $date->isTomorrow();
                 $label = $isToday ? 'Today' : ($isTomorrow ? 'Tomorrow' : $date->format('l'));
@@ -3577,13 +3134,13 @@ class  ScheduleController extends Controller
         $accountId = $request->input('account_id');
         $accountType = $request->input('type');
 
-        if (!$accountId || !$accountType) {
+        if (! $accountId || ! $accountType) {
             return response()->json(['success' => false, 'message' => 'Account required']);
         }
 
         /** @var User|null $user */
         $user = Auth::guard('user')->user();
-        if (!$user instanceof User) {
+        if (! $user instanceof User) {
             return response()->json(['success' => false, 'message' => 'Unauthorized']);
         }
 
@@ -3610,7 +3167,6 @@ class  ScheduleController extends Controller
         $socialType = match ($account->type) {
             'pinterest' => 'pinterest',
             'tiktok' => 'tiktok',
-            'instagram' => 'instagram',
             default => 'facebook',
         };
         $nextLocal = (new Post)->nextScheduleTime(
@@ -3637,7 +3193,7 @@ class  ScheduleController extends Controller
             'has_timeslots' => true,
             'date_display' => $dt->format('l, F j, Y'),
             'time_display' => $dt->format('h:i A'),
-            'display' => $dt->format('D, M j') . ' · ' . $dt->format('h:i A'),
+            'display' => $dt->format('D, M j').' · '.$dt->format('h:i A'),
         ]);
     }
 
@@ -3688,7 +3244,7 @@ class  ScheduleController extends Controller
                     }
                 }
             }
-            if (!is_array($posts)) {
+            if (! is_array($posts)) {
                 $posts = [];
             }
 
@@ -3696,7 +3252,7 @@ class  ScheduleController extends Controller
             $postIds = collect($posts)
                 ->pluck('id')
                 ->filter()
-                ->map(fn($id) => (string) $id)
+                ->map(fn ($id) => (string) $id)
                 ->unique()
                 ->values()
                 ->all();
@@ -3704,11 +3260,11 @@ class  ScheduleController extends Controller
             $ourPostsByExternalId = empty($postIds)
                 ? collect()
                 : Post::withoutGlobalScopes()
-                ->whereIn('user_id', $postCreatorIds)
-                ->whereIn('post_id', $postIds)
-                ->with('user')
-                ->get()
-                ->keyBy(fn($p) => (string) $p->post_id);
+                    ->whereIn('user_id', $postCreatorIds)
+                    ->whereIn('post_id', $postIds)
+                    ->with('user')
+                    ->get()
+                    ->keyBy(fn ($p) => (string) $p->post_id);
 
             foreach ($posts as &$post) {
                 $post['account_name'] = $page->name;
@@ -3727,7 +3283,7 @@ class  ScheduleController extends Controller
             unset($post);
 
             foreach ($posts as $p) {
-                if (!empty($p['id'])) {
+                if (! empty($p['id'])) {
                     $graphPostIds[(string) $p['id']] = true;
                 }
             }
@@ -3759,7 +3315,7 @@ class  ScheduleController extends Controller
                 continue;
             }
             $page = $pagesById->get($dbPost->account_id);
-            if (!$page) {
+            if (! $page) {
                 continue;
             }
             $graphPostIds[$extId] = true;
@@ -3769,6 +3325,7 @@ class  ScheduleController extends Controller
         usort($allPosts, function ($a, $b) {
             $ta = $this->parseCreatedTime($a['created_time'] ?? null);
             $tb = $this->parseCreatedTime($b['created_time'] ?? null);
+
             return $tb - $ta;
         });
 
@@ -3811,7 +3368,7 @@ class  ScheduleController extends Controller
         $allPosts = [];
         foreach ($dbPosts as $dbPost) {
             $board = $boardsById->get($dbPost->account_id) ?? $dbPost->board;
-            if (!$board) {
+            if (! $board) {
                 continue;
             }
             $allPosts[] = $this->sentTabPostFromPinterestRecord($dbPost, $board);
@@ -3856,128 +3413,13 @@ class  ScheduleController extends Controller
         $allPosts = [];
         foreach ($dbPosts as $dbPost) {
             $account = $accountsById->get($dbPost->account_id) ?? $dbPost->tiktok;
-            if (!$account) {
+            if (! $account) {
                 continue;
             }
             $allPosts[] = $this->sentTabPostFromTikTokRecord($dbPost, $account);
         }
 
         return response()->json(['success' => true, 'posts' => $allPosts]);
-    }
-
-    /**
-     * Instagram Sent tab: published schedule posts for selected accounts (same card payload as TikTok/Pinterest sent).
-     */
-    public function getInstagramSentPosts(Request $request)
-    {
-        $viewer = Auth::guard('user')->user();
-        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::id()];
-        $accountIds = (array) $request->input('account_id', []);
-        if (empty($accountIds)) {
-            return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
-        }
-
-        $ownerId = (int) ($viewer?->getEffectiveUser()?->id ?? $viewer?->id ?? Auth::id());
-        $accounts = InstagramAccount::query()
-            ->whereIn('id', $accountIds)
-            ->where('user_id', $ownerId)
-            ->get();
-
-        if ($accounts->isEmpty()) {
-            return response()->json(['success' => false, 'message' => 'No Instagram accounts found', 'posts' => []]);
-        }
-
-        $igIds = $accounts->pluck('id')->all();
-        $accountsById = $accounts->keyBy('id');
-
-        $dbPosts = Post::withoutGlobalScopes()
-            ->whereIn('user_id', $postCreatorIds)
-            ->where('social_type', 'like', '%instagram%')
-            ->whereIn('account_id', $igIds)
-            ->where('status', 1)
-            ->whereNotNull('published_at')
-            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
-            ->where('source', 'schedule')
-            ->with('user', 'instagramAccount')
-            ->orderByDesc('published_at')
-            ->get();
-
-        $allPosts = [];
-        foreach ($dbPosts as $dbPost) {
-            $account = $accountsById->get($dbPost->account_id) ?? $dbPost->instagramAccount;
-            if (! $account) {
-                continue;
-            }
-            $allPosts[] = $this->sentTabPostFromInstagramRecord($dbPost, $account);
-        }
-
-        return response()->json(['success' => true, 'posts' => $allPosts]);
-    }
-
-    /**
-     * Minimal Sent-tab payload from a published Instagram Post row (same keys as TikTok / Pinterest sent cards).
-     */
-    private function sentTabPostFromInstagramRecord(Post $dbPost, InstagramAccount $account): array
-    {
-        $published = Carbon::parse($dbPost->published_at);
-        $createdTime = $published->toIso8601String();
-
-        $postType = strtolower((string) ($dbPost->getAttributes()['type'] ?? $dbPost->type ?? ''));
-        $isVideoLike = in_array($postType, ['video', 'reel'], true);
-
-        $fullPicture = '';
-        $rawImage = $dbPost->getAttributes()['image'] ?? null;
-        if (! empty($rawImage)) {
-            $img = (string) $rawImage;
-            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
-                $fullPicture = $img;
-            } elseif ($isVideoLike) {
-                $fullPicture = fetchFromS3($img);
-            } else {
-                $fullPicture = url(getImage('', $img));
-            }
-        }
-
-        $videoUrl = $this->postStoredVideoUrl($dbPost);
-
-        $username = (string) ($account->username ?? '');
-        $usernameForUrl = ltrim($username, '@');
-        $permalink = $usernameForUrl !== ''
-            ? 'https://www.instagram.com/' . rawurlencode($usernameForUrl) . '/'
-            : null;
-
-        $profileImage = $account->profile_image ?? '';
-
-        $payload = [
-            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-' . $dbPost->id),
-            'created_time' => $createdTime,
-            'message' => (string) ($dbPost->title ?? ''),
-            'story' => '',
-            'type' => (string) ($dbPost->type ?? ''),
-            'full_picture' => $fullPicture,
-            'permalink_url' => $permalink,
-            'account_name' => (string) ($account->name ?: $username ?: 'Instagram'),
-            'account_profile' => $profileImage,
-            'social_type' => 'instagram',
-            'page_db_id' => $account->id,
-            'db_post_id' => $dbPost->id,
-            'insights' => [
-                'post_reactions' => 0,
-                'post_impressions' => 0,
-                'post_clicks' => 0,
-            ],
-            'comments' => 0,
-            'shares' => 0,
-            'from_local_db' => true,
-            'video_url' => $videoUrl,
-        ];
-
-        if ($dbPost->user) {
-            $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
-            $payload['publisher_email'] = $dbPost->user->email ?? '';
-        }
-
-        return $payload;
     }
 
     /**
@@ -3993,7 +3435,7 @@ class  ScheduleController extends Controller
 
         $fullPicture = '';
         $rawImage = $dbPost->getAttributes()['image'] ?? null;
-        if (!empty($rawImage)) {
+        if (! empty($rawImage)) {
             $img = $rawImage;
             if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
                 $fullPicture = $img;
@@ -4009,13 +3451,13 @@ class  ScheduleController extends Controller
         $username = (string) ($account->username ?? '');
         $usernameForUrl = ltrim($username, '@');
         $permalink = $usernameForUrl !== ''
-            ? 'https://www.tiktok.com/@' . rawurlencode($usernameForUrl)
+            ? 'https://www.tiktok.com/@'.rawurlencode($usernameForUrl)
             : null;
 
         $profileImage = $account->profile_image ?? '';
 
         $payload = [
-            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-' . $dbPost->id),
+            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-'.$dbPost->id),
             'created_time' => $createdTime,
             'message' => (string) ($dbPost->title ?? ''),
             'story' => '',
@@ -4055,7 +3497,7 @@ class  ScheduleController extends Controller
         $createdTime = $published->toIso8601String();
 
         $fullPicture = '';
-        if (!empty($dbPost->image)) {
+        if (! empty($dbPost->image)) {
             $img = $dbPost->image;
             if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
                 $fullPicture = $img;
@@ -4066,13 +3508,13 @@ class  ScheduleController extends Controller
 
         $pinId = $dbPost->post_id ? (string) $dbPost->post_id : '';
         $permalink = $pinId !== ''
-            ? 'https://www.pinterest.com/pin/' . rawurlencode($pinId) . '/'
+            ? 'https://www.pinterest.com/pin/'.rawurlencode($pinId).'/'
             : null;
 
         $profileImage = $board->pinterest?->profile_image ?? '';
 
         $payload = [
-            'id' => $pinId !== '' ? $pinId : ('db-' . $dbPost->id),
+            'id' => $pinId !== '' ? $pinId : ('db-'.$dbPost->id),
             'created_time' => $createdTime,
             'message' => (string) ($dbPost->title ?? ''),
             'story' => '',
@@ -4114,7 +3556,7 @@ class  ScheduleController extends Controller
 
         $fullPicture = '';
         $rawImage = $dbPost->getAttributes()['image'] ?? null;
-        if (!empty($rawImage)) {
+        if (! empty($rawImage)) {
             $img = (string) $rawImage;
             if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
                 $fullPicture = $img;
@@ -4193,12 +3635,12 @@ class  ScheduleController extends Controller
         }
 
         $tokenCheck = FacebookService::validateToken($page);
-        if (!$tokenCheck['success']) {
+        if (! $tokenCheck['success']) {
             return null;
         }
 
         $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
-        $facebookService = new FacebookService();
+        $facebookService = new FacebookService;
         $insightsPreset = $duration === 'full_year' ? 'sent_tab' : 'default';
         $posts = $facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until, $insightsPreset);
 
@@ -4229,6 +3671,7 @@ class  ScheduleController extends Controller
         if ($value instanceof \DateTimeInterface) {
             return $value->getTimestamp();
         }
+
         return 0;
     }
 
@@ -4248,12 +3691,11 @@ class  ScheduleController extends Controller
         $user = Auth::user();
         $page = Page::where('id', $accountId)->where('user_id', $user->id)->first();
 
-        if (!$page) {
+        if (! $page) {
             return response()->json(['success' => false, 'message' => 'Account not found or access denied.'], 404);
         }
 
         $result = $pagePostsSyncService->syncPageForFullYear($page);
-
 
         if ($result['success'] || $result['synced'] > 0) {
             $accountName = $page->name ?? 'Facebook account';
@@ -4263,7 +3705,7 @@ class  ScheduleController extends Controller
                 'title' => 'Posts and insights synced',
                 'body' => [
                     'type' => 'success',
-                    'message' => 'Posts and insights have been synced for ' . $accountName . '.',
+                    'message' => 'Posts and insights have been synced for '.$accountName.'.',
                     'social_type' => 'facebook',
                     'account_image' => $profileImage,
                     'account_name' => $accountName,
@@ -4307,7 +3749,7 @@ class  ScheduleController extends Controller
         $user = Auth::user();
         $page = Page::where('id', $pageId)->where('user_id', $user->id)->first();
 
-        if (!$page) {
+        if (! $page) {
             return response()->json(['success' => false, 'message' => 'Account not found or access denied.'], 404);
         }
 

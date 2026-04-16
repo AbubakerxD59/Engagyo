@@ -81,34 +81,6 @@
                                                         class="fas fa-check"></i></span>
                                             </label>
                                         </div>
-                                    @elseif ($type === 'instagram')
-                                        @php
-                                            $igName = $account->name ?? $account->username ?? '';
-                                            $igUsername = $account->username ?? '';
-                                            $igProfileImg = $account->profile_image ?? '';
-                                            $igFbUser = $account->facebook?->username ?? '';
-                                            $tooltip = $igName . ($igUsername ? ' - @' . $igUsername : '');
-                                        @endphp
-                                        <div class="channels-dropdown-item" data-id="{{ $account->id }}"
-                                            data-type="{{ $type }}"
-                                            data-name="{{ Str::lower($igName . ' ' . $igUsername . ' ' . $igFbUser) }}"
-                                            data-tooltip="{{ $tooltip }}">
-                                            <div class="channels-dropdown-item-avatar">
-                                                <img src="{{ $igProfileImg }}"
-                                                    onerror="this.onerror=null; this.src='{{ social_logo('instagram') }}';"
-                                                    loading="lazy" alt="">
-                                                <span class="channels-dropdown-item-badge instagram"><i
-                                                        class="fab fa-instagram"></i></span>
-                                            </div>
-                                            <span class="channels-dropdown-item-name">{{ $igName }}</span>
-                                            <label class="channels-dropdown-item-checkbox">
-                                                <input type="checkbox" class="channels-dropdown-checkbox"
-                                                    data-id="{{ $account->id }}" data-type="{{ $type }}"
-                                                    data-schedule-status="{{ $account->schedule_status ?? 'inactive' }}">
-                                                <span class="channels-dropdown-checkbox-icon"><i
-                                                        class="fas fa-check"></i></span>
-                                            </label>
-                                        </div>
                                     @elseif ($type === 'pinterest')
                                         @php
                                             $name = $account->name ?? '';
@@ -226,44 +198,6 @@
                                                 </li>
                                                 <li><strong>Reel</strong>: Caption + Files only.</li>
                                                 <li><strong>Story</strong>: Files only.</li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="create-post-facebook-format-wrap" id="createPostInstagramFormatWrap"
-                                style="display: none;" role="group" aria-label="Instagram content format">
-                                <div class="create-post-facebook-format-bar">
-                                    <span class="create-post-facebook-format-facebook-icon" aria-hidden="true"><i
-                                            class="fab fa-instagram"></i></span>
-                                    <div class="create-post-facebook-format-radios">
-                                        <label class="create-post-format-option">
-                                            <input type="radio" name="create_post_instagram_format"
-                                                id="createPostInstagramFormatPost" value="post" checked>
-                                            <span>Post</span>
-                                        </label>
-                                        <label class="create-post-format-option">
-                                            <input type="radio" name="create_post_instagram_format"
-                                                id="createPostInstagramFormatReel" value="reel">
-                                            <span>Reel</span>
-                                        </label>
-                                        <label class="create-post-format-option">
-                                            <input type="radio" name="create_post_instagram_format"
-                                                id="createPostInstagramFormatCarousel" value="carousel">
-                                            <span>Carousel</span>
-                                        </label>
-                                    </div>
-                                    <div class="create-post-format-help-wrap" id="createPostInstagramFormatHelpWrap">
-                                        <button type="button" class="create-post-format-help-btn"
-                                            id="createPostInstagramFormatHelpBtn">
-                                            <i class="far fa-question-circle"></i>
-                                        </button>
-                                        <div class="create-post-format-help-popover" role="tooltip"
-                                            aria-hidden="true">
-                                            <ul class="create-post-format-help-list">
-                                                <li><strong>Post</strong>: One image or video per publish.</li>
-                                                <li><strong>Reel</strong>: One video (shown when you add a video).</li>
-                                                <li><strong>Carousel</strong>: 2–10 images and/or videos in one post.</li>
                                             </ul>
                                         </div>
                                     </div>

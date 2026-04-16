@@ -2,16 +2,14 @@
 
 namespace App\Models;
 
-use PDO;
 use Carbon\Carbon;
-use App\Models\UserPackage;
-use Laravel\Sanctum\HasApiTokens;
-use Illuminate\Support\Facades\Log;
-use Spatie\Permission\Traits\HasRoles;
-use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Log;
+use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\Traits\HasRoles;
 
 class User extends Authenticatable
 {
@@ -51,7 +49,7 @@ class User extends Authenticatable
         'password',
         'remember_token',
         'otp',
-        'otp_expires_at'
+        'otp_expires_at',
     ];
 
     /**
@@ -68,10 +66,10 @@ class User extends Authenticatable
 
     protected $appends = ['full_name'];
 
-    static public $status_array = [
-        "0" => "Inactive",
-        "1" => "Active",
-        "2" => "Pending"
+    public static $status_array = [
+        '0' => 'Inactive',
+        '1' => 'Active',
+        '2' => 'Pending',
     ];
 
     public function pinterest()
@@ -113,6 +111,7 @@ class User extends Authenticatable
     {
         return $this->hasMany(Post::class, 'user_id', 'id');
     }
+
     public function scopeSearch($query, $value)
     {
         $query->where('first_name', 'like', "%{$value}%")->where('last_name', 'like', "%{$value}%")->orWhere('email', 'like', "%{$value}%");
@@ -126,7 +125,7 @@ class User extends Authenticatable
     protected function Password(): Attribute
     {
         return Attribute::make(
-            set: fn($value) => bcrypt($value),
+            set: fn ($value) => bcrypt($value),
         );
     }
 
@@ -134,7 +133,8 @@ class User extends Authenticatable
     {
         return Attribute::make(
             get: function ($value) {
-                $status = in_array($value, self::$status_array) ? self::$status_array[$value] : "Inactive";
+                $status = in_array($value, self::$status_array) ? self::$status_array[$value] : 'Inactive';
+
                 return $status;
             }
         );
@@ -144,7 +144,8 @@ class User extends Authenticatable
     {
         return Attribute::make(
             get: function ($value) {
-                $full_name = $this->first_name . ' ' . $this->last_name;
+                $full_name = $this->first_name.' '.$this->last_name;
+
                 return $full_name;
             }
         );
@@ -154,7 +155,8 @@ class User extends Authenticatable
     {
         return Attribute::make(
             get: function ($value) {
-                $profile_pic = !empty($value) ? $value : no_image();
+                $profile_pic = ! empty($value) ? $value : no_image();
+
                 return $profile_pic;
             }
         );
@@ -163,13 +165,14 @@ class User extends Authenticatable
     public function getRole()
     {
         $role = $this->roles()->first();
+
         return $role ? $role->name : '';
     }
 
     protected function nameLink(): Attribute
     {
         return Attribute::make(
-            get: fn() => view('admin.users.dataTable.name_link', ['user' => $this])->render()
+            get: fn () => view('admin.users.dataTable.name_link', ['user' => $this])->render()
         );
     }
 
@@ -188,7 +191,7 @@ class User extends Authenticatable
         if ($this->activeUserPackage && $this->activeUserPackage->package) {
             $info['package_name'] = $this->activeUserPackage->package->name;
 
-            if (!empty($this->activeUserPackage->expires_at)) {
+            if (! empty($this->activeUserPackage->expires_at)) {
                 $expiresAt = $this->activeUserPackage->expires_at;
                 $info['expires_at'] = $expiresAt;
 
@@ -220,68 +223,42 @@ class User extends Authenticatable
     protected function packageHtml(): Attribute
     {
         return Attribute::make(
-            get: fn() => view('admin.users.dataTable.package', ['user' => $this])->render()
+            get: fn () => view('admin.users.dataTable.package', ['user' => $this])->render()
         );
     }
 
     protected function statusSpan(): Attribute
     {
         return Attribute::make(
-            get: fn() => view('admin.users.dataTable.status', ['user' => $this])->render()
+            get: fn () => view('admin.users.dataTable.status', ['user' => $this])->render()
         );
     }
 
     protected function roleName(): Attribute
     {
         return Attribute::make(
-            get: fn() => $this->getRole()
+            get: fn () => $this->getRole()
         );
     }
+
     public function getActionAttribute()
     {
-        return view("admin.users.dataTable.action", ['user' => $this])->render();
+        return view('admin.users.dataTable.action', ['user' => $this])->render();
     }
 
     public function getAccounts()
     {
-        $pages = Page::with("facebook", "timeslots")->orderBy("name")->get();
-        $insta_accounts = InstagramAccount::with(['linkedPage.timeslots', 'scheduleTimeslots'])->orderBy("username")->get();
-        $boards = Board::with("pinterest", "timeslots")->orderBy("name")->get();
-        $tiktoks = Tiktok::with("timeslots")->orderBy("username")->get();
-        return $pages->concat($insta_accounts)->concat($boards)->concat($tiktoks);
-    }
+        $pages = Page::with('facebook', 'timeslots')->orderBy('name')->get();
+        $boards = Board::with('pinterest', 'timeslots')->orderBy('name')->get();
+        $tiktoks = Tiktok::with('timeslots')->orderBy('username')->get();
 
-    /**
-     * Instagram accounts for scheduling UI and post creation.
-     *
-     * @param  bool  $onlyScheduleActive  When true, only accounts with schedule_status active on the Instagram row.
-     * @return \Illuminate\Support\Collection<int, InstagramAccount>
-     */
-    protected function collectInstagramAccountsForUser(bool $onlyScheduleActive = false): \Illuminate\Support\Collection
-    {
-        $ownerId = (int) ($this->getEffectiveUser()?->id ?? $this->id);
-        $q = InstagramAccount::query()
-            ->with(['facebook', 'linkedPage.timeslots', 'scheduleTimeslots'])
-            ->where('user_id', $ownerId);
-
-        if ($this->isTeamMember()) {
-            $igIds = $this->getTeamMemberAccountIdsByType('instagram');
-            if (empty($igIds)) {
-                return collect();
-            }
-            $q->whereIn('id', array_map('intval', $igIds));
-        }
-
-        if ($onlyScheduleActive) {
-            $q->where('schedule_status', 'active');
-        }
-
-        return $q->orderBy('username')->get();
+        return $pages->concat($boards)->concat($tiktoks);
     }
 
     public function getDomains($id, $type)
     {
-        $domains = $this->domains()->where("account_id", $id)->where('type', $type)->get();
+        $domains = $this->domains()->where('account_id', $id)->where('type', $type)->get();
+
         return count($domains) > 0 ? $domains : [];
     }
 
@@ -307,6 +284,7 @@ class User extends Authenticatable
 
     /**
      * Get the user feature usages
+     *
      * @return \Illuminate\Database\Eloquent\Relations\HasMany The user feature usages
      */
     public function userFeatureUsages()
@@ -327,21 +305,19 @@ class User extends Authenticatable
 
     /**
      * Get the scheduled active accounts
-     * 
+     *
      * @return \Illuminate\Database\Eloquent\Collection The scheduled active accounts
      */
     public function getScheduledActiveAccounts()
     {
         // Pinterest Boards
-        $boards = Board::with("pinterest", "timeslots")->whereScheduledActive()->get();
+        $boards = Board::with('pinterest', 'timeslots')->whereScheduledActive()->get();
         // Facebook Pages
-        $pages = Page::with("facebook", "timeslots")->whereScheduledActive()->get();
+        $pages = Page::with('facebook', 'timeslots')->whereScheduledActive()->get();
         // TikTok Accounts
-        $tiktoks = Tiktok::with("timeslots")->whereScheduledActive()->get();
-        // Instagram Accounts
-        $insta_accounts = InstagramAccount::with(['linkedPage.timeslots', 'scheduleTimeslots'])->whereScheduledActive()->get();
+        $tiktoks = Tiktok::with('timeslots')->whereScheduledActive()->get();
         $accounts = collect();
-        $accounts = $boards->concat($pages)->concat($tiktoks)->concat($insta_accounts);
+        $accounts = $boards->concat($pages)->concat($tiktoks);
 
         return $accounts;
     }
@@ -350,7 +326,7 @@ class User extends Authenticatable
      * Get accounts for post creation. When account_ids are provided (e.g. from create post modal
      * when user selected specific accounts), use those. Otherwise use getScheduledActiveAccounts().
      *
-     * @param array|null $accountIds Array of ['id' => int, 'type' => string] (facebook|pinterest|tiktok|instagram)
+     * @param  array|null  $accountIds  Array of ['id' => int, 'type' => string] (facebook|pinterest|tiktok)
      * @return \Illuminate\Support\Collection
      */
     public function getAccountsForPostCreation(?array $accountIds = null)
@@ -360,7 +336,7 @@ class User extends Authenticatable
             foreach ($accountIds as $item) {
                 $id = $item['id'] ?? null;
                 $type = $item['type'] ?? 'facebook';
-                if (!$id) {
+                if (! $id) {
                     continue;
                 }
                 if ($type === 'facebook') {
@@ -378,24 +354,9 @@ class User extends Authenticatable
                     if ($tiktok) {
                         $accounts->push($tiktok);
                     }
-                } elseif ($type === 'instagram') {
-                    $ig = InstagramAccount::with(['facebook', 'linkedPage.timeslots', 'scheduleTimeslots'])->where('id', $id)->first();
-                    if (! $ig) {
-                        continue;
-                    }
-                    $ownerId = (int) ($this->getEffectiveUser()?->id ?? $this->id);
-                    if ((int) $ig->user_id !== $ownerId) {
-                        continue;
-                    }
-                    if ($this->isTeamMember()) {
-                        $igIds = $this->getTeamMemberAccountIdsByType('instagram');
-                        if (! in_array((int) $ig->id, array_map('intval', $igIds), true)) {
-                            continue;
-                        }
-                    }
-                    $accounts->push($ig);
                 }
             }
+
             return $accounts;
         }
 
@@ -404,7 +365,7 @@ class User extends Authenticatable
 
     /**
      * Get the active user package
-     * 
+     *
      * @return \App\Models\UserPackage The active user package
      */
     public function getActiveUserPackageAttribute()
@@ -413,19 +374,21 @@ class User extends Authenticatable
         if ($this->relationLoaded('userPackages')) {
             $package = $this->userPackages->where('is_active', true)->sortByDesc('id')->first();
             // Ensure package relationship is loaded
-            if ($package && !$package->relationLoaded('package')) {
+            if ($package && ! $package->relationLoaded('package')) {
                 $package->load('package');
             }
+
             return $package;
         }
         // If not loaded, query the database
         $package = $this->userPackages()->with('package')->active()->latest()->first();
+
         return $package;
     }
 
     /**
      * Get all features available for the user based on their package as an array
-     * 
+     *
      * @return array Array of features with their details
      */
     public function getAvailableFeaturesArray()
@@ -433,7 +396,7 @@ class User extends Authenticatable
         $features = [];
         // Get the active user package
         $activePackage = $this->activeUserPackage;
-        if (!$activePackage || !$activePackage->package) {
+        if (! $activePackage || ! $activePackage->package) {
             return $features;
         }
         $package = $activePackage->package;
@@ -456,25 +419,26 @@ class User extends Authenticatable
                 'usage_count' => $this->getFeatureUsage($feature->key),
             ];
         }
+
         return $features;
     }
 
     /**
      * Get feature usage count for a user by feature key
-     * 
-     * @param string $featureKey The feature key to check usage for
+     *
+     * @param  string  $featureKey  The feature key to check usage for
      * @return int The usage count for the feature (0 if not found)
      */
     public function getFeatureUsage($featureKey, $periodStart = null)
     {
         // Find the feature by key
         $feature = Feature::where('key', $featureKey)->first();
-        if (!$feature) {
+        if (! $feature) {
             return 0;
         }
 
         // Use current month if no period specified
-        if (!$periodStart) {
+        if (! $periodStart) {
             $periodStart = now()->startOfMonth();
         } else {
             $periodStart = $periodStart instanceof \Carbon\Carbon
@@ -498,15 +462,15 @@ class User extends Authenticatable
 
     /**
      * Increment feature usage count for a user
-     * 
-     * @param string $featureKey The feature key
-     * @param int $amount The amount to increment (default: 1)
+     *
+     * @param  string  $featureKey  The feature key
+     * @param  int  $amount  The amount to increment (default: 1)
      * @return bool Success status
      */
     public function incrementFeatureUsage($featureKey, $amount = 1)
     {
         $feature = Feature::where('key', $featureKey)->first();
-        if (!$feature) {
+        if (! $feature) {
             return false;
         }
 
@@ -519,7 +483,7 @@ class User extends Authenticatable
             ->where('is_archived', false)
             ->first();
 
-        if (!$featureUsage) {
+        if (! $featureUsage) {
             $featureUsage = UserFeatureUsage::create([
                 'user_id' => $this->id,
                 'feature_id' => $feature->id,
@@ -540,15 +504,15 @@ class User extends Authenticatable
 
     /**
      * Decrement feature usage count for a user (for rollback scenarios)
-     * 
-     * @param string $featureKey The feature key
-     * @param int $amount The amount to decrement (default: 1)
+     *
+     * @param  string  $featureKey  The feature key
+     * @param  int  $amount  The amount to decrement (default: 1)
      * @return bool Success status
      */
     public function decrementFeatureUsage($featureKey, $amount = 1)
     {
         $feature = Feature::where('key', $featureKey)->first();
-        if (!$feature) {
+        if (! $feature) {
             return false;
         }
 
@@ -562,7 +526,7 @@ class User extends Authenticatable
             ->first();
 
         // If no usage record exists, there's nothing to decrement
-        if (!$featureUsage) {
+        if (! $featureUsage) {
             return true; // Return true as there's nothing to decrement
         }
 
@@ -575,19 +539,19 @@ class User extends Authenticatable
 
     /**
      * Get historical feature usage for a specific period
-     * 
-     * @param string $featureKey The feature key
-     * @param \Carbon\Carbon|string $periodStart The period start date
+     *
+     * @param  string  $featureKey  The feature key
+     * @param  \Carbon\Carbon|string  $periodStart  The period start date
      * @return int The usage count for that period
      */
     public function getHistoricalFeatureUsage($featureKey, $periodStart)
     {
         $feature = Feature::where('key', $featureKey)->first();
-        if (!$feature) {
+        if (! $feature) {
             return 0;
         }
 
-        if (!$periodStart instanceof \Carbon\Carbon) {
+        if (! $periodStart instanceof \Carbon\Carbon) {
             $periodStart = \Carbon\Carbon::parse($periodStart)->startOfMonth();
         } else {
             $periodStart = $periodStart->startOfMonth();
@@ -604,14 +568,14 @@ class User extends Authenticatable
 
     /**
      * Get all historical usage records for a feature
-     * 
-     * @param string $featureKey The feature key
+     *
+     * @param  string  $featureKey  The feature key
      * @return \Illuminate\Database\Eloquent\Collection
      */
     public function getFeatureUsageHistory($featureKey)
     {
         $feature = Feature::where('key', $featureKey)->first();
-        if (!$feature) {
+        if (! $feature) {
             return collect();
         }
 
@@ -624,8 +588,8 @@ class User extends Authenticatable
 
     /**
      * Check if a user can use a feature by feature key
-     * 
-     * @param string $featureKey The feature key to check
+     *
+     * @param  string  $featureKey  The feature key to check
      * @return bool True if the user can use the feature, false otherwise
      */
     public function canUseFeature($featureKey)
@@ -635,7 +599,7 @@ class User extends Authenticatable
 
         // Check if user has an active package
         $activePackage = $effectiveUser->activeUserPackage;
-        if (!$activePackage || !$activePackage->package) {
+        if (! $activePackage || ! $activePackage->package) {
             return false;
         }
 
@@ -646,8 +610,7 @@ class User extends Authenticatable
             ->where('is_active', true)
             ->first();
 
-
-        if (!$feature) {
+        if (! $feature) {
             return false;
         }
 
@@ -657,16 +620,17 @@ class User extends Authenticatable
             ->wherePivot('is_enabled', true)
             ->first();
 
-        if (!$packageFeature) {
+        if (! $packageFeature) {
             return false;
         }
+
         return true;
     }
 
     public function canAccessMenu($menuId)
     {
-        $menu = Menu::with("features")->find($menuId);
-        if (!$menu) {
+        $menu = Menu::with('features')->find($menuId);
+        if (! $menu) {
             return false;
         }
 
@@ -680,12 +644,13 @@ class User extends Authenticatable
                 return true;
             }
         }
+
         return false;
     }
 
     /**
      * Check if user has full access (lifetime package or no expiration)
-     * 
+     *
      * @return bool True if user has full access, false otherwise
      */
     public function hasFullAccess()
@@ -693,7 +658,7 @@ class User extends Authenticatable
         // Get the active user package
         $activePackage = $this->activeUserPackage;
 
-        if (!$activePackage || !$activePackage->package) {
+        if (! $activePackage || ! $activePackage->package) {
             return false;
         }
 
@@ -740,6 +705,7 @@ class User extends Authenticatable
     public function getTeamLead()
     {
         $membership = $this->activeTeamMembership();
+
         return $membership ? $membership->teamLead : null;
     }
 
@@ -774,6 +740,7 @@ class User extends Authenticatable
         if ($this->isTeamMember()) {
             return $this->getTeamLead();
         }
+
         return $this;
     }
 
@@ -782,17 +749,17 @@ class User extends Authenticatable
      */
     public function getTeamMemberFeatureLimit($featureKey)
     {
-        if (!$this->isTeamMember()) {
+        if (! $this->isTeamMember()) {
             return null;
         }
 
         $membership = $this->activeTeamMembership();
-        if (!$membership) {
+        if (! $membership) {
             return null;
         }
 
         $feature = Feature::where('key', $featureKey)->first();
-        if (!$feature) {
+        if (! $feature) {
             return null;
         }
 
@@ -805,6 +772,7 @@ class User extends Authenticatable
             if ($limit->is_unlimited) {
                 return ['limit' => null, 'is_unlimited' => true];
             }
+
             return ['limit' => $limit->limit_value, 'is_unlimited' => false];
         }
 
@@ -818,12 +786,12 @@ class User extends Authenticatable
     public function hasMenuAccess(string $menuId): bool
     {
         // If user is not a team member, they have full access
-        if (!$this->isTeamMember()) {
+        if (! $this->isTeamMember()) {
             return true;
         }
 
         $teamMember = $this->activeTeamMembership();
-        if (!$teamMember) {
+        if (! $teamMember) {
             return false;
         }
 
@@ -845,15 +813,16 @@ class User extends Authenticatable
      */
     public function getTeamMemberAccountIds(): array
     {
-        if (!$this->isTeamMember()) {
+        if (! $this->isTeamMember()) {
             return [];
         }
 
         $teamMember = $this->activeTeamMembership();
-        if (!$teamMember) {
+        if (! $teamMember) {
             return [];
         }
         $social_types = ['page', 'board', 'tiktok', 'instagram'];
+
         return TeamMemberAccount::where('team_member_id', $teamMember->id)
             ->whereIn('account_type', $social_types)
             ->pluck('account_id')
@@ -863,17 +832,17 @@ class User extends Authenticatable
     /**
      * Get account IDs for a specific type from team_member_accounts for the current user
      *
-     * @param string $accountType One of: 'page', 'board', 'tiktok', 'instagram'
+     * @param  string  $accountType  One of: 'page', 'board', 'tiktok', 'instagram'
      * @return array Array of account IDs that the user has access to for the given type
      */
     public function getTeamMemberAccountIdsByType(string $accountType): array
     {
-        if (!$this->isTeamMember()) {
+        if (! $this->isTeamMember()) {
             return [];
         }
 
         $teamMember = $this->activeTeamMembership();
-        if (!$teamMember) {
+        if (! $teamMember) {
             return [];
         }
 
@@ -887,9 +856,9 @@ class User extends Authenticatable
     public function assignFreePackage()
     {
         $package = Package::free()->active()->first();
-        $durationInDays = $package->date_type == "month" ? $package->duration * 30 . " days" : $package->duration . " days";
-        $startsAt = date("Y-m-d H:i:s");
-        $endsAt = date("Y-m-d H:i:s", strtotime("+ $durationInDays"));
+        $durationInDays = $package->date_type == 'month' ? $package->duration * 30 .' days' : $package->duration.' days';
+        $startsAt = date('Y-m-d H:i:s');
+        $endsAt = date('Y-m-d H:i:s', strtotime("+ $durationInDays"));
         // user package record
         $userPackage = UserPackage::create(
             [
@@ -948,10 +917,10 @@ class User extends Authenticatable
                 );
             }
         } catch (\Exception $e) {
-            Log::error('Error updating user feature limits: ' . $e->getMessage(), [
+            Log::error('Error updating user feature limits: '.$e->getMessage(), [
                 'user_id' => $user->id,
                 'package_id' => $package->id,
-                'trace' => $e->getTraceAsString()
+                'trace' => $e->getTraceAsString(),
             ]);
         }
     }

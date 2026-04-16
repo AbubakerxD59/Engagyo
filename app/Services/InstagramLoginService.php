@@ -27,7 +27,6 @@ class InstagramLoginService
             'instagram_business_basic',
             'instagram_business_manage_messages',
             'instagram_business_manage_comments',
-            'instagram_business_content_publish',
             'instagram_business_manage_insights',
         ];
     }
@@ -150,7 +149,7 @@ class InstagramLoginService
         if (! $resp->successful()) {
             return [
                 'success' => false,
-                'message' => 'Could not exchange Instagram authorization code: ' . $this->formatHttpError($resp),
+                'message' => 'Could not exchange Instagram authorization code: '.$this->formatHttpError($resp),
             ];
         }
 
@@ -208,7 +207,7 @@ class InstagramLoginService
         if (! $resp->successful()) {
             return [
                 'success' => false,
-                'message' => 'Could not obtain long-lived Instagram token: ' . $this->formatHttpError($resp),
+                'message' => 'Could not obtain long-lived Instagram token: '.$this->formatHttpError($resp),
             ];
         }
 
@@ -226,7 +225,7 @@ class InstagramLoginService
     public function fetchInstagramProfile(string $longLivedUserAccessToken): array
     {
         $v = ltrim((string) config('services.instagram.graph_version', 'v21.0'), '/');
-        $url = 'https://graph.instagram.com/' . $v . '/me';
+        $url = 'https://graph.instagram.com/'.$v.'/me';
 
         $resp = Http::acceptJson()
             ->timeout(60)
@@ -238,7 +237,7 @@ class InstagramLoginService
         if (! $resp->successful()) {
             return [
                 'success' => false,
-                'message' => 'Could not load Instagram profile: ' . $this->formatHttpError($resp),
+                'message' => 'Could not load Instagram profile: '.$this->formatHttpError($resp),
             ];
         }
 
@@ -277,7 +276,7 @@ class InstagramLoginService
                 ]);
 
             if (! $resp->successful()) {
-                $msg = 'Instagram API error: ' . $this->formatHttpError($resp);
+                $msg = 'Instagram API error: '.$this->formatHttpError($resp);
                 $logService->logTokenRefresh('instagram', $accountId, 'failed', $msg);
 
                 return ['success' => false, 'message' => $msg];
@@ -307,7 +306,7 @@ class InstagramLoginService
         } catch (\Throwable $e) {
             $logService->logTokenRefresh('instagram', $accountId, 'failed', $e->getMessage());
 
-            return ['success' => false, 'message' => 'Unexpected error while refreshing Instagram token: ' . $e->getMessage()];
+            return ['success' => false, 'message' => 'Unexpected error while refreshing Instagram token: '.$e->getMessage()];
         }
     }
 
@@ -389,7 +388,7 @@ class InstagramLoginService
 
             return [
                 'success' => 'error',
-                'message' => 'Could not save Instagram account: ' . $e->getMessage(),
+                'message' => 'Could not save Instagram account: '.$e->getMessage(),
             ];
         }
     }
@@ -406,6 +405,6 @@ class InstagramLoginService
 
         $body = $resp->body();
 
-        return 'HTTP ' . $resp->status() . (strlen($body) > 0 ? ': ' . substr($body, 0, 500) : '');
+        return 'HTTP '.$resp->status().(strlen($body) > 0 ? ': '.substr($body, 0, 500) : '');
     }
 }

@@ -40,7 +40,6 @@ return [
     'instagram' => [
         'app_id' => env('INSTAGRAM_APP_ID') ?: env('FACEBOOK_APP_ID', env('FACEBOOK_CLIENT_ID')),
         'app_secret' => env('INSTAGRAM_APP_SECRET') ?: env('FACEBOOK_APP_SECRET', env('FACEBOOK_CLIENT_SECRET')),
-        'image_public_base_url' => env('INSTAGRAM_IMAGE_PUBLIC_BASE_URL'),
         'login_redirect' => env('INSTAGRAM_LOGIN_REDIRECT_URI'),
         'oauth_authorize_url' => env('INSTAGRAM_OAUTH_AUTHORIZE_URL', 'https://www.instagram.com/oauth/authorize'),
         /** Match Instagram authorize URL: force_reauth=true (see Meta OAuth authorize). */

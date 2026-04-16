@@ -14,14 +14,10 @@
                     <img class="queue-settings-avatar" src="{{ $account->profile_image }}"
                         onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';" alt="" loading="lazy">
                     <span class="queue-settings-platform-badge queue-settings-badge-tiktok"><i class="fab fa-tiktok"></i></span>
-                @elseif($account->type == 'instagram')
-                    <img class="queue-settings-avatar" src="{{ $account->profile_image }}"
-                        onerror="this.onerror=null; this.src='{{ social_logo('instagram') }}';" alt="" loading="lazy">
-                    <span class="queue-settings-platform-badge queue-settings-badge-instagram"><i class="fab fa-instagram"></i></span>
                 @endif
             </div>
             <div class="queue-settings-account-info">
-                <span class="queue-settings-account-name">{{ $account->type === 'instagram' ? ($account->name ?? $account->username ?? 'Instagram') : $account->name }}</span>
+                <span class="queue-settings-account-name">{{ $account->name }}</span>
                 <span class="queue-settings-account-type">
                     @if ($account->type == 'facebook')
                         {{ $account->facebook?->username ?? 'Facebook' }}
@@ -29,8 +25,6 @@
                         {{ $account->pinterest?->username ?? 'Pinterest' }}
                     @elseif($account->type == 'tiktok')
                         {{ $account->username ?? $account->display_name ?? 'TikTok' }}
-                    @elseif($account->type == 'instagram')
-                        {{ $account->username ? '@'.$account->username : ($account->name ?? 'Instagram') }}
                     @else
                         {{ ucfirst($account->type) }}
                     @endif
