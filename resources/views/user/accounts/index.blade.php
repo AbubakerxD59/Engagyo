@@ -310,83 +310,84 @@
                         </div>
                     </div>
                 </div>
+                @if($user->id == "4")
                 {{-- Threads --}}
-                <div class="card platform-card">
-                    <div class="card-header with-border clearfix">
-                        <div class="card-title">
-                            <img src="{{ social_logo('threads') }}" loading="lazy">
-                            <span>Threads</span>
+                    <div class="card platform-card">
+                        <div class="card-header with-border clearfix">
+                            <div class="card-title">
+                                <img src="{{ social_logo('threads') }}" loading="lazy">
+                                <span>Threads</span>
+                            </div>
+                            <a href="{{ $threadsUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
+                            <div class="card-tools">
+                                <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
+                                    <i class="fas fa-minus"></i>
+                                </button>
+                            </div>
                         </div>
-                        <a href="{{ $threadsUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
-                        <div class="card-tools">
-                            <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
-                                <i class="fas fa-minus"></i>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="card-body">
-                        <div class="accounts-grid-wrapper">
-                            <div class="accounts-grid" data-platform="threads">
-                                @forelse ($user->threads as $index => $thread)
-                                    <article class="account-card threads-card has-tooltip" @style(['display:none;' => $index >= 12])
-                                        data-tooltip="{{ $thread->username }}" data-index="{{ $index }}">
-                                        <div class="account-card-accent"></div>
-                                        <a href="{{ route('panel.accounts.threads', $thread->threads_id) }}"
-                                            class="account-card-link">
-                                            <div class="account-card-content">
-                                                <div class="account-avatar-wrapper">
-                                                    <img src="{{ $thread->profile_image }}" class="account-avatar"
-                                                        loading="lazy"
-                                                        onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';">
-                                                    <span class="platform-indicator threads-indicator">
-                                                        <i class="fab fa-threads"></i>
-                                                    </span>
-                                                </div>
-                                                <div class="account-info">
-                                                    <div class="account-username">
-                                                        {{ Str::limit($thread->username, 12) }}
+                        <div class="card-body">
+                            <div class="accounts-grid-wrapper">
+                                <div class="accounts-grid" data-platform="threads">
+                                    @forelse ($user->threads as $index => $thread)
+                                        <article class="account-card threads-card has-tooltip" @style(['display:none;' => $index >= 12])
+                                            data-tooltip="{{ $thread->username }}" data-index="{{ $index }}">
+                                            <div class="account-card-accent"></div>
+                                            <a href="{{ route('panel.accounts.threads', $thread->threads_id) }}"
+                                                class="account-card-link">
+                                                <div class="account-card-content">
+                                                    <div class="account-avatar-wrapper">
+                                                        <img src="{{ $thread->profile_image }}" class="account-avatar"
+                                                            loading="lazy"
+                                                            onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';">
+                                                        <span class="platform-indicator threads-indicator">
+                                                            <i class="fab fa-threads"></i>
+                                                        </span>
+                                                    </div>
+                                                    <div class="account-info">
+                                                        <div class="account-username">
+                                                            {{ Str::limit($thread->username, 12) }}
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        </a>
-                                        <div class="account-card-actions">
-                                            <button class="btn-account-delete delete-btn" title="Delete Account">
-                                                <i class="fa fa-trash"></i>
-                                            </button>
-                                            <form action="{{ route('panel.accounts.threads.delete', $thread->threads_id) }}"
-                                                method="POST" class="delete_form">
-                                                @csrf
-                                                @method('DELETE')
-                                            </form>
-                                        </div>
-                                    </article>
-                                @empty
-                                    <div class="empty-state-wrapper">
-                                        <div class="empty-state">
-                                            <div class="empty-state-icon threads-empty">
-                                                <i class="fab fa-threads"></i>
-                                            </div>
-                                            <h4>No Threads Account Connected</h4>
-                                            <p>Connect your Threads account to enable authentication and account access.</p>
-                                            <a href="{{ $threadsUrl }}" class="btn btn-threads">
-                                                <i class="fab fa-threads mr-2"></i> Connect Threads
                                             </a>
+                                            <div class="account-card-actions">
+                                                <button class="btn-account-delete delete-btn" title="Delete Account">
+                                                    <i class="fa fa-trash"></i>
+                                                </button>
+                                                <form action="{{ route('panel.accounts.threads.delete', $thread->threads_id) }}"
+                                                    method="POST" class="delete_form">
+                                                    @csrf
+                                                    @method('DELETE')
+                                                </form>
+                                            </div>
+                                        </article>
+                                    @empty
+                                        <div class="empty-state-wrapper">
+                                            <div class="empty-state">
+                                                <div class="empty-state-icon threads-empty">
+                                                    <i class="fab fa-threads"></i>
+                                                </div>
+                                                <h4>No Threads Account Connected</h4>
+                                                <p>Connect your Threads account to enable authentication and account access.</p>
+                                                <a href="{{ $threadsUrl }}" class="btn btn-threads">
+                                                    <i class="fab fa-threads mr-2"></i> Connect Threads
+                                                </a>
+                                            </div>
                                         </div>
-                                    </div>
-                                @endforelse
-                            </div>
-                            @if (count($user->threads) > 12)
-                                <div class="accounts-toggle-wrapper">
-                                    <button class="btn-accounts-toggle" data-platform="threads" type="button">
-                                        <span class="toggle-text">Show All</span>
-                                        <i class="fas fa-chevron-down toggle-icon"></i>
-                                    </button>
+                                    @endforelse
                                 </div>
-                            @endif
+                                @if (count($user->threads) > 12)
+                                    <div class="accounts-toggle-wrapper">
+                                        <button class="btn-accounts-toggle" data-platform="threads" type="button">
+                                            <span class="toggle-text">Show All</span>
+                                            <i class="fas fa-chevron-down toggle-icon"></i>
+                                        </button>
+                                    </div>
+                                @endif
+                            </div>
                         </div>
                     </div>
-                </div>
-
+                @endif
             </div>
         </section>
     </div>

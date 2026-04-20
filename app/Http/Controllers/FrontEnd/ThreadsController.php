@@ -57,8 +57,7 @@ class ThreadsController extends Controller
             $expiresIn = $longLivedTokenResponse['expires_in'] ?? $expiresIn;
         }
 
-        $me = $this->threadsService->me($accessToken);
-        dd($me);
+        $me = $this->threadsService->me($accessToken);        
         if (empty($me['id']) || empty($me['username'])) {
             $errorMessage = $me['error_message'] ?? $me['message'] ?? 'Failed to fetch Threads user profile.';
             $this->logService->logApiError('threads', '/me', $errorMessage, ['user_id' => $userId]);
