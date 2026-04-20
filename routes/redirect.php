@@ -3,6 +3,7 @@
 use App\Http\Controllers\FrontEnd\FacebookController;
 use App\Http\Controllers\FrontEnd\InstagramLoginController;
 use App\Http\Controllers\FrontEnd\PinterestController;
+use App\Http\Controllers\FrontEnd\ThreadsController;
 use App\Http\Controllers\FrontEnd\TikTokController;
 use Illuminate\Support\Facades\Route;
 
@@ -26,4 +27,9 @@ Route::name('facebook.')->controller(FacebookController::class)->group(function 
 // TikTok
 Route::name('tiktok.')->controller(TikTokController::class)->group(function () {
     Route::get('tiktok-callback', 'tiktokCallback')->name('callback');
+});
+
+// Threads
+Route::name('threads.')->controller(ThreadsController::class)->group(function () {
+    Route::get('threads-callback', 'threadsCallback')->name('callback');
 });

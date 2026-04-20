@@ -6,8 +6,9 @@
     $boardsCount = $user->boards()->count();
     $pagesCount = $user->pages()->count();
     $tiktoksCount = $user->tiktok()->count();
+    $threadsCount = $user->threads()->count();
     
-    $hasAccounts = ($boardsCount > 0 || $pagesCount > 0 || $tiktoksCount > 0);
+    $hasAccounts = ($boardsCount > 0 || $pagesCount > 0 || $tiktoksCount > 0 || $threadsCount > 0);
     
     // Get current route name
     $currentRoute = request()->route()->getName();

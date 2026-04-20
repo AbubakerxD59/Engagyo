@@ -89,7 +89,7 @@
                             <img src="{{ social_logo('instagram') }}" loading="lazy">
                             <span>Instagram</span>
                         </div>
-                        <a href="{{ $instagramUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect Instagram</a>
+                        <a href="{{ $instagramUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
                         <div class="card-tools">
                             <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
                                 <i class="fas fa-minus"></i>
@@ -141,7 +141,7 @@
                                             <p>Connect with Facebook to discover Instagram Business profiles linked to your
                                                 Pages.</p>
                                             <a href="{{ $instagramUrl }}" class="btn btn-outline-primary">
-                                                <i class="fab fa-instagram mr-2"></i> Connect Instagram
+                                                <i class="fab fa-instagram mr-2"></i> Connect
                                             </a>
                                         </div>
                                     </div>
@@ -302,6 +302,82 @@
                             @if (count($user->tiktok) > 12)
                                 <div class="accounts-toggle-wrapper">
                                     <button class="btn-accounts-toggle" data-platform="tiktok" type="button">
+                                        <span class="toggle-text">Show All</span>
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                {{-- Threads --}}
+                <div class="card platform-card">
+                    <div class="card-header with-border clearfix">
+                        <div class="card-title">
+                            <img src="{{ social_logo('threads') }}" loading="lazy">
+                            <span>Threads</span>
+                        </div>
+                        <a href="{{ $threadsUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="accounts-grid-wrapper">
+                            <div class="accounts-grid" data-platform="threads">
+                                @forelse ($user->threads as $index => $thread)
+                                    <article class="account-card threads-card has-tooltip" @style(['display:none;' => $index >= 12])
+                                        data-tooltip="{{ $thread->username }}" data-index="{{ $index }}">
+                                        <div class="account-card-accent"></div>
+                                        <a href="{{ route('panel.accounts.threads', $thread->threads_id) }}"
+                                            class="account-card-link">
+                                            <div class="account-card-content">
+                                                <div class="account-avatar-wrapper">
+                                                    <img src="{{ $thread->profile_image }}" class="account-avatar"
+                                                        loading="lazy"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';">
+                                                    <span class="platform-indicator threads-indicator">
+                                                        <i class="fab fa-threads"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-info">
+                                                    <div class="account-username">
+                                                        {{ Str::limit($thread->username, 12) }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                        <div class="account-card-actions">
+                                            <button class="btn-account-delete delete-btn" title="Delete Account">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                            <form action="{{ route('panel.accounts.threads.delete', $thread->threads_id) }}"
+                                                method="POST" class="delete_form">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
+                                        </div>
+                                    </article>
+                                @empty
+                                    <div class="empty-state-wrapper">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon threads-empty">
+                                                <i class="fab fa-threads"></i>
+                                            </div>
+                                            <h4>No Threads Account Connected</h4>
+                                            <p>Connect your Threads account to enable authentication and account access.</p>
+                                            <a href="{{ $threadsUrl }}" class="btn btn-threads">
+                                                <i class="fab fa-threads mr-2"></i> Connect Threads
+                                            </a>
+                                        </div>
+                                    </div>
+                                @endforelse
+                            </div>
+                            @if (count($user->threads) > 12)
+                                <div class="accounts-toggle-wrapper">
+                                    <button class="btn-accounts-toggle" data-platform="threads" type="button">
                                         <span class="toggle-text">Show All</span>
                                         <i class="fas fa-chevron-down toggle-icon"></i>
                                     </button>
@@ -697,7 +773,15 @@
             background: linear-gradient(180deg, #000000, #333333);
         }
 
+        .threads-card .account-card-accent {
+            background: linear-gradient(180deg, #101010, #2a2a2a);
+        }
+
         .tiktok-card:hover .account-avatar {
+            border-color: #000000;
+        }
+
+        .threads-card:hover .account-avatar {
             border-color: #000000;
         }
 
@@ -705,9 +789,36 @@
             background: #000000;
         }
 
+        .threads-indicator {
+            background: #111111;
+        }
+
         .empty-state-icon.tiktok-empty {
             background: linear-gradient(135deg, #e8e8e8, #d4d4d4);
             color: #000000;
+        }
+
+        .empty-state-icon.threads-empty {
+            background: linear-gradient(135deg, #ececec, #d6d6d6);
+            color: #111111;
+        }
+
+        .btn-threads {
+            background: #111111;
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-threads:hover {
+            background: #2a2a2a;
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
         }
 
         /* Toggle Button Styling */

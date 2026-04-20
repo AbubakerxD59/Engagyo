@@ -94,6 +94,10 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.timezone
             // TikTok
             Route::get('tiktok/{id?}', 'tiktok')->name('tiktok');
             Route::delete('tiktok-delete/{id?}', 'tiktokDelete')->name('tiktok.delete');
+            // Threads
+            Route::get('threads/{id?}', 'threads')->name('threads');
+            Route::get('threads-socialite', 'threadsSocialite')->name('threads.socialite');
+            Route::delete('threads-delete/{id?}', 'threadsDelete')->name('threads.delete');
             // Toggle RSS Pause
             Route::post('toggle-rss-pause', 'toggleRssPause')->name('toggleRssPause');
         });

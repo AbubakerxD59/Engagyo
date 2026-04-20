@@ -11,6 +11,7 @@ use App\Models\InstagramAccount;
 use App\Models\Page;
 use App\Models\Pinterest;
 use App\Models\Post;
+use App\Models\Thread;
 use App\Models\Tiktok;
 use App\Models\Timeslot;
 use App\Models\User;
@@ -19,6 +20,7 @@ use App\Services\FeatureUsageService;
 use App\Services\InstagramLoginService;
 use App\Services\PinterestService;
 use App\Services\SocialMediaLogService;
+use App\Services\ThreadsService;
 use App\Services\TikTokService;
 use Exception;
 use Illuminate\Http\Request;
@@ -52,7 +54,11 @@ class AccountsController extends Controller
 
     private $instagramAccount;
 
-    public function __construct(Pinterest $pinterest, Facebook $facebook, Tiktok $tiktok, Board $board, Page $page, Post $post, Domain $domain, FeatureUsageService $featureUsageService, InstagramAccount $instagramAccount)
+    private $threadsService;
+
+    private $thread;
+
+    public function __construct(Pinterest $pinterest, Facebook $facebook, Tiktok $tiktok, Board $board, Page $page, Post $post, Domain $domain, FeatureUsageService $featureUsageService, InstagramAccount $instagramAccount, Thread $thread)
     {
         $this->pinterestService = new PinterestService;
         $this->facebookService = new FacebookService;
@@ -67,11 +73,13 @@ class AccountsController extends Controller
         $this->domain = $domain;
         $this->logService = new SocialMediaLogService;
         $this->instagramAccount = $instagramAccount;
+        $this->threadsService = new ThreadsService;
+        $this->thread = $thread;
     }
 
     public function index(InstagramLoginService $instagramLoginService)
     {
-        $user = User::with('facebook', 'pinterest', 'tiktok', 'instagramAccounts')->findOrFail(Auth::guard('user')->id());
+        $user = User::with('facebook', 'pinterest', 'tiktok', 'instagramAccounts', 'threads')->findOrFail(Auth::guard('user')->id());
         $facebookUrl = route('panel.accounts.facebook.socialite');
         try {
             $instagramUrl = $instagramLoginService->authorizeUrl();
@@ -80,8 +88,13 @@ class AccountsController extends Controller
         }
         $pinterestUrl = $this->pinterestService->getLoginUrl();
         $tiktokUrl = $this->tiktokService->getLoginUrl();
+        try {
+            $threadsUrl = $this->threadsService->getLoginUrl();
+        } catch (\Throwable $e) {
+            $threadsUrl = route('panel.accounts.threads.socialite');
+        }
 
-        return view('user.accounts.index', compact('user', 'facebookUrl', 'instagramUrl', 'pinterestUrl', 'tiktokUrl'));
+        return view('user.accounts.index', compact('user', 'facebookUrl', 'instagramUrl', 'pinterestUrl', 'tiktokUrl', 'threadsUrl'));
     }
 
     /**
@@ -582,6 +595,58 @@ class AccountsController extends Controller
         }
 
         return back()->with('error', 'Something went Wrong!');
+    }
+
+    public function threadsSocialite()
+    {
+        try {
+            return redirect()->away($this->threadsService->getLoginUrl());
+        } catch (\Throwable $e) {
+            return redirect()->route('panel.accounts')->with('error', $e->getMessage());
+        }
+    }
+
+    public function threads($id = null)
+    {
+        if (! empty($id)) {
+            $user = User::find(Auth::guard('user')->id());
+            try {
+                $threadsUrl = $this->threadsService->getLoginUrl();
+            } catch (\Throwable $e) {
+                $threadsUrl = route('panel.accounts.threads.socialite');
+            }
+            $thread = $this->thread->where('user_id', $user->id)->search($id)->first();
+            if ($thread) {
+                return view('user.accounts.threads', compact('threadsUrl', 'thread'));
+            } else {
+                return back()->with('error', 'Something went Wrong!');
+            }
+        } else {
+            return back()->with('error', 'Something went Wrong!');
+        }
+    }
+
+    public function threadsDelete($id = null)
+    {
+        if (! empty($id)) {
+            $user = User::find(Auth::guard('user')->id());
+            $thread = $this->thread->where('user_id', $user->id)->search($id)->first();
+            if ($thread) {
+                $threadId = $thread->id;
+                $threadUsername = $thread->username;
+                $thread->delete();
+
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1);
+
+                $this->logService->logAccountConnection('threads', $threadId, $threadUsername, 'disconnected');
+
+                return back()->with('success', 'Threads Account deleted Successfully!');
+            } else {
+                return back()->with('error', 'Something went Wrong!');
+            }
+        } else {
+            return back()->with('error', 'Something went Wrong!');
+        }
     }
 
     public function tiktok($id = null)

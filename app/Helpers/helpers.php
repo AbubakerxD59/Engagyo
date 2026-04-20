@@ -532,6 +532,8 @@ function social_logo($type = null)
         $logo = asset("assets/img/icons/pinterest-circle.svg");
     } elseif ($type == 'tiktok') {
         $logo = asset("assets/img/icons/tiktok-circle.svg");
+    } elseif ($type == 'threads') {
+        $logo = asset("assets/img/icons/threads-circle.svg");
     } else {
         $logo = "";
     }
@@ -549,6 +551,8 @@ function social_icon($type = null)
         $logo = '<i class="fa-brands fa-pinterest"></i>';
     } elseif ($type == 'tiktok') {
         $logo = '<i class="fa-brands fa-tiktok"></i>';
+    } elseif ($type == 'threads') {
+        $logo = '<i class="fa-brands fa-threads"></i>';
     } else {
         $logo = "";
     }
@@ -574,6 +578,7 @@ function get_social_accounts()
         "facebook",
         "pinterest",
         "tiktok",
+        "threads",
         "youtube",
         "twitter"
     ];
