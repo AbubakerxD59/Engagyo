@@ -89,4 +89,18 @@ class ThreadsController extends Controller
 
         return redirect(route('panel.accounts'))->with('success', 'Threads authorization completed!');
     }
+
+    public function uninstallCallback(Request $request)
+    {
+        $this->logService->log('threads', 'uninstall_callback', 'Threads uninstall callback received', $request->all(), 'warning');
+
+        return true;
+    }
+
+    public function deleteCallback(Request $request)
+    {
+        $this->logService->log('threads', 'delete_callback', 'Threads delete callback received', $request->all(), 'warning');
+
+        return true;
+    }
 }

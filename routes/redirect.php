@@ -32,4 +32,6 @@ Route::name('tiktok.')->controller(TikTokController::class)->group(function () {
 // Threads
 Route::name('threads.')->controller(ThreadsController::class)->group(function () {
     Route::get('threads-callback', 'threadsCallback')->name('callback');
+    Route::get('threads-delete-callback', 'deleteCallback')->name('deleteCallback');
+    Route::post('threads-uninstall-callback', 'uninstallCallback')->name('uninstallCallback');
 });
