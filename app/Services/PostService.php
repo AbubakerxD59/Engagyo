@@ -235,24 +235,16 @@ class PostService
             if ($raw === null || $raw === '') {
                 return null;
             }
-            $raw = (string) $raw;
-            if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
-                return $raw;
-            }
 
-            return url(getImage('', $raw));
+            return self::ensureAbsoluteMediaUrl((string) $raw, 'image');
         };
 
         $resolveVideo = function ($raw): ?string {
             if ($raw === null || $raw === '') {
                 return null;
             }
-            $raw = (string) $raw;
-            if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
-                return $raw;
-            }
 
-            return fetchFromS3($raw);
+            return self::ensureAbsoluteMediaUrl((string) $raw, 'video');
         };
 
         $body = [
@@ -317,6 +309,57 @@ class PostService
         }
 
         return $body;
+    }
+
+    /**
+     * Normalize stored media path/value into an absolute URL with domain.
+     */
+    private static function ensureAbsoluteMediaUrl(string $raw, string $kind = 'image'): ?string
+    {
+        $raw = trim($raw);
+        if ($raw === '') {
+            return null;
+        }
+
+        if (str_starts_with($raw, 'https://') || str_starts_with($raw, 'http://')) {
+            return $raw;
+        }
+
+        if (str_starts_with($raw, '//')) {
+            return 'https:'.$raw;
+        }
+
+        if (str_starts_with($raw, '/')) {
+            return url($raw);
+        }
+
+        if (
+            str_starts_with($raw, 'uploads/') ||
+            str_starts_with($raw, 'images/') ||
+            str_starts_with($raw, 'storage/')
+        ) {
+            return asset($raw);
+        }
+
+        if ($kind === 'video') {
+            $videoUrl = fetchFromS3($raw);
+            if (is_string($videoUrl) && trim($videoUrl) !== '') {
+                $videoUrl = trim($videoUrl);
+                if (str_starts_with($videoUrl, 'https://') || str_starts_with($videoUrl, 'http://')) {
+                    return $videoUrl;
+                }
+                if (str_starts_with($videoUrl, '//')) {
+                    return 'https:'.$videoUrl;
+                }
+                if (str_starts_with($videoUrl, '/')) {
+                    return url($videoUrl);
+                }
+
+                return asset($videoUrl);
+            }
+        }
+
+        return url(getImage('', $raw));
     }
 
     /**
