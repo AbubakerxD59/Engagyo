@@ -77,6 +77,11 @@ class Thread extends Model
         return $this->expires_in >= $now;
     }
 
+    public function getTimeslotsAttribute()
+    {
+        return collect();
+    }
+
     protected static function booted()
     {
         static::addGlobalScope(new TeamScope());

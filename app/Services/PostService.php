@@ -6,10 +6,12 @@ use App\Jobs\DeleteFacebookPostJob;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishPinterestPost;
+use App\Jobs\PublishThreadsPost;
 use App\Models\Board;
 use App\Models\InstagramAccount;
 use App\Models\Page;
 use App\Models\Post;
+use App\Models\Thread;
 use App\Models\Tiktok;
 use App\Models\User;
 use Exception;
@@ -50,7 +52,7 @@ class PostService
 
     public static function delete($post_id)
     {
-        $post = Post::with('page', 'board.pinterest', 'tiktok', 'instagramAccount')->where('id', $post_id)->first();
+        $post = Post::with('page', 'board.pinterest', 'tiktok', 'instagramAccount', 'thread')->where('id', $post_id)->first();
         if ($post) {
             $status = $post->status;
             $social_type = $post->social_type;
@@ -80,7 +82,7 @@ class PostService
     {
         try {
             $user = Auth::user();
-            $post = Post::with('page.facebook', 'board.pinterest', 'instagramAccount')->where('status', '!=', 1)->where('id', $id)->firstOrFail();
+            $post = Post::with('page.facebook', 'board.pinterest', 'instagramAccount', 'thread')->where('status', '!=', 1)->where('id', $id)->firstOrFail();
             if ($post->social_type == 'facebook') {
                 $page = $post->page;
                 $response = FacebookService::validateToken($page);
@@ -110,6 +112,22 @@ class PostService
                     ];
                 }
                 PublishInstagramPost::dispatch($post->id);
+            }
+            if (str_contains(strtolower((string) $post->social_type), 'threads')) {
+                $thread = $post->thread;
+                if (! $thread) {
+                    return [
+                        'success' => false,
+                        'message' => 'Threads account not found for this post.',
+                    ];
+                }
+                if (! $thread->validToken()) {
+                    return [
+                        'success' => false,
+                        'message' => 'Threads access token expired. Reconnect your Threads account.',
+                    ];
+                }
+                PublishThreadsPost::dispatch($post->id);
             }
             $response = [
                 'success' => true,
@@ -162,6 +180,7 @@ class PostService
             'pinterest' => Board::find($data['account_id']),
             'tiktok' => Tiktok::find($data['account_id']),
             'instagram' => InstagramAccount::find($data['account_id']),
+            'threads' => Thread::find($data['account_id']),
             default => null,
         };
 
@@ -197,8 +216,107 @@ class PostService
             str_contains($st, 'pinterest') => self::pinterestPostTypeBody($post),
             str_contains($st, 'tiktok') => self::tiktokPostTypeBody($post),
             str_contains($st, 'facebook') => self::facebookPostTypeBody($post),
+            str_contains($st, 'threads') => self::threadsPostTypeBody($post),
             default => [],
         };
+    }
+
+    public static function threadsPostTypeBody(Post $post): array
+    {
+        $attrs = $post->getAttributes();
+        $title = trim((string) ($attrs['title'] ?? ''));
+        $comment = trim((string) ($attrs['comment'] ?? ''));
+        $text = $title;
+        if ($comment !== '') {
+            $text = $text !== '' ? $text."\n\n".$comment : $comment;
+        }
+
+        $resolveImage = function ($raw): ?string {
+            if ($raw === null || $raw === '') {
+                return null;
+            }
+            $raw = (string) $raw;
+            if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
+                return $raw;
+            }
+
+            return url(getImage('', $raw));
+        };
+
+        $resolveVideo = function ($raw): ?string {
+            if ($raw === null || $raw === '') {
+                return null;
+            }
+            $raw = (string) $raw;
+            if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
+                return $raw;
+            }
+
+            return fetchFromS3($raw);
+        };
+
+        $body = [
+            'text' => $text,
+            'type' => 'text',
+            'media_type' => 'TEXT',
+        ];
+
+        if (($post->type ?? '') === 'carousel') {
+            $meta = [];
+            if (! empty($attrs['metadata'])) {
+                $decoded = is_string($attrs['metadata']) ? json_decode($attrs['metadata'], true) : $attrs['metadata'];
+                if (is_array($decoded)) {
+                    $meta = $decoded;
+                }
+            }
+            $items = $meta['threads_carousel'] ?? [];
+            if (! is_array($items) || $items === []) {
+                $items = $meta['ig_carousel'] ?? [];
+            }
+
+            $carouselItems = [];
+            foreach ($items as $it) {
+                if (! is_array($it)) {
+                    continue;
+                }
+                if (! empty($it['video'])) {
+                    $url = $resolveVideo($it['video']);
+                    if ($url) {
+                        $carouselItems[] = ['type' => 'video', 'url' => $url];
+                    }
+                } elseif (! empty($it['image'])) {
+                    $url = $resolveImage($it['image']);
+                    if ($url) {
+                        $carouselItems[] = ['type' => 'image', 'url' => $url];
+                    }
+                }
+            }
+
+            return [
+                'type' => 'carousel',
+                'text' => $text,
+                'carousel_items' => $carouselItems,
+            ];
+        }
+
+        $rawImage = $attrs['image'] ?? null;
+        $rawVideo = $attrs['video'] ?? null;
+        if (! empty($rawVideo)) {
+            $body['type'] = 'video';
+            $body['media_type'] = 'VIDEO';
+            $body['video_url'] = $resolveVideo($rawVideo);
+
+            return $body;
+        }
+        if (! empty($rawImage)) {
+            $body['type'] = 'image';
+            $body['media_type'] = 'IMAGE';
+            $body['image_url'] = $resolveImage($rawImage);
+
+            return $body;
+        }
+
+        return $body;
     }
 
     /**

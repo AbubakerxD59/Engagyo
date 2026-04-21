@@ -257,8 +257,9 @@ class User extends Authenticatable
         $boards = Board::with('pinterest', 'timeslots')->orderBy('name')->get();
         $tiktoks = Tiktok::with('timeslots')->orderBy('username')->get();
         $instagram = $this->instagramAccountsForSchedule(false);
+        $threads = Thread::query()->where('user_id', $this->id)->orderBy('username')->get();
 
-        return $pages->concat($boards)->concat($tiktoks)->concat($instagram);
+        return $pages->concat($boards)->concat($tiktoks)->concat($instagram)->concat($threads);
     }
 
     /**
@@ -395,6 +396,15 @@ class User extends Authenticatable
                         ->first();
                     if ($ig) {
                         $accounts->push($ig);
+                    }
+                } elseif ($type === 'threads') {
+                    $ownerId = (int) ($this->getEffectiveUser()?->id ?? $this->id);
+                    $thread = Thread::query()
+                        ->where('id', $id)
+                        ->where('user_id', $ownerId)
+                        ->first();
+                    if ($thread) {
+                        $accounts->push($thread);
                     }
                 }
             }

@@ -69,6 +69,11 @@ class Post extends Model
         return $this->belongsTo(InstagramAccount::class, 'account_id', 'id');
     }
 
+    public function thread()
+    {
+        return $this->belongsTo(Thread::class, 'account_id', 'id');
+    }
+
     public function domain()
     {
         return $this->belongsTo(Domain::class, 'domain_id', 'id');
@@ -122,7 +127,7 @@ class Post extends Model
 
     public function scopeAccountExist($query)
     {
-        $query->has("page")->orHas("board")->orHas("tiktok")->orHas("instagramAccount");
+        $query->has("page")->orHas("board")->orHas("tiktok")->orHas("instagramAccount")->orHas("thread");
     }
 
     public function scopePageExist($query)
@@ -802,6 +807,9 @@ class Post extends Model
         if ($social_type == "instagram") {
             $account_name = $this->instagramAccount?->name ?? $this->instagramAccount?->username;
         }
+        if ($social_type == "threads") {
+            $account_name = $this->thread?->username;
+        }
         return $account_name;
     }
 
@@ -822,6 +830,9 @@ class Post extends Model
         }
         if ($social_type === 'instagram') {
             return $this->instagramAccount?->username ?? '';
+        }
+        if ($social_type === 'threads') {
+            return $this->thread?->username ?? '';
         }
         return '';
     }
@@ -846,6 +857,9 @@ class Post extends Model
         }
         if ($social_type == "instagram") {
             $profile_image = $this->instagramAccount?->profile_image ?? null;
+        }
+        if ($social_type == "threads") {
+            $profile_image = $this->thread?->profile_image ?? null;
         }
         return $profile_image;
     }

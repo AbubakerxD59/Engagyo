@@ -9,6 +9,7 @@ use App\Jobs\DeleteSentPostJob;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishPinterestPost;
+use App\Jobs\PublishThreadsPost;
 use App\Jobs\PublishTikTokPost;
 use App\Models\Board;
 use App\Models\Facebook;
@@ -19,6 +20,7 @@ use App\Models\PagePost;
 use App\Models\Pinterest;
 use App\Models\Post;
 use App\Models\Tiktok;
+use App\Models\Thread;
 use App\Models\Timeslot;
 use App\Models\User;
 use App\Services\FacebookService;
@@ -101,6 +103,13 @@ class ScheduleController extends Controller
                 $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
 
                 return InstagramAccount::where('id', $post->account_id)
+                    ->where('user_id', $ownerId)
+                    ->exists();
+
+            case 'threads':
+                $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
+
+                return Thread::where('id', $post->account_id)
                     ->where('user_id', $ownerId)
                     ->exists();
 
@@ -421,6 +430,81 @@ class ScheduleController extends Controller
     }
 
     /**
+     * @return array{error: ?string, post: ?Post, plan: ?array<string, mixed>}
+     */
+    private function createThreadsPostFromCompose(User $user, object $account, Request $request, array $upload, string $publishDateTime, int $scheduled = 0): array
+    {
+        $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
+        $threadRow = Thread::query()
+            ->where('id', $account->id)
+            ->where('user_id', $ownerId)
+            ->first();
+        if (! $threadRow) {
+            return ['error' => 'Threads account not found.', 'post' => null, 'plan' => null];
+        }
+        if (! $threadRow->validToken()) {
+            return ['error' => 'Threads access token expired. Reconnect your Threads account.', 'post' => null, 'plan' => null];
+        }
+
+        $plan = [
+            'type' => 'content_only',
+            'image' => null,
+            'video' => null,
+            'metadata' => null,
+        ];
+
+        if (($upload['instagram_carousel_items'] ?? []) !== [] && count($upload['instagram_carousel_items']) >= 2) {
+            $carousel = [];
+            foreach ($upload['instagram_carousel_items'] as $item) {
+                if (! is_array($item)) {
+                    continue;
+                }
+                if (($item['type'] ?? '') === 'video' && ! empty($item['path'])) {
+                    $carousel[] = ['video' => $item['path']];
+                } elseif (! empty($item['path'])) {
+                    $carousel[] = ['image' => $item['path']];
+                }
+            }
+            if (count($carousel) > 20) {
+                return ['error' => 'Threads carousel supports at most 20 media files.', 'post' => null, 'plan' => null];
+            }
+            if (count($carousel) >= 2) {
+                $plan['type'] = 'carousel';
+                $plan['metadata'] = json_encode(['threads_carousel' => $carousel]);
+            }
+        } elseif (! empty($upload['video'])) {
+            $plan['type'] = 'video';
+            $plan['video'] = $upload['video'];
+        } elseif (! empty($upload['image'])) {
+            $plan['type'] = 'photo';
+            $plan['image'] = $upload['image'];
+        }
+
+        $data = [
+            'user_id' => $user->id,
+            'account_id' => $account->id,
+            'social_type' => 'threads',
+            'type' => $plan['type'],
+            'source' => $this->source,
+            'title' => $request->get('content'),
+            'comment' => $request->get('comment'),
+            'image' => $plan['image'],
+            'video' => $plan['video'],
+            'status' => 0,
+            'publish_date' => $publishDateTime,
+            'scheduled' => $scheduled,
+            'metadata' => $plan['metadata'],
+        ];
+
+        $post = PostService::create($data);
+        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+        }
+
+        return ['error' => null, 'post' => $post, 'plan' => $plan];
+    }
+
+    /**
      * Check if user can create scheduled posts
      *
      * @param  int  $newPostsCount  Number of new posts to be created
@@ -614,6 +698,16 @@ class ScheduleController extends Controller
                         'profile_image' => $ig->profile_image ?? '',
                     ];
                 }
+            } elseif (str_contains($st, 'threads')) {
+                $thread = Thread::find($post->account_id);
+                if ($thread) {
+                    $account = [
+                        'id' => $thread->id,
+                        'type' => 'threads',
+                        'name' => $thread->username ? '@'.$thread->username : 'Threads',
+                        'profile_image' => $thread->profile_image ?? '',
+                    ];
+                }
             }
         }
 
@@ -645,6 +739,13 @@ class ScheduleController extends Controller
                     'id' => $igRow->id,
                     'type' => 'instagram',
                     'schedule_status' => $igRow->schedule_status ?? 'inactive',
+                ]);
+            });
+            $user->threads()->get(['id'])->each(function ($threadRow) use ($accountsStatus) {
+                $accountsStatus->push([
+                    'id' => $threadRow->id,
+                    'type' => 'threads',
+                    'schedule_status' => 'inactive',
                 ]);
             });
         }
@@ -693,6 +794,13 @@ class ScheduleController extends Controller
                 'schedule_status' => $ig->schedule_status ?? 'inactive',
             ]);
         });
+        $user->threads()->get(['id'])->each(function ($threadRow) use ($accountsStatus) {
+            $accountsStatus->push([
+                'id' => $threadRow->id,
+                'type' => 'threads',
+                'schedule_status' => 'inactive',
+            ]);
+        });
 
         $account = null;
         $post = Post::where('user_id', $user->id)
@@ -738,6 +846,16 @@ class ScheduleController extends Controller
                         'type' => 'instagram',
                         'name' => $igRow->name ?: ($igRow->username ? '@'.$igRow->username : 'Instagram'),
                         'profile_image' => $igRow->profile_image ?? '',
+                    ];
+                }
+            } elseif (str_contains($st, 'threads')) {
+                $thread = Thread::find($post->account_id);
+                if ($thread) {
+                    $account = [
+                        'id' => $thread->id,
+                        'type' => 'threads',
+                        'name' => $thread->username ? '@'.$thread->username : 'Threads',
+                        'profile_image' => $thread->profile_image ?? '',
                     ];
                 }
             }
@@ -1821,6 +1939,15 @@ class ScheduleController extends Controller
                         PublishInstagramPost::dispatch($post->id);
                     }
                 }
+                if ($account->type === 'threads') {
+                    $created = $this->createThreadsPostFromCompose($user, $account, $request, $upload, $publishDateNow, 0);
+                    if ($created['error'] !== null) {
+                        return ['success' => false, 'message' => $created['error']];
+                    }
+                    $post = $created['post'];
+                    $this->logService->logPost('threads', (string) ($created['plan']['type'] ?? 'content_only'), $post->id, ['action' => 'publish'], 'pending');
+                    PublishThreadsPost::dispatch($post->id);
+                }
             }
             $response = [
                 'success' => true,
@@ -2256,6 +2383,18 @@ class ScheduleController extends Controller
                             $this->logService->logQueuedPost('instagram', $created['post']->id, ['type' => $created['plan']['type'], 'publish_date' => $nextTime]);
                         }
                     }
+                    if ($account->type === 'threads') {
+                        $nextTime = (new Post)->nextScheduleTime(
+                            ['account_id' => $account->id, 'social_type' => 'threads', 'source' => 'schedule'],
+                            $account->timeslots,
+                            $user
+                        );
+                        $created = $this->createThreadsPostFromCompose($user, $account, $request, $upload, $nextTime, 0);
+                        if ($created['error'] !== null) {
+                            return ['success' => false, 'message' => $created['error']];
+                        }
+                        $this->logService->logQueuedPost('threads', $created['post']->id, ['type' => $created['plan']['type'] ?? 'content_only', 'publish_date' => $nextTime]);
+                    }
                     $response = [
                         'success' => true,
                         'message' => 'Your posts are queued for Later!',
@@ -2427,6 +2566,13 @@ class ScheduleController extends Controller
                         }
                         $this->logService->logScheduledPost('instagram', $created['post']->id, $scheduleDateTime, ['type' => $created['plan']['type']]);
                     }
+                }
+                if ($account->type === 'threads') {
+                    $created = $this->createThreadsPostFromCompose($user, $account, $request, $upload, $scheduleDateTime, 1);
+                    if ($created['error'] !== null) {
+                        return ['success' => false, 'message' => $created['error']];
+                    }
+                    $this->logService->logScheduledPost('threads', $created['post']->id, $scheduleDateTime, ['type' => $created['plan']['type'] ?? 'content_only']);
                 }
                 $response = [
                     'success' => true,
@@ -3728,6 +3874,7 @@ class ScheduleController extends Controller
             'pinterest' => 'pinterest',
             'tiktok' => 'tiktok',
             'instagram' => 'instagram',
+            'threads' => 'threads',
             default => 'facebook',
         };
         $nextLocal = (new Post)->nextScheduleTime(

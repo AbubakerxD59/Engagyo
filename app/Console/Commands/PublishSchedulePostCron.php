@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishPinterestPost;
+use App\Jobs\PublishThreadsPost;
 use App\Models\Notification;
 use App\Models\Post;
 use App\Services\FacebookService;
@@ -78,7 +79,7 @@ class PublishSchedulePostCron extends Command
     {
         // $now = date('Y-m-d H:i');
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
-        $query = $post->with('user.timezone', 'page.facebook', 'board.pinterest', 'instagramAccount')->past($now)->notPublished()->schedule();
+        $query = $post->with('user.timezone', 'page.facebook', 'board.pinterest', 'instagramAccount', 'thread')->past($now)->notPublished()->schedule();
         $posts = $query->orderBy('publish_date')->get();
 
         foreach ($posts as $key => $post) {
@@ -91,6 +92,8 @@ class PublishSchedulePostCron extends Command
                     $this->processPinterestPost($post);
                 } elseif (str_contains(strtolower(trim((string) $post->social_type)), 'instagram')) {
                     $this->processInstagramPost($post);
+                } elseif (str_contains(strtolower(trim((string) $post->social_type)), 'threads')) {
+                    $this->processThreadsPost($post);
                 }
             } catch (\Exception $e) {
                 $errorMessage = $e->getMessage();
@@ -275,6 +278,46 @@ class PublishSchedulePostCron extends Command
                 'response' => $errorMessage,
             ]);
             $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+        }
+    }
+
+    private function processThreadsPost(Post $post): void
+    {
+        $social_type = $post->social_type;
+        $account_image = $post->account_profile;
+        $thread = $post->thread;
+
+        if (! $thread) {
+            $errorMessage = 'Error: Threads account not found.';
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+
+            return;
+        }
+
+        if (! $thread->validToken()) {
+            $errorMessage = 'Error: Threads access token expired. Please reconnect Threads.';
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+
+            return;
+        }
+
+        try {
+            PublishThreadsPost::dispatch($post->id);
+        } catch (\Exception $e) {
+            $errorMessage = 'Error preparing post: '.$e->getMessage();
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
         }
     }
 }
