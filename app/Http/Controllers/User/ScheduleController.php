@@ -1048,6 +1048,21 @@ class ScheduleController extends Controller
                     'message' => 'Something went Wrong!',
                 ];
             }
+        } elseif ($type == 'threads') {
+            $thread = Thread::find($id);
+            if ($thread) {
+                $thread->schedule_status = $status == 1 ? 'active' : 'inactive';
+                $thread->save();
+                $response = [
+                    'success' => true,
+                    'message' => 'Status changed Successfully!',
+                ];
+            } else {
+                $response = [
+                    'success' => false,
+                    'message' => 'Something went Wrong!',
+                ];
+            }
         }
 
         return response()->json($response);
