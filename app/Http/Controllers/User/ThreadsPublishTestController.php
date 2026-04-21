@@ -137,7 +137,8 @@ class ThreadsPublishTestController extends Controller
             return $postId;
         };
 
-        $waitForContainerReady = function (string $creationId, int $maxAttempts = 15, int $sleepMs = 1500) use ($accessToken, $addStep): bool {
+        $waitForContainerReady = function (string $creationId, int $maxAttempts = 15, int $sleepMs = 1500, ?string $label = null) use ($accessToken, $addStep): bool {
+            $stepTitle = $label ? "Check container readiness ({$label})" : 'Check container readiness';
             for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
                 $resp = Http::acceptJson()
                     ->timeout(60)
@@ -164,7 +165,7 @@ class ThreadsPublishTestController extends Controller
                 $status = strtoupper((string) ($payload['status'] ?? ''));
                 $isReady = in_array($status, ['FINISHED', 'PUBLISHED', 'READY', 'COMPLETE'], true);
 
-                $addStep('Check container readiness', $isReady ? 'ok' : 'running', [
+                $addStep($stepTitle, $isReady ? 'ok' : 'running', [
                     'attempt' => $attempt,
                     'creation_id' => $creationId,
                     'status' => $status,
@@ -181,7 +182,7 @@ class ThreadsPublishTestController extends Controller
                 usleep($sleepMs * 1000);
             }
 
-            $addStep('Check container readiness', 'error', [
+            $addStep($stepTitle, 'error', [
                 'creation_id' => $creationId,
                 'message' => 'Timed out waiting for Threads container readiness.',
             ]);
@@ -247,6 +248,16 @@ class ThreadsPublishTestController extends Controller
                 if ($childId === null) {
                     return back()->withInput()->with('threads_test_result', ['success' => false, 'steps' => $steps]);
                 }
+
+                if (! $waitForContainerReady($childId, 20, 1500, 'child #'.($idx + 1))) {
+                    $addStep('Validate carousel child', 'error', [
+                        'message' => 'Child container is not ready/valid for parent carousel.',
+                        'child_index' => $idx + 1,
+                        'child_creation_id' => $childId,
+                    ]);
+
+                    return back()->withInput()->with('threads_test_result', ['success' => false, 'steps' => $steps]);
+                }
                 $children[] = $childId;
             }
 
@@ -263,7 +274,7 @@ class ThreadsPublishTestController extends Controller
             return back()->withInput()->with('threads_test_result', ['success' => false, 'steps' => $steps]);
         }
 
-        if (! $waitForContainerReady($creationId)) {
+        if (! $waitForContainerReady($creationId, 20, 1500, 'parent')) {
             return back()->withInput()->with('threads_test_result', ['success' => false, 'steps' => $steps]);
         }
 
