@@ -21,6 +21,17 @@ class Thread extends Model
         'access_token',
         'expires_in',
         'refresh_token',
+        'schedule_status',
+        'url_shortener_enabled',
+        'last_fetch',
+        'shuffle',
+        'rss_paused',
+    ];
+
+    protected $casts = [
+        'url_shortener_enabled' => 'boolean',
+        'rss_paused' => 'boolean',
+        'last_fetch' => 'datetime',
     ];
 
     protected $appends = ['type'];
@@ -33,6 +44,11 @@ class Thread extends Model
     public function scopeSearch($query, $search)
     {
         $query->where('threads_id', $search)->orWhere('username', 'like', "%{$search}%");
+    }
+
+    public function scopeWhereScheduledActive($query)
+    {
+        $query->where('schedule_status', 'active');
     }
 
     protected function profileImage(): Attribute
