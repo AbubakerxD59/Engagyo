@@ -137,6 +137,61 @@ class ThreadsPublishTestController extends Controller
             return $postId;
         };
 
+        $waitForContainerReady = function (string $creationId, int $maxAttempts = 15, int $sleepMs = 1500) use ($accessToken, $addStep): bool {
+            for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+                $resp = Http::acceptJson()
+                    ->timeout(60)
+                    ->get("https://graph.threads.net/v1.0/{$creationId}", [
+                        'fields' => 'id,status,status_code,error',
+                        'access_token' => $accessToken,
+                    ]);
+
+                $payload = $resp->json();
+                if (! is_array($payload)) {
+                    $payload = ['raw' => $resp->body()];
+                }
+
+                if (! $resp->successful()) {
+                    $addStep('Check container readiness', 'error', [
+                        'attempt' => $attempt,
+                        'creation_id' => $creationId,
+                        'response' => $payload,
+                    ]);
+
+                    return false;
+                }
+
+                $statusCode = strtoupper((string) ($payload['status_code'] ?? ''));
+                $status = strtoupper((string) ($payload['status'] ?? ''));
+                $isReady = in_array($statusCode, ['FINISHED', 'PUBLISHED', 'READY', 'COMPLETE'], true)
+                    || in_array($status, ['FINISHED', 'PUBLISHED', 'READY', 'COMPLETE'], true);
+
+                $addStep('Check container readiness', $isReady ? 'ok' : 'running', [
+                    'attempt' => $attempt,
+                    'creation_id' => $creationId,
+                    'status_code' => $statusCode,
+                    'status' => $status,
+                ]);
+
+                if ($isReady) {
+                    return true;
+                }
+
+                if (in_array($statusCode, ['ERROR', 'EXPIRED', 'FAILED'], true) || in_array($status, ['ERROR', 'EXPIRED', 'FAILED'], true)) {
+                    return false;
+                }
+
+                usleep($sleepMs * 1000);
+            }
+
+            $addStep('Check container readiness', 'error', [
+                'creation_id' => $creationId,
+                'message' => 'Timed out waiting for Threads container readiness.',
+            ]);
+
+            return false;
+        };
+
         $creationId = null;
 
         if ($postType === 'text') {
@@ -208,6 +263,10 @@ class ThreadsPublishTestController extends Controller
         }
 
         if ($creationId === null) {
+            return back()->withInput()->with('threads_test_result', ['success' => false, 'steps' => $steps]);
+        }
+
+        if (! $waitForContainerReady($creationId)) {
             return back()->withInput()->with('threads_test_result', ['success' => false, 'steps' => $steps]);
         }
 
