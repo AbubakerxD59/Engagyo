@@ -80,7 +80,7 @@ class ThreadsPublishTestController extends Controller
             $name = uniqid('threads_test_', true).'_'.$file->getClientOriginalName();
             $file->move($dir, $name);
 
-            return asset('uploads/threads-test/'.$name);
+            return url('uploads/threads-test/'.$name);
         };
 
         $createContainer = function (array $payload) use ($threadsUserId, $addStep): ?string {
