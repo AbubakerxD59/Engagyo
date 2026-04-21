@@ -142,7 +142,7 @@ class ThreadsPublishTestController extends Controller
                 $resp = Http::acceptJson()
                     ->timeout(60)
                     ->get("https://graph.threads.net/v1.0/{$creationId}", [
-                        'fields' => 'id,status,status_code,error',
+                        'fields' => 'id,status,error',
                         'access_token' => $accessToken,
                     ]);
 
@@ -161,15 +161,12 @@ class ThreadsPublishTestController extends Controller
                     return false;
                 }
 
-                $statusCode = strtoupper((string) ($payload['status_code'] ?? ''));
                 $status = strtoupper((string) ($payload['status'] ?? ''));
-                $isReady = in_array($statusCode, ['FINISHED', 'PUBLISHED', 'READY', 'COMPLETE'], true)
-                    || in_array($status, ['FINISHED', 'PUBLISHED', 'READY', 'COMPLETE'], true);
+                $isReady = in_array($status, ['FINISHED', 'PUBLISHED', 'READY', 'COMPLETE'], true);
 
                 $addStep('Check container readiness', $isReady ? 'ok' : 'running', [
                     'attempt' => $attempt,
                     'creation_id' => $creationId,
-                    'status_code' => $statusCode,
                     'status' => $status,
                 ]);
 
@@ -177,7 +174,7 @@ class ThreadsPublishTestController extends Controller
                     return true;
                 }
 
-                if (in_array($statusCode, ['ERROR', 'EXPIRED', 'FAILED'], true) || in_array($status, ['ERROR', 'EXPIRED', 'FAILED'], true)) {
+                if (in_array($status, ['ERROR', 'EXPIRED', 'FAILED'], true)) {
                     return false;
                 }
 
