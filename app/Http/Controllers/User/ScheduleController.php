@@ -586,7 +586,7 @@ class ScheduleController extends Controller
     // new design code
     public function index()
     {
-        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'timezone')->find(Auth::guard('user')->id());
+        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'instagramAccounts', 'threads', 'timezone')->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $accounts = $this->sortAccountsByRecentUsage($accounts, $user->id);
         $userTimezoneName = $user->timezone && ! empty($user->timezone->name) ? $user->timezone->name : 'UTC';
@@ -639,8 +639,9 @@ class ScheduleController extends Controller
         $pinterest = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'pinterest'));
         $tiktok = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'tiktok'));
         $instagram = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'instagram'));
+        $threads = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'threads'));
 
-        return $facebook->concat($pinterest)->concat($tiktok)->concat($instagram);
+        return $facebook->concat($pinterest)->concat($tiktok)->concat($instagram)->concat($threads);
     }
 
     /**
@@ -3696,6 +3697,9 @@ class ScheduleController extends Controller
         }
 
         $user = Auth::guard('user')->user();
+        if (! $user instanceof User) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
         $userTz = TimezoneService::getUserTimezone($user);
 
         $timeslots = $this->queueScheduleTimeslotStringsForAccount(
@@ -4179,6 +4183,54 @@ class ScheduleController extends Controller
     }
 
     /**
+     * Threads Sent tab: published schedule posts for selected accounts.
+     */
+    public function getThreadsSentPosts(Request $request)
+    {
+        $viewer = Auth::guard('user')->user();
+        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::guard('user')->id()];
+        $accountIds = (array) $request->input('account_id', []);
+        if (empty($accountIds)) {
+            return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
+        }
+
+        $ownerId = (int) ($viewer instanceof User ? ($viewer->getEffectiveUser()?->id ?? $viewer->id) : Auth::guard('user')->id());
+        $accounts = Thread::query()
+            ->whereIn('id', $accountIds)
+            ->where('user_id', $ownerId)
+            ->get();
+        if ($accounts->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No Threads accounts found', 'posts' => []]);
+        }
+
+        $threadIds = $accounts->pluck('id')->all();
+        $accountsById = $accounts->keyBy('id');
+
+        $dbPosts = Post::withoutGlobalScopes()
+            ->whereIn('user_id', $postCreatorIds)
+            ->where('social_type', 'like', '%threads%')
+            ->whereIn('account_id', $threadIds)
+            ->where('status', 1)
+            ->whereNotNull('published_at')
+            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
+            ->where('source', 'schedule')
+            ->with('user', 'thread')
+            ->orderByDesc('published_at')
+            ->get();
+
+        $allPosts = [];
+        foreach ($dbPosts as $dbPost) {
+            $account = $accountsById->get($dbPost->account_id) ?? $dbPost->thread;
+            if (! $account instanceof Thread) {
+                continue;
+            }
+            $allPosts[] = $this->sentTabPostFromThreadsRecord($dbPost, $account);
+        }
+
+        return response()->json(['success' => true, 'posts' => $allPosts]);
+    }
+
+    /**
      * Minimal Sent-tab payload from a published Instagram Post row (same keys as Pinterest / Facebook sent cards).
      */
     private function sentTabPostFromInstagramRecord(Post $dbPost, InstagramAccount $account): array
@@ -4238,6 +4290,60 @@ class ScheduleController extends Controller
         if ($dbPost->user) {
             $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
             $payload['publisher_email'] = $dbPost->user->email ?? '';
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Minimal Sent-tab payload from a published Threads Post row.
+     */
+    private function sentTabPostFromThreadsRecord(Post $dbPost, Thread $account): array
+    {
+        $published = Carbon::parse($dbPost->published_at);
+        $createdTime = $published->toIso8601String();
+
+        $fullPicture = '';
+        $rawImage = $dbPost->getAttributes()['image'] ?? null;
+        if (! empty($rawImage)) {
+            $img = (string) $rawImage;
+            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                $fullPicture = $img;
+            } else {
+                $fullPicture = url(getImage('', $img));
+            }
+        }
+
+        $videoUrl = $this->postStoredVideoUrl($dbPost);
+        $username = ltrim((string) ($account->username ?? ''), '@');
+        $permalink = $username !== ''
+            ? 'https://www.threads.com/@'.rawurlencode($username)
+            : null;
+
+        $payload = [
+            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-'.$dbPost->id),
+            'created_time' => $createdTime,
+            'message' => (string) ($dbPost->title ?? ''),
+            'story' => '',
+            'type' => (string) ($dbPost->getAttributes()['type'] ?? $dbPost->type ?? ''),
+            'full_picture' => $fullPicture,
+            'carousel_items' => [],
+            'permalink_url' => $permalink,
+            'account_name' => $username !== '' ? '@'.$username : 'Threads',
+            'account_profile' => (string) ($account->profile_image ?? ''),
+            'social_type' => 'threads',
+            'page_db_id' => $account->id,
+            'db_post_id' => $dbPost->id,
+            'insights' => [
+                'post_reactions' => 0,
+                'post_impressions' => 0,
+                'post_shares' => 0,
+                'post_comments' => 0,
+            ],
+        ];
+
+        if ($videoUrl !== null) {
+            $payload['video_url'] = $videoUrl;
         }
 
         return $payload;

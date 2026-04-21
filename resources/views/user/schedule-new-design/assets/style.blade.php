@@ -424,6 +424,10 @@
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
     }
 
+    .platform-badge.threads {
+        background: #000;
+    }
+
     .account-details {
         display: flex;
         flex-direction: column;
@@ -669,6 +673,10 @@
 
     .selected-account-platform-badge.instagram {
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    }
+
+    .selected-account-platform-badge.threads {
+        background: #000;
     }
 
     .selected-account-text {
@@ -1326,6 +1334,10 @@
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
     }
 
+    .queue-post-platform-badge.threads {
+        background: #000;
+    }
+
     .queue-post-format-badge {
         position: static;
         bottom: auto;
@@ -1880,6 +1892,10 @@
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
     }
 
+    .sent-card-platform-badge.threads {
+        background: #000;
+    }
+
     .sent-card-account-name {
         font-size: 14px;
         font-weight: 600;
@@ -2085,6 +2101,10 @@
 
     .sent-card-platform-icon.instagram {
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    }
+
+    .sent-card-platform-icon.threads {
+        background: #000;
     }
 
     .sent-card-footer-actions {
@@ -2442,6 +2462,10 @@
 
     .queue-settings-modal-redesign .queue-settings-badge-instagram {
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    }
+
+    .queue-settings-modal-redesign .queue-settings-badge-threads {
+        background: #000;
     }
 
     .queue-settings-modal-redesign .queue-settings-account-info {
@@ -3362,6 +3386,10 @@
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
     }
 
+    .post-account-badge .platform-icon.threads {
+        background: #000;
+    }
+
     .post-account-badge .post-account-name {
         font-size: 12px;
         font-weight: 600;
@@ -4234,6 +4262,10 @@
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
     }
 
+    .create-post-selected-channel-chip .create-post-chip-badge.threads {
+        background: #000;
+    }
+
     .create-post-channels-dropdown {
         display: none;
         position: absolute;
@@ -4385,6 +4417,10 @@
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
     }
 
+    .channels-dropdown-item-badge.threads {
+        background: #000;
+    }
+
     .channels-dropdown-item-name {
         flex: 1;
         font-size: 14px;
@@ -4504,6 +4540,10 @@
 
     .create-post-last-used-avatar-wrap .create-post-last-used-badge.instagram {
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+    }
+
+    .create-post-last-used-avatar-wrap .create-post-last-used-badge.threads {
+        background: #000;
     }
 
     .create-post-main-content {

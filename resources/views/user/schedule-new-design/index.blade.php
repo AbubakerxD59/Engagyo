@@ -149,6 +149,29 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    @elseif ($account->type == 'threads')
+                                        @php
+                                            $thProfile = $account->profile_image ?? '';
+                                            $thUsernameRaw = $account->username ?? '';
+                                            $thName = $thUsernameRaw !== '' ? '@'.$thUsernameRaw : 'Threads';
+                                        @endphp
+                                        <div class="account-card {{ ($hasSelectedAccount && $selectedAccountId == (string) $account->id && ($saved['type'] ?? '') === 'threads') ? 'active' : (!$hasSelectedAccount ? 'active' : '') }}" data-type="threads"
+                                            data-id="{{ $account->id }}">
+                                            <div class="account-card-inner">
+                                                <div class="account-avatar">
+                                                    <img src="{{ $thProfile }}"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';"
+                                                        loading="lazy" alt="">
+                                                    <span class="platform-badge threads">
+                                                        <i class="fab fa-threads"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-details">
+                                                    <span class="account-name">{{ Str::limit($thName, 18) }}</span>
+                                                    <span class="account-username">{{ Str::limit($thUsernameRaw !== '' ? '@'.$thUsernameRaw : '', 15) }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     @endif
                                 @endforeach
                             </div>

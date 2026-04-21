@@ -37,6 +37,7 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.timezone
             Route::get('posts/pinterest-sent', 'getPinterestSentPosts')->name('posts.pinterest.sent');
             Route::get('posts/tiktok-sent', 'getTikTokSentPosts')->name('posts.tiktok.sent');
             Route::get('posts/instagram-sent', 'getInstagramSentPosts')->name('posts.instagram.sent');
+            Route::get('posts/threads-sent', 'getThreadsSentPosts')->name('posts.threads.sent');
             Route::post('refresh-page-posts', 'refreshPagePosts')->name('refresh-page-posts');
             Route::post('delete-sent-post', 'deleteSentPost')->name('delete-sent-post');
             Route::get('queue-timeline', 'getQueueTimeline')->name('queue.timeline');

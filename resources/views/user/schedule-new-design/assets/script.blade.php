@@ -314,11 +314,12 @@
                 } else {
                     $parentName.hide();
                 }
-                var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok instagram').addClass(type);
+                var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok instagram threads').addClass(type);
                 var headerIconClass = 'fab fa-facebook-f';
                 if (type === 'pinterest') headerIconClass = 'fab fa-pinterest-p';
                 else if (type === 'tiktok') headerIconClass = 'fab fa-tiktok';
                 else if (type === 'instagram') headerIconClass = 'fab fa-instagram';
+                else if (type === 'threads') headerIconClass = 'fab fa-threads';
                 $badge.find('i').attr('class', headerIconClass);
                 $headerBtns.show();
             } else if ($realActive.length > 1) {
@@ -424,6 +425,7 @@
         var pinterestSentRequest = null;
         var tiktokSentRequest = null;
         var instagramSentRequest = null;
+        var threadsSentRequest = null;
         var queueSectionRequest = null;
         var queueSectionMultiRequests = [];
         var queueTimelineIsAllChannelsQueue = false;
@@ -450,18 +452,21 @@
             if (pinterestSentRequest && pinterestSentRequest.readyState !== 4) pinterestSentRequest.abort();
             if (tiktokSentRequest && tiktokSentRequest.readyState !== 4) tiktokSentRequest.abort();
             if (instagramSentRequest && instagramSentRequest.readyState !== 4) instagramSentRequest.abort();
+            if (threadsSentRequest && threadsSentRequest.readyState !== 4) threadsSentRequest.abort();
 
             var pairs = selectedAccounts.pairs || [];
             var fbIds = [];
             var pinIds = [];
             var ttIds = [];
             var igIds = [];
+            var thIds = [];
             pairs.forEach(function(p) {
                 var t = (p.type || '').toString().toLowerCase();
                 if (t === 'facebook') fbIds.push(p.id);
                 else if (t === 'pinterest') pinIds.push(p.id);
                 else if (t === 'tiktok') ttIds.push(p.id);
                 else if (t === 'instagram') igIds.push(p.id);
+                else if (t === 'threads') thIds.push(p.id);
             });
 
             cachedSentPagePosts = null;
@@ -585,6 +590,28 @@
                     }
                 });
                 mixedSentRequests.push(rig);
+            }
+            if (thIds.length) {
+                pending++;
+                var thPostsResult = [];
+                var rth = $.ajax({
+                    url: "{{ route('panel.schedule.posts.threads.sent') }}",
+                    type: "GET",
+                    data: { account_id: thIds },
+                    success: function(response) {
+                        if (gen !== allChannelsSentLoadGeneration) return;
+                        thPostsResult = (response.success && response.posts) ? response.posts : [];
+                    },
+                    error: function(xhr, textStatus) {
+                        if (textStatus === 'abort' || gen !== allChannelsSentLoadGeneration) return;
+                        thPostsResult = [];
+                    },
+                    complete: function() {
+                        if (gen === allChannelsSentLoadGeneration) chunks.push(thPostsResult);
+                        onRequestDone();
+                    }
+                });
+                mixedSentRequests.push(rth);
             }
 
             if (pending === 0) {
@@ -911,7 +938,8 @@
             facebook: "{{ social_logo('facebook') }}",
             pinterest: "{{ social_logo('pinterest') }}",
             tiktok: "{{ social_logo('tiktok') }}",
-            instagram: "{{ social_logo('instagram') }}"
+            instagram: "{{ social_logo('instagram') }}",
+            threads: "{{ social_logo('threads') }}"
         };
 
         function getSocialIconClass(socialType) {
@@ -920,6 +948,7 @@
             if (t.indexOf('pinterest') !== -1) return 'fab fa-pinterest';
             if (t.indexOf('tiktok') !== -1) return 'fab fa-tiktok';
             if (t.indexOf('instagram') !== -1) return 'fab fa-instagram';
+            if (t.indexOf('threads') !== -1) return 'fab fa-threads';
             return 'fab fa-facebook-f';
         }
 
@@ -2010,8 +2039,8 @@
                 var un = $card.find('.account-username').text().trim();
                 tooltip = (nm + (un ? ' - ' + un : '')).trim();
             }
-            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram' };
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'fab fa-threads' };
             var type = p.type || 'facebook';
             var logo = socialLogos[type] || socialLogos.facebook;
             var icon = iconMap[type] || iconMap.facebook;
@@ -2333,8 +2362,8 @@
             if (!$item.length) return;
             var type = $item.data('type') || accType;
             var src = acc.profile_image || $item.find('.channels-dropdown-item-avatar img').attr('src') || '';
-            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram' };
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'fab fa-threads' };
             var logo = socialLogos[type] || socialLogos.facebook;
             var icon = iconMap[type] || iconMap.facebook;
             var html = '<span class="create-post-last-used-label">Last used</span>' +
@@ -2445,8 +2474,8 @@
         function renderSelectedChannels() {
             var $container = $('#createPostSelectedChannels');
             $container.empty();
-            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram' };
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'fab fa-threads' };
             var chipHtmls = [];
             $('.channels-dropdown-checkbox:checked').each(function() {
                 var $item = $(this).closest('.channels-dropdown-item');
@@ -4649,6 +4678,8 @@
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon tiktok"><i class="fab fa-tiktok"></i></span> TikTok';
             } else if (st === 'instagram') {
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon instagram"><i class="fab fa-instagram"></i></span> Instagram';
+            } else if (st === 'threads') {
+                publishedViaHtml = 'Published via <span class="sent-card-platform-icon threads"><i class="fab fa-threads"></i></span> Threads';
             } else {
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon facebook"><i class="fab fa-facebook-f"></i></span> Facebook';
             }
@@ -4678,7 +4709,7 @@
                 sentStatusHtml = '<span class="sent-card-status-badge ' + sentClass + '">' + sentLabel + '</span>';
             }
 
-            var badgeIcon = st === 'pinterest' ? 'fab fa-pinterest-p' : (st === 'tiktok' ? 'fab fa-tiktok' : (st === 'instagram' ? 'fab fa-instagram' : 'fab fa-facebook-f'));
+            var badgeIcon = st === 'pinterest' ? 'fab fa-pinterest-p' : (st === 'tiktok' ? 'fab fa-tiktok' : (st === 'instagram' ? 'fab fa-instagram' : (st === 'threads' ? 'fab fa-threads' : 'fab fa-facebook-f')));
 
             return `
                 <div class="sent-post-row" data-post-id="${post.id || ''}" data-page-id="${post.page_db_id || ''}" data-db-post-id="${dbPostId}" data-social-type="${st}">
@@ -4747,6 +4778,7 @@
             if (post.social_type === 'pinterest') platformIcon = 'fab fa-pinterest-p';
             else if (post.social_type === 'tiktok') platformIcon = 'fab fa-tiktok';
             else if (post.social_type === 'instagram') platformIcon = 'fab fa-instagram';
+            else if (post.social_type === 'threads') platformIcon = 'fab fa-threads';
             var platformClass = post.social_type;
 
             // Source badge
