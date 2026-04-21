@@ -119,7 +119,7 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Normalize create-post uploads: single file, or multiple files for Instagram carousel.
+     * Normalize create-post uploads: single file, or multiple files for Instagram/Threads carousel.
      *
      * @return array{error: ?array, has_files: bool, image: ?string, images: array<int, string>, video: ?string, instagram_carousel_items: array<int, array{type: string, path: string}>}
      */
@@ -140,9 +140,19 @@ class ScheduleController extends Controller
         }
 
         $igFormat = strtolower((string) $request->input('instagram_content_format', ''));
+        $threadsFormat = strtolower((string) $request->input('threads_content_format', ''));
+        if ($threadsFormat === '') {
+            $threadsRaw = $request->input('threads_content_formats');
+            if (is_string($threadsRaw) && $threadsRaw !== '') {
+                $decoded = json_decode($threadsRaw, true);
+                if (is_array($decoded) && in_array('carousel', array_map(fn ($v) => strtolower((string) $v), $decoded), true)) {
+                    $threadsFormat = 'carousel';
+                }
+            }
+        }
         $files = is_array($raw) ? array_values(array_filter($raw)) : [$raw];
 
-        if ($igFormat === 'carousel') {
+        if ($igFormat === 'carousel' || $threadsFormat === 'carousel') {
             if (count($files) < 2) {
                 return [
                     'error' => [
@@ -453,7 +463,32 @@ class ScheduleController extends Controller
             'metadata' => null,
         ];
 
-        if (($upload['instagram_carousel_items'] ?? []) !== [] && count($upload['instagram_carousel_items']) >= 2) {
+        $threadsFormats = ['post'];
+        $threadsRaw = $request->input('threads_content_formats');
+        if (is_array($threadsRaw)) {
+            $threadsFormats = array_values(array_filter(array_map(fn ($v) => strtolower((string) $v), $threadsRaw)));
+        } elseif (is_string($threadsRaw) && $threadsRaw !== '') {
+            $decoded = json_decode($threadsRaw, true);
+            if (is_array($decoded)) {
+                $threadsFormats = array_values(array_filter(array_map(fn ($v) => strtolower((string) $v), $decoded)));
+            }
+        }
+        $threadsSingle = strtolower((string) $request->input('threads_content_format', ''));
+        if ($threadsSingle !== '' && ! in_array($threadsSingle, $threadsFormats, true)) {
+            $threadsFormats[] = $threadsSingle;
+        }
+        if ($threadsFormats === []) {
+            $threadsFormats = ['post'];
+        }
+        $threadsFormat = in_array('carousel', $threadsFormats, true) ? 'carousel' : 'post';
+
+        if ($threadsFormat === 'carousel') {
+            if (($upload['instagram_carousel_items'] ?? []) === []) {
+                return ['error' => 'Threads carousel requires at least 2 media files.', 'post' => null, 'plan' => null];
+            }
+            if (count($upload['instagram_carousel_items']) < 2) {
+                return ['error' => 'Threads carousel requires at least 2 media files.', 'post' => null, 'plan' => null];
+            }
             $carousel = [];
             foreach ($upload['instagram_carousel_items'] as $item) {
                 if (! is_array($item)) {
@@ -471,13 +506,26 @@ class ScheduleController extends Controller
             if (count($carousel) >= 2) {
                 $plan['type'] = 'carousel';
                 $plan['metadata'] = json_encode(['threads_carousel' => $carousel]);
+            } else {
+                return ['error' => 'Threads carousel requires at least 2 valid media files.', 'post' => null, 'plan' => null];
             }
-        } elseif (! empty($upload['video'])) {
-            $plan['type'] = 'video';
-            $plan['video'] = $upload['video'];
-        } elseif (! empty($upload['image'])) {
-            $plan['type'] = 'photo';
-            $plan['image'] = $upload['image'];
+        } else {
+            if (! empty($upload['video'])) {
+                $plan['type'] = 'video';
+                $plan['video'] = $upload['video'];
+            } elseif (! empty($upload['image'])) {
+                $plan['type'] = 'photo';
+                $plan['image'] = $upload['image'];
+            } elseif (($upload['instagram_carousel_items'] ?? []) !== []) {
+                $first = $upload['instagram_carousel_items'][0] ?? null;
+                if (is_array($first) && (($first['type'] ?? '') === 'video') && ! empty($first['path'])) {
+                    $plan['type'] = 'video';
+                    $plan['video'] = $first['path'];
+                } elseif (is_array($first) && ! empty($first['path'])) {
+                    $plan['type'] = 'photo';
+                    $plan['image'] = $first['path'];
+                }
+            }
         }
 
         $data = [

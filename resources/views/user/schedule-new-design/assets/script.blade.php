@@ -2178,6 +2178,31 @@
             return false;
         }
 
+        function createPostHasOnlyThreadsChannelsSelected() {
+            if (isQueueNewPostModalVisible()) {
+                var pair = getSidebarSingleAccountPairForQueueModal();
+                return !!(pair && pair.type === 'threads');
+            }
+            var checked = $('.channels-dropdown-checkbox:checked');
+            if (checked.length === 0) return false;
+            var onlyThreads = true;
+            checked.each(function() {
+                if (($(this).data('type') || '') !== 'threads') {
+                    onlyThreads = false;
+                    return false;
+                }
+            });
+            return onlyThreads;
+        }
+
+        function shouldSendThreadsContentFormats() {
+            var acc = getCreatePostSelectedAccounts();
+            for (var i = 0; i < acc.length; i++) {
+                if ((acc[i].type || '') === 'threads') return true;
+            }
+            return false;
+        }
+
         function getInstagramContentFormatsPayload() {
             var fmts = ['post'];
             if (createPostHasOnlyInstagramChannelsSelected()) {
@@ -2189,9 +2214,26 @@
             return JSON.stringify(fmts);
         }
 
+        function getThreadsContentFormatsPayload() {
+            var fmts = ['post'];
+            if (createPostHasOnlyThreadsChannelsSelected()) {
+                fmts = activeComposeModal$().find('input[name="create_post_threads_formats[]"]:checked').map(function() {
+                    return $(this).val();
+                }).get();
+                if (!fmts.length) fmts = ['post'];
+            }
+            return JSON.stringify(fmts);
+        }
+
         function createPostInstagramCarouselModeActive() {
             if (!createPostHasOnlyInstagramChannelsSelected()) return false;
             var hasCarousel = activeComposeModal$().find('input[name="create_post_instagram_formats[]"][value="carousel"]').is(':checked');
+            return hasCarousel && createPostFiles.length >= 2;
+        }
+
+        function createPostThreadsCarouselModeActive() {
+            if (!createPostHasOnlyThreadsChannelsSelected()) return false;
+            var hasCarousel = activeComposeModal$().find('input[name="create_post_threads_formats[]"][value="carousel"]').is(':checked');
             return hasCarousel && createPostFiles.length >= 2;
         }
 
@@ -2236,6 +2278,7 @@
                 pm$('FormatReel').add(pm$('FormatStory')).prop('checked', false);
             }
             updateCreatePostInstagramFormatRow();
+            updateCreatePostThreadsFormatRow();
             updateCreatePostTextareasVisibility();
         }
 
@@ -2260,6 +2303,30 @@
                 $carouselOpt.show();
                 pm$('FormatIgPost').prop('checked', true);
                 pm$('FormatIgStory').add(pm$('FormatIgCarousel')).prop('checked', false);
+            }
+        }
+
+        function updateCreatePostThreadsFormatRow() {
+            var show = createPostHasOnlyThreadsChannelsSelected() && !is_link;
+            var $wrap = pm$('ThreadsFormatWrap');
+            var nFiles = createPostFiles.length;
+            var $carouselOpt = pm$('FormatThCarousel').closest('.create-post-format-option');
+            if (show) {
+                $wrap.show();
+                if (nFiles >= 2) {
+                    $carouselOpt.show();
+                } else {
+                    $carouselOpt.hide();
+                    if (pm$('FormatThCarousel').is(':checked')) {
+                        pm$('FormatThCarousel').prop('checked', false);
+                        pm$('FormatThPost').prop('checked', true);
+                    }
+                }
+            } else {
+                $wrap.hide();
+                $carouselOpt.show();
+                pm$('FormatThPost').prop('checked', true);
+                pm$('FormatThCarousel').prop('checked', false);
             }
         }
 
@@ -2295,6 +2362,14 @@
                     pm$('EditorTextarea').show();
                     pm$('EmojiBtn').show();
                 }
+                return;
+            }
+
+            var thFormatVisible = pm$('ThreadsFormatWrap').is(':visible');
+            if (thFormatVisible) {
+                pm$('CommentWrap').hide();
+                pm$('EditorTextarea').show();
+                pm$('EmojiBtn').show();
                 return;
             }
 
@@ -2346,6 +2421,22 @@
             var $checked = $modal.find('input[name="create_post_instagram_formats[]"]:checked');
             if ($checked.length === 0) {
                 $modal.find('input[name="create_post_instagram_formats[]"][value="post"]').prop('checked', true);
+            }
+            updateCreatePostTextareasVisibility();
+        });
+
+        $(document).on('change', 'input[name="create_post_threads_formats[]"]', function() {
+            var $cb = $(this);
+            var v = $cb.val();
+            var $modal = $cb.closest('.create-post-modal');
+            if ($cb.is(':checked') && v === 'carousel') {
+                $modal.find('input[name="create_post_threads_formats[]"]').not($cb).prop('checked', false);
+            } else if ($cb.is(':checked') && v !== 'carousel') {
+                $modal.find('input[name="create_post_threads_formats[]"][value="carousel"]').prop('checked', false);
+            }
+            var $checked = $modal.find('input[name="create_post_threads_formats[]"]:checked');
+            if ($checked.length === 0) {
+                $modal.find('input[name="create_post_threads_formats[]"][value="post"]').prop('checked', true);
             }
             updateCreatePostTextareasVisibility();
         });
@@ -2665,6 +2756,8 @@
             $('#createPostFirstComment').val('');
             $('#createPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
             $('#createPostFormatIgPost').prop('checked', true);
+            $('#createPostModal').find('input[name="create_post_threads_formats[]"]').prop('checked', false);
+            $('#createPostFormatThPost').prop('checked', true);
             $('#createPostLinkPreview').empty();
             createPostFiles = [];
             createPostRevokeUrls();
@@ -2683,6 +2776,8 @@
             $('#queueNewPostComment').val('');
             $('#queueNewPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
             $('#queueNewPostFormatIgPost').prop('checked', true);
+            $('#queueNewPostModal').find('input[name="create_post_threads_formats[]"]').prop('checked', false);
+            $('#queueNewPostFormatThPost').prop('checked', true);
             $('#queueNewPostUploadPreviews').empty();
             createPostUploadStates = {};
             $('#queueNewPostScheduleDropdown').removeClass('is-open');
@@ -2725,6 +2820,8 @@
             $('#queueNewPostComment').val('');
             $('#queueNewPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
             $('#queueNewPostFormatIgPost').prop('checked', true);
+            $('#queueNewPostModal').find('input[name="create_post_threads_formats[]"]').prop('checked', false);
+            $('#queueNewPostFormatThPost').prop('checked', true);
             $('#queueNewPostLinkPreview').empty();
             createPostFiles = [];
             createPostRevokeUrls();
@@ -3494,7 +3591,19 @@
                     return;
                 }
             }
+            if (createPostHasOnlyThreadsChannelsSelected()) {
+                var thCarousel = activeComposeModal$().find('input[name="create_post_threads_formats[]"][value="carousel"]').is(':checked');
+                if (thCarousel && (createPostFiles.length < 2 || createPostFiles.length > 20)) {
+                    toastr.error('Threads carousel requires between 2 and 20 media files.');
+                    return;
+                }
+            }
             if (createPostInstagramCarouselModeActive()) {
+                if (!validateCreatePostTikTokSettings()) return;
+                processCreatePostInstagramCarouselBatch();
+                return;
+            }
+            if (createPostThreadsCarouselModeActive()) {
                 if (!validateCreatePostTikTokSettings()) return;
                 processCreatePostInstagramCarouselBatch();
                 return;
@@ -3527,6 +3636,9 @@
             formData.append("facebook_content_formats", JSON.stringify(fbFormats));
             if (shouldSendInstagramContentFormats()) {
                 formData.append('instagram_content_formats', getInstagramContentFormatsPayload());
+            }
+            if (shouldSendThreadsContentFormats()) {
+                formData.append('threads_content_formats', getThreadsContentFormatsPayload());
             }
             var selectedAccounts = getCreatePostSelectedAccounts();
             if (selectedAccounts.length > 0) {
@@ -3599,9 +3711,17 @@
 
         function processCreatePostInstagramCarouselBatch() {
             if (!validateCreatePostTikTokSettings()) return;
-            if (createPostFiles.length < 2 || createPostFiles.length > 10) {
-                toastr.error('Instagram carousel requires between 2 and 10 media files.');
-                return;
+            var isThreadsCarousel = createPostThreadsCarouselModeActive();
+            if (isThreadsCarousel) {
+                if (createPostFiles.length < 2 || createPostFiles.length > 20) {
+                    toastr.error('Threads carousel requires between 2 and 20 media files.');
+                    return;
+                }
+            } else {
+                if (createPostFiles.length < 2 || createPostFiles.length > 10) {
+                    toastr.error('Instagram carousel requires between 2 and 10 media files.');
+                    return;
+                }
             }
             disableActionButton();
             var formData = new FormData();
@@ -3617,8 +3737,13 @@
             createPostFiles.forEach(function(file) {
                 formData.append("files[]", file);
             });
-            formData.append("instagram_content_format", "carousel");
-            formData.append("instagram_content_formats", JSON.stringify(['carousel']));
+            if (isThreadsCarousel) {
+                formData.append("threads_content_format", "carousel");
+                formData.append("threads_content_formats", JSON.stringify(['carousel']));
+            } else {
+                formData.append("instagram_content_format", "carousel");
+                formData.append("instagram_content_formats", JSON.stringify(['carousel']));
+            }
             var fbFormats = activeComposeModal$().find('input[name="create_post_facebook_formats[]"]:checked').map(function() {
                 return $(this).val();
             }).get();
@@ -3697,6 +3822,12 @@
             formData.append("facebook_content_formats", JSON.stringify(fbFormats));
             if (shouldSendInstagramContentFormats()) {
                 formData.append('instagram_content_formats', getInstagramContentFormatsPayload());
+            }
+            if (shouldSendThreadsContentFormats()) {
+                formData.append('threads_content_formats', getThreadsContentFormatsPayload());
+                if (createPostThreadsCarouselModeActive()) {
+                    formData.append('threads_content_format', 'carousel');
+                }
             }
             var selectedAccounts = getCreatePostSelectedAccounts();
             if (selectedAccounts.length > 0) {

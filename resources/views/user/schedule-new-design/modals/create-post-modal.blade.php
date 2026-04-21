@@ -299,6 +299,39 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="create-post-instagram-format-wrap create-post-facebook-format-wrap"
+                                id="createPostThreadsFormatWrap" style="display: none;"
+                                role="group" aria-label="Threads content format">
+                                <div class="create-post-facebook-format-bar">
+                                    <span class="create-post-instagram-format-instagram-icon" aria-hidden="true"><i
+                                            class="fab fa-threads"></i></span>
+                                    <div class="create-post-instagram-format-radios create-post-facebook-format-radios">
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_threads_formats[]"
+                                                id="createPostFormatThPost" value="post" checked>
+                                            <span>Post</span>
+                                        </label>
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_threads_formats[]"
+                                                id="createPostFormatThCarousel" value="carousel">
+                                            <span>Carousel</span>
+                                        </label>
+                                    </div>
+                                    <div class="create-post-format-help-wrap" id="createPostThreadsFormatHelpWrap">
+                                        <button type="button" class="create-post-format-help-btn"
+                                            id="createPostThreadsFormatHelpBtn">
+                                            <i class="far fa-question-circle"></i>
+                                        </button>
+                                        <div class="create-post-format-help-popover" role="tooltip"
+                                            aria-hidden="true">
+                                            <ul class="create-post-format-help-list">
+                                                <li><strong>Post</strong>: Text-only when no media, or one image/video when media is uploaded.</li>
+                                                <li><strong>Carousel</strong>: Publish 2–20 images/videos in one Threads post.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <textarea class="create-post-editor-textarea" id="createPostEditorTextarea"
                                 placeholder="Paste your link or write something..."></textarea>
                         </div>
