@@ -11,6 +11,7 @@ use App\Http\Controllers\User\NotificationController;
 use App\Http\Controllers\User\PaymentController;
 use App\Http\Controllers\User\ScheduleController;
 use App\Http\Controllers\User\SettingsController;
+use App\Http\Controllers\User\ThreadsPublishTestController;
 use App\Http\Controllers\User\TeamMemberController;
 use App\Http\Controllers\User\UrlTrackingController;
 use App\Models\Feature;
@@ -200,4 +201,9 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.timezone
 
     // Team Members Routes
     Route::resource('team-members', TeamMemberController::class)->except(['show']);
+
+    Route::controller(ThreadsPublishTestController::class)->middleware(['feature:'.Feature::$features_list[0]])->prefix('threads-test')->name('threads-test.')->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/publish', 'publish')->name('publish');
+    });
 });
