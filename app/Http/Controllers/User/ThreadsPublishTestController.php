@@ -142,7 +142,7 @@ class ThreadsPublishTestController extends Controller
                 $resp = Http::acceptJson()
                     ->timeout(60)
                     ->get("https://graph.threads.net/v1.0/{$creationId}", [
-                        'fields' => 'id,status,error',
+                        'fields' => 'id,status',
                         'access_token' => $accessToken,
                     ]);
 
