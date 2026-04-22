@@ -16,6 +16,8 @@ use App\Models\Tiktok;
 use App\Models\User;
 use Exception;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 
 class PostService
 {
@@ -56,6 +58,7 @@ class PostService
         if ($post) {
             $status = $post->status;
             $social_type = $post->social_type;
+            $socialType = strtolower((string) $social_type);
             $facebookPostId = $post->post_id ?? null;
             $pageId = $post->account_id;
             $dbPostId = $post->id;
@@ -64,6 +67,34 @@ class PostService
             if ($status == 1 && $social_type == 'pinterest' && ! empty($post->post_id)) {
                 $service = new PinterestService;
                 $service->delete($post);
+            }
+
+            // Threads: delete from Threads API before deleting local row.
+            if ($status == 1 && str_contains($socialType, 'thread') && ! empty($post->post_id)) {
+                $thread = $post->thread;
+                if (! $thread || empty($thread->access_token)) {
+                    throw new Exception('Threads access token is missing. Reconnect your Threads account and try again.');
+                }
+
+                $endpoint = 'https://graph.threads.net/v1.0/'.rawurlencode((string) $post->post_id)
+                    .'?access_token='.urlencode((string) $thread->access_token);
+
+                $response = Http::acceptJson()
+                    ->timeout(30)
+                    ->delete($endpoint);
+
+                if (! $response->successful() || ! $response->json('success')) {
+                    $apiMessage = (string) ($response->json('error.message')
+                        ?? $response->json('message')
+                        ?? 'Failed to delete Threads post.');
+                    Log::warning('Threads delete failed', [
+                        'post_id' => $post->id,
+                        'threads_media_id' => $post->post_id,
+                        'status' => $response->status(),
+                        'response' => $response->body(),
+                    ]);
+                    throw new Exception($apiMessage);
+                }
             }
 
             // Delete from database instantly
