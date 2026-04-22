@@ -163,7 +163,7 @@
                                                         onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';"
                                                         loading="lazy" alt="">
                                                     <span class="platform-badge threads">
-                                                        <img src="{{ social_logo('threads') }}" alt="Threads" style="width:12px;height:12px;object-fit:contain;">
+                                                        <img src="{{ social_logo('threads') }}" alt="Threads" style="width:100%;height:100%;object-fit:contain;">
                                                     </span>
                                                 </div>
                                                 <div class="account-details">

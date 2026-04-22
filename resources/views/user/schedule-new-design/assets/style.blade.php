@@ -366,11 +366,11 @@
     }
 
     .accounts-sidebar.collapsed .platform-badge {
-        width: 14px;
-        height: 14px;
+        width: 20px;
+        height: 20px;
         font-size: 7px;
-        bottom: -1px;
-        right: -1px;
+        bottom: -4px;
+        right: -4px;
     }
 
     /* Hide tick icon on selected accounts in sidebar */
@@ -4810,6 +4810,19 @@
         height: 25px;
         border-radius: 50%;
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+
+    .create-post-threads-format-icon {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        background: #111111;
         display: inline-flex;
         align-items: center;
         justify-content: center;

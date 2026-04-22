@@ -304,7 +304,7 @@
                                 id="createPostThreadsFormatWrap" style="display: none;"
                                 role="group" aria-label="Threads content format">
                                 <div class="create-post-facebook-format-bar">
-                                    <span class="create-post-instagram-format-instagram-icon" aria-hidden="true">
+                                    <span class="create-post-threads-format-icon" aria-hidden="true">
                                         <img src="{{ social_logo('threads') }}" alt="Threads" style="width:14px;height:14px;object-fit:contain;">
                                     </span>
                                     <div class="create-post-instagram-format-radios create-post-facebook-format-radios">

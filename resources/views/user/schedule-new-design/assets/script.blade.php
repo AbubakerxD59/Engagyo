@@ -320,7 +320,7 @@
                 else if (type === 'tiktok') headerIconClass = 'fab fa-tiktok';
                 else if (type === 'instagram') headerIconClass = 'fab fa-instagram';
                 if (type === 'threads') {
-                    $badge.html('<img src="' + socialLogos.threads + '" alt="Threads" class="threads-circle-icon">');
+                    $badge.html('<img src="' + socialLogos.threads + '" alt="Threads" class="threads-circle-icon" width="100%">');
                 } else {
                     $badge.html('<i class="' + headerIconClass + '"></i>');
                 }
