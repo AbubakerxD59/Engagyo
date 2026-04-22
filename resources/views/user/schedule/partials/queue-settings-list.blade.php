@@ -17,7 +17,7 @@
                 @elseif($account->type == 'threads')
                     <img class="queue-settings-avatar" src="{{ $account->profile_image }}"
                         onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';" alt="" loading="lazy">
-                    <span class="queue-settings-platform-badge queue-settings-badge-threads"><i class="fab fa-threads"></i></span>
+                    <span class="queue-settings-platform-badge queue-settings-badge-threads"><img src="{{ social_logo('threads') }}" alt="Threads" style="width:12px;height:12px;object-fit:contain;"></span>
                 @endif
             </div>
             <div class="queue-settings-account-info">

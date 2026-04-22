@@ -180,8 +180,9 @@
                                                 <img src="{{ $profileImg }}"
                                                     onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';"
                                                     loading="lazy" alt="">
-                                                <span class="channels-dropdown-item-badge threads"><i
-                                                        class="fab fa-threads"></i></span>
+                                                <span class="channels-dropdown-item-badge threads">
+                                                    <img src="{{ social_logo('threads') }}" alt="Threads" style="width:12px;height:12px;object-fit:contain;">
+                                                </span>
                                             </div>
                                             <span class="channels-dropdown-item-name">{{ $name }}</span>
                                             <label class="channels-dropdown-item-checkbox">
@@ -303,8 +304,9 @@
                                 id="createPostThreadsFormatWrap" style="display: none;"
                                 role="group" aria-label="Threads content format">
                                 <div class="create-post-facebook-format-bar">
-                                    <span class="create-post-instagram-format-instagram-icon" aria-hidden="true"><i
-                                            class="fab fa-threads"></i></span>
+                                    <span class="create-post-instagram-format-instagram-icon" aria-hidden="true">
+                                        <img src="{{ social_logo('threads') }}" alt="Threads" style="width:14px;height:14px;object-fit:contain;">
+                                    </span>
                                     <div class="create-post-instagram-format-radios create-post-facebook-format-radios">
                                         <label class="create-post-format-option">
                                             <input type="checkbox" name="create_post_threads_formats[]"

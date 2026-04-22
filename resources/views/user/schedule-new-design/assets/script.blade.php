@@ -319,8 +319,11 @@
                 if (type === 'pinterest') headerIconClass = 'fab fa-pinterest-p';
                 else if (type === 'tiktok') headerIconClass = 'fab fa-tiktok';
                 else if (type === 'instagram') headerIconClass = 'fab fa-instagram';
-                else if (type === 'threads') headerIconClass = 'fab fa-threads';
-                $badge.find('i').attr('class', headerIconClass);
+                if (type === 'threads') {
+                    $badge.html('<img src="' + socialLogos.threads + '" alt="Threads" class="threads-circle-icon">');
+                } else {
+                    $badge.html('<i class="' + headerIconClass + '"></i>');
+                }
                 $headerBtns.show();
             } else if ($realActive.length > 1) {
                 var $first = $realActive.first();
@@ -990,13 +993,18 @@
             threads: "{{ social_logo('threads') }}"
         };
 
+        function threadsCircleIconHtml(extraClass) {
+            var cls = extraClass ? (' class="' + extraClass + '"') : '';
+            return '<img src="' + socialLogos.threads + '" alt="Threads" style="width:12px;height:12px;object-fit:contain;"' + cls + '>';
+        }
+
         function getSocialIconClass(socialType) {
             if (!socialType) return 'fab fa-facebook-f';
             var t = (socialType || '').toLowerCase();
             if (t.indexOf('pinterest') !== -1) return 'fab fa-pinterest';
             if (t.indexOf('tiktok') !== -1) return 'fab fa-tiktok';
             if (t.indexOf('instagram') !== -1) return 'fab fa-instagram';
-            if (t.indexOf('threads') !== -1) return 'fab fa-threads';
+            if (t.indexOf('threads') !== -1) return 'threads-circle-icon';
             return 'fab fa-facebook-f';
         }
 
@@ -1045,7 +1053,10 @@
             cardHtml += '<div class="queue-post-card-header">';
             cardHtml += '<div class="queue-post-account">';
             cardHtml += '<div class="queue-post-avatar-wrap"><img src="' + profileSrc + '" class="queue-post-avatar" loading="lazy" onerror="this.onerror=null;this.src=\'' + socialLogos[post.social_type] + '\';">';
-            cardHtml += '<span class="queue-post-platform-badge ' + (post.social_type || 'facebook').toLowerCase().replace(/ /g, '-') + '"><i class="' + iconClass + '"></i></span></div>';
+            var platformIconHtml = iconClass === 'threads-circle-icon'
+                ? threadsCircleIconHtml('threads-circle-icon')
+                : '<i class="' + iconClass + '"></i>';
+            cardHtml += '<span class="queue-post-platform-badge ' + (post.social_type || 'facebook').toLowerCase().replace(/ /g, '-') + '">' + platformIconHtml + '</span></div>';
             cardHtml += '<span class="queue-post-account-name">' + escapeHtml(accountName) + '</span>';
             cardHtml += '</div>';
             cardHtml += '<button type="button" class="queue-post-chat-btn" data-post-id="' + postId + '" data-comment="' + escapeHtml(post.comment || '') + '" aria-label="Comments"><i class="far fa-comment"></i></button>';
@@ -2088,15 +2099,18 @@
                 tooltip = (nm + (un ? ' - ' + un : '')).trim();
             }
             var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'fab fa-threads' };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon' };
             var type = p.type || 'facebook';
             var logo = socialLogos[type] || socialLogos.facebook;
             var icon = iconMap[type] || iconMap.facebook;
+            var badgeIconHtml = icon === 'threads-circle-icon'
+                ? threadsCircleIconHtml('threads-circle-icon')
+                : '<i class="' + icon + '"></i>';
             tooltip = (tooltip || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             var html = '<div class="create-post-selected-channel-chip has-tooltip queue-new-post-single-chip" data-id="' + p.id + '" data-type="' + type + '" data-tooltip="' + tooltip + '">' +
                 '<span class="create-post-selected-channel-chip-inner">' +
                 '<img src="' + src + '" alt="" onerror="this.onerror=null; this.src=\'' + logo + '\';">' +
-                '<span class="create-post-chip-badge ' + type + '"><i class="' + icon + '"></i></span>' +
+                '<span class="create-post-chip-badge ' + type + '">' + badgeIconHtml + '</span>' +
                 '</span></div>';
             $container.append(html);
         }
@@ -2502,13 +2516,16 @@
             var type = $item.data('type') || accType;
             var src = acc.profile_image || $item.find('.channels-dropdown-item-avatar img').attr('src') || '';
             var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'fab fa-threads' };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon' };
             var logo = socialLogos[type] || socialLogos.facebook;
             var icon = iconMap[type] || iconMap.facebook;
+            var badgeIconHtml = icon === 'threads-circle-icon'
+                ? threadsCircleIconHtml('threads-circle-icon')
+                : '<i class="' + icon + '"></i>';
             var html = '<span class="create-post-last-used-label">Last used</span>' +
                 '<span class="create-post-last-used-avatar-wrap">' +
                 '<img src="' + src + '" alt="" onerror="this.onerror=null; this.src=\'' + logo + '\';">' +
-                '<span class="create-post-last-used-badge ' + type + '"><i class="' + icon + '"></i></span>' +
+                '<span class="create-post-last-used-badge ' + type + '">' + badgeIconHtml + '</span>' +
                 '</span>';
             $container.html(html).attr('data-id', acc.id).attr('data-type', accType).show();
         }
@@ -2614,7 +2631,7 @@
             var $container = $('#createPostSelectedChannels');
             $container.empty();
             var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'fab fa-threads' };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon' };
             var chipHtmls = [];
             $('.channels-dropdown-checkbox:checked').each(function() {
                 var $item = $(this).closest('.channels-dropdown-item');
@@ -2622,6 +2639,9 @@
                 var type = $item.data('type') || $(this).data('type') || 'facebook';
                 var logo = socialLogos[type] || socialLogos.facebook;
                 var icon = iconMap[type] || iconMap.facebook;
+                var badgeIconHtml = icon === 'threads-circle-icon'
+                    ? threadsCircleIconHtml('threads-circle-icon')
+                    : '<i class="' + icon + '"></i>';
                 var id = $(this).data('id');
                 var tooltip = ($item.attr('data-tooltip') || $item.find('.channels-dropdown-item-name').text() || '').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
                 var html = '<div class="create-post-selected-channel-chip has-tooltip" data-id="' + id + '" data-type="' + type + '" data-tooltip="' + tooltip + '">' +
@@ -2629,7 +2649,7 @@
                     '<i class="fas fa-times"></i></span>' +
                     '<span class="create-post-selected-channel-chip-inner">' +
                     '<img src="' + src + '" alt="" onerror="this.onerror=null; this.src=\'' + logo + '\';">' +
-                    '<span class="create-post-chip-badge ' + type + '"><i class="' + icon + '"></i></span>' +
+                    '<span class="create-post-chip-badge ' + type + '">' + badgeIconHtml + '</span>' +
                     '</span></div>';
                 chipHtmls.push(html);
             });
@@ -4932,7 +4952,7 @@
             } else if (st === 'instagram') {
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon instagram"><i class="fab fa-instagram"></i></span> Instagram';
             } else if (st === 'threads') {
-                publishedViaHtml = 'Published via <span class="sent-card-platform-icon threads"><i class="fab fa-threads"></i></span> Threads';
+                publishedViaHtml = 'Published via <span class="sent-card-platform-icon threads">' + threadsCircleIconHtml('threads-circle-icon') + '</span> Threads';
             } else {
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon facebook"><i class="fab fa-facebook-f"></i></span> Facebook';
             }
@@ -4962,7 +4982,10 @@
                 sentStatusHtml = '<span class="sent-card-status-badge ' + sentClass + '">' + sentLabel + '</span>';
             }
 
-            var badgeIcon = st === 'pinterest' ? 'fab fa-pinterest-p' : (st === 'tiktok' ? 'fab fa-tiktok' : (st === 'instagram' ? 'fab fa-instagram' : (st === 'threads' ? 'fab fa-threads' : 'fab fa-facebook-f')));
+            var badgeIcon = st === 'pinterest' ? 'fab fa-pinterest-p' : (st === 'tiktok' ? 'fab fa-tiktok' : (st === 'instagram' ? 'fab fa-instagram' : (st === 'threads' ? 'threads-circle-icon' : 'fab fa-facebook-f')));
+            var badgeIconHtml = badgeIcon === 'threads-circle-icon'
+                ? threadsCircleIconHtml('threads-circle-icon')
+                : '<i class="' + badgeIcon + '"></i>';
 
             return `
                 <div class="sent-post-row" data-post-id="${post.id || ''}" data-page-id="${post.page_db_id || ''}" data-db-post-id="${dbPostId}" data-social-type="${st}">
@@ -4978,7 +5001,7 @@
                                     <div class="sent-card-account">
                                         <div class="sent-card-avatar-wrap">
                                             <img src="${profileImg}" class="sent-card-avatar" onerror="this.onerror=null;this.src='${socialLogo}';" loading="lazy">
-                                            <span class="sent-card-platform-badge ${st}"><i class="${badgeIcon}"></i></span>
+                                            <span class="sent-card-platform-badge ${st}">${badgeIconHtml}</span>
                                         </div>
                                         <span class="sent-card-account-name">${$('<span>').text(accountName).html()}</span>
                                     </div>
@@ -5031,7 +5054,10 @@
             if (post.social_type === 'pinterest') platformIcon = 'fab fa-pinterest-p';
             else if (post.social_type === 'tiktok') platformIcon = 'fab fa-tiktok';
             else if (post.social_type === 'instagram') platformIcon = 'fab fa-instagram';
-            else if (post.social_type === 'threads') platformIcon = 'fab fa-threads';
+            else if (post.social_type === 'threads') platformIcon = 'threads-circle-icon';
+            var platformIconHtml = platformIcon === 'threads-circle-icon'
+                ? threadsCircleIconHtml('threads-circle-icon')
+                : '<i class="' + platformIcon + '"></i>';
             var platformClass = post.social_type;
 
             // Source badge
@@ -5091,7 +5117,7 @@
                         <div class="post-meta-row">
                             <div class="post-account-badge">
                                 <span class="platform-icon ${platformClass}">
-                                    <i class="${platformIcon}"></i>
+                                    ${platformIconHtml}
                                 </span>
                                 <span class="post-account-name">${post.account_name || 'Unknown'}</span>
                             </div>

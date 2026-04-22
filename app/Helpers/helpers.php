@@ -552,7 +552,7 @@ function social_icon($type = null)
     } elseif ($type == 'tiktok') {
         $logo = '<i class="fa-brands fa-tiktok"></i>';
     } elseif ($type == 'threads') {
-        $logo = '<i class="fa-brands fa-threads"></i>';
+        $logo = '<img src="'.asset("assets/img/icons/threads-circle.svg").'" alt="Threads" style="width:14px;height:14px;object-fit:contain;">';
     } else {
         $logo = "";
     }

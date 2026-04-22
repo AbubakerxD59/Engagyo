@@ -339,7 +339,7 @@
                                                         loading="lazy"
                                                         onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';">
                                                     <span class="platform-indicator threads-indicator">
-                                                        <i class="fab fa-threads"></i>
+                                                        <img src="{{ social_logo('threads') }}" alt="Threads" style="width:10px;height:10px;object-fit:contain;">
                                                     </span>
                                                 </div>
                                                 <div class="account-info">
@@ -364,12 +364,12 @@
                                     <div class="empty-state-wrapper">
                                         <div class="empty-state">
                                             <div class="empty-state-icon threads-empty">
-                                                <i class="fab fa-threads"></i>
+                                                <img src="{{ social_logo('threads') }}" alt="Threads" style="width:42px;height:42px;object-fit:contain;">
                                             </div>
                                             <h4>No Threads Account Connected</h4>
                                             <p>Connect your Threads account to enable authentication and account access.</p>
                                             <a href="{{ $threadsUrl }}" class="btn btn-threads">
-                                                <i class="fab fa-threads mr-2"></i> Connect Threads
+                                                <img src="{{ social_logo('threads') }}" alt="Threads" style="width:14px;height:14px;object-fit:contain;margin-right:8px;"> Connect Threads
                                             </a>
                                         </div>
                                     </div>

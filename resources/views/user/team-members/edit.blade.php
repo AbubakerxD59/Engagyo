@@ -408,7 +408,7 @@
                                                                                 onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';" loading="lazy">
                                                                             <span
                                                                                 class="platform-indicator threads-indicator">
-                                                                                <i class="fab fa-threads"></i>
+                                                                                <img src="{{ social_logo('threads') }}" alt="Threads" style="width:10px;height:10px;object-fit:contain;">
                                                                             </span>
                                                                         </div>
                                                                         <div class="account-info">

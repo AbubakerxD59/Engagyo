@@ -54,7 +54,7 @@ enum Platform: string
             self::LINKEDIN => 'fab fa-linkedin',
             self::YOUTUBE => 'fab fa-youtube',
             self::SNAPCHAT => 'fab fa-snapchat',
-            self::THREADS => 'fab fa-threads',
+            self::THREADS => 'threads-circle-icon',
             self::WHATSAPP => 'fab fa-whatsapp',
             self::TELEGRAM => 'fab fa-telegram',
             self::REDDIT => 'fab fa-reddit',
