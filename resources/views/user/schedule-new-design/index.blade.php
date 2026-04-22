@@ -163,7 +163,11 @@
                                                         onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';"
                                                         loading="lazy" alt="">
                                                     <span class="platform-badge threads">
-                                                        <i class="fab fa-threads"></i>
+                                                        <svg width="20" height="20" viewBox="0 0 20 20" fill="none" style="vertical-align: middle;" xmlns="http://www.w3.org/2000/svg">
+                                                            <circle cx="10" cy="10" r="9" stroke="#000" stroke-width="2" fill="none"/>
+                                                            <path d="M10 4.5C7.2 4.5 5 6.7 5 9.5C5 12.3 7.2 14.5 10 14.5C12.8 14.5 15 12.3 15 9.5C15 7.57 13.43 6 11.5 6C10.12 6 9 7.12 9 8.5C9 9.33 9.67 10 10.5 10C11.33 10 12 9.33 12 8.5" stroke="#000" stroke-width="1.5" stroke-linecap="round"/>
+                                                        </svg>
+                                                   
                                                     </span>
                                                 </div>
                                                 <div class="account-details">
