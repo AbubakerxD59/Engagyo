@@ -4143,7 +4143,7 @@ class ScheduleController extends Controller
             ->whereIn('account_id', $boardIds)
             ->where('status', 1)
             ->whereNotNull('published_at')
-            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
+            // ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
             ->where('source', 'schedule')
             ->with('user', 'board.pinterest')
             ->orderByDesc('published_at')
@@ -4188,7 +4188,7 @@ class ScheduleController extends Controller
             ->whereIn('account_id', $tiktokIds)
             ->where('status', 1)
             ->whereNotNull('published_at')
-            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
+            // ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
             ->where('source', 'schedule')
             ->with('user', 'tiktok')
             ->orderByDesc('published_at')
@@ -4236,7 +4236,7 @@ class ScheduleController extends Controller
             ->whereIn('account_id', $igIds)
             ->where('status', 1)
             ->whereNotNull('published_at')
-            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
+            // ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
             ->where('source', 'schedule')
             ->with('user', 'instagramAccount')
             ->orderByDesc('published_at')
@@ -4293,7 +4293,7 @@ class ScheduleController extends Controller
 
         // Primary sent-tab filter: recent scheduled posts.
         $dbPosts = (clone $baseQuery)
-            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
+            // ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
             ->where('source', 'schedule')
             ->get();
         // Fallback: prevent empty Sent tab for older rows / source drift.
