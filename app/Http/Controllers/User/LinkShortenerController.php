@@ -6,6 +6,7 @@ use Exception;
 use App\Models\Page;
 use App\Models\Board;
 use App\Models\Tiktok;
+use App\Models\Thread;
 use App\Models\ShortLink;
 use App\Models\Feature;
 use App\Models\User;
@@ -28,7 +29,7 @@ class LinkShortenerController extends Controller
      */
     public function index()
     {
-        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok')->find(Auth::guard('user')->id());
+        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'threads')->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $shortLinks = ShortLink::where('user_id', $user->id)
             ->orderByDesc('created_at')
@@ -47,7 +48,7 @@ class LinkShortenerController extends Controller
     {
         $request->validate([
             'platforms' => 'nullable|array',
-            'platforms.*' => 'in:facebook,pinterest,tiktok',
+            'platforms.*' => 'in:facebook,pinterest,tiktok,threads',
         ]);
 
         $platforms = $request->platforms ?? [];
@@ -71,6 +72,10 @@ class LinkShortenerController extends Controller
 
         // TikTok accounts
         $count = Tiktok::where('user_id', $userId)->update(['url_shortener_enabled' => in_array('tiktok', $platforms)]);
+        $updated += $count;
+
+        // Threads accounts
+        $count = Thread::where('user_id', $userId)->update(['url_shortener_enabled' => in_array('threads', $platforms)]);
         $updated += $count;
 
         return response()->json([
@@ -116,6 +121,15 @@ class LinkShortenerController extends Controller
             }
         }
 
+        if ($type === 'threads') {
+            $thread = Thread::where('id', $id)->where('user_id', Auth::guard('user')->id())->first();
+            if ($thread) {
+                $thread->url_shortener_enabled = (bool) $status;
+                $thread->save();
+                return response()->json(['success' => true, 'message' => 'Status changed successfully!']);
+            }
+        }
+
         return response()->json(['success' => false, 'message' => 'Account not found.']);
     }
 
@@ -127,7 +141,7 @@ class LinkShortenerController extends Controller
     {
         $request->validate([
             'accounts' => 'required|array',
-            'accounts.*.type' => 'required|in:facebook,pinterest,tiktok',
+            'accounts.*.type' => 'required|in:facebook,pinterest,tiktok,threads',
             'accounts.*.id' => 'required|integer',
             'status' => 'required|in:0,1',
         ]);
@@ -160,6 +174,13 @@ class LinkShortenerController extends Controller
                 if ($tiktok) {
                     $tiktok->url_shortener_enabled = $status;
                     $tiktok->save();
+                    $updated++;
+                }
+            } elseif ($type === 'threads') {
+                $thread = Thread::where('id', $id)->where('user_id', $userId)->first();
+                if ($thread) {
+                    $thread->url_shortener_enabled = $status;
+                    $thread->save();
                     $updated++;
                 }
             }

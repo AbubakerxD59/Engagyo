@@ -119,8 +119,25 @@ class TeamMemberController extends BaseController
                 'account_id' => $ig->ig_user_id ?? $ig->id,
             ];
         });
+
+        // Threads Accounts
+        $threadsAccounts = $user->threads()->get()->map(function ($thread) {
+            return [
+                'id' => $thread->id,
+                'type' => 'threads',
+                'name' => $thread->username ? '@'.$thread->username : 'Threads',
+                'username' => $thread->username ? '@'.$thread->username : 'Threads',
+                'profile_image' => $thread->profile_image ?? social_logo('threads'),
+                'account_id' => $thread->threads_id ?? $thread->id,
+            ];
+        });
         
-        $accounts = $accounts->concat($pages)->concat($boards)->concat($tiktoks)->concat($instagramAccounts);
+        $accounts = $accounts
+            ->concat($pages)
+            ->concat($boards)
+            ->concat($tiktoks)
+            ->concat($instagramAccounts)
+            ->concat($threadsAccounts);
 
         return view('user.team-members.create', compact('menuItems', 'features', 'accounts'));
     }
@@ -254,8 +271,25 @@ class TeamMemberController extends BaseController
                 'account_id' => $ig->ig_user_id ?? $ig->id,
             ];
         });
-        
-        $accounts = $accounts->concat($pages)->concat($boards)->concat($tiktoks)->concat($instagramAccounts);
+
+        // Threads Accounts
+        $threadsAccounts = $user->threads()->get()->map(function ($thread) {
+            return [
+                'id' => $thread->id,
+                'type' => 'threads',
+                'name' => $thread->username ? '@'.$thread->username : 'Threads',
+                'username' => $thread->username ? '@'.$thread->username : 'Threads',
+                'profile_image' => $thread->profile_image ?? social_logo('threads'),
+                'account_id' => $thread->threads_id ?? $thread->id,
+            ];
+        });
+
+        $accounts = $accounts
+            ->concat($pages)
+            ->concat($boards)
+            ->concat($tiktoks)
+            ->concat($instagramAccounts)
+            ->concat($threadsAccounts);
         
         // Load team member relationships
         $teamMember->load('menus', 'featureLimits', 'accounts');

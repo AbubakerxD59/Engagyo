@@ -3783,6 +3783,7 @@ class ScheduleController extends Controller
             'pinterest' => 'pinterest',
             'tiktok' => 'tiktok',
             'instagram' => 'instagram',
+            'threads' => 'threads',
             default => 'facebook',
         };
 

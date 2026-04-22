@@ -80,6 +80,7 @@ class ThreadsController extends Controller
                 'access_token' => $accessToken,
                 'expires_in' => $expiresIn,
                 'refresh_token' => $longLivedTokenResponse['refresh_token'] ?? null,
+                'url_shortener_enabled' => in_array('threads', $user->url_shorten_platforms ?? []),
             ]
         );
 

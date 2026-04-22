@@ -114,6 +114,7 @@
                                                 $pinterestAccounts = $accounts->where('type', 'board');
                                                 $tiktokAccounts = $accounts->where('type', 'tiktok');
                                                 $instagramAccounts = $accounts->where('type', 'instagram');
+                                                $threadsAccounts = $accounts->where('type', 'threads');
                                             @endphp
 
                                             @if ($facebookAccounts->count() > 0)
@@ -322,6 +323,58 @@
                                                     </div>
                                                 </div>
                                             @endif
+
+                                            @if ($threadsAccounts->count() > 0)
+                                                <div class="mb-4">
+                                                    <h6 class="mb-3">
+                                                        <img src="{{ social_logo('threads') }}" loading="lazy"
+                                                            style="width: 24px; height: 24px; margin-right: 8px;">
+                                                        Threads Accounts
+                                                    </h6>
+                                                    <div class="accounts-grid-wrapper">
+                                                        <div class="accounts-grid" data-platform="threads">
+                                                            @foreach ($threadsAccounts as $account)
+                                                                <article
+                                                                    class="account-card threads-card account-select-card has-tooltip"
+                                                                    data-account-id="{{ $account['id'] }}"
+                                                                    data-account-type="{{ $account['type'] }}"
+                                                                    data-tooltip="{{ $account['username'] }}">
+                                                                    <div class="account-card-accent"></div>
+                                                                    <div class="account-card-content">
+                                                                        <div class="account-avatar-wrapper">
+                                                                            <img src="{{ $account['profile_image'] }}"
+                                                                                class="account-avatar"
+                                                                                onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';" loading="lazy">
+                                                                            <span
+                                                                                class="platform-indicator threads-indicator">
+                                                                                <i class="fab fa-threads"></i>
+                                                                            </span>
+                                                                        </div>
+                                                                        <div class="account-info">
+                                                                            <div class="account-name">
+                                                                                {{ Str::limit($account['name'], 18) }}
+                                                                            </div>
+                                                                            <div class="account-username">
+                                                                                {{ Str::limit($account['username'], 15) }}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="account-card-checkbox">
+                                                                        <input type="checkbox" class="account-checkbox"
+                                                                            name="accounts[{{ $account['id'] }}][type]"
+                                                                            value="{{ $account['type'] }}"
+                                                                            id="acc_{{ $account['type'] }}_{{ $account['id'] }}"
+                                                                            data-account-id="{{ $account['id'] }}">
+                                                                        <input type="hidden"
+                                                                            name="accounts[{{ $account['id'] }}][id]"
+                                                                            value="{{ $account['id'] }}">
+                                                                    </div>
+                                                                </article>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endif
                                         @endif
                                     </div>
 
@@ -452,6 +505,10 @@
             background: linear-gradient(180deg, #000000, #333333);
         }
 
+        .threads-card .account-card-accent {
+            background: linear-gradient(180deg, #1f1f1f, #000000);
+        }
+
         .account-card:hover .account-card-accent {
             width: 6px;
         }
@@ -490,6 +547,10 @@
             border-color: #000000;
         }
 
+        .threads-card:hover .account-avatar {
+            border-color: #1f1f1f;
+        }
+
         .platform-indicator {
             position: absolute;
             bottom: -2px;
@@ -516,6 +577,10 @@
 
         .tiktok-indicator {
             background: #000000;
+        }
+
+        .threads-indicator {
+            background: #1f1f1f;
         }
 
         .account-info {
