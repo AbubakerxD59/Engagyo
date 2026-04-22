@@ -357,12 +357,17 @@
                             <div id="createPostTikTokSettingsWrap" class="mt-3" style="display:none;">
                                 <div class="border rounded p-3" style="background:#f8fafc;color:#1f2937;border-color:#e5e7eb !important;">
                                     <h6 class="mb-3" style="color:#111827;">TikTok Post Settings</h6>
+                                    <div class="small font-weight-bold mb-1" style="color:#111827;">1) Creator info</div>
                                     <div class="mb-2 small" style="color:#4b5563;">
                                         Posting as:
                                         <strong id="createPostTikTokCreatorNickname">—</strong>
                                     </div>
                                     <div id="createPostTikTokError" class="alert alert-danger py-2 px-3 mb-3"
                                         style="display:none;"></div>
+                                    <div class="small font-weight-bold mb-1" style="color:#111827;">2) Post metadata</div>
+                                    <div class="small mb-2" style="color:#4b5563;">
+                                        Title is taken from your post text and can be edited before publishing.
+                                    </div>
                                     <div class="form-group mb-3">
                                         <label for="createPostTikTokPrivacyLevel" class="mb-1" style="color:#374151;">Who can view this post?</label>
                                         <select id="createPostTikTokPrivacyLevel" class="form-control w-50">
@@ -375,7 +380,16 @@
                                             <input type="checkbox" id="createPostTikTokAllowComment" class="mr-2">
                                             <span>Comment</span>
                                         </label>
+                                        <label class="mb-0 d-flex align-items-center mt-2" id="createPostTikTokDuetWrap">
+                                            <input type="checkbox" id="createPostTikTokAllowDuet" class="mr-2">
+                                            <span>Duet</span>
+                                        </label>
+                                        <label class="mb-0 d-flex align-items-center mt-2" id="createPostTikTokStitchWrap">
+                                            <input type="checkbox" id="createPostTikTokAllowStitch" class="mr-2">
+                                            <span>Stitch</span>
+                                        </label>
                                     </div>
+                                    <div class="small font-weight-bold mb-1 mt-3" style="color:#111827;">3) Commercial content disclosure</div>
                                     <div class="form-group mb-2">
                                         <label class="mb-0 d-flex align-items-center">
                                             <input type="checkbox" id="createPostTikTokCommercialToggle" class="mr-2">
@@ -434,6 +448,7 @@
                                             <span>Add recommended music from TikTok</span>
                                         </label>
                                     </div>
+                                    <div class="small font-weight-bold mb-1 mt-3" style="color:#111827;">4) Compliance declaration</div>
                                     <small class="d-block mt-2" style="color:#4b5563;">
                                         By posting, you agree to TikTok's
                                         <span id="createPostTikTokPolicyPrefix" style="display:none;"><a href="https://www.tiktok.com/legal/page/global/bc-policy/en" target="_blank" rel="noopener noreferrer">Branded Content Policy</a> and </span>
@@ -444,6 +459,11 @@
                                         <input type="checkbox" id="createPostTikTokConsentConfirm" class="mr-2">
                                         <span>I agree and consent to upload this content to TikTok.</span>
                                     </label>
+                                    <div class="small font-weight-bold mb-1 mt-3" style="color:#111827;">5) Posting awareness and control</div>
+                                    <small class="d-block" style="color:#4b5563;">Preview your content in the composer before publishing. You can edit text at any time prior to upload.</small>
+                                    <small class="d-block mt-1" style="color:#4b5563;">Publishing starts only after your explicit consent above.</small>
+                                    <small class="d-block mt-1" style="color:#4b5563;">After publishing, processing may take a few minutes before the post is visible on your profile.</small>
+                                    <small class="d-block mt-1" style="color:#4b5563;">Post status is automatically refreshed so you can track processing and final publish state.</small>
                                 </div>
                             </div>
                             <div class="create-post-editor-actions">
