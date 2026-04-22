@@ -4278,17 +4278,28 @@ class ScheduleController extends Controller
         $threadIds = $accounts->pluck('id')->all();
         $accountsById = $accounts->keyBy('id');
 
-        $dbPosts = Post::withoutGlobalScopes()
+        $baseQuery = Post::withoutGlobalScopes()
             ->whereIn('user_id', $postCreatorIds)
-            ->where('social_type', 'like', '%threads%')
+            ->where(function ($q) {
+                // Backward compatibility for any legacy "thread" values.
+                $q->where('social_type', 'like', '%threads%')
+                    ->orWhere('social_type', 'like', '%thread%');
+            })
             ->whereIn('account_id', $threadIds)
             ->where('status', 1)
             ->whereNotNull('published_at')
+            ->with('user', 'thread')
+            ->orderByDesc('published_at');
+
+        // Primary sent-tab filter: recent scheduled posts.
+        $dbPosts = (clone $baseQuery)
             ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
             ->where('source', 'schedule')
-            ->with('user', 'thread')
-            ->orderByDesc('published_at')
             ->get();
+        // Fallback: prevent empty Sent tab for older rows / source drift.
+        if ($dbPosts->isEmpty()) {
+            $dbPosts = (clone $baseQuery)->get();
+        }
 
         $allPosts = [];
         foreach ($dbPosts as $dbPost) {
