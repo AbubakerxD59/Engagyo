@@ -1499,7 +1499,7 @@ class ScheduleController extends Controller
 
         $type = strtolower((string) ($post->getAttributes()['type'] ?? ''));
         $social = strtolower((string) ($post->getAttributes()['social_type'] ?? ''));
-        if (str_contains($social, 'instagram') && $type === 'carousel') {
+        if ((str_contains($social, 'instagram') || str_contains($social, 'thread')) && $type === 'carousel') {
             $fromCarousel = $this->instagramCarouselFirstStillPreviewUrl($post);
 
             return ($fromCarousel !== null && $fromCarousel !== '') ? $fromCarousel : null;
@@ -1509,7 +1509,7 @@ class ScheduleController extends Controller
     }
 
     /**
-     * First image URL from ig_carousel metadata (queue/sent preview when root image column is empty).
+     * First image URL from carousel metadata (ig_carousel / threads_carousel).
      */
     private function instagramCarouselFirstStillPreviewUrl(Post $post): ?string
     {
@@ -1521,7 +1521,7 @@ class ScheduleController extends Controller
         if (! is_array($meta)) {
             return null;
         }
-        $items = $meta['ig_carousel'] ?? [];
+        $items = $meta['ig_carousel'] ?? $meta['threads_carousel'] ?? [];
         if (! is_array($items)) {
             return null;
         }
@@ -1556,7 +1556,7 @@ class ScheduleController extends Controller
     }
 
     /**
-     * All Instagram carousel slides for queue/sent UI (images + videos from metadata.ig_carousel).
+     * All carousel slides for queue/sent UI (images + videos from metadata ig_carousel/threads_carousel).
      *
      * @return list<array{type: string, url: string}>
      */
@@ -1574,7 +1574,7 @@ class ScheduleController extends Controller
         if (! is_array($meta)) {
             return [];
         }
-        $items = $meta['ig_carousel'] ?? [];
+        $items = $meta['ig_carousel'] ?? $meta['threads_carousel'] ?? [];
         if (! is_array($items)) {
             return [];
         }
@@ -4334,6 +4334,9 @@ class ScheduleController extends Controller
         if ($fullPicture === '' && strtolower((string) ($dbPost->getAttributes()['type'] ?? '')) === 'carousel') {
             $fullPicture = (string) ($this->instagramCarouselFirstStillPreviewUrl($dbPost) ?? '');
         }
+        if ($fullPicture === '' && strtolower((string) ($dbPost->getAttributes()['type'] ?? '')) === 'carousel') {
+            $fullPicture = (string) ($this->instagramCarouselFirstStillPreviewUrl($dbPost) ?? '');
+        }
 
         $videoUrl = $this->postStoredVideoUrl($dbPost);
 
@@ -4410,7 +4413,7 @@ class ScheduleController extends Controller
             'story' => '',
             'type' => (string) ($dbPost->getAttributes()['type'] ?? $dbPost->type ?? ''),
             'full_picture' => $fullPicture,
-            'carousel_items' => [],
+            'carousel_items' => $this->instagramCarouselGalleryItemsFromPost($dbPost),
             'permalink_url' => $permalink,
             'account_name' => $username !== '' ? '@'.$username : 'Threads',
             'account_profile' => (string) ($account->profile_image ?? ''),
