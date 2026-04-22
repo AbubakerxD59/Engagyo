@@ -14,6 +14,10 @@
                     <img class="queue-settings-avatar" src="{{ $account->profile_image }}"
                         onerror="this.onerror=null; this.src='{{ social_logo('tiktok') }}';" alt="" loading="lazy">
                     <span class="queue-settings-platform-badge queue-settings-badge-tiktok"><i class="fab fa-tiktok"></i></span>
+                @elseif($account->type == 'threads')
+                    <img class="queue-settings-avatar" src="{{ $account->profile_image }}"
+                        onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';" alt="" loading="lazy">
+                    <span class="queue-settings-platform-badge queue-settings-badge-threads"><i class="fab fa-threads"></i></span>
                 @endif
             </div>
             <div class="queue-settings-account-info">
@@ -25,6 +29,8 @@
                         {{ $account->pinterest?->username ?? 'Pinterest' }}
                     @elseif($account->type == 'tiktok')
                         {{ $account->username ?? $account->display_name ?? 'TikTok' }}
+                    @elseif($account->type == 'threads')
+                        {{ $account->username ? '@' . $account->username : 'Threads' }}
                     @else
                         {{ ucfirst($account->type) }}
                     @endif

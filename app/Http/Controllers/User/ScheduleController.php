@@ -790,11 +790,11 @@ class ScheduleController extends Controller
                     'schedule_status' => $igRow->schedule_status ?? 'inactive',
                 ]);
             });
-            $user->threads()->get(['id'])->each(function ($threadRow) use ($accountsStatus) {
+            $user->threads()->get(['id', 'schedule_status'])->each(function ($threadRow) use ($accountsStatus) {
                 $accountsStatus->push([
                     'id' => $threadRow->id,
                     'type' => 'threads',
-                    'schedule_status' => 'inactive',
+                    'schedule_status' => $threadRow->schedule_status ?? 'inactive',
                 ]);
             });
         }
@@ -843,11 +843,11 @@ class ScheduleController extends Controller
                 'schedule_status' => $ig->schedule_status ?? 'inactive',
             ]);
         });
-        $user->threads()->get(['id'])->each(function ($threadRow) use ($accountsStatus) {
+        $user->threads()->get(['id', 'schedule_status'])->each(function ($threadRow) use ($accountsStatus) {
             $accountsStatus->push([
                 'id' => $threadRow->id,
                 'type' => 'threads',
-                'schedule_status' => 'inactive',
+                'schedule_status' => $threadRow->schedule_status ?? 'inactive',
             ]);
         });
 
@@ -1010,7 +1010,7 @@ class ScheduleController extends Controller
     public function saveSelectedAccount(Request $request)
     {
         $request->validate([
-            'type' => 'required|string|in:all,facebook,pinterest,tiktok,instagram',
+            'type' => 'required|string|in:all,facebook,pinterest,tiktok,instagram,threads',
             'id' => 'nullable|string',
         ]);
         $user = User::find(Auth::guard('user')->id());
@@ -3113,7 +3113,7 @@ class ScheduleController extends Controller
 
     public function getQueueSettings(Request $request)
     {
-        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok')->find(Auth::guard('user')->id());
+        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'instagramAccounts', 'threads.timeslots')->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $view = view('user.schedule.partials.queue-settings-list', compact('accounts'));
 
@@ -3142,6 +3142,9 @@ class ScheduleController extends Controller
                 $account_id = $account->id;
             } elseif ($type == 'instagram') {
                 $account = InstagramAccount::with('scheduleTimeslots')->where('id', $id)->where('user_id', $user->id)->firstOrFail();
+                $account_id = $account->id;
+            } elseif ($type == 'threads') {
+                $account = Thread::with('timeslots')->where('id', $id)->where('user_id', $user->id)->firstOrFail();
                 $account_id = $account->id;
             }
             if ($account) {
@@ -3274,6 +3277,11 @@ class ScheduleController extends Controller
                     }
                 } elseif ($type == 'instagram') {
                     $account = InstagramAccount::with('scheduleTimeslots')->where('id', $id)->where('user_id', $user->id)->first();
+                    if ($account) {
+                        $accountId = $account->id;
+                    }
+                } elseif ($type == 'threads') {
+                    $account = Thread::with('timeslots')->where('id', $id)->where('user_id', $user->id)->first();
                     if ($account) {
                         $accountId = $account->id;
                     }

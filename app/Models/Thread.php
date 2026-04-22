@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Scopes\TeamScope;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Casts\Attribute;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Thread extends Model
@@ -93,9 +94,9 @@ class Thread extends Model
         return $this->expires_in >= $now;
     }
 
-    public function getTimeslotsAttribute()
+    public function timeslots(): HasMany
     {
-        return collect();
+        return $this->hasMany(Timeslot::class, 'account_id', 'id')->where('account_type', 'threads');
     }
 
     protected static function booted()
