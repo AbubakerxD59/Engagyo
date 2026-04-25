@@ -370,9 +370,20 @@
                     var createdHtml = created.time ?
                         '<span class="analytics-post-time">' + escapeHtml(created.time) + '</span><span class="analytics-post-day">' + escapeHtml(created.date) + '</span>' :
                         '<span class="analytics-post-day">-</span>';
-                    var img = post.full_picture ? '<img src="' + escapeHtml(post.full_picture) +
-                        '" alt="" class="analytics-post-thumb" loading="lazy">' :
-                        '<div class="analytics-post-thumb-placeholder"><i class="fas fa-image text-muted"></i></div>';
+                    var postMediaType = (post.media_type || '').toString().toLowerCase();
+                    var isThreadsVideo = platform === 'threads' && (postMediaType === 'video' || (post.type || '').toString().toLowerCase() === 'video');
+                    var img = '';
+                    if (isThreadsVideo && post.full_picture) {
+                        var vSrc = escapeHtml(post.full_picture);
+                        img = '<video class="analytics-post-thumb" preload="metadata" playsinline controls>' +
+                            '<source src="' + vSrc + '" type="video/mp4">' +
+                            '</video>';
+                    } else if (post.full_picture) {
+                        img = '<img src="' + escapeHtml(post.full_picture) +
+                            '" alt="" class="analytics-post-thumb" loading="lazy">';
+                    } else {
+                        img = '<div class="analytics-post-thumb-placeholder"><i class="fas fa-image text-muted"></i></div>';
+                    }
                     var insights = post.insights || {};
                     var insightItems = [];
                     var order = postInsightDisplayOrder;
