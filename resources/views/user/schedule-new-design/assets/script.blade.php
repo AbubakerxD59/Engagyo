@@ -5234,7 +5234,7 @@
             var postId = $btn.data('post-id');
             var pageId = $btn.data('page-id');
 
-            if (social === 'pinterest' || social === 'tiktok' || social === 'instagram' || social === 'threads') {
+            if (social === 'pinterest' || social === 'tiktok' || social === 'instagram') {
                 if (!dbPostId) {
                     toastr.error('Cannot delete: missing post info.');
                     return;
@@ -5263,6 +5263,44 @@
                         } else {
                             $btn.prop('disabled', false).removeClass('is-deleting');
                             toastr.error(response.message || 'Failed to delete post.');
+                        }
+                    },
+                    error: function(xhr) {
+                        $btn.prop('disabled', false).removeClass('is-deleting');
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Failed to delete post.';
+                        toastr.error(msg);
+                    }
+                });
+                return;
+            }
+
+            if (social === 'threads') {
+                if (!dbPostId || !pageId) {
+                    toastr.error('Cannot delete: missing post or account info.');
+                    return;
+                }
+                if (!confirm('Delete this post from Threads and from the app? This cannot be undone.')) return;
+                $btn.prop('disabled', true).addClass('is-deleting');
+                $.ajax({
+                    url: "{{ route('panel.schedule.delete-sent-post') }}",
+                    type: "POST",
+                    data: {
+                        "_token": "{{ csrf_token() }}",
+                        "social_type": "threads",
+                        "db_post_id": dbPostId,
+                        "page_id": pageId
+                    },
+                    success: function(response) {
+                        if (response && response.success) {
+                            var $row = $btn.closest('.sent-post-row');
+                            $row.fadeOut(200, function() { $(this).remove(); });
+                            toastr.success(response.message || 'Post deleted successfully.');
+                            var $tab = $('#posts-status-tabs [data-count="sent"]');
+                            var n = parseInt($tab.text(), 10) || 0;
+                            if (n > 0) $tab.text(n - 1);
+                        } else {
+                            $btn.prop('disabled', false).removeClass('is-deleting');
+                            toastr.error((response && response.message) || 'Failed to delete post.');
                         }
                     },
                     error: function(xhr) {

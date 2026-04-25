@@ -4870,14 +4870,48 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Delete a sent post from Facebook and from DB (in background).
-     * Returns success immediately; actual delete runs in a job.
-     * Expects: id = Facebook post id, page_id = our Page (account) id.
+     * Delete a sent post.
+     * - Facebook: delete by external post id + page id (background job).
+     * - Threads: delete by local db post id (calls Threads API then removes local row).
      */
     public function deleteSentPost(Request $request)
     {
+        $socialType = strtolower((string) $request->input('social_type', 'facebook'));
         $postId = $request->input('id'); // Facebook post id
         $pageId = $request->input('page_id');
+        $dbPostId = (int) $request->input('db_post_id');
+
+        if ($socialType === 'threads') {
+            if ($dbPostId <= 0 || empty($pageId)) {
+                return response()->json(['success' => false, 'message' => 'Post and account info are required.'], 400);
+            }
+
+            $user = Auth::user();
+            $threadAccount = Thread::where('id', (int) $pageId)->where('user_id', $user->id)->first();
+            if (! $threadAccount) {
+                return response()->json(['success' => false, 'message' => 'Account not found or access denied.'], 404);
+            }
+
+            $dbPost = Post::withoutGlobalScopes()
+                ->where('id', $dbPostId)
+                ->where('account_id', $threadAccount->id)
+                ->where(function ($q) {
+                    $q->where('social_type', 'like', '%threads%')
+                        ->orWhere('social_type', 'like', '%thread%');
+                })
+                ->first();
+            if (! $dbPost) {
+                return response()->json(['success' => false, 'message' => 'Post not found or access denied.'], 404);
+            }
+
+            try {
+                PostService::delete($dbPost->id);
+
+                return response()->json(['success' => true, 'message' => 'Threads post deleted successfully.']);
+            } catch (\Throwable $e) {
+                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+            }
+        }
 
         if (empty($postId) || empty($pageId)) {
             return response()->json(['success' => false, 'message' => 'Post id and page id are required.'], 400);
