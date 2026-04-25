@@ -21,6 +21,7 @@ use App\Models\Pinterest;
 use App\Models\Post;
 use App\Models\Tiktok;
 use App\Models\Thread;
+use App\Models\ThreadPost;
 use App\Models\Timeslot;
 use App\Models\User;
 use App\Services\FacebookService;
@@ -30,6 +31,7 @@ use App\Services\PinterestService;
 use App\Services\PostService;
 use App\Services\SocialMediaLogService;
 use App\Services\TikTokService;
+use App\Services\ThreadsAnalyticsService;
 use App\Services\TimezoneService;
 use Carbon\Carbon;
 use Exception;
@@ -4259,6 +4261,7 @@ class ScheduleController extends Controller
      */
     public function getThreadsSentPosts(Request $request)
     {
+        $userId = (int) Auth::id();
         $viewer = Auth::guard('user')->user();
         $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::guard('user')->id()];
         $accountIds = (array) $request->input('account_id', []);
@@ -4275,40 +4278,123 @@ class ScheduleController extends Controller
             return response()->json(['success' => false, 'message' => 'No Threads accounts found', 'posts' => []]);
         }
 
-        $threadIds = $accounts->pluck('id')->all();
         $accountsById = $accounts->keyBy('id');
+        $allPosts = [];
+        $graphPostIds = [];
 
-        $baseQuery = Post::withoutGlobalScopes()
+        // Sent tab (beta): full_year only — since = 1 year ago, until = today
+        $until = now()->format('Y-m-d');
+        $since = now()->subYear()->format('Y-m-d');
+        $duration = 'full_year';
+
+        foreach ($accounts as $account) {
+            $cacheKey = $this->sentPostsCacheKey($userId, (int) $account->id, $duration, $since, $until);
+            $posts = null;
+            try {
+                $posts = Cache::get($cacheKey);
+            } catch (\Throwable $e) {
+                Log::warning('Threads sent posts cache read failed', [
+                    'key' => $cacheKey,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+            if ($posts === null) {
+                $posts = $this->fetchThreadPostsFromStore($account, $since, $until, $duration);
+                if ($posts !== null) {
+                    try {
+                        Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+                    } catch (\Throwable $e) {
+                        Log::warning('Threads sent posts cache write failed', [
+                            'key' => $cacheKey,
+                            'message' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+            if (! is_array($posts)) {
+                $posts = [];
+            }
+
+            $postIds = collect($posts)
+                ->pluck('id')
+                ->filter()
+                ->map(fn ($id) => (string) $id)
+                ->unique()
+                ->values()
+                ->all();
+
+            $ourPostsByExternalId = empty($postIds)
+                ? collect()
+                : Post::withoutGlobalScopes()
+                    ->whereIn('user_id', $postCreatorIds)
+                    ->whereIn('post_id', $postIds)
+                    ->with('user')
+                    ->get()
+                    ->keyBy(fn ($p) => (string) $p->post_id);
+
+            foreach ($posts as &$post) {
+                $post['account_name'] = $account->username ? '@'.$account->username : 'Threads';
+                $post['account_profile'] = $account->profile_image ?? '';
+                $post['social_type'] = 'threads';
+                $post['page_db_id'] = $account->id;
+                $ourPost = $ourPostsByExternalId->get((string) ($post['id'] ?? ''));
+                if ($ourPost) {
+                    $post['db_post_id'] = $ourPost->id;
+                    if ($ourPost->user) {
+                        $post['publisher_username'] = $ourPost->user->username ?? $ourPost->user->full_name ?? $ourPost->user->email ?? '';
+                        $post['publisher_email'] = $ourPost->user->email ?? '';
+                    }
+                }
+            }
+            unset($post);
+
+            foreach ($posts as $p) {
+                if (! empty($p['id'])) {
+                    $graphPostIds[(string) $p['id']] = true;
+                }
+            }
+
+            $allPosts = array_merge($allPosts, $posts);
+        }
+
+        // Add app-published records that are not yet present in snapshot/API data.
+        $sinceStart = Carbon::parse($since)->startOfDay();
+        $untilEnd = Carbon::parse($until)->endOfDay();
+        $threadIds = $accounts->pluck('id')->all();
+        $dbSentPosts = Post::withoutGlobalScopes()
             ->whereIn('user_id', $postCreatorIds)
             ->where(function ($q) {
-                // Backward compatibility for any legacy "thread" values.
                 $q->where('social_type', 'like', '%threads%')
                     ->orWhere('social_type', 'like', '%thread%');
             })
             ->whereIn('account_id', $threadIds)
             ->where('status', 1)
+            ->whereNotNull('post_id')
             ->whereNotNull('published_at')
+            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
+            ->whereBetween('published_at', [$sinceStart, $untilEnd])
             ->with('user', 'thread')
-            ->orderByDesc('published_at');
-
-        // Primary sent-tab filter: recent scheduled posts.
-        $dbPosts = (clone $baseQuery)
-            // ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
-            ->where('source', 'schedule')
             ->get();
-        // Fallback: prevent empty Sent tab for older rows / source drift.
-        if ($dbPosts->isEmpty()) {
-            $dbPosts = (clone $baseQuery)->get();
-        }
 
-        $allPosts = [];
-        foreach ($dbPosts as $dbPost) {
-            $account = $accountsById->get($dbPost->account_id) ?? $dbPost->thread;
+        foreach ($dbSentPosts as $dbPost) {
+            $extId = (string) $dbPost->post_id;
+            if ($extId === '' || isset($graphPostIds[$extId])) {
+                continue;
+            }
+            $account = $accountsById->get($dbPost->account_id);
             if (! $account instanceof Thread) {
                 continue;
             }
+            $graphPostIds[$extId] = true;
             $allPosts[] = $this->sentTabPostFromThreadsRecord($dbPost, $account);
         }
+
+        usort($allPosts, function ($a, $b) {
+            $ta = $this->parseCreatedTime($a['created_time'] ?? null);
+            $tb = $this->parseCreatedTime($b['created_time'] ?? null);
+
+            return $tb - $ta;
+        });
 
         return response()->json(['success' => true, 'posts' => $allPosts]);
     }
@@ -4660,6 +4746,44 @@ class ScheduleController extends Controller
         PagePost::updateOrCreate(
             [
                 'page_id' => $page->id,
+                'since' => $since,
+                'until' => $until,
+            ],
+            [
+                'duration' => $duration,
+                'posts' => $posts,
+                'synced_at' => now(),
+            ]
+        );
+
+        return $posts;
+    }
+
+    private function fetchThreadPostsFromStore(Thread $thread, string $since, string $until, string $duration = 'full_year'): ?array
+    {
+        if (empty($thread->threads_id) || empty($thread->access_token)) {
+            return null;
+        }
+
+        $stored = ThreadPost::where('thread_id', $thread->id)
+            ->where('since', $since)
+            ->where('until', $until)
+            ->first();
+
+        if ($stored && $stored->posts !== null) {
+            return $stored->posts;
+        }
+
+        if (! $thread->validToken()) {
+            return null;
+        }
+
+        $threadsAnalyticsService = new ThreadsAnalyticsService;
+        $posts = $threadsAnalyticsService->getPostsWithInsights($thread, $since, $until);
+
+        ThreadPost::updateOrCreate(
+            [
+                'thread_id' => $thread->id,
                 'since' => $since,
                 'until' => $until,
             ],

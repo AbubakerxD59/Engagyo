@@ -4899,9 +4899,13 @@
             var accountName = post.account_name || (st === 'pinterest' ? 'Pinterest board' : (st === 'tiktok' ? 'TikTok' : (st === 'instagram' ? 'Instagram' : 'Facebook Page')));
 
             var videoUrl = (post.video_url || '').toString().trim();
+            var mediaType = (post.media_type || '').toString().toLowerCase();
+            var isThreadVideo = st === 'threads' && (postType === 'video' || mediaType === 'video');
             var imageHtml = '';
-            if (!carouselGalleryHtml && videoUrl && (postType === 'video' || postType === 'reel' || postType === 'story')) {
-                var vSrc = $('<span>').text(videoUrl).html();
+            if (!carouselGalleryHtml && (videoUrl || (isThreadVideo && post.full_picture)) && (postType === 'video' || postType === 'reel' || postType === 'story' || isThreadVideo)) {
+                // Threads API may return video media URL in full_picture; use it as video source when video_url is not set.
+                var videoSrcValue = videoUrl || (isThreadVideo ? String(post.full_picture || '') : '');
+                var vSrc = $('<span>').text(videoSrcValue).html();
                 var posterAttr = '';
                 if (post.full_picture) {
                     posterAttr = ' poster="' + $('<span>').text(post.full_picture).html() + '"';
