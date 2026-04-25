@@ -7,13 +7,13 @@
             <div class="container-fluid">
                 <div class="row analytics-layout">
                     {{-- Sub-sidebar: Facebook pages (fixed height, searchable) --}}
-                    @if ($facebookPages->count() > 0)
+                    @if (($analyticsAccounts ?? collect())->count() > 0)
                         <aside class="analytics-sidebar">
                             <div class="analytics-sidebar-inner">
                                 <div class="analytics-sidebar-search">
                                     <div class="input-group">
                                         <input type="text" id="analyticsPageSearch" class="form-control form-control-sm"
-                                            placeholder="Search pages...">
+                                            placeholder="Search accounts...">
                                         <div class="input-group-append">
                                             <span class="input-group-text bg-white">
                                                 <i class="fas fa-search text-muted"></i>
@@ -22,34 +22,35 @@
                                     </div>
                                 </div>
                                 <div class="analytics-sidebar-cards">
-                                    <div class="analytics-page-card analytics-page-card-all active" data-page-id="all"
-                                        data-search="all accounts" role="button" tabindex="0">
+                                    <div class="analytics-page-card analytics-page-card-all active" data-account-ref="facebook:all"
+                                        data-platform="facebook" data-search="all facebook pages" role="button" tabindex="0">
                                         <div class="analytics-page-card-inner">
                                             <div class="analytics-page-avatar analytics-page-avatar-all">
                                                 <i class="fas fa-th-large text-primary"></i>
                                             </div>
                                             <div class="analytics-page-details">
-                                                <span class="analytics-page-name">All Accounts</span>
-                                                <span class="analytics-page-username">Combined insights</span>
+                                                <span class="analytics-page-name">All Facebook Pages</span>
+                                                <span class="analytics-page-username">Combined Facebook insights</span>
                                             </div>
                                         </div>
                                     </div>
-                                    @foreach ($facebookPages as $page)
-                                        <div class="analytics-page-card" data-page-id="{{ $page->id }}"
-                                            data-search="{{ strtolower($page->name . ' ' . ($page->facebook?->username ?? '')) }}"
+                                    @foreach ($analyticsAccounts as $account)
+                                        <div class="analytics-page-card" data-account-ref="{{ $account['ref'] }}"
+                                            data-platform="{{ $account['platform'] }}"
+                                            data-search="{{ strtolower(($account['name'] ?? '') . ' ' . ($account['username'] ?? '') . ' ' . ($account['platform'] ?? '')) }}"
                                             role="button" tabindex="0">
                                             <div class="analytics-page-card-inner">
                                                 <div class="analytics-page-avatar">
-                                                    <img src="{{ $page->profile_image ?? social_logo('facebook') }}" loading="lazy"
-                                                        onerror="this.onerror=null; this.src='{{ social_logo('facebook') }}';">
-                                                    <span class="platform-badge facebook">
-                                                        <i class="fab fa-facebook-f"></i>
+                                                    <img src="{{ $account['profile_image'] }}" loading="lazy"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo($account['platform']) }}';">
+                                                    <span class="platform-badge {{ $account['platform'] }}">
+                                                        <i class="{{ $account['platform'] === 'threads' ? 'fas fa-at' : 'fab fa-facebook-f' }}"></i>
                                                     </span>
                                                 </div>
                                                 <div class="analytics-page-details">
-                                                    <span class="analytics-page-name">{{ $page->name }}</span>
+                                                    <span class="analytics-page-name">{{ $account['name'] }}</span>
                                                     <span
-                                                        class="analytics-page-username">{{ $page->facebook?->username ?? '' }}</span>
+                                                        class="analytics-page-username">{{ $account['username'] }}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -60,12 +61,12 @@
                     @endif
 
                     {{-- Main content: posts --}}
-                    <div class="analytics-main {{ $facebookPages->count() > 0 ? '' : 'analytics-main-full' }}">
+                    <div class="analytics-main {{ ($analyticsAccounts ?? collect())->count() > 0 ? '' : 'analytics-main-full' }}">
                         <div class="card">
                             <div class="card-header with-border clearfix">
                                 <div class="card-title d-flex align-items-center">
                                     <i class="fas fa-chart-line mr-2 text-primary"></i>
-                                    <span>Page Insights</span>
+                                    <span>Social Analytics</span>
                                 </div>
                                 <div class="card-tools">
                                     <button type="button" class="btn btn-tool" data-card-widget="collapse"
@@ -237,13 +238,13 @@
                                             <div class="empty-state-icon mb-3">
                                                 <i class="fas fa-chart-pie fa-4x text-muted"></i>
                                             </div>
-                                            <h4>{{ $facebookPages->count() > 0 ? 'Select a Page' : 'No Facebook Pages Connected' }}
+                                            <h4>{{ ($analyticsAccounts ?? collect())->count() > 0 ? 'Select an Account' : 'No Accounts Connected' }}
                                             </h4>
                                             <p class="text-muted">
-                                                @if ($facebookPages->count() > 0)
-                                                    Select a Facebook page from the sidebar to view page insights.
+                                                @if (($analyticsAccounts ?? collect())->count() > 0)
+                                                    Select an account from the sidebar to view analytics insights.
                                                 @else
-                                                    Connect your Facebook account to see page insights here.
+                                                    Connect Facebook or Threads to see analytics here.
                                                 @endif
                                             </p>
                                         </div>

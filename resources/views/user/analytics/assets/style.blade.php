@@ -230,7 +230,8 @@
         border: 2px solid #e9ecef;
     }
 
-    .analytics-page-avatar .platform-badge.facebook {
+    .analytics-page-avatar .platform-badge.facebook,
+    .analytics-page-avatar .platform-badge.threads {
         position: absolute;
         bottom: -2px;
         right: -2px;
@@ -244,6 +245,10 @@
         font-size: 8px;
         color: #fff;
         border: 2px solid #fff;
+    }
+
+    .analytics-page-avatar .platform-badge.threads {
+        background: #111827;
     }
 
     .analytics-page-details {

@@ -6,8 +6,12 @@ use App\Http\Controllers\Controller;
 use App\Models\Page;
 use App\Models\PageInsight;
 use App\Models\PagePost;
+use App\Models\Thread;
+use App\Models\ThreadInsight;
+use App\Models\ThreadPost;
 use App\Models\User;
 use App\Services\FacebookService;
+use App\Services\ThreadsAnalyticsService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -53,7 +57,8 @@ class AnalyticsController extends Controller
         };
     }
     public function __construct(
-        protected FacebookService $facebookService
+        protected FacebookService $facebookService,
+        protected ThreadsAnalyticsService $threadsAnalyticsService
     ) {}
 
     /**
@@ -68,6 +73,28 @@ class AnalyticsController extends Controller
         }
         $accounts = $user->getAccounts();
         $facebookPages = $accounts->where('type', 'facebook')->values();
+        $threadsAccounts = $accounts->where('type', 'threads')->values();
+        $analyticsAccounts = $facebookPages->map(function ($page) {
+            return [
+                'ref' => 'facebook:'.$page->id,
+                'platform' => 'facebook',
+                'id' => $page->id,
+                'name' => $page->name,
+                'username' => $page->facebook?->username ?? '',
+                'profile_image' => $page->profile_image ?? social_logo('facebook'),
+            ];
+        })->values()->concat(
+            $threadsAccounts->map(function ($thread) {
+                return [
+                    'ref' => 'threads:'.$thread->id,
+                    'platform' => 'threads',
+                    'id' => $thread->id,
+                    'name' => $thread->username,
+                    'username' => $thread->username,
+                    'profile_image' => $thread->profile_image ?? social_logo('threads'),
+                ];
+            })->values()
+        )->values();
         $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
 
         $today = Carbon::today();
@@ -76,7 +103,7 @@ class AnalyticsController extends Controller
         $duration = 'last_28';
 
         $selectedPage = null;
-        return view('user.analytics.index', compact('facebookPages', 'selectedPage', 'since', 'until', 'duration', 'userTimezoneName'));
+        return view('user.analytics.index', compact('facebookPages', 'threadsAccounts', 'analyticsAccounts', 'selectedPage', 'since', 'until', 'duration', 'userTimezoneName'));
     }
 
     /**
@@ -85,25 +112,53 @@ class AnalyticsController extends Controller
     public function data(Request $request)
     {
         $user = User::find(auth()->id());
+        if (! $user) {
+            return response()->json(['success' => false]);
+        }
         $accounts = $user->getAccounts();
         $facebookPages = $accounts->where('type', 'facebook')->values();
+        $threadsAccounts = $accounts->where('type', 'threads')->values();
 
         [$since, $until] = $this->resolveDateRange($request);
 
+        $accountRef = (string) $request->query('account_ref', '');
         $pageId = $request->query('page_id');
         $selectedPage = null;
         $pageInsights = null;
         $pagePosts = null;
+        $platform = 'facebook';
 
-        if ($pageId === 'all' || empty($pageId)) {
+        if ($accountRef === '' && ($pageId === 'all' || empty($pageId))) {
+            $accountRef = 'facebook:all';
+        } elseif ($accountRef === '' && ! empty($pageId)) {
+            $accountRef = 'facebook:'.$pageId;
+        }
+
+        if ($accountRef === 'facebook:all') {
+            $platform = 'facebook';
             $pageInsights = $this->fetchAggregatedInsights($facebookPages, $since, $until);
-            $selectedPage = $facebookPages->count() > 0 ? ['id' => 'all', 'name' => 'All Accounts'] : null;
-        } elseif ($facebookPages->contains('id', (int) $pageId)) {
-            $selectedPage = Page::find($pageId);
-            if ($selectedPage) {
-                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until);
-                $pagePosts = $this->fetchPagePosts($selectedPage, $since, $until);
-                $selectedPage = ['id' => $selectedPage->id, 'name' => $selectedPage->name];
+            $selectedPage = $facebookPages->count() > 0 ? ['id' => 'all', 'name' => 'All Facebook Pages'] : null;
+        } elseif (str_starts_with($accountRef, 'facebook:')) {
+            $platform = 'facebook';
+            $id = (int) str_replace('facebook:', '', $accountRef);
+            if ($facebookPages->contains('id', $id)) {
+                $selected = Page::find($id);
+                if ($selected) {
+                    $pageInsights = $this->fetchPageInsights($selected, $since, $until);
+                    $pagePosts = $this->fetchPagePosts($selected, $since, $until);
+                    $selectedPage = ['id' => $selected->id, 'name' => $selected->name];
+                }
+            }
+        } elseif (str_starts_with($accountRef, 'threads:')) {
+            $platform = 'threads';
+            $id = (int) str_replace('threads:', '', $accountRef);
+            if ($threadsAccounts->contains('id', $id)) {
+                $selected = Thread::find($id);
+                if ($selected) {
+                    $pageInsights = $this->fetchThreadInsights($selected, $since, $until);
+                    $pagePosts = $this->fetchThreadPosts($selected, $since, $until);
+                    $selectedPage = ['id' => $selected->id, 'name' => $selected->username];
+                }
             }
         }
 
@@ -112,7 +167,9 @@ class AnalyticsController extends Controller
             'pageInsights' => $pageInsights,
             'pagePosts' => $pagePosts,
             'selectedPage' => $selectedPage,
-            'hasPages' => $facebookPages->count() > 0,
+            'hasPages' => ($facebookPages->count() + $threadsAccounts->count()) > 0,
+            'platform' => $platform,
+            'accountRef' => $accountRef,
             'since' => $since,
             'until' => $until,
         ]);
@@ -219,15 +276,105 @@ class AnalyticsController extends Controller
         return $posts;
     }
 
-    private function analyticsPostsCacheKey(int $userId, int $pageId, string $duration, ?string $since, ?string $until): string
+    /**
+     * Fetch Threads account insights.
+     */
+    private function fetchThreadInsights(?Thread $thread, ?string $since = null, ?string $until = null): ?array
+    {
+        if (! $thread || empty($thread->threads_id) || empty($thread->access_token)) {
+            return null;
+        }
+
+        $duration = request()->query('duration', 'last_28');
+        $stored = ThreadInsight::where('thread_id', $thread->id)
+            ->where('since', $since)
+            ->where('until', $until)
+            ->first();
+        if ($stored && $stored->insights) {
+            return $stored->insights;
+        }
+
+        if (! $thread->validToken()) {
+            return null;
+        }
+
+        $insights = $this->threadsAnalyticsService->getAccountInsightsWithComparison($thread, $since, $until);
+        ThreadInsight::updateOrCreate(
+            [
+                'thread_id' => $thread->id,
+                'since' => $since,
+                'until' => $until,
+            ],
+            [
+                'duration' => $duration,
+                'insights' => $insights,
+                'synced_at' => now(),
+            ]
+        );
+
+        return $insights;
+    }
+
+    /**
+     * Fetch Threads posts with insights.
+     */
+    private function fetchThreadPosts(?Thread $thread, ?string $since = null, ?string $until = null): ?array
+    {
+        if (! $thread || empty($thread->threads_id) || empty($thread->access_token)) {
+            return null;
+        }
+
+        $duration = request()->query('duration', 'last_28');
+        $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $thread->id, $duration, $since, $until, 'threads');
+
+        $cachedPosts = Cache::get($cacheKey);
+        if ($cachedPosts !== null) {
+            return $cachedPosts;
+        }
+
+        $stored = ThreadPost::where('thread_id', $thread->id)
+            ->where('since', $since)
+            ->where('until', $until)
+            ->first();
+        if ($stored && $stored->posts !== null) {
+            Cache::put($cacheKey, $stored->posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+            return $stored->posts;
+        }
+
+        if (! $thread->validToken()) {
+            return null;
+        }
+
+        $posts = $this->threadsAnalyticsService->getPostsWithInsights($thread, $since, $until);
+        ThreadPost::updateOrCreate(
+            [
+                'thread_id' => $thread->id,
+                'since' => $since,
+                'until' => $until,
+            ],
+            [
+                'duration' => $duration,
+                'posts' => $posts,
+                'synced_at' => now(),
+            ]
+        );
+
+        Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+
+        return $posts;
+    }
+
+    private function analyticsPostsCacheKey(int $userId, int $accountId, string $duration, ?string $since, ?string $until, string $platform = 'facebook'): string
     {
         return implode(':', [
             'analytics_posts',
-            'v1',
+            'v2',
             'user',
             $userId,
-            'page',
-            $pageId,
+            'platform',
+            $platform,
+            'account',
+            $accountId,
             'duration',
             $duration,
             'since',

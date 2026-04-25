@@ -22,6 +22,8 @@ use App\Console\Commands\ScheduleShufflePosts;
 use App\Console\Commands\ShuffleRssPosts;
 use App\Console\Commands\SyncPageInsights;
 use App\Console\Commands\SyncPagePosts;
+use App\Console\Commands\SyncThreadInsights;
+use App\Console\Commands\SyncThreadPosts;
 use App\Console\Commands\SyncUserUsage;
 use App\Console\Commands\TikTokFetchPublishStatus;
 use App\Console\Commands\TikTokPublishCron;
@@ -56,6 +58,8 @@ class Kernel extends ConsoleKernel
         ShuffleRssPosts::class, // app:shuffle-rss-posts
         SyncPageInsights::class, // insights:sync-page
         SyncPagePosts::class, // insights:sync-posts
+        SyncThreadInsights::class, // insights:sync-threads
+        SyncThreadPosts::class, // insights:sync-threads-posts
         PurgeOldPosts::class, // posts:purge-old
         PublishPendingCommentsCron::class, // facebook:publish-pending-comments
         ScheduleShufflePosts::class, // schedule:shuffle
@@ -103,6 +107,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('insights:sync-page')->dailyAt('12:00');
         // Command to sync page posts and post insights for all pages and durations (runs every 3 hours)
         $schedule->command('insights:sync-posts')->everyThreeHours();
+        // Command to sync Threads account insights (runs twice daily)
+        $schedule->command('insights:sync-threads')->dailyAt('00:30');
+        $schedule->command('insights:sync-threads')->dailyAt('12:30');
+        // Command to sync Threads posts and post insights (runs every 3 hours)
+        $schedule->command('insights:sync-threads-posts')->everyThreeHours();
         // Command to purge posts older than 30 days in batches of 200 (runs every 3 hours)
         $schedule->command('posts:purge-old')->everyThreeHours();
         // Runs every minute; the command itself executes twice (at 0s and ~30s) for near-realtime retries

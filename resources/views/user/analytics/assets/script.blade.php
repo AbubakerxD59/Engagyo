@@ -1,10 +1,11 @@
-@if ($facebookPages->count() > 0)
+@if (($analyticsAccounts ?? collect())->count() > 0)
     <script>
         $(document).ready(function() {
             var $content = $('#analyticsContent');
             var analyticsUrl = $content.data('analytics-url');
-            var hasPages = {{ $facebookPages->count() > 0 ? 'true' : 'false' }};
-            var currentPageId = $('.analytics-page-card.active').data('page-id') || 'all';
+            var hasPages = {{ ($analyticsAccounts ?? collect())->count() > 0 ? 'true' : 'false' }};
+            var currentAccountRef = $('.analytics-page-card.active').data('account-ref') || 'facebook:all';
+            var currentPlatform = ($('.analytics-page-card.active').data('platform') || 'facebook').toString();
             var currentDuration = '{{ $duration ?? 'last_28' }}';
             var currentSince = '{{ $since ?? '' }}';
             var currentUntil = '{{ $until ?? '' }}';
@@ -290,14 +291,15 @@
                 return null;
             }
 
-            function renderPostsList(posts, since, until, searchQuery, sortBy, sortOrder) {
+            function renderPostsList(posts, since, until, searchQuery, sortBy, sortOrder, platform) {
+                platform = platform || currentPlatform || 'facebook';
                 searchQuery = (searchQuery || '').trim().toLowerCase();
                 sortBy = sortBy || 'created_time';
                 sortOrder = sortOrder || 'desc';
                 if (posts === null) {
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
                         '<i class="fas fa-th-large fa-4x text-muted mb-3"></i>' +
-                        '<p class="text-muted mb-0">Select a page to view posts.</p></div>';
+                        '<p class="text-muted mb-0">Select an account to view posts.</p></div>';
                 }
                 if (!posts || posts.length === 0) {
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
@@ -400,8 +402,9 @@
                     var insightHtml = insightItems.length > 0 ?
                         '<div class="analytics-post-insights-grid">' + insightItems.join('') + '</div>' :
                         '<p class="text-muted small mb-0">No insights available</p>';
+                    var viewLabel = platform === 'threads' ? 'View on Threads' : 'View on Facebook';
                     var link = post.permalink_url ? '<a href="' + escapeHtml(post.permalink_url) +
-                        '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary analytics-post-view-btn"><i class="fas fa-external-link-alt mr-1"></i>View on Facebook</a>' :
+                        '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary analytics-post-view-btn"><i class="fas fa-external-link-alt mr-1"></i>' + viewLabel + '</a>' :
                         '';
                     html += '<div class="analytics-post-card card mb-3">' +
                         '<div class="card-body">' +
@@ -423,17 +426,18 @@
                 return html;
             }
 
-            function renderPageInsights(insights, pageName, duration, since, until, pagePosts) {
+            function renderPageInsights(insights, pageName, duration, since, until, pagePosts, platform) {
+                platform = platform || 'facebook';
                 duration = duration || 'last_28';
                 since = since || '';
                 until = until || '';
                 var overviewContent = '<div class="analytics-page-insights mb-4">';
                 if (!hasMeaningfulInsights(insights)) {
                     overviewContent += '<div class="alert alert-info mb-0" role="alert">' +
-                        '<strong><i class="fas fa-info-circle mr-2"></i>Insights can\'t be fetched for this page.</strong>' +
+                        '<strong><i class="fas fa-info-circle mr-2"></i>Insights can\'t be fetched for this account.</strong>' +
                         '<ol class="mb-0 mt-2 pl-3">' +
-                        '<li>Page Insights data is only available on Pages with 100 or more likes.</li>' +
-                        '<li>The connected account may not have the required permissions. <a href="{{ route('panel.accounts') }}" class="alert-link font-weight-bold">Reconnect your account</a> to grant access.</li>' +
+                        '<li>The connected account may not have the required permissions.</li>' +
+                        '<li><a href="{{ route('panel.accounts') }}" class="alert-link font-weight-bold">Reconnect your account</a> to grant access.</li>' +
                         '</ol></div></div>';
                 } else {
                     var comp = insights.comparison || {};
@@ -443,9 +447,9 @@
                         ['video_views', 'Video Views', false],
                         ['engagements', 'Engagements', false]
                     ];
-                    var note =
-                        '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>' +
-                        'Page Insights data is only available on Pages with 100 or more likes.</p>';
+                    var note = platform === 'facebook' ?
+                        '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>Page Insights data is only available on Pages with 100 or more likes.</p>' :
+                        '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Threads insights are aggregated from available media metrics for the selected date range.</p>';
                     overviewContent += note + '<div class="analytics-insight-cards">';
                     cards.forEach(function(c) {
                         overviewContent += renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]);
@@ -454,7 +458,7 @@
                     overviewContent += renderEngagementsChart(insights, comp);
                     overviewContent += '</div>';
                 }
-                var postsContent = renderPostsList(pagePosts, since, until, currentPostsSearchQuery, currentPostsSortBy, currentPostsSortOrder);
+                var postsContent = renderPostsList(pagePosts, since, until, currentPostsSearchQuery, currentPostsSortBy, currentPostsSortOrder, platform);
                 var durationDropdown = renderDurationDropdown(duration, since, until);
                 return '<div class="analytics-tabs-row d-flex flex-wrap align-items-center justify-content-between mb-3">' +
                     '<ul class="nav nav-tabs analytics-insight-tabs mb-0" role="tablist">' +
@@ -471,21 +475,21 @@
             }
 
             function renderEmptyState(hasPageSelected) {
-                var msg = hasPageSelected ? 'Unable to load page insights.' :
-                    'Select a Facebook page from the sidebar to view page insights.';
-                if (!hasPages) msg = 'Connect your Facebook account to see page insights here.';
-                var title = hasPages ? 'Select a Page' : 'No Facebook Pages Connected';
+                var msg = hasPageSelected ? 'Unable to load account insights.' :
+                    'Select an account from the sidebar to view analytics.';
+                if (!hasPages) msg = 'Connect Facebook or Threads to see analytics here.';
+                var title = hasPages ? 'Select an Account' : 'No Accounts Connected';
                 return '<div class="empty-state text-center py-5">' +
                     '<div class="empty-state-icon mb-3"><i class="fas fa-chart-bar fa-4x text-muted"></i></div>' +
                     '<h4>' + title + '</h4><p class="text-muted">' + msg + '</p>' +
                     '<a href="{{ route('panel.accounts') }}" class="btn btn-primary mt-2"><i class="fas fa-user-circle mr-2"></i> Go to Accounts</a></div>';
             }
 
-            function loadAnalytics(pageId, duration, since, until) {
+            function loadAnalytics(accountRef, duration, since, until) {
                 if (analyticsRequest && analyticsRequest.readyState !== 4) {
                     analyticsRequest.abort();
                 }
-                currentPageId = pageId || currentPageId;
+                currentAccountRef = accountRef || currentAccountRef;
                 currentDuration = duration || currentDuration;
                 currentSince = since || currentSince;
                 currentUntil = until || currentUntil;
@@ -496,7 +500,7 @@
                     '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="mt-2 text-muted">Loading analytics...</p></div>'
                 );
                 var params = {
-                    page_id: currentPageId || ''
+                    account_ref: currentAccountRef || ''
                 };
                 if (currentDuration) params.duration = currentDuration;
                 if (currentDuration === 'custom' && currentSince) {
@@ -511,17 +515,18 @@
                     })
                     .done(function(res) {
                         if (!res.success) {
-                            $content.html(renderEmptyState(!!currentPageId));
+                            $content.html(renderEmptyState(!!currentAccountRef));
                             return;
                         }
                         var html = '';
                         if (res.selectedPage) {
                             if (res.since) currentSince = res.since;
                             if (res.until) currentUntil = res.until;
+                            currentPlatform = res.platform || currentPlatform;
                             html += renderPageInsights(res.pageInsights, res.selectedPage.name, currentDuration,
-                                currentSince, currentUntil, res.pagePosts);
+                                currentSince, currentUntil, res.pagePosts, currentPlatform);
                         } else {
-                            html += renderEmptyState(!!currentPageId);
+                            html += renderEmptyState(!!currentAccountRef);
                         }
                         $content.html(html);
                         if (wasPostsTabActive) {
@@ -551,7 +556,7 @@
                     })
                     .fail(function(xhr, textStatus) {
                         if (textStatus === 'abort') return;
-                        $content.html(renderEmptyState(!!currentPageId));
+                        $content.html(renderEmptyState(!!currentAccountRef));
                         if (typeof toastr !== 'undefined') toastr.error('Failed to load analytics.');
                     });
             }
@@ -582,7 +587,7 @@
                 if (posts === null || !Array.isArray(posts)) return;
                 var query = $('#analyticsPostsSearch').length ? $('#analyticsPostsSearch').val().trim() : currentPostsSearchQuery;
                 currentPostsSearchQuery = query;
-                var postsContent = renderPostsList(posts, currentSince, currentUntil, query, currentPostsSortBy, currentPostsSortOrder);
+                var postsContent = renderPostsList(posts, currentSince, currentUntil, query, currentPostsSortBy, currentPostsSortOrder, currentPlatform);
                 $('#analyticsPostsTab').html(postsContent);
                 bindPostsSearchHandler();
                 bindPostsSortHandler();
@@ -628,7 +633,7 @@
                         $('#analyticsUntil').val(currentUntil || today);
                     } else {
                         $custom.hide();
-                        loadAnalytics(currentPageId, val);
+                        loadAnalytics(currentAccountRef, val);
                     }
                 });
                 $(document).on('click', '#analyticsApplyCustom', function() {
@@ -638,16 +643,17 @@
                         if (typeof toastr !== 'undefined') toastr.warning('Please select a start date.');
                         return;
                     }
-                    loadAnalytics(currentPageId, 'custom', since, until);
+                    loadAnalytics(currentAccountRef, 'custom', since, until);
                 });
             }
 
             $('.analytics-page-card').on('click', function() {
-                var pageId = $(this).data('page-id');
-                if (String(pageId) === String(currentPageId)) return;
+                var accountRef = $(this).data('account-ref');
+                if (String(accountRef) === String(currentAccountRef)) return;
                 $('.analytics-page-card').removeClass('active');
                 $(this).addClass('active');
-                loadAnalytics(pageId || 'all', currentDuration, currentSince, currentUntil);
+                currentPlatform = ($(this).data('platform') || 'facebook').toString();
+                loadAnalytics(accountRef || 'facebook:all', currentDuration, currentSince, currentUntil);
             }).on('keydown', function(e) {
                 if (e.which === 13 || e.which === 32) {
                     e.preventDefault();
@@ -657,8 +663,8 @@
 
             bindDurationHandlers();
 
-            if (hasPages && currentPageId) {
-                loadAnalytics(currentPageId, currentDuration, currentSince, currentUntil);
+            if (hasPages && currentAccountRef) {
+                loadAnalytics(currentAccountRef, currentDuration, currentSince, currentUntil);
             }
 
             $('#analyticsPageSearch').on('input', function() {

@@ -99,6 +99,16 @@ class Thread extends Model
         return $this->hasMany(Timeslot::class, 'account_id', 'id')->where('account_type', 'threads');
     }
 
+    public function insights(): HasMany
+    {
+        return $this->hasMany(ThreadInsight::class, 'thread_id', 'id');
+    }
+
+    public function postsSnapshots(): HasMany
+    {
+        return $this->hasMany(ThreadPost::class, 'thread_id', 'id');
+    }
+
     protected static function booted()
     {
         static::addGlobalScope(new TeamScope());
