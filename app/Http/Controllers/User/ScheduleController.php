@@ -4906,6 +4906,10 @@ class ScheduleController extends Controller
 
             try {
                 PostService::delete($dbPost->id);
+                $externalPostId = (string) ($dbPost->post_id ?? '');
+                if ($externalPostId !== '') {
+                    $this->purgeThreadsSentSnapshotPost($threadAccount, $externalPostId);
+                }
 
                 return response()->json(['success' => true, 'message' => 'Threads post deleted successfully.']);
             } catch (\Throwable $e) {
@@ -4924,8 +4928,65 @@ class ScheduleController extends Controller
             return response()->json(['success' => false, 'message' => 'Account not found or access denied.'], 404);
         }
 
+        $this->purgeFacebookSentSnapshotPost($page, (string) $postId);
         DeleteSentPostJob::dispatch($postId, (int) $pageId);
 
         return response()->json(['success' => true, 'message' => 'Post deleted successfully.']);
+    }
+
+    /**
+     * Remove a Facebook post from stored sent snapshots and clear sent-tab cache.
+     */
+    private function purgeFacebookSentSnapshotPost(Page $page, string $externalPostId): void
+    {
+        if ($externalPostId === '') {
+            return;
+        }
+
+        $rows = PagePost::where('page_id', $page->id)->get();
+        foreach ($rows as $row) {
+            $posts = is_array($row->posts) ? $row->posts : [];
+            $filtered = array_values(array_filter($posts, function ($p) use ($externalPostId) {
+                return (string) ($p['id'] ?? '') !== $externalPostId;
+            }));
+            if (count($filtered) !== count($posts)) {
+                $row->posts = $filtered;
+                $row->save();
+            }
+        }
+
+        $userId = (int) Auth::id();
+        $duration = 'full_year';
+        $until = now()->format('Y-m-d');
+        $since = now()->subYear()->format('Y-m-d');
+        Cache::forget($this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until));
+    }
+
+    /**
+     * Remove a Threads post from stored sent snapshots and clear sent-tab cache.
+     */
+    private function purgeThreadsSentSnapshotPost(Thread $thread, string $externalPostId): void
+    {
+        if ($externalPostId === '') {
+            return;
+        }
+
+        $rows = ThreadPost::where('thread_id', $thread->id)->get();
+        foreach ($rows as $row) {
+            $posts = is_array($row->posts) ? $row->posts : [];
+            $filtered = array_values(array_filter($posts, function ($p) use ($externalPostId) {
+                return (string) ($p['id'] ?? '') !== $externalPostId;
+            }));
+            if (count($filtered) !== count($posts)) {
+                $row->posts = $filtered;
+                $row->save();
+            }
+        }
+
+        $userId = (int) Auth::id();
+        $duration = 'full_year';
+        $until = now()->format('Y-m-d');
+        $since = now()->subYear()->format('Y-m-d');
+        Cache::forget($this->sentPostsCacheKey($userId, (int) $thread->id, $duration, $since, $until));
     }
 }
