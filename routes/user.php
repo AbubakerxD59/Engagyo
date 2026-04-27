@@ -100,6 +100,10 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.timezone
             Route::get('threads/{id?}', 'threads')->name('threads');
             Route::get('threads-socialite', 'threadsSocialite')->name('threads.socialite');
             Route::delete('threads-delete/{id?}', 'threadsDelete')->name('threads.delete');
+            // LinkedIn
+            Route::get('linkedin/{id?}', 'linkedin')->name('linkedin');
+            Route::get('linkedin-socialite', 'linkedinSocialite')->name('linkedin.socialite');
+            Route::delete('linkedin-delete/{id?}', 'linkedinDelete')->name('linkedin.delete');
             // Toggle RSS Pause
             Route::post('toggle-rss-pause', 'toggleRssPause')->name('toggleRssPause');
         });

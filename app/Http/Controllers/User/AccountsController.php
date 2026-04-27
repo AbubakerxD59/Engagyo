@@ -8,6 +8,7 @@ use App\Models\Domain;
 use App\Models\Facebook;
 use App\Models\Feature;
 use App\Models\InstagramAccount;
+use App\Models\Linkedin;
 use App\Models\Page;
 use App\Models\Pinterest;
 use App\Models\Post;
@@ -18,6 +19,7 @@ use App\Models\User;
 use App\Services\FacebookService;
 use App\Services\FeatureUsageService;
 use App\Services\InstagramLoginService;
+use App\Services\LinkedInService;
 use App\Services\PinterestService;
 use App\Services\SocialMediaLogService;
 use App\Services\ThreadsService;
@@ -58,7 +60,11 @@ class AccountsController extends Controller
 
     private $thread;
 
-    public function __construct(Pinterest $pinterest, Facebook $facebook, Tiktok $tiktok, Board $board, Page $page, Post $post, Domain $domain, FeatureUsageService $featureUsageService, InstagramAccount $instagramAccount, Thread $thread)
+    private $linkedinService;
+
+    private $linkedin;
+
+    public function __construct(Pinterest $pinterest, Facebook $facebook, Tiktok $tiktok, Board $board, Page $page, Post $post, Domain $domain, FeatureUsageService $featureUsageService, InstagramAccount $instagramAccount, Thread $thread, Linkedin $linkedin)
     {
         $this->pinterestService = new PinterestService;
         $this->facebookService = new FacebookService;
@@ -75,11 +81,13 @@ class AccountsController extends Controller
         $this->instagramAccount = $instagramAccount;
         $this->threadsService = new ThreadsService;
         $this->thread = $thread;
+        $this->linkedinService = new LinkedInService;
+        $this->linkedin = $linkedin;
     }
 
     public function index(InstagramLoginService $instagramLoginService)
     {
-        $user = User::with('facebook', 'pinterest', 'tiktok', 'instagramAccounts', 'threads')->findOrFail(Auth::guard('user')->id());
+        $user = User::with('facebook', 'pinterest', 'tiktok', 'instagramAccounts', 'threads', 'linkedin')->findOrFail(Auth::guard('user')->id());
         $facebookUrl = route('panel.accounts.facebook.socialite');
         try {
             $instagramUrl = $instagramLoginService->authorizeUrl();
@@ -93,8 +101,13 @@ class AccountsController extends Controller
         } catch (\Throwable $e) {
             $threadsUrl = route('panel.accounts.threads.socialite');
         }
+        try {
+            $linkedinUrl = $this->linkedinService->getLoginUrl();
+        } catch (\Throwable $e) {
+            $linkedinUrl = route('panel.accounts.linkedin.socialite');
+        }
 
-        return view('user.accounts.index', compact('user', 'facebookUrl', 'instagramUrl', 'pinterestUrl', 'tiktokUrl', 'threadsUrl'));
+        return view('user.accounts.index', compact('user', 'facebookUrl', 'instagramUrl', 'pinterestUrl', 'tiktokUrl', 'threadsUrl', 'linkedinUrl'));
     }
 
     /**
@@ -606,6 +619,15 @@ class AccountsController extends Controller
         }
     }
 
+    public function linkedinSocialite()
+    {
+        try {
+            return redirect()->away($this->linkedinService->getLoginUrl());
+        } catch (\Throwable $e) {
+            return redirect()->route('panel.accounts')->with('error', $e->getMessage());
+        }
+    }
+
     public function threads($id = null)
     {
         if (! empty($id)) {
@@ -664,6 +686,26 @@ class AccountsController extends Controller
         }
     }
 
+    public function linkedin($id = null)
+    {
+        if (! empty($id)) {
+            $user = User::find(Auth::guard('user')->id());
+            try {
+                $linkedinUrl = $this->linkedinService->getLoginUrl();
+            } catch (\Throwable $e) {
+                $linkedinUrl = route('panel.accounts.linkedin.socialite');
+            }
+            $linkedin = $this->linkedin->where('user_id', $user->id)->search($id)->first();
+            if ($linkedin) {
+                return view('user.accounts.linkedin', compact('linkedinUrl', 'linkedin'));
+            } else {
+                return back()->with('error', 'Something went Wrong!');
+            }
+        } else {
+            return back()->with('error', 'Something went Wrong!');
+        }
+    }
+
     public function tiktokDelete($id = null)
     {
         if (! empty($id)) {
@@ -690,6 +732,29 @@ class AccountsController extends Controller
                 $user->decrementFeatureUsage(Feature::$features_list[0], 1);
 
                 return back()->with('success', 'TikTok Account deleted Successfully!');
+            } else {
+                return back()->with('error', 'Something went Wrong!');
+            }
+        } else {
+            return back()->with('error', 'Something went Wrong!');
+        }
+    }
+
+    public function linkedinDelete($id = null)
+    {
+        if (! empty($id)) {
+            $user = User::find(Auth::guard('user')->id());
+            $linkedin = $this->linkedin->where('user_id', $user->id)->search($id)->first();
+            if ($linkedin) {
+                $linkedinId = $linkedin->id;
+                $linkedinUsername = $linkedin->username;
+                $linkedin->delete();
+
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1);
+
+                $this->logService->logAccountConnection('linkedin', $linkedinId, $linkedinUsername, 'disconnected');
+
+                return back()->with('success', 'LinkedIn account deleted successfully!');
             } else {
                 return back()->with('error', 'Something went Wrong!');
             }

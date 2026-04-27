@@ -55,6 +55,12 @@ return [
         'allow_image_publish_test' => filter_var(env('INSTAGRAM_IMAGE_PUBLISH_TEST', false), FILTER_VALIDATE_BOOLEAN),
     ],
 
+    'linkedin' => [
+        'client_id' => env('LINKEDIN_CLIENT_ID'),
+        'client_secret' => env('LINKEDIN_CLIENT_SECRET'),
+        'redirect' => env('LINKEDIN_REDIRECT_URI'),
+    ],
+
     'stripe' => [
         'key' => env('STRIPE_KEY'),
         'secret' => env('STRIPE_SECRET'),

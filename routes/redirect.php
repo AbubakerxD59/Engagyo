@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\FrontEnd\FacebookController;
 use App\Http\Controllers\FrontEnd\InstagramLoginController;
+use App\Http\Controllers\FrontEnd\LinkedInAuthController;
 use App\Http\Controllers\FrontEnd\PinterestController;
 use App\Http\Controllers\FrontEnd\ThreadsController;
 use App\Http\Controllers\FrontEnd\TikTokController;
@@ -34,4 +35,9 @@ Route::name('threads.')->controller(ThreadsController::class)->group(function ()
     Route::get('threads-callback', 'threadsCallback')->name('callback');
     Route::get('threads-delete-callback', 'deleteCallback')->name('deleteCallback');
     Route::post('threads-uninstall-callback', 'uninstallCallback')->name('uninstallCallback');
+});
+
+// LinkedIn
+Route::name('linkedin.')->controller(LinkedInAuthController::class)->group(function () {
+    Route::get('linkedin-callback', 'linkedInCallback')->name('callback');
 });

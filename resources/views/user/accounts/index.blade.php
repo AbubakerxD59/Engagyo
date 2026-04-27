@@ -310,6 +310,82 @@
                         </div>
                     </div>
                 </div>
+                {{-- LinkedIn --}}
+                <div class="card platform-card">
+                    <div class="card-header with-border clearfix">
+                        <div class="card-title">
+                            <img src="{{ social_logo('linkedin') }}" loading="lazy">
+                            <span>LinkedIn</span>
+                        </div>
+                        <a href="{{ $linkedinUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="accounts-grid-wrapper">
+                            <div class="accounts-grid" data-platform="linkedin">
+                                @forelse ($user->linkedin as $index => $linkedin)
+                                    <article class="account-card linkedin-card has-tooltip" @style(['display:none;' => $index >= 12])
+                                        data-tooltip="{{ $linkedin->username }}" data-index="{{ $index }}">
+                                        <div class="account-card-accent"></div>
+                                        <a href="{{ route('panel.accounts.linkedin', $linkedin->linkedin_id) }}"
+                                            class="account-card-link">
+                                            <div class="account-card-content">
+                                                <div class="account-avatar-wrapper">
+                                                    <img src="{{ $linkedin->profile_image }}" class="account-avatar"
+                                                        loading="lazy"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('linkedin') }}';">
+                                                    <span class="platform-indicator linkedin-indicator">
+                                                        <i class="fab fa-linkedin-in"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-info">
+                                                    <div class="account-username">
+                                                        {{ Str::limit($linkedin->username, 12) }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                        <div class="account-card-actions">
+                                            <button class="btn-account-delete delete-btn" title="Delete Account">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                            <form action="{{ route('panel.accounts.linkedin.delete', $linkedin->linkedin_id) }}"
+                                                method="POST" class="delete_form">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
+                                        </div>
+                                    </article>
+                                @empty
+                                    <div class="empty-state-wrapper">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon linkedin-empty">
+                                                <i class="fab fa-linkedin-in"></i>
+                                            </div>
+                                            <h4>No LinkedIn Account Connected</h4>
+                                            <p>Connect your LinkedIn profile to enable account access and publishing.</p>
+                                            <a href="{{ $linkedinUrl }}" class="btn btn-linkedin">
+                                                <i class="fab fa-linkedin-in mr-2"></i> Connect
+                                            </a>
+                                        </div>
+                                    </div>
+                                @endforelse
+                            </div>
+                            @if (count($user->linkedin) > 12)
+                                <div class="accounts-toggle-wrapper">
+                                    <button class="btn-accounts-toggle" data-platform="linkedin" type="button">
+                                        <span class="toggle-text">Show All</span>
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
                 {{-- Threads --}}
                 <div class="card platform-card">
                     <div class="card-header with-border clearfix">
@@ -776,12 +852,20 @@
             background: linear-gradient(180deg, #101010, #2a2a2a);
         }
 
+        .linkedin-card .account-card-accent {
+            background: linear-gradient(180deg, #0A66C2, #004182);
+        }
+
         .tiktok-card:hover .account-avatar {
             border-color: #000000;
         }
 
         .threads-card:hover .account-avatar {
             border-color: #000000;
+        }
+
+        .linkedin-card:hover .account-avatar {
+            border-color: #0A66C2;
         }
 
         .tiktok-indicator {
@@ -792,6 +876,10 @@
             background: #111111;
         }
 
+        .linkedin-indicator {
+            background: #0A66C2;
+        }
+
         .empty-state-icon.tiktok-empty {
             background: linear-gradient(135deg, #e8e8e8, #d4d4d4);
             color: #000000;
@@ -800,6 +888,11 @@
         .empty-state-icon.threads-empty {
             background: linear-gradient(135deg, #ececec, #d6d6d6);
             color: #111111;
+        }
+
+        .empty-state-icon.linkedin-empty {
+            background: linear-gradient(135deg, #e6f2ff, #d0e7ff);
+            color: #0A66C2;
         }
 
         .btn-threads {
@@ -818,6 +911,24 @@
             color: #fff;
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.35);
+        }
+
+        .btn-linkedin {
+            background: #0A66C2;
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-linkedin:hover {
+            background: #004182;
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(10, 102, 194, 0.35);
         }
 
         /* Toggle Button Styling */
