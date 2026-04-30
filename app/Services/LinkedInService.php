@@ -18,7 +18,7 @@ class LinkedInService
     {
         $this->clientId = (string) config('services.linkedin.client_id', env('LINKEDIN_CLIENT_ID'));
         $this->clientSecret = (string) config('services.linkedin.client_secret', env('LINKEDIN_CLIENT_SECRET'));
-        $this->redirectUri = (string) config('services.linkedin.redirect', route('linkedin.callback'));
+        $this->redirectUri = route('linkedin.callback');
         $this->scopes = [
             'openid',
             'profile',

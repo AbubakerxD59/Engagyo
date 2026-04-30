@@ -74,6 +74,11 @@ class Post extends Model
         return $this->belongsTo(Thread::class, 'account_id', 'id');
     }
 
+    public function linkedin()
+    {
+        return $this->belongsTo(Linkedin::class, 'account_id', 'id');
+    }
+
     public function domain()
     {
         return $this->belongsTo(Domain::class, 'domain_id', 'id');
@@ -127,7 +132,7 @@ class Post extends Model
 
     public function scopeAccountExist($query)
     {
-        $query->has("page")->orHas("board")->orHas("tiktok")->orHas("instagramAccount")->orHas("thread");
+        $query->has("page")->orHas("board")->orHas("tiktok")->orHas("instagramAccount")->orHas("thread")->orHas("linkedin");
     }
 
     public function scopePageExist($query)
@@ -810,6 +815,9 @@ class Post extends Model
         if ($social_type == "threads") {
             $account_name = $this->thread?->username;
         }
+        if ($social_type == "linkedin") {
+            $account_name = $this->linkedin?->username;
+        }
         return $account_name;
     }
 
@@ -833,6 +841,9 @@ class Post extends Model
         }
         if ($social_type === 'threads') {
             return $this->thread?->username ?? '';
+        }
+        if ($social_type === 'linkedin') {
+            return $this->linkedin?->username ?? '';
         }
         return '';
     }
@@ -860,6 +871,9 @@ class Post extends Model
         }
         if ($social_type == "threads") {
             $profile_image = $this->thread?->profile_image ?? null;
+        }
+        if ($social_type == "linkedin") {
+            $profile_image = $this->linkedin?->profile_image ?? null;
         }
         return $profile_image;
     }

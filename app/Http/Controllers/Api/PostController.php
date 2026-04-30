@@ -6,8 +6,10 @@ use App\Enums\Platform;
 use App\Models\Post;
 use App\Models\Page;
 use App\Models\Board;
+use App\Models\Linkedin;
 use App\Http\Controllers\BaseController;
 use App\Jobs\PublishFacebookPost;
+use App\Jobs\PublishLinkedInPost;
 use App\Jobs\PublishPinterestPost;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
@@ -31,6 +33,10 @@ class PostController extends BaseController
      */
     public function create(Request $request)
     {
+        if ($request->input('platform') === Platform::LINKEDIN->value) {
+            return $this->publishToLinkedIn($request);
+        }
+
         // Get supported platform values for validation
         $supportedPlatforms = array_map(
             fn(Platform $p) => $p->value,
@@ -64,6 +70,7 @@ class PostController extends BaseController
         return match ($platform) {
             Platform::FACEBOOK => $this->publishToFacebook($request, $user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link),
             Platform::PINTEREST => $this->publishToPinterest($request, $user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link),
+            Platform::LINKEDIN => $this->publishToLinkedIn($request),
             default => $this->errorResponse('Platform not supported for posting', 400),
         };
     }
@@ -295,6 +302,155 @@ class PostController extends BaseController
         ], 'Post scheduled successfully for ' . $scheduledDate);
     }
 
+    private function publishToLinkedIn(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'platform' => ['required', Rule::in([Platform::LINKEDIN->value])],
+            'account_id' => 'required|string',
+            'title' => 'nullable|string',
+            'description' => 'nullable|string',
+            'image_url' => 'nullable|url',
+            'video_url' => 'nullable|url',
+            'image_urls' => 'nullable|array|min:2',
+            'image_urls.*' => 'url',
+            'document_url' => 'nullable|url',
+            'publish_now' => 'nullable|in:0,1',
+            'scheduled_at' => 'nullable|date|after:now',
+        ]);
+
+        if ($validator->fails()) {
+            return $this->errorResponse($validator->errors()->first(), 422);
+        }
+
+        $user = $request->user();
+        $accountId = (string) $request->input('account_id');
+        $apiKeyId = $request->input('api_key_id');
+
+        $linkedin = Linkedin::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->where('linkedin_id', $accountId)
+            ->first();
+
+        if (! $linkedin) {
+            return $this->errorResponse('LinkedIn account not found or not connected to your account', 404);
+        }
+        if (! $linkedin->validToken()) {
+            return $this->errorResponse('LinkedIn access token has expired. Please reconnect your LinkedIn account.', 401);
+        }
+
+        $title = (string) ($request->input('title') ?? '');
+        $description = (string) ($request->input('description') ?? '');
+        $text = trim($title."\n\n".$description);
+        $singleImage = $request->input('image_url');
+        $videoUrl = $request->input('video_url');
+        $imageUrls = $request->input('image_urls', []);
+        $documentUrl = $request->input('document_url');
+
+        $selectionCount = 0;
+        $selectionCount += ! empty($singleImage) ? 1 : 0;
+        $selectionCount += ! empty($videoUrl) ? 1 : 0;
+        $selectionCount += (is_array($imageUrls) && count($imageUrls) > 0) ? 1 : 0;
+        $selectionCount += ! empty($documentUrl) ? 1 : 0;
+        if ($selectionCount > 1) {
+            return $this->errorResponse('For LinkedIn, provide exactly one content option: image_url, video_url, image_urls (carousel), or document_url.', 422);
+        }
+        if ($selectionCount === 0 && $text === '') {
+            return $this->errorResponse('LinkedIn post requires text or one media selection.', 422);
+        }
+
+        $type = 'content_only';
+        $image = null;
+        $video = null;
+        $metadata = null;
+
+        if (! empty($documentUrl)) {
+            $ext = strtolower((string) pathinfo((string) parse_url($documentUrl, PHP_URL_PATH), PATHINFO_EXTENSION));
+            $allowed = ['pdf', 'ppt', 'pptx', 'doc', 'docx'];
+            if (! in_array($ext, $allowed, true)) {
+                return $this->errorResponse('LinkedIn documents support only PDF, PPT, PPTX, DOC, and DOCX files.', 422);
+            }
+            $type = 'document';
+            $metadata = json_encode([
+                'linkedin_document' => [
+                    'path' => $documentUrl,
+                    'name' => basename((string) parse_url($documentUrl, PHP_URL_PATH)) ?: 'document.'.$ext,
+                ],
+            ]);
+        } elseif (is_array($imageUrls) && count($imageUrls) > 0) {
+            $type = 'carousel';
+            $metadata = json_encode(['linkedin_carousel' => array_values($imageUrls)]);
+        } elseif (! empty($videoUrl)) {
+            $type = 'video';
+            $video = $videoUrl;
+        } elseif (! empty($singleImage)) {
+            $type = 'photo';
+            $image = $singleImage;
+        }
+
+        $timing = $this->resolveApiPublishTimingWithoutTimeslots($request, $user);
+        $publishNow = $timing['publish_now'];
+        $publishDate = $publishNow ? now() : $timing['publish_date'];
+        $isScheduled = ! $publishNow;
+
+        $post = PostService::create([
+            'user_id' => $user->id,
+            'account_id' => $linkedin->id,
+            'social_type' => 'linkedin',
+            'type' => $type,
+            'source' => 'api',
+            'title' => $title,
+            'comment' => $description,
+            'image' => $image,
+            'video' => $video,
+            'metadata' => $metadata,
+            'publish_date' => $publishDate,
+            'scheduled' => $isScheduled ? 1 : 0,
+        ]);
+
+        if ($apiKeyId) {
+            $post->update(['api_key_id' => $apiKeyId]);
+        }
+
+        if ($publishNow) {
+            PublishLinkedInPost::dispatch($post->id);
+
+            return $this->successResponse([
+                'post' => [
+                    'id' => $post->id,
+                    'platform' => 'linkedin',
+                    'status' => 'publishing',
+                    'type' => $type,
+                    'created_at' => $post->created_at->toIso8601String(),
+                ],
+                'account' => [
+                    'type' => 'linkedin_profile',
+                    'linkedin_id' => $linkedin->linkedin_id,
+                    'name' => $linkedin->username,
+                    'profile_image' => $linkedin->profile_image,
+                ],
+            ], 'Post is being published to LinkedIn');
+        }
+
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime((string) $timing['publish_date']));
+
+        return $this->successResponse([
+            'post' => [
+                'id' => $post->id,
+                'platform' => 'linkedin',
+                'status' => 'scheduled',
+                'type' => $type,
+                'scheduled_at' => $post->publish_datetime,
+                'created_at' => $post->created_at->toIso8601String(),
+            ],
+            'account' => [
+                'type' => 'linkedin_profile',
+                'linkedin_id' => $linkedin->linkedin_id,
+                'name' => $linkedin->username,
+                'profile_image' => $linkedin->profile_image,
+            ],
+        ], 'Post scheduled successfully for '.$scheduledDate);
+    }
+
     /**
      * Get post status by ID.
      *
@@ -366,6 +522,20 @@ class PostController extends BaseController
         if ($post->social_type === 'pinterest') {
             $board = Board::withoutGlobalScopes()->with('pinterest')->find($post->account_id);
             return $board ? $this->formatPinterestAccount($board, $board->pinterest) : null;
+        }
+
+        if ($post->social_type === 'linkedin') {
+            $linkedin = Linkedin::withoutGlobalScopes()->find($post->account_id);
+            if (! $linkedin) {
+                return null;
+            }
+
+            return [
+                'type' => 'linkedin_profile',
+                'linkedin_id' => $linkedin->linkedin_id,
+                'name' => $linkedin->username,
+                'profile_image' => $linkedin->profile_image,
+            ];
         }
 
         return null;
@@ -755,6 +925,36 @@ class PostController extends BaseController
             return [
                 'publish_now' => false,
                 'publish_date' => $nextLocal,
+            ];
+        }
+
+        $tz = TimezoneService::getUserTimezone($user);
+        $now = Carbon::now($tz);
+        $target = $now->copy()->setTime(14, 0, 0);
+        if ($now->greaterThanOrEqualTo($target)) {
+            $target->addDay();
+        }
+
+        return [
+            'publish_now' => false,
+            'publish_date' => $target->format('Y-m-d H:i:s'),
+        ];
+    }
+
+    private function resolveApiPublishTimingWithoutTimeslots(Request $request, $user): array
+    {
+        if ((int) $request->input('publish_now') === 1) {
+            return [
+                'publish_now' => true,
+                'publish_date' => '',
+            ];
+        }
+
+        $scheduledAt = $request->input('scheduled_at');
+        if ($scheduledAt !== null && trim((string) $scheduledAt) !== '') {
+            return [
+                'publish_now' => false,
+                'publish_date' => (string) $scheduledAt,
             ];
         }
 

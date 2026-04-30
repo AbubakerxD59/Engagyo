@@ -116,12 +116,23 @@ class UserController extends BaseController
             ];
         });
 
+        $linkedinAccounts = $user->linkedin()->get()->map(function ($linkedin) {
+            return [
+                '_id' => (string) $linkedin->linkedin_id,
+                'name' => $linkedin->username,
+                'type' => 'linkedin',
+                'profile_image' => !empty($linkedin->profile_image) ? $linkedin->profile_image : null,
+                'created_at' => $linkedin->created_at->toIso8601String(),
+            ];
+        });
+
         return $this->successResponse([
             'accounts' => [
                 'pinterest' => $pinterestAccounts,
                 'facebook' => $facebookAccounts,
+                'linkedin' => $linkedinAccounts,
             ],
-            'total' => $pinterestAccounts->count() + $facebookAccounts->count(),
+            'total' => $pinterestAccounts->count() + $facebookAccounts->count() + $linkedinAccounts->count(),
         ]);
     }
 
@@ -220,6 +231,7 @@ class UserController extends BaseController
             'stats' => [
                 'pinterest_accounts' => $user->pinterest()->count(),
                 'facebook_accounts' => $user->facebook()->count(),
+                'linkedin_accounts' => $user->linkedin()->count(),
                 'boards' => $user->boards()->count(),
                 'pages' => $user->pages()->count(),
                 'domains' => $user->domains()->count(),

@@ -9,6 +9,7 @@ use App\Jobs\PublishPinterestPost;
 use App\Jobs\PublishThreadsPost;
 use App\Models\Board;
 use App\Models\InstagramAccount;
+use App\Models\Linkedin;
 use App\Models\Page;
 use App\Models\Post;
 use App\Models\Thread;
@@ -212,6 +213,7 @@ class PostService
             'tiktok' => Tiktok::find($data['account_id']),
             'instagram' => InstagramAccount::find($data['account_id']),
             'threads' => Thread::find($data['account_id']),
+            'linkedin' => Linkedin::find($data['account_id']),
             default => null,
         };
 
