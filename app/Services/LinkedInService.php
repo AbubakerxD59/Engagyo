@@ -20,9 +20,12 @@ class LinkedInService
         $this->clientSecret = (string) config('services.linkedin.client_secret', env('LINKEDIN_CLIENT_SECRET'));
         $this->redirectUri = route('linkedin.callback');
         $this->scopes = [
+            'r_verify',
             'openid',
             'profile',
             'email',
+            'w_member_social',
+            'r_profile_basicinfo'
         ];
         $this->client = new HttpService();
     }
@@ -44,7 +47,7 @@ class LinkedInService
             'state' => $state,
         ], '', '&', PHP_QUERY_RFC3986);
 
-        return 'https://www.linkedin.com/oauth/v2/authorization?'.$query;
+        return 'https://www.linkedin.com/oauth/v2/authorization?' . $query;
     }
 
     public function getAccessToken(string $code): ?array
@@ -63,7 +66,7 @@ class LinkedInService
     public function getUserInfo(string $accessToken): ?array
     {
         return $this->client->get('https://api.linkedin.com/v2/userinfo', [], [
-            'Authorization' => 'Bearer '.$accessToken,
+            'Authorization' => 'Bearer ' . $accessToken,
         ]);
     }
 }
