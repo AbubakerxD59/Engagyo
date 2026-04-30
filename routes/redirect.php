@@ -3,7 +3,6 @@
 use App\Http\Controllers\FrontEnd\FacebookController;
 use App\Http\Controllers\FrontEnd\InstagramLoginController;
 use App\Http\Controllers\FrontEnd\LinkedInAuthController;
-use App\Http\Controllers\FrontEnd\LinkedInAuthTestController;
 use App\Http\Controllers\FrontEnd\PinterestController;
 use App\Http\Controllers\FrontEnd\ThreadsController;
 use App\Http\Controllers\FrontEnd\TikTokController;
@@ -41,11 +40,4 @@ Route::name('threads.')->controller(ThreadsController::class)->group(function ()
 // LinkedIn
 Route::name('linkedin.')->controller(LinkedInAuthController::class)->group(function () {
     Route::get('linkedin-callback', 'linkedInCallback')->name('callback');
-});
-
-// LinkedIn OAuth test flow (step-by-step)
-Route::prefix('linkedin-test')->name('linkedin.test.')->controller(LinkedInAuthTestController::class)->group(function () {
-    Route::get('login', 'index')->name('index');
-    Route::get('start', 'start')->name('start');
-    Route::get('callback', 'callback')->name('callback');
 });
