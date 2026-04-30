@@ -180,13 +180,20 @@ class LinkedInPublishService
             ];
         }
 
-        $uploadUrl = (string) ($registerResponse->json('value.uploadMechanism.com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest.uploadUrl') ?? '');
-        $asset = (string) ($registerResponse->json('value.asset') ?? '');
+        $registerJson = $registerResponse->json();
+        $value = is_array($registerJson) ? ($registerJson['value'] ?? []) : [];
+        $uploadMechanism = is_array($value) ? ($value['uploadMechanism'] ?? []) : [];
+        $httpRequestMechanism = is_array($uploadMechanism)
+            ? ($uploadMechanism['com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest'] ?? [])
+            : [];
+
+        $uploadUrl = is_array($httpRequestMechanism) ? (string) ($httpRequestMechanism['uploadUrl'] ?? '') : '';
+        $asset = is_array($value) ? (string) ($value['asset'] ?? '') : '';
         if ($uploadUrl === '' || $asset === '') {
             return [
                 'success' => false,
                 'stage' => 'register_upload_parse',
-                'response' => $registerResponse->json() ?: $registerResponse->body(),
+                'response' => $registerJson ?: $registerResponse->body(),
             ];
         }
 
