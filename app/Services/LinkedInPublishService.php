@@ -61,10 +61,15 @@ class LinkedInPublishService
             if ($imageUrl === '') {
                 return ['success' => false, 'message' => 'Photo publish requires a valid image URL or uploaded image.'];
             }
-            $assetUrn = $this->registerAndUploadAsset($token, $authorUrn, 'image', $imageUrl);
-            if ($assetUrn === null) {
-                return ['success' => false, 'message' => 'Failed to register/upload image asset to LinkedIn.'];
+            $assetResult = $this->registerAndUploadAsset($token, $authorUrn, 'image', $imageUrl);
+            if (! ($assetResult['success'] ?? false)) {
+                return [
+                    'success' => false,
+                    'message' => 'Failed to register/upload image asset to LinkedIn.',
+                    'details' => $assetResult,
+                ];
             }
+            $assetUrn = (string) ($assetResult['asset'] ?? '');
             $mediaCategory = 'IMAGE';
             $media[] = [
                 'status' => 'READY',
@@ -76,10 +81,15 @@ class LinkedInPublishService
             if ($videoUrl === '') {
                 return ['success' => false, 'message' => 'Video publish requires a valid video URL or uploaded video.'];
             }
-            $assetUrn = $this->registerAndUploadAsset($token, $authorUrn, 'video', $videoUrl);
-            if ($assetUrn === null) {
-                return ['success' => false, 'message' => 'Failed to register/upload video asset to LinkedIn.'];
+            $assetResult = $this->registerAndUploadAsset($token, $authorUrn, 'video', $videoUrl);
+            if (! ($assetResult['success'] ?? false)) {
+                return [
+                    'success' => false,
+                    'message' => 'Failed to register/upload video asset to LinkedIn.',
+                    'details' => $assetResult,
+                ];
             }
+            $assetUrn = (string) ($assetResult['asset'] ?? '');
             $mediaCategory = 'VIDEO';
             $media[] = [
                 'status' => 'READY',
@@ -141,7 +151,7 @@ class LinkedInPublishService
         return $title !== '' ? $title : 'LinkedIn media';
     }
 
-    private function registerAndUploadAsset(string $token, string $ownerUrn, string $kind, string $sourceUrl): ?string
+    private function registerAndUploadAsset(string $token, string $ownerUrn, string $kind, string $sourceUrl): array
     {
         $recipe = $kind === 'video'
             ? 'urn:li:digitalmediaRecipe:feedshare-video'
@@ -162,18 +172,33 @@ class LinkedInPublishService
             ]);
 
         if (! $registerResponse->successful()) {
-            return null;
+            return [
+                'success' => false,
+                'stage' => 'register_upload',
+                'status' => $registerResponse->status(),
+                'response' => $registerResponse->json() ?: $registerResponse->body(),
+            ];
         }
 
         $uploadUrl = (string) ($registerResponse->json('value.uploadMechanism.com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest.uploadUrl') ?? '');
         $asset = (string) ($registerResponse->json('value.asset') ?? '');
         if ($uploadUrl === '' || $asset === '') {
-            return null;
+            return [
+                'success' => false,
+                'stage' => 'register_upload_parse',
+                'response' => $registerResponse->json() ?: $registerResponse->body(),
+            ];
         }
 
         $binaryResponse = Http::timeout(120)->get($sourceUrl);
         if (! $binaryResponse->successful()) {
-            return null;
+            return [
+                'success' => false,
+                'stage' => 'fetch_source_binary',
+                'status' => $binaryResponse->status(),
+                'source_url' => $sourceUrl,
+                'response' => $binaryResponse->body(),
+            ];
         }
 
         $contentType = (string) ($binaryResponse->header('Content-Type') ?: 'application/octet-stream');
@@ -185,10 +210,19 @@ class LinkedInPublishService
             ->put($uploadUrl);
 
         if (! $upload->successful()) {
-            return null;
+            return [
+                'success' => false,
+                'stage' => 'upload_binary',
+                'status' => $upload->status(),
+                'response' => $upload->body(),
+            ];
         }
 
-        return $asset;
+        return [
+            'success' => true,
+            'asset' => $asset,
+            'upload_status' => $upload->status(),
+        ];
     }
 
     private function resolveImageUrl(Post $post): string
@@ -207,7 +241,7 @@ class LinkedInPublishService
             return $path;
         }
 
-        return url(getImage('', $path));
+        return getImage('', $path);
     }
 
     private function resolveVideoUrl(Post $post): string
