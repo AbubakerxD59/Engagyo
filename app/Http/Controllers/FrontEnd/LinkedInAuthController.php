@@ -10,6 +10,7 @@ use App\Services\LinkedInService;
 use App\Services\SocialMediaLogService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 
 class LinkedInAuthController extends Controller
 {
@@ -79,19 +80,25 @@ class LinkedInAuthController extends Controller
         }
 
         try {
+            $payload = [
+                'user_id' => $user->id,
+                'linkedin_id' => $userInfo['sub'],
+                'username' => $userInfo['name'] ?? ($userInfo['given_name'] ?? $userInfo['email'] ?? 'LinkedIn User'),
+                'email' => $userInfo['email'] ?? null,
+                'profile_image' => $profileImage,
+                'access_token' => $accessToken,
+                'expires_in' => $tokenResponse['expires_in'] ?? null,
+                'refresh_token' => $tokenResponse['refresh_token'] ?? null,
+            ];
+
+            // Some environments may still have the base linkedins schema without this column.
+            if (Schema::hasColumn('linkedins', 'url_shortener_enabled')) {
+                $payload['url_shortener_enabled'] = in_array('linkedin', $user->url_shorten_platforms ?? []);
+            }
+
             $linkedinAccount = $user->linkedin()->updateOrCreate(
                 ['linkedin_id' => $userInfo['sub']],
-                [
-                    'user_id' => $user->id,
-                    'linkedin_id' => $userInfo['sub'],
-                    'username' => $userInfo['name'] ?? ($userInfo['given_name'] ?? $userInfo['email'] ?? 'LinkedIn User'),
-                    'email' => $userInfo['email'] ?? null,
-                    'profile_image' => $profileImage,
-                    'access_token' => $accessToken,
-                    'expires_in' => $tokenResponse['expires_in'] ?? null,
-                    'refresh_token' => $tokenResponse['refresh_token'] ?? null,
-                    'url_shortener_enabled' => in_array('linkedin', $user->url_shorten_platforms ?? []),
-                ]
+                $payload
             );
         } catch (\Throwable $e) {
             if ($didIncrement) {
