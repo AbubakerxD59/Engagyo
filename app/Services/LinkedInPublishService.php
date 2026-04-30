@@ -8,9 +8,9 @@ use Illuminate\Support\Facades\Http;
 
 class LinkedInPublishService
 {
-    private const API_BASE = 'https://api.linkedin.com/rest';
+    private const API_BASE_V2 = 'https://api.linkedin.com/v2';
 
-    private const API_VERSION = '202405';
+    private const RESTLI_VERSION = '2.0.0';
 
     public function publish(Post $post, Linkedin $account): array
     {
@@ -20,32 +20,13 @@ class LinkedInPublishService
         }
 
         $authorUrn = 'urn:li:person:'.$account->linkedin_id;
-        $commentary = $this->buildCommentary($post);
-        $content = $this->buildContentPayload($post, $token);
-
-        if (isset($content['success']) && $content['success'] === false) {
-            return $content;
-        }
-
-        $payload = [
-            'author' => $authorUrn,
-            'commentary' => $commentary,
-            'visibility' => 'PUBLIC',
-            'distribution' => [
-                'feedDistribution' => 'MAIN_FEED',
-                'targetEntities' => [],
-                'thirdPartyDistributionChannels' => [],
-            ],
-            'lifecycleState' => 'PUBLISHED',
-            'isReshareDisabledByAuthor' => false,
-        ];
-
-        if (! empty($content)) {
-            $payload['content'] = $content;
+        $ugcPayload = $this->buildUgcPayload($post, $authorUrn, $token);
+        if (! ($ugcPayload['success'] ?? false)) {
+            return $ugcPayload;
         }
 
         $response = Http::withHeaders($this->jsonHeaders($token))
-            ->post(self::API_BASE.'/posts', $payload);
+            ->post(self::API_BASE_V2.'/ugcPosts', $ugcPayload['payload']);
 
         if (! $response->successful()) {
             return [
@@ -57,12 +38,88 @@ class LinkedInPublishService
             ];
         }
 
-        $id = (string) ($response->json('id') ?? $response->header('x-restli-id') ?? '');
+        $id = (string) ($response->header('x-restli-id') ?? '');
+        if ($id === '') {
+            $id = (string) ($response->json('id') ?? '');
+        }
 
         return [
             'success' => true,
             'id' => $id,
             'response' => $response->json() ?: ['raw' => $response->body()],
+        ];
+    }
+
+    private function buildUgcPayload(Post $post, string $authorUrn, string $token): array
+    {
+        $commentary = $this->buildCommentary($post);
+        $mediaCategory = 'NONE';
+        $media = [];
+
+        if ($post->type === 'photo') {
+            $imageUrl = $this->resolveImageUrl($post);
+            if ($imageUrl === '') {
+                return ['success' => false, 'message' => 'Photo publish requires a valid image URL or uploaded image.'];
+            }
+            $assetUrn = $this->registerAndUploadAsset($token, $authorUrn, 'image', $imageUrl);
+            if ($assetUrn === null) {
+                return ['success' => false, 'message' => 'Failed to register/upload image asset to LinkedIn.'];
+            }
+            $mediaCategory = 'IMAGE';
+            $media[] = [
+                'status' => 'READY',
+                'media' => $assetUrn,
+                'title' => ['text' => $this->mediaTitle($post)],
+            ];
+        } elseif ($post->type === 'video') {
+            $videoUrl = $this->resolveVideoUrl($post);
+            if ($videoUrl === '') {
+                return ['success' => false, 'message' => 'Video publish requires a valid video URL or uploaded video.'];
+            }
+            $assetUrn = $this->registerAndUploadAsset($token, $authorUrn, 'video', $videoUrl);
+            if ($assetUrn === null) {
+                return ['success' => false, 'message' => 'Failed to register/upload video asset to LinkedIn.'];
+            }
+            $mediaCategory = 'VIDEO';
+            $media[] = [
+                'status' => 'READY',
+                'media' => $assetUrn,
+                'title' => ['text' => $this->mediaTitle($post)],
+            ];
+        } elseif ($post->type === 'carousel') {
+            return [
+                'success' => false,
+                'message' => 'LinkedIn Share API (ugcPosts) does not support carousel in this implementation.',
+            ];
+        } elseif ($post->type === 'document') {
+            return [
+                'success' => false,
+                'message' => 'LinkedIn Share API (ugcPosts) does not support document publishing in this implementation.',
+            ];
+        }
+
+        $shareContent = [
+            'shareCommentary' => [
+                'text' => $commentary,
+            ],
+            'shareMediaCategory' => $mediaCategory,
+        ];
+        if ($media !== []) {
+            $shareContent['media'] = $media;
+        }
+
+        return [
+            'success' => true,
+            'payload' => [
+                'author' => $authorUrn,
+                'lifecycleState' => 'PUBLISHED',
+                'specificContent' => [
+                    'com.linkedin.ugc.ShareContent' => $shareContent,
+                ],
+                'visibility' => [
+                    'com.linkedin.ugc.MemberNetworkVisibility' => 'PUBLIC',
+                ],
+            ],
         ];
     }
 
@@ -77,100 +134,39 @@ class LinkedInPublishService
         return $title !== '' ? $title : $comment;
     }
 
-    private function buildContentPayload(Post $post, string $token): array
+    private function mediaTitle(Post $post): string
     {
-        if ($post->type === 'content_only') {
-            return [];
-        }
+        $title = trim((string) ($post->title ?? ''));
 
-        $meta = $this->decodeMetadata($post->metadata);
-
-        if ($post->type === 'photo') {
-            $urn = $this->uploadImage($this->resolveImageUrl($post), $token);
-            if ($urn === null) {
-                return ['success' => false, 'message' => 'Failed to upload LinkedIn image.'];
-            }
-
-            return ['media' => ['id' => $urn]];
-        }
-
-        if ($post->type === 'video') {
-            $urn = $this->uploadVideo($this->resolveVideoUrl($post), $token);
-            if ($urn === null) {
-                return ['success' => false, 'message' => 'Failed to upload LinkedIn video.'];
-            }
-
-            return ['media' => ['id' => $urn]];
-        }
-
-        if ($post->type === 'carousel') {
-            $items = $meta['linkedin_carousel'] ?? [];
-            if (! is_array($items) || count($items) < 2) {
-                return ['success' => false, 'message' => 'LinkedIn carousel requires at least 2 images.'];
-            }
-            $images = [];
-            foreach ($items as $path) {
-                $url = $this->resolveImagePath((string) $path);
-                $urn = $this->uploadImage($url, $token);
-                if ($urn === null) {
-                    return ['success' => false, 'message' => 'Failed to upload one or more LinkedIn carousel images.'];
-                }
-                $images[] = ['id' => $urn];
-            }
-
-            return ['multiImage' => ['images' => $images]];
-        }
-
-        if ($post->type === 'document') {
-            $docPath = (string) ($meta['linkedin_document']['path'] ?? '');
-            $docName = (string) ($meta['linkedin_document']['name'] ?? 'document');
-            if ($docPath === '') {
-                return ['success' => false, 'message' => 'LinkedIn document path missing.'];
-            }
-            $url = $this->resolveDocumentPath($docPath);
-            $urn = $this->uploadDocument($url, $token);
-            if ($urn === null) {
-                return ['success' => false, 'message' => 'Failed to upload LinkedIn document.'];
-            }
-
-            return ['media' => ['id' => $urn, 'title' => $docName]];
-        }
-
-        return [];
+        return $title !== '' ? $title : 'LinkedIn media';
     }
 
-    private function uploadImage(string $url, string $token): ?string
+    private function registerAndUploadAsset(string $token, string $ownerUrn, string $kind, string $sourceUrl): ?string
     {
-        return $this->uploadBinaryAsset('images', $url, $token, 'urn:li:image:');
-    }
+        $recipe = $kind === 'video'
+            ? 'urn:li:digitalmediaRecipe:feedshare-video'
+            : 'urn:li:digitalmediaRecipe:feedshare-image';
 
-    private function uploadVideo(string $url, string $token): ?string
-    {
-        return $this->uploadBinaryAsset('videos', $url, $token, 'urn:li:video:');
-    }
+        $registerResponse = Http::withHeaders($this->jsonHeaders($token))
+            ->post(self::API_BASE_V2.'/assets?action=registerUpload', [
+                'registerUploadRequest' => [
+                    'recipes' => [$recipe],
+                    'owner' => $ownerUrn,
+                    'serviceRelationships' => [
+                        [
+                            'relationshipType' => 'OWNER',
+                            'identifier' => 'urn:li:userGeneratedContent',
+                        ],
+                    ],
+                ],
+            ]);
 
-    private function uploadDocument(string $url, string $token): ?string
-    {
-        return $this->uploadBinaryAsset('documents', $url, $token, 'urn:li:document:');
-    }
-
-    private function uploadBinaryAsset(string $assetType, string $sourceUrl, string $token, string $urnPrefix): ?string
-    {
-        $init = Http::withHeaders($this->jsonHeaders($token))
-            ->post(self::API_BASE.'/'.$assetType.'?action=initializeUpload', ['initializeUploadRequest' => new \stdClass()]);
-
-        if (! $init->successful()) {
+        if (! $registerResponse->successful()) {
             return null;
         }
 
-        $uploadUrl = (string) ($init->json('value.uploadUrl') ?? '');
-        $assetKey = match ($assetType) {
-            'images' => 'image',
-            'videos' => 'video',
-            'documents' => 'document',
-            default => 'asset',
-        };
-        $asset = (string) ($init->json('value.'.$assetKey) ?? $init->json('value.asset') ?? '');
+        $uploadUrl = (string) ($registerResponse->json('value.uploadMechanism.com.linkedin.digitalmedia.uploading.MediaUploadHttpRequest.uploadUrl') ?? '');
+        $asset = (string) ($registerResponse->json('value.asset') ?? '');
         if ($uploadUrl === '' || $asset === '') {
             return null;
         }
@@ -181,7 +177,10 @@ class LinkedInPublishService
         }
 
         $contentType = (string) ($binaryResponse->header('Content-Type') ?: 'application/octet-stream');
-        $upload = Http::withHeaders(['Content-Type' => $contentType])
+        $upload = Http::withHeaders([
+            'Authorization' => 'Bearer '.$token,
+            'Content-Type' => $contentType,
+        ])
             ->withBody($binaryResponse->body(), $contentType)
             ->put($uploadUrl);
 
@@ -189,30 +188,17 @@ class LinkedInPublishService
             return null;
         }
 
-        if (str_starts_with($asset, 'urn:li:')) {
-            return $asset;
-        }
-
-        return str_starts_with($asset, $urnPrefix) ? $asset : $urnPrefix.$asset;
-    }
-
-    private function decodeMetadata(mixed $metadata): array
-    {
-        if (is_array($metadata)) {
-            return $metadata;
-        }
-        if (! is_string($metadata) || trim($metadata) === '') {
-            return [];
-        }
-
-        $decoded = json_decode($metadata, true);
-
-        return is_array($decoded) ? $decoded : [];
+        return $asset;
     }
 
     private function resolveImageUrl(Post $post): string
     {
-        return $this->resolveImagePath((string) ($post->getRawOriginal('image') ?: $post->image ?: ''));
+        $raw = (string) ($post->getRawOriginal('image') ?: $post->image ?: '');
+        if ($raw === '') {
+            return '';
+        }
+
+        return $this->resolveImagePath($raw);
     }
 
     private function resolveImagePath(string $path): string
@@ -227,6 +213,9 @@ class LinkedInPublishService
     private function resolveVideoUrl(Post $post): string
     {
         $raw = (string) ($post->getRawOriginal('video') ?: $post->video ?: '');
+        if ($raw === '') {
+            return '';
+        }
         if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
             return $raw;
         }
@@ -234,25 +223,12 @@ class LinkedInPublishService
         return (string) fetchFromS3($raw);
     }
 
-    private function resolveDocumentPath(string $path): string
-    {
-        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
-            return $path;
-        }
-        if (str_starts_with($path, '/')) {
-            return url($path);
-        }
-
-        return asset($path);
-    }
-
     private function jsonHeaders(string $token): array
     {
         return [
             'Authorization' => 'Bearer '.$token,
             'Content-Type' => 'application/json',
-            'X-Restli-Protocol-Version' => '2.0.0',
-            'LinkedIn-Version' => self::API_VERSION,
+            'X-Restli-Protocol-Version' => self::RESTLI_VERSION,
         ];
     }
 }
