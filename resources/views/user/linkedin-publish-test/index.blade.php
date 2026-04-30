@@ -20,7 +20,7 @@
                             </div>
                         @endif
 
-                        <form method="POST" action="{{ route('panel.linkedin-publish-test.publish') }}">
+                        <form method="POST" action="{{ route('panel.linkedin-publish-test.publish') }}" enctype="multipart/form-data">
                             @csrf
                             <div class="row">
                                 <div class="col-md-6 mb-3">
@@ -62,12 +62,24 @@
                                     <input type="url" name="image_url" class="form-control" value="{{ old('image_url') }}" placeholder="https://...">
                                 </div>
                                 <div class="col-md-6 mb-3">
+                                    <label class="font-weight-bold">Image File (photo)</label>
+                                    <input type="file" name="image_file" class="form-control" accept="image/*">
+                                </div>
+                                <div class="col-md-6 mb-3">
                                     <label class="font-weight-bold">Video URL (video)</label>
                                     <input type="url" name="video_url" class="form-control" value="{{ old('video_url') }}" placeholder="https://...">
+                                </div>
+                                <div class="col-md-6 mb-3">
+                                    <label class="font-weight-bold">Video File (video)</label>
+                                    <input type="file" name="video_file" class="form-control" accept="video/*">
                                 </div>
                                 <div class="col-md-12 mb-3">
                                     <label class="font-weight-bold">Carousel Image URLs (carousel)</label>
                                     <textarea name="carousel_urls" rows="4" class="form-control" placeholder="One image URL per line">{{ old('carousel_urls') }}</textarea>
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="font-weight-bold">Carousel Files (carousel)</label>
+                                    <input type="file" name="carousel_files[]" class="form-control" accept="image/*" multiple>
                                 </div>
                                 <div class="col-md-8 mb-3">
                                     <label class="font-weight-bold">Document URL (document)</label>
@@ -76,6 +88,10 @@
                                 <div class="col-md-4 mb-3">
                                     <label class="font-weight-bold">Document Name</label>
                                     <input type="text" name="document_name" class="form-control" value="{{ old('document_name') }}" placeholder="Optional display name">
+                                </div>
+                                <div class="col-md-12 mb-3">
+                                    <label class="font-weight-bold">Document File (document)</label>
+                                    <input type="file" name="document_file" class="form-control" accept=".pdf,.doc,.docx,.ppt,.pptx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation">
                                 </div>
                                 <div class="col-md-12">
                                     <button type="submit" class="btn btn-primary">Run Publish Test</button>

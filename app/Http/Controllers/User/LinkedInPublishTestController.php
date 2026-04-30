@@ -8,6 +8,7 @@ use App\Models\Post;
 use App\Models\User;
 use App\Services\LinkedInPublishService;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
@@ -47,10 +48,15 @@ class LinkedInPublishTestController extends Controller
             'title' => ['nullable', 'string', 'max:3000'],
             'comment' => ['nullable', 'string', 'max:3000'],
             'image_url' => ['nullable', 'url'],
+            'image_file' => ['nullable', 'file', 'image', 'max:15360'],
             'video_url' => ['nullable', 'url'],
+            'video_file' => ['nullable', 'file', 'mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm', 'max:102400'],
             'carousel_urls' => ['nullable', 'string'],
+            'carousel_files' => ['nullable', 'array'],
+            'carousel_files.*' => ['file', 'image', 'max:15360'],
             'document_url' => ['nullable', 'url'],
             'document_name' => ['nullable', 'string', 'max:255'],
+            'document_file' => ['nullable', 'file', 'mimes:pdf,doc,docx,ppt,pptx', 'max:51200'],
         ]);
 
         $steps = [];
@@ -100,36 +106,71 @@ class LinkedInPublishTestController extends Controller
         $post->metadata = null;
 
         if ($type === 'photo') {
-            if (empty($validated['image_url'])) {
+            $imagePath = null;
+            if ($request->hasFile('image_file')) {
+                $imagePath = saveImage($request->file('image_file'));
+            } elseif (! empty($validated['image_url'])) {
+                $imagePath = $validated['image_url'];
+            }
+
+            if (empty($imagePath)) {
                 $addStep('build_payload', 'error', ['message' => 'Image URL is required for photo type.']);
 
                 return back()->withInput()
                     ->with('linkedin_publish_test_steps', $steps)
                     ->with('linkedin_publish_test_result', ['success' => false]);
             }
-            $post->image = $validated['image_url'];
+            $post->image = $imagePath;
         } elseif ($type === 'video') {
-            if (empty($validated['video_url'])) {
+            $videoPath = null;
+            if ($request->hasFile('video_file')) {
+                $videoPath = saveToS3($request->file('video_file'));
+            } elseif (! empty($validated['video_url'])) {
+                $videoPath = $validated['video_url'];
+            }
+
+            if (empty($videoPath)) {
                 $addStep('build_payload', 'error', ['message' => 'Video URL is required for video type.']);
 
                 return back()->withInput()
                     ->with('linkedin_publish_test_steps', $steps)
                     ->with('linkedin_publish_test_result', ['success' => false]);
             }
-            $post->video = $validated['video_url'];
+            $post->video = $videoPath;
         } elseif ($type === 'carousel') {
+            $carouselItems = [];
             $rawCarousel = trim((string) ($validated['carousel_urls'] ?? ''));
             $urls = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $rawCarousel ?: ''))));
-            if (count($urls) < 2) {
+            foreach ($urls as $url) {
+                $carouselItems[] = $url;
+            }
+            $files = $request->file('carousel_files', []);
+            if (! is_array($files)) {
+                $files = [$files];
+            }
+            foreach (array_filter($files) as $file) {
+                if ($file instanceof UploadedFile && $file->isValid()) {
+                    $carouselItems[] = saveImage($file);
+                }
+            }
+
+            if (count($carouselItems) < 2) {
                 $addStep('build_payload', 'error', ['message' => 'Carousel type requires at least 2 image URLs (one per line).']);
 
                 return back()->withInput()
                     ->with('linkedin_publish_test_steps', $steps)
                     ->with('linkedin_publish_test_result', ['success' => false]);
             }
-            $post->metadata = json_encode(['linkedin_carousel' => $urls]);
+            $post->metadata = json_encode(['linkedin_carousel' => $carouselItems]);
         } elseif ($type === 'document') {
-            if (empty($validated['document_url'])) {
+            $documentPath = null;
+            if ($request->hasFile('document_file')) {
+                $documentPath = saveToS3($request->file('document_file'));
+            } elseif (! empty($validated['document_url'])) {
+                $documentPath = $validated['document_url'];
+            }
+
+            if (empty($documentPath)) {
                 $addStep('build_payload', 'error', ['message' => 'Document URL is required for document type.']);
 
                 return back()->withInput()
@@ -138,8 +179,8 @@ class LinkedInPublishTestController extends Controller
             }
             $post->metadata = json_encode([
                 'linkedin_document' => [
-                    'path' => $validated['document_url'],
-                    'name' => $validated['document_name'] ?: 'document',
+                    'path' => $documentPath,
+                    'name' => $validated['document_name'] ?: ($request->file('document_file')?->getClientOriginalName() ?: 'document'),
                 ],
             ]);
         }
