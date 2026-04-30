@@ -22,7 +22,7 @@ class LinkedInAuthTestController extends Controller
     {
         $clientId = (string) config('services.linkedin.client_id');
         $clientSecret = (string) config('services.linkedin.client_secret');
-        $redirectUri = route('linkedin.test.callback');
+        $redirectUri = route('linkedin.callback');
         $state = bin2hex(random_bytes(16));
 
         $steps = [
