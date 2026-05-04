@@ -130,7 +130,18 @@
                                                                 $engRate = $insights['post_engagement_rate'] ?? 0;
                                                                 $msg = \Illuminate\Support\Str::limit($post['message'] ?? $post['story'] ?? '—', 80);
                                                                 $msgFull = $post['message'] ?? $post['story'] ?? '';
-                                                                $created = isset($post['created_time']) ? \Carbon\Carbon::parse($post['created_time'])->format('F j, Y g:ia') : '—';
+                                                                $createdTimeRaw = $post['created_time'] ?? null;
+                                                                $createdTimeValue = is_array($createdTimeRaw)
+                                                                    ? ($createdTimeRaw['date'] ?? $createdTimeRaw['datetime'] ?? null)
+                                                                    : $createdTimeRaw;
+                                                                $created = '—';
+                                                                if (is_string($createdTimeValue) && trim($createdTimeValue) !== '') {
+                                                                    try {
+                                                                        $created = \Carbon\Carbon::parse($createdTimeValue)->format('F j, Y g:ia');
+                                                                    } catch (\Throwable $e) {
+                                                                        $created = '—';
+                                                                    }
+                                                                }
                                                             @endphp
                                                             <tr class="analytics-test-post-row" data-search-text="{{ e(strtolower($msgFull ?? '')) }}">
                                                                 <td class="text-nowrap">{{ $created }}</td>
