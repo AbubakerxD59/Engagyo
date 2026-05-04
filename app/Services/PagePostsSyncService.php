@@ -177,7 +177,7 @@ class PagePostsSyncService
     /**
      * Sync page posts with insights for all pages (from page_insight) and all durations.
      */
-    public function syncAll(): array
+    public function syncAll(?callable $progress = null): array
     {
         $pageIds = PageInsight::distinct()->pluck('page_id');
         $pages = Page::withoutGlobalScopes()
@@ -190,14 +190,71 @@ class PagePostsSyncService
 
         $synced = 0;
         $failed = 0;
+        $totalPages = $pages->count();
+        $totalDurations = count($this->durations);
+        $totalSteps = $totalPages * $totalDurations;
+        $step = 0;
+
+        if ($progress) {
+            $progress([
+                'type' => 'start',
+                'total_pages' => $totalPages,
+                'total_durations' => $totalDurations,
+                'total_steps' => $totalSteps,
+            ]);
+        }
 
         foreach ($pages as $page) {
+            if ($progress) {
+                $progress([
+                    'type' => 'page_start',
+                    'page_id' => $page->id,
+                    'page_name' => $page->name ?? null,
+                ]);
+            }
+
             foreach ($this->durations as $duration) {
+                $step++;
+                [$since, $until] = $this->resolveDateRange($duration);
+                if ($progress) {
+                    $progress([
+                        'type' => 'duration_start',
+                        'step' => $step,
+                        'total_steps' => $totalSteps,
+                        'page_id' => $page->id,
+                        'page_name' => $page->name ?? null,
+                        'duration' => $duration,
+                        'since' => $since,
+                        'until' => $until,
+                    ]);
+                }
+
                 try {
                     if ($this->syncPagePosts($page, $duration)) {
                         $synced++;
+                        if ($progress) {
+                            $progress([
+                                'type' => 'duration_success',
+                                'step' => $step,
+                                'total_steps' => $totalSteps,
+                                'page_id' => $page->id,
+                                'page_name' => $page->name ?? null,
+                                'duration' => $duration,
+                            ]);
+                        }
                     } else {
                         $failed++;
+                        if ($progress) {
+                            $progress([
+                                'type' => 'duration_failed',
+                                'step' => $step,
+                                'total_steps' => $totalSteps,
+                                'page_id' => $page->id,
+                                'page_name' => $page->name ?? null,
+                                'duration' => $duration,
+                                'error' => 'Skipped due to missing credentials or invalid token.',
+                            ]);
+                        }
                     }
                 } catch (\Throwable $e) {
                     $failed++;
@@ -206,8 +263,27 @@ class PagePostsSyncService
                         'duration' => $duration,
                         'error' => $e->getMessage(),
                     ]);
+                    if ($progress) {
+                        $progress([
+                            'type' => 'duration_failed',
+                            'step' => $step,
+                            'total_steps' => $totalSteps,
+                            'page_id' => $page->id,
+                            'page_name' => $page->name ?? null,
+                            'duration' => $duration,
+                            'error' => $e->getMessage(),
+                        ]);
+                    }
                 }
             }
+        }
+
+        if ($progress) {
+            $progress([
+                'type' => 'done',
+                'synced' => $synced,
+                'failed' => $failed,
+            ]);
         }
 
         return ['synced' => $synced, 'failed' => $failed];
