@@ -24,6 +24,14 @@ class FacebookService
 
     private $logService;
 
+    private function throttlePostInsightsBatchRequests(): void
+    {
+        $delayMs = (int) env('FACEBOOK_POSTS_BATCH_DELAY_MS', 350);
+        if ($delayMs > 0) {
+            usleep($delayMs * 1000);
+        }
+    }
+
     private function successNotification($userId, $title, $message, $post = null)
     {
         $body = ['type' => 'success', 'message' => $message];
@@ -1457,6 +1465,8 @@ class FacebookService
                 }
             }
 
+            $this->throttlePostInsightsBatchRequests();
+
             try {
                 $commentsBatch = [];
                 foreach ($chunk as $post) {
@@ -1491,6 +1501,7 @@ class FacebookService
             }
 
             $offset += $n;
+            $this->throttlePostInsightsBatchRequests();
         }
 
         foreach ($posts as &$post) {

@@ -20,6 +20,14 @@ class PagePostsSyncService
     /** Keep only this many records per (page_id, duration); oldest beyond this are removed. */
     protected int $maxRecordsPerDuration = 7;
 
+    private function throttleBetweenSyncSteps(): void
+    {
+        $delayMs = (int) env('PAGE_POSTS_SYNC_STEP_DELAY_MS', 500);
+        if ($delayMs > 0) {
+            usleep($delayMs * 1000);
+        }
+    }
+
     public function __construct(FacebookService $facebookService)
     {
         $this->facebookService = $facebookService;
@@ -275,6 +283,8 @@ class PagePostsSyncService
                         ]);
                     }
                 }
+
+                $this->throttleBetweenSyncSteps();
             }
         }
 
@@ -314,6 +324,8 @@ class PagePostsSyncService
                     'error' => $e->getMessage(),
                 ]);
             }
+
+            $this->throttleBetweenSyncSteps();
         }
 
         return [
