@@ -11,7 +11,7 @@ class PageInsightsSyncService
 {
     protected FacebookService $facebookService;
 
-    protected array $durations = ['last_7', 'last_28', 'last_90', 'this_month', 'this_year'];
+    protected array $durations = ['last_7', 'last_28', 'last_90', 'this_month', 'this_year', 'full_year'];
 
     /** Keep only this many records per (page_id, duration); oldest beyond this are removed. */
     protected int $maxRecordsPerDuration = 7;
@@ -40,6 +40,10 @@ class PageInsightsSyncService
             ],
             'this_year' => [
                 $today->copy()->startOfYear()->format('Y-m-d'),
+                $today->format('Y-m-d'),
+            ],
+            'full_year' => [
+                $today->copy()->subYear()->format('Y-m-d'),
                 $today->format('Y-m-d'),
             ],
             default => [$today->copy()->subDays(28)->format('Y-m-d'), $today->format('Y-m-d')],

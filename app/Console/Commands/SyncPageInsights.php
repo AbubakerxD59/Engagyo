@@ -19,7 +19,7 @@ class SyncPageInsights extends Command
      *
      * @var string
      */
-    protected $description = 'Update page insights for each duration (last_7, last_28, last_90, this_month, this_year) with since/until based on current date';
+    protected $description = 'Update page insights for each duration (last_7, last_28, last_90, this_month, this_year, full_year) with since/until based on current date';
 
     /**
      * Execute the console command.
