@@ -277,6 +277,94 @@ class AnalyticsController extends Controller
     }
 
     /**
+     * Fetch page posts for analytics test endpoint with raw status payload.
+     */
+    private function fetchPagePostsForTest(?Page $page, ?string $since = null, ?string $until = null): array
+    {
+        if (!$page || empty($page->page_id) || empty($page->access_token)) {
+            return [
+                'success' => false,
+                'source' => 'validation',
+                'posts' => null,
+                'error' => 'Page not found or missing Facebook credentials.',
+            ];
+        }
+
+        $duration = request()->query('duration', 'last_28');
+        $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $page->id, $duration, $since, $until);
+
+        $cachedPosts = Cache::get($cacheKey);
+        if ($cachedPosts !== null) {
+            return [
+                'success' => true,
+                'source' => 'cache',
+                'posts' => $cachedPosts,
+                'error' => null,
+            ];
+        }
+
+        $stored = PagePost::where('page_id', $page->id)
+            ->where('since', $since)
+            ->where('until', $until)
+            ->first();
+        if ($stored && $stored->posts !== null) {
+            Cache::put($cacheKey, $stored->posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+
+            return [
+                'success' => true,
+                'source' => 'database',
+                'posts' => $stored->posts,
+                'error' => null,
+            ];
+        }
+
+        $tokenCheck = FacebookService::validateToken($page);
+        if (!$tokenCheck['success']) {
+            return [
+                'success' => false,
+                'source' => 'token_validation',
+                'posts' => null,
+                'error' => $tokenCheck['message'] ?? 'Invalid or expired access token.',
+            ];
+        }
+
+        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
+
+        try {
+            $posts = $this->facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until);
+        } catch (\Throwable $e) {
+            return [
+                'success' => false,
+                'source' => 'api',
+                'posts' => null,
+                'error' => $e->getMessage(),
+            ];
+        }
+
+        PagePost::updateOrCreate(
+            [
+                'page_id' => $page->id,
+                'since' => $since,
+                'until' => $until,
+            ],
+            [
+                'duration' => $duration,
+                'posts' => $posts,
+                'synced_at' => now(),
+            ]
+        );
+
+        Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+
+        return [
+            'success' => true,
+            'source' => 'api',
+            'posts' => $posts,
+            'error' => null,
+        ];
+    }
+
+    /**
      * Fetch Threads account insights.
      */
     private function fetchThreadInsights(?Thread $thread, ?string $since = null, ?string $until = null): ?array
@@ -533,23 +621,36 @@ class AnalyticsController extends Controller
         $pageInsights = null;
         $pagePosts = null;
         $apiResponse = null;
+        $pagePostsFetchResponse = null;
 
         if ($pageId && $facebookPages->contains('id', (int) $pageId)) {
             $selectedPage = Page::find($pageId);
             if ($selectedPage) {
                 $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until);
-                $pagePosts = $this->fetchPagePosts($selectedPage, $since, $until);
+                $pagePostsFetchResponse = $this->fetchPagePostsForTest($selectedPage, $since, $until);
+                $pagePosts = $pagePostsFetchResponse['posts'] ?? null;
                 $apiResponse = [
                     'success' => true,
                     'pageInsights' => $pageInsights,
                     'pagePosts' => $pagePosts,
+                    'pagePostsFetchResponse' => $pagePostsFetchResponse,
                     'selectedPage' => $selectedPage ? ['id' => $selectedPage->id, 'name' => $selectedPage->name] : null,
                     'since' => $since,
                     'until' => $until,
                 ];
             }
         } elseif ($pageId) {
-            $apiResponse = ['success' => false, 'error' => 'Page not found or not owned by user.'];
+            $pagePostsFetchResponse = [
+                'success' => false,
+                'source' => 'validation',
+                'posts' => null,
+                'error' => 'Page not found or not owned by user.',
+            ];
+            $apiResponse = [
+                'success' => false,
+                'error' => 'Page not found or not owned by user.',
+                'pagePostsFetchResponse' => $pagePostsFetchResponse,
+            ];
         }
 
         return view('user.analytics.test', compact('facebookPages', 'pageId', 'selectedPage', 'pageInsights', 'pagePosts', 'apiResponse', 'since', 'until'));
