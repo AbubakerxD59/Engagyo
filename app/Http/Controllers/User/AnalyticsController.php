@@ -21,12 +21,28 @@ class AnalyticsController extends Controller
     private const POSTS_CACHE_TTL_HOURS = 3;
 
     /**
+     * Normalize duration aliases used by different screens/endpoints.
+     */
+    private function normalizeDuration(?string $duration): string
+    {
+        $duration = (string) ($duration ?? 'last_28');
+
+        return match ($duration) {
+            'last_7_days' => 'last_7',
+            'last_28_days' => 'last_28',
+            'last_90_days' => 'last_90',
+            'last_year' => 'full_year',
+            default => $duration,
+        };
+    }
+
+    /**
      * Resolve date range from duration preset or custom since/until.
      * Returns [since, until] as Y-m-d strings.
      */
     private function resolveDateRange(Request $request): array
     {
-        $duration = $request->query('duration', 'last_28');
+        $duration = $this->normalizeDuration($request->query('duration', 'last_28'));
         $customSince = $request->query('since');
         $customUntil = $request->query('until');
 
@@ -51,6 +67,10 @@ class AnalyticsController extends Controller
             ],
             'this_year' => [
                 $today->copy()->startOfYear()->format('Y-m-d'),
+                $today->format('Y-m-d'),
+            ],
+            'full_year' => [
+                $today->copy()->subYear()->format('Y-m-d'),
                 $today->format('Y-m-d'),
             ],
             default => [$today->copy()->subDays(28)->format('Y-m-d'), $today->format('Y-m-d')],
@@ -186,7 +206,7 @@ class AnalyticsController extends Controller
             return null;
         }
 
-        $duration = request()->query('duration', 'last_28');
+        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
 
         $stored = PageInsight::where('page_id', $page->id)
             ->where('since', $since)
@@ -232,7 +252,7 @@ class AnalyticsController extends Controller
             return null;
         }
 
-        $duration = request()->query('duration', 'last_28');
+        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
         $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $page->id, $duration, $since, $until);
 
         $cachedPosts = Cache::get($cacheKey);
@@ -256,7 +276,8 @@ class AnalyticsController extends Controller
         }
 
         $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
-        $posts = $this->facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until);
+        $insightsPreset = $duration === 'full_year' ? 'sent_tab' : 'default';
+        $posts = $this->facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until, $insightsPreset);
 
         PagePost::updateOrCreate(
             [
@@ -277,94 +298,6 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Fetch page posts for analytics test endpoint with raw status payload.
-     */
-    private function fetchPagePostsForTest(?Page $page, ?string $since = null, ?string $until = null): array
-    {
-        if (!$page || empty($page->page_id) || empty($page->access_token)) {
-            return [
-                'success' => false,
-                'source' => 'validation',
-                'posts' => null,
-                'error' => 'Page not found or missing Facebook credentials.',
-            ];
-        }
-
-        $duration = request()->query('duration', 'last_28');
-        $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $page->id, $duration, $since, $until);
-
-        $cachedPosts = Cache::get($cacheKey);
-        if ($cachedPosts !== null) {
-            return [
-                'success' => true,
-                'source' => 'cache',
-                'posts' => $cachedPosts,
-                'error' => null,
-            ];
-        }
-
-        $stored = PagePost::where('page_id', $page->id)
-            ->where('since', $since)
-            ->where('until', $until)
-            ->first();
-        if ($stored && $stored->posts !== null) {
-            Cache::put($cacheKey, $stored->posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-
-            return [
-                'success' => true,
-                'source' => 'database',
-                'posts' => $stored->posts,
-                'error' => null,
-            ];
-        }
-
-        $tokenCheck = FacebookService::validateToken($page);
-        if (!$tokenCheck['success']) {
-            return [
-                'success' => false,
-                'source' => 'token_validation',
-                'posts' => null,
-                'error' => $tokenCheck['message'] ?? 'Invalid or expired access token.',
-            ];
-        }
-
-        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
-
-        try {
-            $posts = $this->facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until);
-        } catch (\Throwable $e) {
-            return [
-                'success' => false,
-                'source' => 'api',
-                'posts' => null,
-                'error' => $e->getMessage(),
-            ];
-        }
-
-        PagePost::updateOrCreate(
-            [
-                'page_id' => $page->id,
-                'since' => $since,
-                'until' => $until,
-            ],
-            [
-                'duration' => $duration,
-                'posts' => $posts,
-                'synced_at' => now(),
-            ]
-        );
-
-        Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-
-        return [
-            'success' => true,
-            'source' => 'api',
-            'posts' => $posts,
-            'error' => null,
-        ];
-    }
-
-    /**
      * Fetch Threads account insights.
      */
     private function fetchThreadInsights(?Thread $thread, ?string $since = null, ?string $until = null): ?array
@@ -373,7 +306,7 @@ class AnalyticsController extends Controller
             return null;
         }
 
-        $duration = request()->query('duration', 'last_28');
+        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
         $stored = ThreadInsight::where('thread_id', $thread->id)
             ->where('since', $since)
             ->where('until', $until)
@@ -412,7 +345,7 @@ class AnalyticsController extends Controller
             return null;
         }
 
-        $duration = request()->query('duration', 'last_28');
+        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
         $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $thread->id, $duration, $since, $until, 'threads');
 
         $cachedPosts = Cache::get($cacheKey);
@@ -604,115 +537,4 @@ class AnalyticsController extends Controller
         return $aggregated;
     }
 
-    /**
-     * Test page insights - displays formatted data and raw API response.
-     * Route: GET panel/analytics/test?page_id={id}
-     */
-    public function testPageInsights(Request $request)
-    {
-        $user = User::find(auth()->id());
-        $accounts = $user->getAccounts();
-        $facebookPages = $accounts->where('type', 'facebook')->values();
-
-        [$since, $until] = $this->resolveDateRange($request);
-        $pageId = $request->query('page_id');
-
-        $selectedPage = null;
-        $pageInsights = null;
-        $pagePosts = null;
-        $apiResponse = null;
-        $pagePostsFetchResponse = null;
-
-        if ($pageId && $facebookPages->contains('id', (int) $pageId)) {
-            $selectedPage = Page::find($pageId);
-            if ($selectedPage) {
-                $pageInsights = $this->fetchPageInsights($selectedPage, $since, $until);
-                $pagePostsFetchResponse = $this->fetchPagePostsForTest($selectedPage, $since, $until);
-                $pagePosts = $pagePostsFetchResponse['posts'] ?? null;
-                $apiResponse = [
-                    'success' => true,
-                    'pageInsights' => $pageInsights,
-                    'pagePosts' => $pagePosts,
-                    'pagePostsFetchResponse' => $pagePostsFetchResponse,
-                    'selectedPage' => $selectedPage ? ['id' => $selectedPage->id, 'name' => $selectedPage->name] : null,
-                    'since' => $since,
-                    'until' => $until,
-                ];
-            }
-        } elseif ($pageId) {
-            $pagePostsFetchResponse = [
-                'success' => false,
-                'source' => 'validation',
-                'posts' => null,
-                'error' => 'Page not found or not owned by user.',
-            ];
-            $apiResponse = [
-                'success' => false,
-                'error' => 'Page not found or not owned by user.',
-                'pagePostsFetchResponse' => $pagePostsFetchResponse,
-            ];
-        }
-
-        return view('user.analytics.test', compact('facebookPages', 'pageId', 'selectedPage', 'pageInsights', 'pagePosts', 'apiResponse', 'since', 'until'));
-    }
-
-    /**
-     * Test route: fetch posts and insights for a page for last_7 days and display all data.
-     * Route: GET panel/test/page-insights/{page_id}
-     */
-    public function testPagePostsInsights(int $page_id)
-    {
-        $user = User::find(auth()->id());
-        $accounts = $user->getAccounts();
-        $facebookPages = $accounts->where('type', 'facebook')->values();
-
-        if (!$facebookPages->contains('id', $page_id)) {
-            abort(404, 'Page not found or you do not have access.');
-        }
-
-        $page = Page::find($page_id);
-        if (!$page || empty($page->page_id) || empty($page->access_token)) {
-            abort(404, 'Page not found or missing Facebook credentials.');
-        }
-
-        $tokenCheck = FacebookService::validateToken($page);
-        if (!$tokenCheck['success']) {
-            return view('user.analytics.test-page-insights', [
-                'page' => $page,
-                'since' => null,
-                'until' => null,
-                'pageInsights' => null,
-                'posts' => [],
-                'error' => 'Invalid or expired access token.',
-            ]);
-        }
-
-        $today = Carbon::today();
-        $since = $today->copy()->subDays(7)->format('Y-m-d');
-        $until = $today->format('Y-m-d');
-        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
-
-        $pageInsights = $this->facebookService->getPageInsightsWithComparison(
-            $page->page_id,
-            $accessToken,
-            $since,
-            $until
-        );
-
-        $posts = $this->facebookService->getPagePostsWithInsights(
-            $page->page_id,
-            $accessToken,
-            $since,
-            $until
-        );
-
-        return view('user.analytics.test-page-insights', [
-            'page' => $page,
-            'since' => $since,
-            'until' => $until,
-            'pageInsights' => $pageInsights,
-            'posts' => $posts,
-            'error' => null,
-        ]);
-    }
 }

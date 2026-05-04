@@ -60,9 +60,6 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.timezone
     // Analytics Routes - requires social_accounts feature
     Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics')->middleware(['feature:'.Feature::$features_list[0]]);
     Route::get('analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data')->middleware(['feature:'.Feature::$features_list[0]]);
-    Route::get('analytics/test', [AnalyticsController::class, 'testPageInsights'])->name('analytics.test')->middleware(['feature:'.Feature::$features_list[0]]);
-    Route::get('test/page-insights/{page_id}', [AnalyticsController::class, 'testPagePostsInsights'])->name('test.page-insights')->middleware(['feature:'.Feature::$features_list[0]]);
-
     Route::controller(LinkedInPublishTestController::class)
         ->middleware(['feature:'.Feature::$features_list[0]])
         ->prefix('linkedin-publish-test')
