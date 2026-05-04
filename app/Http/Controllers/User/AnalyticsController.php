@@ -564,11 +564,30 @@ class AnalyticsController extends Controller
         }
 
         $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
+        $insightsPreset = $duration === 'full_year' ? 'sent_tab' : 'default';
 
         try {
-            $insightsPreset = $duration === 'full_year' ? 'sent_tab' : 'default';
             $posts = $this->facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until, $insightsPreset);
         } catch (\Throwable $e) {
+            if ($this->isFacebookReduceDataError($e)) {
+                try {
+                    $posts = $this->fetchPagePostsInChunksForTest($page->page_id, $accessToken, $since, $until, $insightsPreset, 30);
+                    return [
+                        'success' => true,
+                        'source' => 'api_live_chunked',
+                        'posts' => $posts,
+                        'error' => null,
+                    ];
+                } catch (\Throwable $chunkError) {
+                    return [
+                        'success' => false,
+                        'source' => 'api',
+                        'posts' => null,
+                        'error' => $chunkError->getMessage(),
+                    ];
+                }
+            }
+
             return [
                 'success' => false,
                 'source' => 'api',
@@ -583,6 +602,71 @@ class AnalyticsController extends Controller
             'posts' => $posts,
             'error' => null,
         ];
+    }
+
+    private function isFacebookReduceDataError(\Throwable $e): bool
+    {
+        return str_contains(strtolower($e->getMessage()), "reduce the amount of data you're asking for");
+    }
+
+    private function fetchPagePostsInChunksForTest(string $pageId, string $accessToken, ?string $since, ?string $until, string $insightsPreset, int $chunkDays = 30): array
+    {
+        $safeUntil = $until ?: Carbon::today()->format('Y-m-d');
+        $safeSince = $since ?: Carbon::parse($safeUntil)->subDays(28)->format('Y-m-d');
+
+        $currentStart = Carbon::parse($safeSince)->startOfDay();
+        $end = Carbon::parse($safeUntil)->endOfDay();
+        $mergedById = [];
+
+        while ($currentStart->lte($end)) {
+            $chunkStart = $currentStart->copy();
+            $chunkEnd = $chunkStart->copy()->addDays($chunkDays - 1)->endOfDay();
+            if ($chunkEnd->gt($end)) {
+                $chunkEnd = $end->copy();
+            }
+
+            $chunkPosts = $this->facebookService->getPagePostsWithInsights(
+                $pageId,
+                $accessToken,
+                $chunkStart->format('Y-m-d'),
+                $chunkEnd->format('Y-m-d'),
+                $insightsPreset
+            );
+
+            foreach ($chunkPosts as $post) {
+                $postId = (string) ($post['id'] ?? $post['post_id'] ?? '');
+                if ($postId === '') {
+                    $mergedById[] = $post;
+                    continue;
+                }
+                $mergedById[$postId] = $post;
+            }
+
+            $currentStart = $chunkEnd->copy()->addDay()->startOfDay();
+        }
+
+        $posts = array_values($mergedById);
+        usort($posts, function (array $a, array $b) {
+            $aTimeRaw = $a['created_time'] ?? null;
+            $bTimeRaw = $b['created_time'] ?? null;
+            $aTime = is_array($aTimeRaw) ? ($aTimeRaw['date'] ?? $aTimeRaw['datetime'] ?? null) : $aTimeRaw;
+            $bTime = is_array($bTimeRaw) ? ($bTimeRaw['date'] ?? $bTimeRaw['datetime'] ?? null) : $bTimeRaw;
+
+            try {
+                $aTs = is_string($aTime) ? Carbon::parse($aTime)->timestamp : 0;
+            } catch (\Throwable $e) {
+                $aTs = 0;
+            }
+            try {
+                $bTs = is_string($bTime) ? Carbon::parse($bTime)->timestamp : 0;
+            } catch (\Throwable $e) {
+                $bTs = 0;
+            }
+
+            return $bTs <=> $aTs;
+        });
+
+        return $posts;
     }
 
     /**
