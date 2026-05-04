@@ -1329,8 +1329,10 @@ class FacebookService
         $until = $until ?: date('Y-m-d');
         $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
-        $sinceIso = $since.'T00:00:00+0000';
-        $untilIso = $until.'T23:59:59+0000';
+        $sinceIso = $since;
+        $untilIso = $until;
+        // $sinceIso = $since.'T00:00:00+0000';
+        // $untilIso = $until.'T23:59:59+0000';
 
         $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story,comments.limit(0).summary(true)';
         $endpoint = '/'.$pageId.'/feed?fields='.urlencode($fields)
