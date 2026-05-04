@@ -552,32 +552,6 @@ class AnalyticsController extends Controller
         }
 
         $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
-        $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $page->id, $duration, $since, $until);
-
-        $cachedPosts = Cache::get($cacheKey);
-        if ($cachedPosts !== null) {
-            return [
-                'success' => true,
-                'source' => 'cache',
-                'posts' => $cachedPosts,
-                'error' => null,
-            ];
-        }
-
-        $stored = PagePost::where('page_id', $page->id)
-            ->where('since', $since)
-            ->where('until', $until)
-            ->first();
-        if ($stored && $stored->posts !== null) {
-            Cache::put($cacheKey, $stored->posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-
-            return [
-                'success' => true,
-                'source' => 'database',
-                'posts' => $stored->posts,
-                'error' => null,
-            ];
-        }
 
         $tokenCheck = FacebookService::validateToken($page);
         if (!$tokenCheck['success']) {
@@ -603,24 +577,9 @@ class AnalyticsController extends Controller
             ];
         }
 
-        PagePost::updateOrCreate(
-            [
-                'page_id' => $page->id,
-                'since' => $since,
-                'until' => $until,
-            ],
-            [
-                'duration' => $duration,
-                'posts' => $posts,
-                'synced_at' => now(),
-            ]
-        );
-
-        Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-
         return [
             'success' => true,
-            'source' => 'api',
+            'source' => 'api_live',
             'posts' => $posts,
             'error' => null,
         ];
