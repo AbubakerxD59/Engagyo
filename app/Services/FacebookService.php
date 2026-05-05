@@ -1423,6 +1423,14 @@ class FacebookService
      */
     public function getPagePostsWithInsights(string $pageId, string $accessToken, ?string $since = null, ?string $until = null, string $insightsPreset = 'default'): array
     {
+        $until = $until ?: date('Y-m-d');
+        $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
+
+        $storedPosts = $this->getStoredPagePostsWithInsights($pageId, $since, $until);
+        if (! empty($storedPosts)) {
+            return $storedPosts;
+        }
+
         $posts = $this->getPageFeed($pageId, $accessToken, $since, $until);
         if (empty($posts)) {
             return [];
@@ -1544,6 +1552,49 @@ class FacebookService
         $this->storeFetchedFacebookPosts($pageId, $posts);
 
         return $posts;
+    }
+
+    /**
+     * Return already fetched posts for a page/date range from facebook_posts table.
+     */
+    private function getStoredPagePostsWithInsights(string $pageId, string $since, string $until): array
+    {
+        if (empty($pageId)) {
+            return [];
+        }
+
+        $from = $since.' 00:00:00';
+        $to = $until.' 23:59:59';
+
+        $rows = FacebookPost::query()
+            ->where('fb_page_id', $pageId)
+            ->whereBetween('post_created_date', [$from, $to])
+            ->orderByDesc('post_created_date')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return [];
+        }
+
+        return $rows->map(function (FacebookPost $row) {
+            $post = is_array($row->post_data) ? $row->post_data : [];
+            $insights = is_array($row->post_insights) ? $row->post_insights : [];
+
+            if (! isset($post['insights']) || ! is_array($post['insights'])) {
+                $post['insights'] = $insights;
+            }
+
+            $post['post_id'] = $post['post_id'] ?? $row->fb_post_id;
+            $post['id'] = $post['id'] ?? $row->fb_post_id;
+            $post['created_time'] = $post['created_time'] ?? $row->post_created_date;
+            $post['permalink_url'] = $post['permalink_url'] ?? $row->permalink_url;
+            $post['status_type'] = $post['status_type'] ?? $row->status_type;
+            $post['type'] = $post['type'] ?? $row->post_type;
+            $post['shares'] = $post['shares'] ?? $row->shares_count;
+            $post['comments'] = $post['comments'] ?? $row->comments_count;
+
+            return $post;
+        })->values()->all();
     }
 
     /**
