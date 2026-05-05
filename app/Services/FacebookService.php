@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Classes\FacebookSDK\LaravelSessionPersistentDataHandler;
 use App\Models\InstagramAccount;
+use App\Models\FacebookPost;
 use App\Models\Notification;
 use App\Models\Page;
 use App\Models\Post;
@@ -1522,7 +1523,60 @@ class FacebookService
         }
         unset($post);
 
+        $this->storeFetchedFacebookPosts($pageId, $posts);
+
         return $posts;
+    }
+
+    /**
+     * Persist fetched feed posts individually in facebook_posts table.
+     */
+    private function storeFetchedFacebookPosts(string $pageId, array $posts): void
+    {
+        if (empty($pageId) || empty($posts)) {
+            return;
+        }
+
+        foreach ($posts as $post) {
+            $fbPostId = (string) ($post['post_id'] ?? $post['id'] ?? '');
+            if ($fbPostId === '') {
+                continue;
+            }
+
+            $createdAt = null;
+            if (! empty($post['created_time'])) {
+                try {
+                    $createdAt = \Carbon\Carbon::parse((string) $post['created_time']);
+                } catch (\Throwable $e) {
+                    $createdAt = null;
+                }
+            }
+
+            $insights = is_array($post['insights'] ?? null) ? $post['insights'] : [];
+
+            FacebookPost::updateOrCreate(
+                [
+                    'fb_page_id' => $pageId,
+                    'fb_post_id' => $fbPostId,
+                ],
+                [
+                    'permalink_url' => $post['permalink_url'] ?? null,
+                    'status_type' => $post['status_type'] ?? null,
+                    'post_type' => $post['type'] ?? null,
+                    'shares_count' => (int) ($post['shares'] ?? 0),
+                    'comments_count' => (int) ($post['comments'] ?? 0),
+                    'clicks_count' => (int) ($insights['post_clicks'] ?? 0),
+                    'reactions_count' => (int) ($insights['post_reactions'] ?? 0),
+                    'impressions_count' => (int) ($insights['post_impressions'] ?? 0),
+                    'reach_count' => (int) ($insights['post_reach'] ?? 0),
+                    'engagement_rate' => (float) ($insights['post_engagement_rate'] ?? 0),
+                    'post_data' => $post,
+                    'post_created_date' => $createdAt,
+                    'post_insights' => $insights,
+                    'fetched_at' => now(),
+                ]
+            );
+        }
     }
 
     public static function validateToken(Page|InstagramAccount|null $account)
