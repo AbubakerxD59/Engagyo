@@ -4010,9 +4010,9 @@ class ScheduleController extends Controller
         $allPosts = [];
         $graphPostIds = [];
 
-        $cacheKey = $this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
+        $cacheKey = $this->facebookDurationPostsCacheKey((string) $page->page_id, $duration, $since, $until);
         $posts = null;
-        $source = 'database';
+        $source = null;
         try {
             $posts = Cache::get($cacheKey);
             $source = 'cache';
@@ -4023,7 +4023,7 @@ class ScheduleController extends Controller
             ]);
         }
         if ($posts === null) {
-            $posts = $this->fetchPagePostsFromStore($page, $since, $until, $duration);
+            $posts = $this->fetchPagePostsFromStore($page, $since, $until);
             if ($posts !== null) {
                 try {
                     Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
@@ -4132,6 +4132,7 @@ class ScheduleController extends Controller
                 'posts' => $pagedPosts,
                 'posts_fetching' => $isFetching,
                 'posts_fetching_message' => $fetchingMessage,
+                'source' => $source,
                 'total' => $total,
                 'has_more' => $nextOffset < $total,
                 'next_offset' => $nextOffset,
@@ -4143,6 +4144,7 @@ class ScheduleController extends Controller
             'posts' => $allPosts,
             'posts_fetching' => $isFetching,
             'posts_fetching_message' => $fetchingMessage,
+            'source' => $source,
             'total' => $total,
             'has_more' => false,
             'next_offset' => $total,
@@ -4749,17 +4751,26 @@ class ScheduleController extends Controller
         ]);
     }
 
-    private function fetchPagePostsFromStore(Page $page, string $since, string $until, string $duration = 'full_year'): ?array
+    private function facebookDurationPostsCacheKey(string $pageId, string $duration, string $since, string $until): string
+    {
+        return implode(':', [
+            'facebook_posts_by_duration',
+            'v1',
+            'page',
+            $pageId,
+            'duration',
+            $duration,
+            'since',
+            $since,
+            'until',
+            $until,
+        ]);
+    }
+
+    private function fetchPagePostsFromStore(Page $page, string $since, string $until): ?array
     {
         if (empty($page->page_id) || empty($page->access_token)) {
             return null;
-        }
-
-        if ($duration === 'full_year') {
-            $durationCachedPosts = $this->getFacebookDurationCachePosts((string) $page->page_id, $duration, $since, $until);
-            if (! empty($durationCachedPosts)) {
-                return $durationCachedPosts;
-            }
         }
 
         $stored = FacebookPost::query()
@@ -4874,18 +4885,6 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Refresh posts and post insights for the selected Facebook account (page).
-     * Used by the schedule page "Refresh" button. Creates a success notification when done.
-     */
-    public function refreshPagePosts(Request $request, FacebookFeedSyncService $pagePostsSyncService)
-    {
-        return response()->json([
-            'success' => false,
-            'message' => 'Manual refresh is disabled. Posts and insights are synced by cronjob.',
-        ], 403);
-    }
-
-    /**
      * Delete a sent post.
      * - Facebook: delete by external post id + page id (background job).
      * - Threads: delete by local db post id (calls Threads API then removes local row).
@@ -4968,7 +4967,7 @@ class ScheduleController extends Controller
         $duration = 'full_year';
         $until = now()->format('Y-m-d');
         $since = now()->subYear()->format('Y-m-d');
-        Cache::forget($this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until));
+        Cache::forget($this->facebookDurationPostsCacheKey((string) $page->page_id, $duration, $since, $until));
     }
 
     /**
