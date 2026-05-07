@@ -45,7 +45,7 @@ use Illuminate\Support\Facades\Storage;
 
 class ScheduleController extends Controller
 {
-    private const POSTS_CACHE_TTL_HOURS = 3;
+    private const POSTS_CACHE_TTL_HOURS = 24;
 
     protected $facebookService;
 
@@ -4024,10 +4024,11 @@ class ScheduleController extends Controller
         }
         if ($posts === null) {
             $posts = $this->fetchPagePostsFromStore($page, $since, $until);
+            dd($posts);
             if ($posts !== null) {
                 try {
                     Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-                    $source = 'cache';
+                    $source = 'database';
                 } catch (\Throwable $e) {
                     Log::warning('Facebook sent posts cache write failed', [
                         'key' => $cacheKey,
