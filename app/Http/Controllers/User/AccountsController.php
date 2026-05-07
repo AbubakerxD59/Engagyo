@@ -220,6 +220,7 @@ class AccountsController extends Controller
                     'status' => 1,
                     'url_shortener_enabled' => $urlShortenerEnabled,
                 ]);
+                $this->ensureDefaultScheduleTimeslot($user->id, $boardModel->id, 'pinterest');
 
                 // Log board connection
                 $this->logService->log('pinterest', 'board_connected', "Board '{$board['name']}' connected", [
@@ -434,6 +435,7 @@ class AccountsController extends Controller
                 }
 
                 $pageModel = $facebook->pages()->updateOrCreate(['user_id' => $user->id, 'page_id' => $page['id']], $pageData);
+                $this->ensureDefaultScheduleTimeslot($user->id, $pageModel->id, 'facebook');
 
                 // Log page connection
                 $this->logService->log('facebook', 'page_connected', "Page '{$page['name']}' connected", [
@@ -761,5 +763,26 @@ class AccountsController extends Controller
         } else {
             return back()->with('error', 'Something went Wrong!');
         }
+    }
+
+    private function ensureDefaultScheduleTimeslot(int $userId, int $accountId, string $accountType): void
+    {
+        $hasScheduleTimeslot = Timeslot::where('user_id', $userId)
+            ->where('account_id', $accountId)
+            ->where('account_type', $accountType)
+            ->where('type', 'schedule')
+            ->exists();
+
+        if ($hasScheduleTimeslot) {
+            return;
+        }
+
+        Timeslot::create([
+            'user_id' => $userId,
+            'account_id' => $accountId,
+            'account_type' => $accountType,
+            'timeslot' => '14:00',
+            'type' => 'schedule',
+        ]);
     }
 }
