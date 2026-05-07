@@ -12,6 +12,7 @@ use Facebook\Exceptions\FacebookResponseException;
 use Facebook\Exceptions\FacebookSDKException;
 use Facebook\Facebook;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 
 class FacebookService
 {
@@ -1563,6 +1564,11 @@ class FacebookService
             return [];
         }
 
+        $cachedPosts = $this->getStoredPagePostsFromFileCache($pageId, $since, $until);
+        if (! empty($cachedPosts)) {
+            return $cachedPosts;
+        }
+
         $from = $since.' 00:00:00';
         $to = $until.' 23:59:59';
 
@@ -1576,25 +1582,9 @@ class FacebookService
             return [];
         }
 
-        return $rows->map(function (FacebookPost $row) {
-            $post = is_array($row->post_data) ? $row->post_data : [];
-            $insights = is_array($row->post_insights) ? $row->post_insights : [];
-
-            if (! isset($post['insights']) || ! is_array($post['insights'])) {
-                $post['insights'] = $insights;
-            }
-
-            $post['post_id'] = $post['post_id'] ?? $row->fb_post_id;
-            $post['id'] = $post['id'] ?? $row->fb_post_id;
-            $post['created_time'] = $post['created_time'] ?? $row->post_created_date;
-            $post['permalink_url'] = $post['permalink_url'] ?? $row->permalink_url;
-            $post['status_type'] = $post['status_type'] ?? $row->status_type;
-            $post['type'] = $post['type'] ?? $row->post_type;
-            $post['shares'] = $post['shares'] ?? $row->shares_count;
-            $post['comments'] = $post['comments'] ?? $row->comments_count;
-
-            return $post;
-        })->values()->all();
+        return $rows->map(fn (FacebookPost $row) => $this->normalizeStoredFacebookPostRow($row))
+            ->values()
+            ->all();
     }
 
     /**
@@ -1646,6 +1636,111 @@ class FacebookService
                 ]
             );
         }
+
+        $this->updateFacebookPostsFileCache($pageId);
+    }
+
+    private function normalizeStoredFacebookPostRow(FacebookPost $row): array
+    {
+        $post = is_array($row->post_data) ? $row->post_data : [];
+        $insights = is_array($row->post_insights) ? $row->post_insights : [];
+
+        if (! isset($post['insights']) || ! is_array($post['insights'])) {
+            $post['insights'] = $insights;
+        }
+
+        $post['post_id'] = $post['post_id'] ?? $row->fb_post_id;
+        $post['id'] = $post['id'] ?? $row->fb_post_id;
+        $post['created_time'] = $post['created_time'] ?? $row->post_created_date;
+        $post['permalink_url'] = $post['permalink_url'] ?? $row->permalink_url;
+        $post['status_type'] = $post['status_type'] ?? $row->status_type;
+        $post['type'] = $post['type'] ?? $row->post_type;
+        $post['shares'] = $post['shares'] ?? $row->shares_count;
+        $post['comments'] = $post['comments'] ?? $row->comments_count;
+
+        return $post;
+    }
+
+    private function facebookPostsCachePath(string $pageId): string
+    {
+        return 'facebook-posts-cache/page-'.$pageId.'.json';
+    }
+
+    private function getStoredPagePostsFromFileCache(string $pageId, string $since, string $until): array
+    {
+        $path = $this->facebookPostsCachePath($pageId);
+        if (! Storage::disk('local')->exists($path)) {
+            return [];
+        }
+
+        $raw = Storage::disk('local')->get($path);
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded)) {
+            return [];
+        }
+
+        $posts = $decoded['posts'] ?? [];
+        if (! is_array($posts) || empty($posts)) {
+            return [];
+        }
+
+        $fromTs = strtotime($since.' 00:00:00');
+        $toTs = strtotime($until.' 23:59:59');
+
+        $filtered = array_values(array_filter($posts, function ($post) use ($fromTs, $toTs) {
+            $created = $post['created_time'] ?? null;
+            if (is_array($created) && isset($created['date'])) {
+                $created = $created['date'];
+            }
+            $ts = is_string($created) ? strtotime($created) : false;
+            if ($ts === false) {
+                return false;
+            }
+
+            return $ts >= $fromTs && $ts <= $toTs;
+        }));
+
+        usort($filtered, function ($a, $b) {
+            $ca = $a['created_time'] ?? null;
+            $cb = $b['created_time'] ?? null;
+            if (is_array($ca) && isset($ca['date'])) {
+                $ca = $ca['date'];
+            }
+            if (is_array($cb) && isset($cb['date'])) {
+                $cb = $cb['date'];
+            }
+            $ta = is_string($ca) ? (strtotime($ca) ?: 0) : 0;
+            $tb = is_string($cb) ? (strtotime($cb) ?: 0) : 0;
+
+            return $tb <=> $ta;
+        });
+
+        return $filtered;
+    }
+
+    private function updateFacebookPostsFileCache(string $pageId): void
+    {
+        $rows = FacebookPost::query()
+            ->where('fb_page_id', $pageId)
+            ->orderByDesc('post_created_date')
+            ->get();
+
+        if ($rows->isEmpty()) {
+            return;
+        }
+
+        $payload = [
+            'page_id' => $pageId,
+            'updated_at' => now()->toIso8601String(),
+            'posts' => $rows->map(fn (FacebookPost $row) => $this->normalizeStoredFacebookPostRow($row))
+                ->values()
+                ->all(),
+        ];
+
+        Storage::disk('local')->put(
+            $this->facebookPostsCachePath($pageId),
+            json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
     }
 
     public static function validateToken(Page|InstagramAccount|null $account)
