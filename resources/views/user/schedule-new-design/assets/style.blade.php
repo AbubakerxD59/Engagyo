@@ -1763,7 +1763,7 @@
         margin: 0 0 4px 0;
         padding: 8px 0;
         position: sticky;
-        top: 10%;
+        top: -20px;
         z-index: 8;
         background: #fff;
         border-bottom: 1px solid #f3f4f6;
