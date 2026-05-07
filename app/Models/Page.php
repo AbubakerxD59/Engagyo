@@ -55,11 +55,6 @@ class Page extends Model
         return $this->hasMany(PageInsight::class);
     }
 
-    public function pagePosts()
-    {
-        return $this->hasMany(PagePost::class);
-    }
-
     public function facebookPosts()
     {
         return $this->hasMany(FacebookPost::class, 'fb_page_id', 'page_id');

@@ -41,6 +41,7 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class ScheduleController extends Controller
 {
@@ -4012,8 +4013,10 @@ class ScheduleController extends Controller
         foreach ($pages as $page) {
             $cacheKey = $this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
             $posts = null;
+            $source = 'database';
             try {
                 $posts = Cache::get($cacheKey);
+                $source = 'cache';
             } catch (\Throwable $e) {
                 Log::warning('Facebook sent posts cache read failed', [
                     'key' => $cacheKey,
@@ -4025,6 +4028,7 @@ class ScheduleController extends Controller
                 if ($posts !== null) {
                     try {
                         Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+                        $source = 'cache';
                     } catch (\Throwable $e) {
                         Log::warning('Facebook sent posts cache write failed', [
                             'key' => $cacheKey,
@@ -4747,6 +4751,13 @@ class ScheduleController extends Controller
             return null;
         }
 
+        if ($duration === 'full_year') {
+            $durationCachedPosts = $this->getFacebookDurationCachePosts((string) $page->page_id, $duration, $since, $until);
+            if (! empty($durationCachedPosts)) {
+                return $durationCachedPosts;
+            }
+        }
+
         $stored = FacebookPost::query()
             ->where('fb_page_id', $page->page_id)
             ->whereBetween('post_created_date', [$since.' 00:00:00', $until.' 23:59:59'])
@@ -4775,15 +4786,32 @@ class ScheduleController extends Controller
             })->values()->all();
         }
 
-        $tokenCheck = FacebookService::validateToken($page);
-        if (! $tokenCheck['success']) {
-            return null;
+        return [];
+    }
+
+    private function facebookDurationCachePath(string $pageId, string $duration, string $since, string $until): string
+    {
+        return implode('/', [
+            'facebook-posts-cache',
+            'durations',
+            'page-'.$pageId,
+            $duration.'-'.$since.'-'.$until.'.json',
+        ]);
+    }
+
+    private function getFacebookDurationCachePosts(string $pageId, string $duration, string $since, string $until): array
+    {
+        $path = $this->facebookDurationCachePath($pageId, $duration, $since, $until);
+        if (! Storage::disk('local')->exists($path)) {
+            return [];
         }
 
-        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
-        $facebookService = new FacebookService;
-        $insightsPreset = $duration === 'full_year' ? 'sent_tab' : 'default';
-        $posts = $facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until, $insightsPreset);
+        $raw = Storage::disk('local')->get($path);
+        $decoded = json_decode($raw, true);
+        $posts = $decoded['posts'] ?? [];
+        if (! is_array($posts)) {
+            return [];
+        }
 
         return $posts;
     }

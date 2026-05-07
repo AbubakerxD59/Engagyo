@@ -1385,7 +1385,7 @@ class FacebookService
                         }
 
                         $postId = $node->getField('id');
-                        $post = [
+                        $attemptPosts[] = [
                             'id' => $postId,
                             'post_id' => $postId,
                             'message' => $node->getField('message'),
@@ -1401,7 +1401,6 @@ class FacebookService
                             'type' => $node->getField('type'),
                             'insights' => [],
                         ];
-                        $attemptPosts[] = $post;
                     }
 
                     if (! empty($attemptPosts)) {

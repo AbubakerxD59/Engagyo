@@ -4,21 +4,16 @@ namespace App\Services;
 
 use App\Models\Page;
 use App\Models\PageInsight;
-use App\Models\PagePost;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 class PagePostsSyncService
 {
-    private const POSTS_CACHE_TTL_HOURS = 3;
-
     protected FacebookService $facebookService;
 
     protected array $durations = ['last_7', 'last_28', 'last_90', 'this_month', 'this_year', 'full_year'];
-
-    /** Keep only this many records per (page_id, duration); oldest beyond this are removed. */
-    protected int $maxRecordsPerDuration = 7;
 
     private function throttleBetweenSyncSteps(): void
     {
@@ -87,45 +82,54 @@ class PagePostsSyncService
             $insightsPreset
         );
 
-        PagePost::updateOrCreate(
-            [
-                'page_id' => $page->id,
-                'since' => $since,
-                'until' => $until,
-            ],
-            [
-                'duration' => $duration,
-                'posts' => $posts,
-                'synced_at' => now(),
-            ]
-        );
-
-        $this->refreshPostsCaches($page, $duration, $since, $until, $posts);
-        $this->prunePagePosts($page->id, $duration);
+        $this->storeDurationPostsCaches($page, $duration, $since, $until, $posts);
+        $this->forgetLegacyPagePostsCaches($page, $duration, $since, $until);
 
         return true;
     }
 
     /**
-     * Refresh sent/analytics posts cache for the given user-page-duration window.
+     * Store shared facebook posts cache for each duration.
+     * This cache is keyed by external page id so it can be reused across users.
      */
-    protected function refreshPostsCaches(Page $page, string $duration, string $since, string $until, array $posts): void
+    protected function storeDurationPostsCaches(Page $page, string $duration, string $since, string $until, array $posts): void
+    {
+        if (empty($page->page_id)) {
+            return;
+        }
+
+        $cacheKey = $this->facebookDurationPostsCacheKey((string) $page->page_id, $duration, $since, $until);
+        Cache::put($cacheKey, $posts, now()->addHours(6));
+
+        $payload = [
+            'page_id' => (string) $page->page_id,
+            'duration' => $duration,
+            'since' => $since,
+            'until' => $until,
+            'updated_at' => now()->toIso8601String(),
+            'posts' => $posts,
+        ];
+
+        Storage::disk('local')->put(
+            $this->facebookDurationPostsCachePath((string) $page->page_id, $duration, $since, $until),
+            json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
+        );
+    }
+
+    /**
+     * Remove legacy cache keys that were used with page_posts snapshots.
+     */
+    protected function forgetLegacyPagePostsCaches(Page $page, string $duration, string $since, string $until): void
     {
         $userId = (int) ($page->user_id ?? 0);
         if ($userId <= 0) {
             return;
         }
 
-        $ttl = now()->addHours(self::POSTS_CACHE_TTL_HOURS);
-
-        $analyticsKey = $this->analyticsPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
-        Cache::forget($analyticsKey);
-        Cache::put($analyticsKey, $posts, $ttl);
+        Cache::forget($this->analyticsPostsCacheKey($userId, (int) $page->id, $duration, $since, $until));
 
         if ($duration === 'full_year') {
-            $sentKey = $this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
-            Cache::forget($sentKey);
-            Cache::put($sentKey, $posts, $ttl);
+            Cache::forget($this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until));
         }
     }
 
@@ -165,21 +169,30 @@ class PagePostsSyncService
         ]);
     }
 
-    /**
-     * Keep only the latest maxRecordsPerDuration records per (page_id, duration); delete the rest.
-     */
-    protected function prunePagePosts(int $pageId, string $duration): void
+    protected function facebookDurationPostsCacheKey(string $pageId, string $duration, string $since, string $until): string
     {
-        $idsToKeep = PagePost::where('page_id', $pageId)
-            ->where('duration', $duration)
-            ->orderByDesc('synced_at')
-            ->limit($this->maxRecordsPerDuration)
-            ->pluck('id');
+        return implode(':', [
+            'facebook_posts_by_duration',
+            'v1',
+            'page',
+            $pageId,
+            'duration',
+            $duration,
+            'since',
+            $since,
+            'until',
+            $until,
+        ]);
+    }
 
-        PagePost::where('page_id', $pageId)
-            ->where('duration', $duration)
-            ->whereNotIn('id', $idsToKeep)
-            ->delete();
+    protected function facebookDurationPostsCachePath(string $pageId, string $duration, string $since, string $until): string
+    {
+        return implode('/', [
+            'facebook-posts-cache',
+            'durations',
+            'page-'.$pageId,
+            $duration.'-'.$since.'-'.$until.'.json',
+        ]);
     }
 
     /**

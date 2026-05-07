@@ -20,7 +20,7 @@ class SyncPagePosts extends Command
      *
      * @var string
      */
-    protected $description = 'Fetch posts and post insights for pages and durations, and update page_posts';
+    protected $description = 'Fetch posts and post insights for pages and durations, and refresh facebook_posts cache';
 
     /**
      * Execute the console command.
