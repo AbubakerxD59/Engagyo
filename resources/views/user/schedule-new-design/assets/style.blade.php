@@ -1761,7 +1761,12 @@
         text-transform: capitalize;
         color: #111827;
         margin: 0 0 4px 0;
-        padding: 0;
+        padding: 8px 0;
+        position: sticky;
+        top: 0;
+        z-index: 8;
+        background: #fff;
+        border-bottom: 1px solid #f3f4f6;
     }
 
     .sent-day-header span {
