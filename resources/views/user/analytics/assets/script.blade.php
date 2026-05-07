@@ -12,6 +12,8 @@
             var currentPostsSearchQuery = '';
             var currentPostsSortBy = 'created_time';
             var currentPostsSortOrder = 'desc';
+            var currentPostsFetching = false;
+            var currentPostsFetchingMessage = '';
             var isLoadingAnalytics = false;
             var analyticsRequest = null;
             var userTimezone = "{{ $userTimezoneName ?? 'UTC' }}";
@@ -306,6 +308,12 @@
                         '<p class="text-muted mb-0">Select an account to view posts.</p></div>';
                 }
                 if (!posts || posts.length === 0) {
+                    if (currentPostsFetching) {
+                        var fetchingMsg = currentPostsFetchingMessage || 'Posts for this page are being fetched. Please check back shortly.';
+                        return '<div class="analytics-posts-placeholder text-center py-5">' +
+                            '<i class="fas fa-sync-alt fa-spin fa-3x text-muted mb-3"></i>' +
+                            '<p class="text-muted mb-0">' + escapeHtml(fetchingMsg) + '</p></div>';
+                    }
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
                         '<i class="fas fa-newspaper fa-4x text-muted mb-3"></i>' +
                         '<p class="text-muted mb-0">No posts in this period.</p></div>';
@@ -563,6 +571,8 @@
                         } else {
                             window.currentPagePosts = res.pagePosts || null;
                         }
+                        currentPostsFetching = !!res.posts_fetching;
+                        currentPostsFetchingMessage = res.posts_fetching_message || '';
                         analyticsPostsOffset = Number(res.pagePostsNextOffset || (Array.isArray(window.currentPagePosts) ? window.currentPagePosts.length : 0));
                         analyticsPostsHasMore = !!res.pagePostsHasMore;
                         analyticsPostsLoadingMore = false;

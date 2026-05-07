@@ -24,9 +24,9 @@ use App\Models\Thread;
 use App\Models\ThreadPost;
 use App\Models\Timeslot;
 use App\Models\User;
+use App\Services\FacebookFeedSyncService;
 use App\Services\FacebookService;
 use App\Services\FeatureUsageService;
-use App\Services\PagePostsSyncService;
 use App\Services\PinterestService;
 use App\Services\PostService;
 use App\Services\SocialMediaLogService;
@@ -148,7 +148,7 @@ class ScheduleController extends Controller
             $threadsRaw = $request->input('threads_content_formats');
             if (is_string($threadsRaw) && $threadsRaw !== '') {
                 $decoded = json_decode($threadsRaw, true);
-                if (is_array($decoded) && in_array('carousel', array_map(fn ($v) => strtolower((string) $v), $decoded), true)) {
+                if (is_array($decoded) && in_array('carousel', array_map(fn($v) => strtolower((string) $v), $decoded), true)) {
                     $threadsFormat = 'carousel';
                 }
             }
@@ -469,11 +469,11 @@ class ScheduleController extends Controller
         $threadsFormats = ['post'];
         $threadsRaw = $request->input('threads_content_formats');
         if (is_array($threadsRaw)) {
-            $threadsFormats = array_values(array_filter(array_map(fn ($v) => strtolower((string) $v), $threadsRaw)));
+            $threadsFormats = array_values(array_filter(array_map(fn($v) => strtolower((string) $v), $threadsRaw)));
         } elseif (is_string($threadsRaw) && $threadsRaw !== '') {
             $decoded = json_decode($threadsRaw, true);
             if (is_array($decoded)) {
-                $threadsFormats = array_values(array_filter(array_map(fn ($v) => strtolower((string) $v), $decoded)));
+                $threadsFormats = array_values(array_filter(array_map(fn($v) => strtolower((string) $v), $decoded)));
             }
         }
         $threadsSingle = strtolower((string) $request->input('threads_content_format', ''));
@@ -660,25 +660,25 @@ class ScheduleController extends Controller
 
         $postCounts = [];
         foreach ($countRows as $row) {
-            $key = (string) $row->social_type.'_'.(int) $row->account_id;
+            $key = (string) $row->social_type . '_' . (int) $row->account_id;
             $postCounts[$key] = (int) $row->post_count;
         }
 
         $sortSegment = function ($segment) use ($postCounts) {
             $segment = $segment->values();
             $sorted = $segment->sortByDesc(function ($account) use ($postCounts) {
-                $key = ($account->type ?? '').'_'.(int) $account->id;
+                $key = ($account->type ?? '') . '_' . (int) $account->id;
 
                 return $postCounts[$key] ?? 0;
             })->values();
 
             $withPosts = $sorted->filter(function ($a) use ($postCounts) {
-                $key = ($a->type ?? '').'_'.(int) $a->id;
+                $key = ($a->type ?? '') . '_' . (int) $a->id;
 
                 return ($postCounts[$key] ?? 0) > 0;
             });
             $withoutPosts = $sorted->filter(function ($a) use ($postCounts) {
-                $key = ($a->type ?? '').'_'.(int) $a->id;
+                $key = ($a->type ?? '') . '_' . (int) $a->id;
 
                 return ($postCounts[$key] ?? 0) === 0;
             })->sortBy('name')->values();
@@ -686,11 +686,11 @@ class ScheduleController extends Controller
             return $withPosts->concat($withoutPosts);
         };
 
-        $facebook = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'facebook'));
-        $pinterest = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'pinterest'));
-        $tiktok = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'tiktok'));
-        $instagram = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'instagram'));
-        $threads = $sortSegment($accounts->filter(fn ($a) => ($a->type ?? '') === 'threads'));
+        $facebook = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'facebook'));
+        $pinterest = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'pinterest'));
+        $tiktok = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'tiktok'));
+        $instagram = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'instagram'));
+        $threads = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'threads'));
 
         return $facebook->concat($pinterest)->concat($tiktok)->concat($instagram)->concat($threads);
     }
@@ -746,7 +746,7 @@ class ScheduleController extends Controller
                     $account = [
                         'id' => $ig->id,
                         'type' => 'instagram',
-                        'name' => $ig->name ?: ($ig->username ? '@'.$ig->username : 'Instagram'),
+                        'name' => $ig->name ?: ($ig->username ? '@' . $ig->username : 'Instagram'),
                         'profile_image' => $ig->profile_image ?? '',
                     ];
                 }
@@ -756,7 +756,7 @@ class ScheduleController extends Controller
                     $account = [
                         'id' => $thread->id,
                         'type' => 'threads',
-                        'name' => $thread->username ? '@'.$thread->username : 'Threads',
+                        'name' => $thread->username ? '@' . $thread->username : 'Threads',
                         'profile_image' => $thread->profile_image ?? '',
                     ];
                 }
@@ -896,7 +896,7 @@ class ScheduleController extends Controller
                     $account = [
                         'id' => $igRow->id,
                         'type' => 'instagram',
-                        'name' => $igRow->name ?: ($igRow->username ? '@'.$igRow->username : 'Instagram'),
+                        'name' => $igRow->name ?: ($igRow->username ? '@' . $igRow->username : 'Instagram'),
                         'profile_image' => $igRow->profile_image ?? '',
                     ];
                 }
@@ -906,7 +906,7 @@ class ScheduleController extends Controller
                     $account = [
                         'id' => $thread->id,
                         'type' => 'threads',
-                        'name' => $thread->username ? '@'.$thread->username : 'Threads',
+                        'name' => $thread->username ? '@' . $thread->username : 'Threads',
                         'profile_image' => $thread->profile_image ?? '',
                     ];
                 }
@@ -1471,7 +1471,7 @@ class ScheduleController extends Controller
 
                 return [
                     'success' => false,
-                    'message' => 'Please select at least one posting hour for '.$label.'.',
+                    'message' => 'Please select at least one posting hour for ' . $label . '.',
                 ];
             }
         }
@@ -2528,7 +2528,7 @@ class ScheduleController extends Controller
             }
 
             foreach ($accounts as $account) {
-                $scheduleDateTime = date('Y-m-d', strtotime($schedule_date)).' '.date('H:i', strtotime($schedule_time));
+                $scheduleDateTime = date('Y-m-d', strtotime($schedule_date)) . ' ' . date('H:i', strtotime($schedule_time));
                 if ($account->type == 'facebook') {
                     Facebook::where('id', $account->fb_id)->firstOrFail();
                     if ($file) {
@@ -2997,7 +2997,7 @@ class ScheduleController extends Controller
                 }
 
                 foreach ($accounts as $account) {
-                    $scheduleDateTime = date('Y-m-d', strtotime($schedule_date)).' '.date('H:i', strtotime($schedule_time));
+                    $scheduleDateTime = date('Y-m-d', strtotime($schedule_date)) . ' ' . date('H:i', strtotime($schedule_time));
                     if ($account->type == 'facebook') {
                         Facebook::where('id', $account->fb_id)->firstOrFail();
                         // store in db (image may be empty for Facebook/Instagram links)
@@ -3376,7 +3376,7 @@ class ScheduleController extends Controller
                                     $timeslotKey = $timeslot24Hour;
 
                                     // Assign post to this timeslot on current date (convert to UTC for storage)
-                                    $publishDateTimeLocal = $currentScheduleDate.' '.$timeslot24Hour;
+                                    $publishDateTimeLocal = $currentScheduleDate . ' ' . $timeslot24Hour;
                                     $post->update([
                                         'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $user),
                                     ]);
@@ -3389,7 +3389,7 @@ class ScheduleController extends Controller
 
                                     // If we've used all timeslots for this day, move to next day
                                     if (count($usedTimeslotsByDate[$currentScheduleDate]) >= count($allTimeslots)) {
-                                        $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate.' +1 day'));
+                                        $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
                                         $timeslotIndex = 0;
                                         if (! isset($usedTimeslotsByDate[$currentScheduleDate])) {
                                             $usedTimeslotsByDate[$currentScheduleDate] = [];
@@ -3421,7 +3421,7 @@ class ScheduleController extends Controller
                                             $timeslotIndex++;
                                             if ($timeslotIndex >= count($allTimeslots)) {
                                                 // All timeslots used for this day, move to next day and reset timeslot index
-                                                $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate.' +1 day'));
+                                                $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
                                                 $timeslotIndex = 0;
                                                 // Reset used timeslots tracking for new date (timeslots reset on new date)
                                                 if (! isset($usedTimeslotsByDate[$currentScheduleDate])) {
@@ -3436,7 +3436,7 @@ class ScheduleController extends Controller
                                         // Check if timeslot has passed for current day
                                         if ($currentScheduleDate == $currentDate && $timeslot24Hour <= $currentTime) {
                                             // Timeslot has passed, move to next day (keep same timeslot index since it's a new date)
-                                            $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate.' +1 day'));
+                                            $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
                                             // Reset used timeslots tracking for new date (timeslots reset on new date)
                                             if (! isset($usedTimeslotsByDate[$currentScheduleDate])) {
                                                 $usedTimeslotsByDate[$currentScheduleDate] = [];
@@ -3447,7 +3447,7 @@ class ScheduleController extends Controller
                                         }
 
                                         // Timeslot is available for this date, assign post (convert to UTC for storage)
-                                        $publishDateTimeLocal = $currentScheduleDate.' '.$timeslot24Hour;
+                                        $publishDateTimeLocal = $currentScheduleDate . ' ' . $timeslot24Hour;
                                         $post->update([
                                             'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $user),
                                         ]);
@@ -3459,7 +3459,7 @@ class ScheduleController extends Controller
                                         $timeslotIndex++;
                                         if ($timeslotIndex >= count($allTimeslots)) {
                                             // All timeslots used for this day, move to next day and reset timeslot index
-                                            $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate.' +1 day'));
+                                            $currentScheduleDate = date('Y-m-d', strtotime($currentScheduleDate . ' +1 day'));
                                             $timeslotIndex = 0;
                                             // Reset used timeslots tracking for new date
                                             if (! isset($usedTimeslotsByDate[$currentScheduleDate])) {
@@ -3495,7 +3495,7 @@ class ScheduleController extends Controller
     {
         $types = array_values(array_filter(
             (array) $request->input('type', []),
-            fn ($t) => $t !== null && $t !== ''
+            fn($t) => $t !== null && $t !== ''
         ));
 
         return count($types) === 1 && (string) $types[0] === 'pinterest';
@@ -3636,7 +3636,7 @@ class ScheduleController extends Controller
     {
         try {
             $post = Post::with('user')->findOrFail($id);
-            $publishDateTimeLocal = date('Y-m-d', strtotime($request->edit_post_publish_date)).' '.date('H:i', strtotime($request->edit_post_publish_time));
+            $publishDateTimeLocal = date('Y-m-d', strtotime($request->edit_post_publish_date)) . ' ' . date('H:i', strtotime($request->edit_post_publish_time));
             $data = [
                 'title' => $request->edit_post_title,
                 'url' => $request->edit_post_link,
@@ -3849,7 +3849,7 @@ class ScheduleController extends Controller
 
             foreach ($timeslots ?: [] as $slot) {
                 $slotNormalized = date('H:i', strtotime($slot));
-                $slotTime = Carbon::parse($dateStr.' '.$slotNormalized, $userTz);
+                $slotTime = Carbon::parse($dateStr . ' ' . $slotNormalized, $userTz);
 
                 if ($date->isToday() && $slotTime->lt($now)) {
                     continue;
@@ -3872,7 +3872,7 @@ class ScheduleController extends Controller
 
             // Generate virtual slots for posts that don't match any configured timeslot
             foreach ($existingPostsByKey as $key => $posts) {
-                if (str_starts_with($key, $dateStr.' ') && ! isset($placedKeys[$key])) {
+                if (str_starts_with($key, $dateStr . ' ') && ! isset($placedKeys[$key])) {
                     $slotTime = Carbon::parse($key, $userTz);
                     if ($date->isToday() && $slotTime->lt($now)) {
                         continue;
@@ -3887,7 +3887,7 @@ class ScheduleController extends Controller
                 }
             }
 
-            usort($daySlots, fn ($a, $b) => strcmp($a['time'], $b['time']));
+            usort($daySlots, fn($a, $b) => strcmp($a['time'], $b['time']));
 
             if (! empty($daySlots)) {
                 $isToday = $date->isToday();
@@ -3980,7 +3980,7 @@ class ScheduleController extends Controller
             'has_timeslots' => true,
             'date_display' => $dt->format('l, F j, Y'),
             'time_display' => $dt->format('h:i A'),
-            'display' => $dt->format('D, M j').' · '.$dt->format('h:i A'),
+            'display' => $dt->format('D, M j') . ' · ' . $dt->format('h:i A'),
         ]);
     }
 
@@ -3997,9 +3997,9 @@ class ScheduleController extends Controller
             return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
         }
 
-        $pages = Page::whereIn('id', $accountIds)->get();
-        if ($pages->isEmpty()) {
-            return response()->json(['success' => false, 'message' => 'No pages found', 'posts' => []]);
+        $page = Page::whereIn('id', $accountIds)->first();
+        if (empty($page)) {
+            return response()->json(['success' => false, 'message' => 'No page found', 'posts' => []]);
         }
 
         // Sent tab (beta): full_year only — since = 1 year ago, until = today
@@ -4010,85 +4010,83 @@ class ScheduleController extends Controller
         $allPosts = [];
         $graphPostIds = [];
 
-        foreach ($pages as $page) {
-            $cacheKey = $this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
-            $posts = null;
-            $source = 'database';
-            try {
-                $posts = Cache::get($cacheKey);
-                $source = 'cache';
-            } catch (\Throwable $e) {
-                Log::warning('Facebook sent posts cache read failed', [
-                    'key' => $cacheKey,
-                    'message' => $e->getMessage(),
-                ]);
-            }
-            if ($posts === null) {
-                $posts = $this->fetchPagePostsFromStore($page, $since, $until, $duration);
-                if ($posts !== null) {
-                    try {
-                        Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-                        $source = 'cache';
-                    } catch (\Throwable $e) {
-                        Log::warning('Facebook sent posts cache write failed', [
-                            'key' => $cacheKey,
-                            'message' => $e->getMessage(),
-                        ]);
-                    }
-                }
-            }
-            if (! is_array($posts)) {
-                $posts = [];
-            }
-
-            // Avoid N+1 queries: preload our matching posts for this page response.
-            $postIds = collect($posts)
-                ->pluck('id')
-                ->filter()
-                ->map(fn ($id) => (string) $id)
-                ->unique()
-                ->values()
-                ->all();
-
-            $ourPostsByExternalId = empty($postIds)
-                ? collect()
-                : Post::withoutGlobalScopes()
-                    ->whereIn('user_id', $postCreatorIds)
-                    ->whereIn('post_id', $postIds)
-                    ->with('user')
-                    ->get()
-                    ->keyBy(fn ($p) => (string) $p->post_id);
-
-            foreach ($posts as &$post) {
-                $post['account_name'] = $page->name;
-                $post['account_profile'] = $page->profile_image;
-                $post['social_type'] = 'facebook';
-                $post['page_db_id'] = $page->id;
-                $ourPost = $ourPostsByExternalId->get((string) ($post['id'] ?? ''));
-                if ($ourPost) {
-                    $post['db_post_id'] = $ourPost->id;
-                    if ($ourPost->user) {
-                        $post['publisher_username'] = $ourPost->user->username ?? $ourPost->user->full_name ?? $ourPost->user->email ?? '';
-                        $post['publisher_email'] = $ourPost->user->email ?? '';
-                    }
-                }
-            }
-            unset($post);
-
-            foreach ($posts as $p) {
-                if (! empty($p['id'])) {
-                    $graphPostIds[(string) $p['id']] = true;
-                }
-            }
-
-            $allPosts = array_merge($allPosts, $posts);
+        $cacheKey = $this->sentPostsCacheKey($userId, (int) $page->id, $duration, $since, $until);
+        $posts = null;
+        $source = 'database';
+        try {
+            $posts = Cache::get($cacheKey);
+            $source = 'cache';
+        } catch (\Throwable $e) {
+            Log::warning('Facebook sent posts cache read failed', [
+                'key' => $cacheKey,
+                'message' => $e->getMessage(),
+            ]);
         }
+        if ($posts === null) {
+            $posts = $this->fetchPagePostsFromStore($page, $since, $until, $duration);
+            if ($posts !== null) {
+                try {
+                    Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+                    $source = 'cache';
+                } catch (\Throwable $e) {
+                    Log::warning('Facebook sent posts cache write failed', [
+                        'key' => $cacheKey,
+                        'message' => $e->getMessage(),
+                    ]);
+                }
+            }
+        }
+        if (! is_array($posts)) {
+            $posts = [];
+        }
+
+        // Avoid N+1 queries: preload our matching posts for this page response.
+        $postIds = collect($posts)
+            ->pluck('id')
+            ->filter()
+            ->map(fn($id) => (string) $id)
+            ->unique()
+            ->values()
+            ->all();
+
+        $ourPostsByExternalId = empty($postIds)
+            ? collect()
+            : Post::withoutGlobalScopes()
+            ->whereIn('user_id', $postCreatorIds)
+            ->whereIn('post_id', $postIds)
+            ->with('user')
+            ->get()
+            ->keyBy(fn($p) => (string) $p->post_id);
+
+        foreach ($posts as &$post) {
+            $post['account_name'] = $page->name;
+            $post['account_profile'] = $page->profile_image;
+            $post['social_type'] = 'facebook';
+            $post['page_db_id'] = $page->id;
+            $ourPost = $ourPostsByExternalId->get((string) ($post['id'] ?? ''));
+            if ($ourPost) {
+                $post['db_post_id'] = $ourPost->id;
+                if ($ourPost->user) {
+                    $post['publisher_username'] = $ourPost->user->username ?? $ourPost->user->full_name ?? $ourPost->user->email ?? '';
+                    $post['publisher_email'] = $ourPost->user->email ?? '';
+                }
+            }
+        }
+        unset($post);
+
+        foreach ($posts as $p) {
+            if (! empty($p['id'])) {
+                $graphPostIds[(string) $p['id']] = true;
+            }
+        }
+
+        $allPosts = array_merge($allPosts, $posts);
 
         // Posts published via the app but not yet present in facebook_posts / Graph cache: show from DB with zeroed metrics.
         $sinceStart = Carbon::parse($since)->startOfDay();
         $untilEnd = Carbon::parse($until)->endOfDay();
-        $pageIds = $pages->pluck('id')->all();
-        $pagesById = $pages->keyBy('id');
+        $pageIds = [$page->id];
+        $pagesById = collect([$page->id => $page]);
 
         $dbSentPosts = Post::withoutGlobalScopes()
             ->whereIn('user_id', $postCreatorIds)
@@ -4122,6 +4120,8 @@ class ScheduleController extends Controller
             return $tb - $ta;
         });
 
+        $isFetching = empty($allPosts);
+        $fetchingMessage = $isFetching ? 'Posts for this page are being fetched. Please check back shortly.' : null;
         $total = count($allPosts);
         if ($limit !== null) {
             $pagedPosts = array_slice($allPosts, $offset, $limit);
@@ -4130,6 +4130,8 @@ class ScheduleController extends Controller
             return response()->json([
                 'success' => true,
                 'posts' => $pagedPosts,
+                'posts_fetching' => $isFetching,
+                'posts_fetching_message' => $fetchingMessage,
                 'total' => $total,
                 'has_more' => $nextOffset < $total,
                 'next_offset' => $nextOffset,
@@ -4139,6 +4141,8 @@ class ScheduleController extends Controller
         return response()->json([
             'success' => true,
             'posts' => $allPosts,
+            'posts_fetching' => $isFetching,
+            'posts_fetching_message' => $fetchingMessage,
             'total' => $total,
             'has_more' => false,
             'next_offset' => $total,
@@ -4345,7 +4349,7 @@ class ScheduleController extends Controller
             $postIds = collect($posts)
                 ->pluck('id')
                 ->filter()
-                ->map(fn ($id) => (string) $id)
+                ->map(fn($id) => (string) $id)
                 ->unique()
                 ->values()
                 ->all();
@@ -4353,14 +4357,14 @@ class ScheduleController extends Controller
             $ourPostsByExternalId = empty($postIds)
                 ? collect()
                 : Post::withoutGlobalScopes()
-                    ->whereIn('user_id', $postCreatorIds)
-                    ->whereIn('post_id', $postIds)
-                    ->with('user')
-                    ->get()
-                    ->keyBy(fn ($p) => (string) $p->post_id);
+                ->whereIn('user_id', $postCreatorIds)
+                ->whereIn('post_id', $postIds)
+                ->with('user')
+                ->get()
+                ->keyBy(fn($p) => (string) $p->post_id);
 
             foreach ($posts as &$post) {
-                $post['account_name'] = $account->username ? '@'.$account->username : 'Threads';
+                $post['account_name'] = $account->username ? '@' . $account->username : 'Threads';
                 $post['account_profile'] = $account->profile_image ?? '';
                 $post['social_type'] = 'threads';
                 $post['page_db_id'] = $account->id;
@@ -4456,13 +4460,13 @@ class ScheduleController extends Controller
         $usernameRaw = (string) ($account->username ?? '');
         $username = ltrim($usernameRaw, '@');
         $permalink = $username !== ''
-            ? 'https://www.instagram.com/'.rawurlencode($username).'/'
+            ? 'https://www.instagram.com/' . rawurlencode($username) . '/'
             : null;
 
         $profileImage = (string) ($account->profile_image ?? '');
 
         $payload = [
-            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-'.$dbPost->id),
+            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-' . $dbPost->id),
             'created_time' => $createdTime,
             'message' => (string) ($dbPost->title ?? ''),
             'story' => '',
@@ -4470,7 +4474,7 @@ class ScheduleController extends Controller
             'full_picture' => $fullPicture,
             'carousel_items' => $this->instagramCarouselGalleryItemsFromPost($dbPost),
             'permalink_url' => $permalink,
-            'account_name' => $account->name ?: ($username !== '' ? '@'.$username : 'Instagram'),
+            'account_name' => $account->name ?: ($username !== '' ? '@' . $username : 'Instagram'),
             'account_profile' => $profileImage,
             'social_type' => 'instagram',
             'page_db_id' => $account->id,
@@ -4516,11 +4520,11 @@ class ScheduleController extends Controller
         $videoUrl = $this->postStoredVideoUrl($dbPost);
         $username = ltrim((string) ($account->username ?? ''), '@');
         $permalink = $username !== ''
-            ? 'https://www.threads.com/@'.rawurlencode($username)
+            ? 'https://www.threads.com/@' . rawurlencode($username)
             : null;
 
         $payload = [
-            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-'.$dbPost->id),
+            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-' . $dbPost->id),
             'created_time' => $createdTime,
             'message' => (string) ($dbPost->title ?? ''),
             'story' => '',
@@ -4528,7 +4532,7 @@ class ScheduleController extends Controller
             'full_picture' => $fullPicture,
             'carousel_items' => $this->instagramCarouselGalleryItemsFromPost($dbPost),
             'permalink_url' => $permalink,
-            'account_name' => $username !== '' ? '@'.$username : 'Threads',
+            'account_name' => $username !== '' ? '@' . $username : 'Threads',
             'account_profile' => (string) ($account->profile_image ?? ''),
             'social_type' => 'threads',
             'page_db_id' => $account->id,
@@ -4577,13 +4581,13 @@ class ScheduleController extends Controller
         $username = (string) ($account->username ?? '');
         $usernameForUrl = ltrim($username, '@');
         $permalink = $usernameForUrl !== ''
-            ? 'https://www.tiktok.com/@'.rawurlencode($usernameForUrl)
+            ? 'https://www.tiktok.com/@' . rawurlencode($usernameForUrl)
             : null;
 
         $profileImage = $account->profile_image ?? '';
 
         $payload = [
-            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-'.$dbPost->id),
+            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-' . $dbPost->id),
             'created_time' => $createdTime,
             'message' => (string) ($dbPost->title ?? ''),
             'story' => '',
@@ -4634,13 +4638,13 @@ class ScheduleController extends Controller
 
         $pinId = $dbPost->post_id ? (string) $dbPost->post_id : '';
         $permalink = $pinId !== ''
-            ? 'https://www.pinterest.com/pin/'.rawurlencode($pinId).'/'
+            ? 'https://www.pinterest.com/pin/' . rawurlencode($pinId) . '/'
             : null;
 
         $profileImage = $board->pinterest?->profile_image ?? '';
 
         $payload = [
-            'id' => $pinId !== '' ? $pinId : ('db-'.$dbPost->id),
+            'id' => $pinId !== '' ? $pinId : ('db-' . $dbPost->id),
             'created_time' => $createdTime,
             'message' => (string) ($dbPost->title ?? ''),
             'story' => '',
@@ -4760,7 +4764,7 @@ class ScheduleController extends Controller
 
         $stored = FacebookPost::query()
             ->where('fb_page_id', $page->page_id)
-            ->whereBetween('post_created_date', [$since.' 00:00:00', $until.' 23:59:59'])
+            ->whereBetween('post_created_date', [$since . ' 00:00:00', $until . ' 23:59:59'])
             ->orderByDesc('post_created_date')
             ->get();
 
@@ -4794,8 +4798,8 @@ class ScheduleController extends Controller
         return implode('/', [
             'facebook-posts-cache',
             'durations',
-            'page-'.$pageId,
-            $duration.'-'.$since.'-'.$until.'.json',
+            'page-' . $pageId,
+            $duration . '-' . $since . '-' . $until . '.json',
         ]);
     }
 
@@ -4873,57 +4877,12 @@ class ScheduleController extends Controller
      * Refresh posts and post insights for the selected Facebook account (page).
      * Used by the schedule page "Refresh" button. Creates a success notification when done.
      */
-    public function refreshPagePosts(Request $request, PagePostsSyncService $pagePostsSyncService)
+    public function refreshPagePosts(Request $request, FacebookFeedSyncService $pagePostsSyncService)
     {
-        $accountId = $request->input('account_id');
-        $type = $request->input('type', 'facebook');
-
-        if (empty($accountId) || $type !== 'facebook') {
-            return response()->json(['success' => false, 'message' => 'Please select a Facebook account.'], 400);
-        }
-
-        $user = Auth::user();
-        $page = Page::where('id', $accountId)->where('user_id', $user->id)->first();
-
-        if (! $page) {
-            return response()->json(['success' => false, 'message' => 'Account not found or access denied.'], 404);
-        }
-
-        $result = $pagePostsSyncService->syncPageForFullYear($page);
-
-        if ($result['success'] || $result['synced'] > 0) {
-            $accountName = $page->name ?? 'Facebook account';
-            $profileImage = $page->profile_image ?? null;
-            Notification::create([
-                'user_id' => $user->id,
-                'title' => 'Posts and insights synced',
-                'body' => [
-                    'type' => 'success',
-                    'message' => 'Posts and insights have been synced for '.$accountName.'.',
-                    'social_type' => 'facebook',
-                    'account_image' => $profileImage,
-                    'account_name' => $accountName,
-                    'account_username' => $page->facebook?->username ?? '',
-                ],
-                'is_read' => false,
-                'is_system' => false,
-            ]);
-        }
-
-        if ($result['success']) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Posts and insights synced successfully.',
-                'account_name' => $page->name,
-            ]);
-        }
-
         return response()->json([
             'success' => false,
-            'message' => 'Sync completed with some failures.',
-            'synced' => $result['synced'],
-            'failed' => $result['failed'],
-        ], 422);
+            'message' => 'Manual refresh is disabled. Posts and insights are synced by cronjob.',
+        ], 403);
     }
 
     /**

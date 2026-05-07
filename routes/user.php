@@ -38,7 +38,6 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.timezone
             Route::get('posts/tiktok-sent', 'getTikTokSentPosts')->name('posts.tiktok.sent');
             Route::get('posts/instagram-sent', 'getInstagramSentPosts')->name('posts.instagram.sent');
             Route::get('posts/threads-sent', 'getThreadsSentPosts')->name('posts.threads.sent');
-            Route::post('refresh-page-posts', 'refreshPagePosts')->name('refresh-page-posts');
             Route::post('delete-sent-post', 'deleteSentPost')->name('delete-sent-post');
             Route::get('queue-timeline', 'getQueueTimeline')->name('queue.timeline');
             Route::get('next-queue-slot', 'getNextQueueSlot')->name('next-queue-slot');
@@ -60,8 +59,6 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.timezone
     // Analytics Routes - requires social_accounts feature
     Route::get('analytics', [AnalyticsController::class, 'index'])->name('analytics')->middleware(['feature:'.Feature::$features_list[0]]);
     Route::get('analytics/data', [AnalyticsController::class, 'data'])->name('analytics.data')->middleware(['feature:'.Feature::$features_list[0]]);
-    Route::get('analytics/test', [AnalyticsController::class, 'testPageInsights'])->name('analytics.test')->middleware(['feature:'.Feature::$features_list[0]]);
-    Route::get('test/page-insights/{page_id}', [AnalyticsController::class, 'testPagePostsInsights'])->name('test.page-insights')->middleware(['feature:'.Feature::$features_list[0]]);
     Route::controller(LinkedInPublishTestController::class)
         ->middleware(['feature:'.Feature::$features_list[0]])
         ->prefix('linkedin-publish-test')

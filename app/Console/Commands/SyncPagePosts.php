@@ -2,8 +2,7 @@
 
 namespace App\Console\Commands;
 
-use App\Models\Page;
-use App\Services\PagePostsSyncService;
+use App\Services\FacebookFeedSyncService;
 use Illuminate\Console\Command;
 
 class SyncPagePosts extends Command
@@ -13,51 +12,21 @@ class SyncPagePosts extends Command
      *
      * @var string
      */
-    protected $signature = 'insights:sync-posts {--page-id= : Sync only one local Page id} {--full-year-only : With --page-id, sync only full_year duration}';
+    protected $signature = 'insights:sync-posts';
 
     /**
      * The console command description.
      *
      * @var string
      */
-    protected $description = 'Fetch posts and post insights for pages and durations, and refresh facebook_posts cache';
+    protected $description = 'Fetch posts and post insights for Facebook Page';
 
     /**
      * Execute the console command.
      */
-    public function handle(PagePostsSyncService $syncService): int
+    public function handle(FacebookFeedSyncService $syncService): void
     {
-        $pageIdOption = $this->option('page-id');
-        if (!empty($pageIdOption)) {
-            $pageId = (int) $pageIdOption;
-            $page = Page::withoutGlobalScopes()->find($pageId);
-            if (!$page) {
-                $this->error("Page not found for id: {$pageId}");
-                return Command::FAILURE;
-            }
-
-            $this->info("Starting page posts sync for single page: {$page->name} (ID: {$page->id})");
-
-            if ((bool) $this->option('full-year-only')) {
-                $result = $syncService->syncPageForFullYear($page);
-                $this->info("Synced: {$result['synced']}");
-                if ($result['failed'] > 0) {
-                    $this->warn("Failed: {$result['failed']}");
-                }
-
-                return $result['failed'] > 0 ? Command::FAILURE : Command::SUCCESS;
-            }
-
-            $result = $syncService->syncPageForAllDurations($page);
-            $this->info("Synced: {$result['synced']}");
-            if ($result['failed'] > 0) {
-                $this->warn("Failed: {$result['failed']}");
-            }
-
-            return $result['failed'] > 0 ? Command::FAILURE : Command::SUCCESS;
-        }
-
-        $this->info('Starting page posts sync for all pages...');
+        $this->info('Starting page posts sync for Facebook Page...');
 
         $result = $syncService->syncAll(function (array $event): void {
             $type = $event['type'] ?? '';
@@ -115,7 +84,5 @@ class SyncPagePosts extends Command
         if ($result['failed'] > 0) {
             $this->warn("Failed: {$result['failed']}");
         }
-
-        return Command::SUCCESS;
     }
 }

@@ -452,6 +452,8 @@
         var sentPostsLimit = 10;
         var sentPostsHasMore = false;
         var sentPostsLoadingMore = false;
+        var sentPostsFetching = false;
+        var sentPostsFetchingMessage = '';
 
         function abortMixedSentRequests() {
             mixedSentRequests.forEach(function(r) {
@@ -723,6 +725,8 @@
             sentPostsOffset = 0;
             sentPostsHasMore = false;
             sentPostsLoadingMore = false;
+            sentPostsFetching = false;
+            sentPostsFetchingMessage = '';
             if (sentPostsRequest && sentPostsRequest.readyState !== 4) {
                 sentPostsRequest.abort();
             }
@@ -733,6 +737,8 @@
                 success: function(response) {
                     var posts = (response.success && response.posts) ? response.posts : [];
                     cachedSentPagePosts = posts;
+                    sentPostsFetching = !!response.posts_fetching;
+                    sentPostsFetchingMessage = response.posts_fetching_message || '';
                     sentPostsOffset = Number(response.next_offset || posts.length || 0);
                     sentPostsHasMore = !!response.has_more;
                     $('#posts-status-tabs [data-count="sent"]').text(Number(response.total || posts.length || 0));
@@ -745,6 +751,8 @@
                     cachedSentPagePosts = [];
                     sentPostsOffset = 0;
                     sentPostsHasMore = false;
+                    sentPostsFetching = false;
+                    sentPostsFetchingMessage = '';
                     $('#posts-status-tabs [data-count="sent"]').text(0);
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
@@ -777,6 +785,8 @@
                         cachedSentPagePosts = cachedSentPagePosts.concat(posts);
                         showSentPosts();
                     }
+                    sentPostsFetching = !!response.posts_fetching;
+                    sentPostsFetchingMessage = response.posts_fetching_message || '';
                     sentPostsOffset = Number(response.next_offset || (sentPostsOffset + posts.length));
                     sentPostsHasMore = !!response.has_more;
                     $('#posts-status-tabs [data-count="sent"]').text(Number(response.total || cachedSentPagePosts.length || 0));
@@ -963,7 +973,11 @@
             var postsToShow = filterSentPostsByTitle(cachedSentPagePosts, postsSearchQuery);
             if (postsToShow.length === 0) {
                 sentPostsGroupedByDay = [];
-                $('#postsGrid').html('<div class="empty-state-box"><i class="far fa-folder-open"></i><p>' + (postsSearchQuery ? 'No sent posts match your search.' : 'No sent posts found.') + '</p></div>');
+                var emptyMsg = postsSearchQuery ? 'No sent posts match your search.' : 'No sent posts found.';
+                if (!postsSearchQuery && sentPostsFetching) {
+                    emptyMsg = sentPostsFetchingMessage || 'Posts for this page are being fetched. Please check back shortly.';
+                }
+                $('#postsGrid').html('<div class="empty-state-box"><i class="far fa-folder-open"></i><p>' + emptyMsg + '</p></div>');
                 return;
             }
             sentPostsGroupedByDay = buildSentPostsGroupedByDay(postsToShow);

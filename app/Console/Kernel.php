@@ -104,12 +104,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('schedule:shuffle')->dailyAt('02:00');
         // Command to sync page insights for all pages and durations (runs twice daily at 12:00 AM and 12:00 PM)
         $schedule->command('insights:sync-page')->dailyAt('00:00');
-        $schedule->command('insights:sync-page')->dailyAt('12:00');
         // Command to sync page posts and post insights for all pages and durations (runs every 3 hours)
         $schedule->command('insights:sync-posts')->everyThreeHours();
         // Command to sync Threads account insights (runs twice daily)
         $schedule->command('insights:sync-threads')->dailyAt('00:30');
-        $schedule->command('insights:sync-threads')->dailyAt('12:30');
         // Command to sync Threads posts and post insights (runs every 3 hours)
         $schedule->command('insights:sync-threads-posts')->everyThreeHours();
         // Command to purge posts older than 30 days in batches of 200 (runs every 3 hours)
@@ -123,7 +121,7 @@ class Kernel extends ConsoleKernel
      */
     protected function commands(): void
     {
-        $this->load(__DIR__.'/Commands');
+        $this->load(__DIR__ . '/Commands');
 
         require base_path('routes/console.php');
     }

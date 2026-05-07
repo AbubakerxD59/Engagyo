@@ -146,6 +146,8 @@ class AnalyticsController extends Controller
         $selectedPage = null;
         $pageInsights = null;
         $pagePosts = null;
+        $postsFetching = false;
+        $postsFetchingMessage = null;
         $pagePostsTotal = 0;
         $pagePostsHasMore = false;
         $pagePostsNextOffset = 0;
@@ -172,6 +174,10 @@ class AnalyticsController extends Controller
                 if ($selected) {
                     $pageInsights = $this->fetchPageInsights($selected, $since, $until);
                     $pagePosts = $this->fetchPagePosts($selected, $since, $until);
+                    if (is_array($pagePosts) && empty($pagePosts)) {
+                        $postsFetching = true;
+                        $postsFetchingMessage = 'Posts for this page are being fetched. Please check back shortly.';
+                    }
                     if (is_array($pagePosts)) {
                         $pagePostsTotal = count($pagePosts);
                         if ($postsLimit !== null) {
@@ -212,6 +218,8 @@ class AnalyticsController extends Controller
             'success' => true,
             'pageInsights' => $pageInsights,
             'pagePosts' => $pagePosts,
+            'posts_fetching' => $postsFetching,
+            'posts_fetching_message' => $postsFetchingMessage,
             'pagePostsTotal' => $pagePostsTotal,
             'pagePostsHasMore' => $pagePostsHasMore,
             'pagePostsNextOffset' => $pagePostsNextOffset,
@@ -225,17 +233,13 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Fetch page-level insights (followers, reach, video views, engagements).
-     * Returns from DB if stored; fetches from Graph API only when no stored data.
-     * Data is refreshed automatically by cronjobs.
+     * Fetch page-level insights (followers, reach, video views, engagements) from DB only.
      */
     private function fetchPageInsights(?Page $page, ?string $since = null, ?string $until = null): ?array
     {
         if (!$page || empty($page->page_id) || empty($page->access_token)) {
             return null;
         }
-
-        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
 
         $stored = PageInsight::where('page_id', $page->id)
             ->where('since', $since)
@@ -246,34 +250,12 @@ class AnalyticsController extends Controller
             return $stored->insights;
         }
 
-        $tokenCheck = FacebookService::validateToken($page);
-        if (!$tokenCheck['success']) {
-            return null;
-        }
-
-        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
-        $insights = $this->facebookService->getPageInsightsWithComparison($page->page_id, $accessToken, $since, $until);
-
-        PageInsight::updateOrCreate(
-            [
-                'page_id' => $page->id,
-                'since' => $since,
-                'until' => $until,
-            ],
-            [
-                'duration' => $duration,
-                'insights' => $insights,
-                'synced_at' => now(),
-            ]
-        );
-
-        return $insights;
+        return null;
     }
 
     /**
-     * Fetch page posts with insights. Returns from DB if stored; fetches from Graph API only when no stored data.
+     * Fetch page posts with insights from cache/DB only.
      * Returns null for "All Accounts" (posts not aggregated across pages).
-     * Data is refreshed automatically by cronjobs.
      */
     private function fetchPagePosts(?Page $page, ?string $since = null, ?string $until = null): ?array
     {
@@ -321,18 +303,7 @@ class AnalyticsController extends Controller
             return $storedPosts;
         }
 
-        $tokenCheck = FacebookService::validateToken($page);
-        if (!$tokenCheck['success']) {
-            return null;
-        }
-
-        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
-        $insightsPreset = $duration === 'full_year' ? 'sent_tab' : 'default';
-        $posts = $this->facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until, $insightsPreset);
-
-        Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-
-        return $posts;
+        return [];
     }
 
     /**
