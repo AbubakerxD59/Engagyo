@@ -146,7 +146,13 @@ class AnalyticsController extends Controller
         $selectedPage = null;
         $pageInsights = null;
         $pagePosts = null;
+        $pagePostsTotal = 0;
+        $pagePostsHasMore = false;
+        $pagePostsNextOffset = 0;
         $platform = 'facebook';
+        $postsOffset = max(0, (int) $request->query('posts_offset', 0));
+        $postsLimitInput = $request->query('posts_limit');
+        $postsLimit = is_null($postsLimitInput) ? null : max(1, min(50, (int) $postsLimitInput));
 
         if ($accountRef === '' && ($pageId === 'all' || empty($pageId))) {
             $accountRef = 'facebook:all';
@@ -166,6 +172,16 @@ class AnalyticsController extends Controller
                 if ($selected) {
                     $pageInsights = $this->fetchPageInsights($selected, $since, $until);
                     $pagePosts = $this->fetchPagePosts($selected, $since, $until);
+                    if (is_array($pagePosts)) {
+                        $pagePostsTotal = count($pagePosts);
+                        if ($postsLimit !== null) {
+                            $pagePosts = array_slice($pagePosts, $postsOffset, $postsLimit);
+                            $pagePostsNextOffset = $postsOffset + count($pagePosts);
+                            $pagePostsHasMore = $pagePostsNextOffset < $pagePostsTotal;
+                        } else {
+                            $pagePostsNextOffset = $pagePostsTotal;
+                        }
+                    }
                     $selectedPage = ['id' => $selected->id, 'name' => $selected->name];
                 }
             }
@@ -177,6 +193,16 @@ class AnalyticsController extends Controller
                 if ($selected) {
                     $pageInsights = $this->fetchThreadInsights($selected, $since, $until);
                     $pagePosts = $this->fetchThreadPosts($selected, $since, $until);
+                    if (is_array($pagePosts)) {
+                        $pagePostsTotal = count($pagePosts);
+                        if ($postsLimit !== null) {
+                            $pagePosts = array_slice($pagePosts, $postsOffset, $postsLimit);
+                            $pagePostsNextOffset = $postsOffset + count($pagePosts);
+                            $pagePostsHasMore = $pagePostsNextOffset < $pagePostsTotal;
+                        } else {
+                            $pagePostsNextOffset = $pagePostsTotal;
+                        }
+                    }
                     $selectedPage = ['id' => $selected->id, 'name' => $selected->username];
                 }
             }
@@ -186,6 +212,9 @@ class AnalyticsController extends Controller
             'success' => true,
             'pageInsights' => $pageInsights,
             'pagePosts' => $pagePosts,
+            'pagePostsTotal' => $pagePostsTotal,
+            'pagePostsHasMore' => $pagePostsHasMore,
+            'pagePostsNextOffset' => $pagePostsNextOffset,
             'selectedPage' => $selectedPage,
             'hasPages' => ($facebookPages->count() + $threadsAccounts->count()) > 0,
             'platform' => $platform,

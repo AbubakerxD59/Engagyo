@@ -448,6 +448,10 @@
         var publishSentRefreshTimer = null;
         var allChannelsSentLoadGeneration = 0;
         var mixedSentRequests = [];
+        var sentPostsOffset = 0;
+        var sentPostsLimit = 10;
+        var sentPostsHasMore = false;
+        var sentPostsLoadingMore = false;
 
         function abortMixedSentRequests() {
             mixedSentRequests.forEach(function(r) {
@@ -716,17 +720,22 @@
                 return;
             }
             cachedSentPagePosts = null;
+            sentPostsOffset = 0;
+            sentPostsHasMore = false;
+            sentPostsLoadingMore = false;
             if (sentPostsRequest && sentPostsRequest.readyState !== 4) {
                 sentPostsRequest.abort();
             }
             sentPostsRequest = $.ajax({
                 url: "{{ route('panel.schedule.posts.sent.page') }}",
                 type: "GET",
-                data: { account_id: selectedAccounts.accountIds },
+                data: { account_id: selectedAccounts.accountIds, offset: 0, limit: sentPostsLimit },
                 success: function(response) {
                     var posts = (response.success && response.posts) ? response.posts : [];
                     cachedSentPagePosts = posts;
-                    $('#posts-status-tabs [data-count="sent"]').text(posts.length);
+                    sentPostsOffset = Number(response.next_offset || posts.length || 0);
+                    sentPostsHasMore = !!response.has_more;
+                    $('#posts-status-tabs [data-count="sent"]').text(Number(response.total || posts.length || 0));
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
                     }
@@ -734,12 +743,46 @@
                 error: function(xhr, textStatus) {
                     if (textStatus === 'abort') return;
                     cachedSentPagePosts = [];
+                    sentPostsOffset = 0;
+                    sentPostsHasMore = false;
                     $('#posts-status-tabs [data-count="sent"]').text(0);
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
                     }
                 },
                 complete: function() {
+                    sentPostsRequest = null;
+                }
+            });
+        }
+
+        function loadMoreSentPagePostsServer() {
+            if (!shouldUseFacebookSentPageTimeline() || !sentPostsHasMore || sentPostsLoadingMore) return;
+            var selectedAccounts = getSelectedAccounts();
+            if (!selectedAccounts || !selectedAccounts.accountIds || selectedAccounts.accountIds.length === 0) return;
+
+            sentPostsLoadingMore = true;
+            if (sentPostsRequest && sentPostsRequest.readyState !== 4) {
+                sentPostsRequest.abort();
+            }
+            sentPostsRequest = $.ajax({
+                url: "{{ route('panel.schedule.posts.sent.page') }}",
+                type: "GET",
+                data: { account_id: selectedAccounts.accountIds, offset: sentPostsOffset, limit: sentPostsLimit },
+                success: function(response) {
+                    if (!(response && response.success)) return;
+                    var posts = Array.isArray(response.posts) ? response.posts : [];
+                    if (!Array.isArray(cachedSentPagePosts)) cachedSentPagePosts = [];
+                    if (posts.length) {
+                        cachedSentPagePosts = cachedSentPagePosts.concat(posts);
+                        showSentPosts();
+                    }
+                    sentPostsOffset = Number(response.next_offset || (sentPostsOffset + posts.length));
+                    sentPostsHasMore = !!response.has_more;
+                    $('#posts-status-tabs [data-count="sent"]').text(Number(response.total || cachedSentPagePosts.length || 0));
+                },
+                complete: function() {
+                    sentPostsLoadingMore = false;
                     sentPostsRequest = null;
                 }
             });
@@ -929,7 +972,11 @@
                 $('#postsGrid').html('<div class="empty-state-box"><i class="far fa-folder-open"></i><p>No sent posts found.</p></div>');
                 return;
             }
-            renderSentPagePosts(0, Math.min(sentDaysBatchSize, sentPostsGroupedByDay.length));
+            if (shouldUseFacebookSentPageTimeline()) {
+                renderSentPagePosts(0, sentPostsGroupedByDay.length);
+            } else {
+                renderSentPagePosts(0, Math.min(sentDaysBatchSize, sentPostsGroupedByDay.length));
+            }
         }
 
         function buildSentPostsGroupedByDay(posts) {
@@ -1722,7 +1769,11 @@
             if (currentPostStatusTab !== 'sent' || sentPostsGroupedByDay.length === 0) return;
             var el = this;
             if (el.scrollTop + el.clientHeight >= el.scrollHeight - 100) {
-                loadMoreSentDays();
+                if (shouldUseFacebookSentPageTimeline()) {
+                    loadMoreSentPagePostsServer();
+                } else {
+                    loadMoreSentDays();
+                }
             }
         });
 

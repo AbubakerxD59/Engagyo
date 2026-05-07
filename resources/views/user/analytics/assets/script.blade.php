@@ -15,6 +15,10 @@
             var isLoadingAnalytics = false;
             var analyticsRequest = null;
             var userTimezone = "{{ $userTimezoneName ?? 'UTC' }}";
+            var analyticsPostsOffset = 0;
+            var analyticsPostsLimit = 10;
+            var analyticsPostsHasMore = false;
+            var analyticsPostsLoadingMore = false;
 
             function formatInUserTimezone(date, options) {
                 if (!date || isNaN(date.getTime())) return '';
@@ -496,7 +500,7 @@
                     '<a href="{{ route('panel.accounts') }}" class="btn btn-primary mt-2"><i class="fas fa-user-circle mr-2"></i> Go to Accounts</a></div>';
             }
 
-            function loadAnalytics(accountRef, duration, since, until) {
+            function loadAnalytics(accountRef, duration, since, until, postsOffset) {
                 if (analyticsRequest && analyticsRequest.readyState !== 4) {
                     analyticsRequest.abort();
                 }
@@ -504,6 +508,11 @@
                 currentDuration = duration || currentDuration;
                 currentSince = since || currentSince;
                 currentUntil = until || currentUntil;
+                if (postsOffset === undefined || postsOffset === null) {
+                    postsOffset = 0;
+                    analyticsPostsOffset = 0;
+                    analyticsPostsHasMore = false;
+                }
 
                 var wasPostsTabActive = $content.find('a[href="#analyticsPostsTab"]').hasClass('active');
 
@@ -511,7 +520,9 @@
                     '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="mt-2 text-muted">Loading analytics...</p></div>'
                 );
                 var params = {
-                    account_ref: currentAccountRef || ''
+                    account_ref: currentAccountRef || '',
+                    posts_offset: postsOffset,
+                    posts_limit: analyticsPostsLimit
                 };
                 if (currentDuration) params.duration = currentDuration;
                 if (currentDuration === 'custom' && currentSince) {
@@ -547,11 +558,19 @@
                             $content.find('#analyticsPostsTab').addClass('show active');
                         }
                         window.currentAnalyticsInsights = res.pageInsights || null;
-                        window.currentPagePosts = res.pagePosts || null;
+                        if (postsOffset > 0 && Array.isArray(window.currentPagePosts) && Array.isArray(res.pagePosts)) {
+                            window.currentPagePosts = window.currentPagePosts.concat(res.pagePosts);
+                        } else {
+                            window.currentPagePosts = res.pagePosts || null;
+                        }
+                        analyticsPostsOffset = Number(res.pagePostsNextOffset || (Array.isArray(window.currentPagePosts) ? window.currentPagePosts.length : 0));
+                        analyticsPostsHasMore = !!res.pagePostsHasMore;
+                        analyticsPostsLoadingMore = false;
                         bindDurationHandlers();
                         bindChartMetricHandlers();
                         bindPostsSearchHandler();
                         bindPostsSortHandler();
+                        bindAnalyticsPostsInfiniteScroll();
                         var selectedMetric = $('.chart-metric-section').data('selected-metric') ||
                         'engagements';
                         if (res.selectedPage && res.pageInsights) {
@@ -567,9 +586,18 @@
                     })
                     .fail(function(xhr, textStatus) {
                         if (textStatus === 'abort') return;
+                        analyticsPostsLoadingMore = false;
                         $content.html(renderEmptyState(!!currentAccountRef));
                         if (typeof toastr !== 'undefined') toastr.error('Failed to load analytics.');
                     });
+            }
+
+            function loadMoreAnalyticsPosts() {
+                if (analyticsPostsLoadingMore || !analyticsPostsHasMore) return;
+                if (!currentAccountRef || currentAccountRef === 'facebook:all') return;
+                if (currentPostsSearchQuery && currentPostsSearchQuery.trim() !== '') return;
+                analyticsPostsLoadingMore = true;
+                loadAnalytics(currentAccountRef, currentDuration, currentSince, currentUntil, analyticsPostsOffset);
             }
 
             function bindChartMetricHandlers() {
@@ -630,6 +658,19 @@
                 });
             }
 
+            function bindAnalyticsPostsInfiniteScroll() {
+                $(window).off('scroll.analyticsPostsLoadMore');
+                $(window).on('scroll.analyticsPostsLoadMore', function() {
+                    var $postsTabLink = $content.find('a[href="#analyticsPostsTab"]');
+                    if (!$postsTabLink.hasClass('active')) return;
+                    var scrollBottom = $(window).scrollTop() + $(window).height();
+                    var triggerPoint = $(document).height() - 120;
+                    if (scrollBottom >= triggerPoint) {
+                        loadMoreAnalyticsPosts();
+                    }
+                });
+            }
+
             function bindDurationHandlers() {
                 $(document).off('change', '#analyticsDuration');
                 $(document).off('click', '#analyticsApplyCustom');
@@ -664,7 +705,7 @@
                 $('.analytics-page-card').removeClass('active');
                 $(this).addClass('active');
                 currentPlatform = ($(this).data('platform') || 'facebook').toString();
-                loadAnalytics(accountRef || 'facebook:all', currentDuration, currentSince, currentUntil);
+                loadAnalytics(accountRef || 'facebook:all', currentDuration, currentSince, currentUntil, 0);
             }).on('keydown', function(e) {
                 if (e.which === 13 || e.which === 32) {
                     e.preventDefault();
@@ -675,7 +716,7 @@
             bindDurationHandlers();
 
             if (hasPages && currentAccountRef) {
-                loadAnalytics(currentAccountRef, currentDuration, currentSince, currentUntil);
+                loadAnalytics(currentAccountRef, currentDuration, currentSince, currentUntil, 0);
             }
 
             $('#analyticsPageSearch').on('input', function() {

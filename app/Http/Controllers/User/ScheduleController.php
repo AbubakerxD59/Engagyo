@@ -3988,6 +3988,9 @@ class ScheduleController extends Controller
         $userId = (int) Auth::id();
         $viewer = Auth::guard('user')->user();
         $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [$userId];
+        $offset = max(0, (int) $request->input('offset', 0));
+        $limitInput = $request->input('limit');
+        $limit = is_null($limitInput) ? null : max(1, min(50, (int) $limitInput));
         $accountIds = (array) $request->input('account_id', []);
         if (empty($accountIds)) {
             return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
@@ -4115,7 +4118,27 @@ class ScheduleController extends Controller
             return $tb - $ta;
         });
 
-        return response()->json(['success' => true, 'posts' => $allPosts]);
+        $total = count($allPosts);
+        if ($limit !== null) {
+            $pagedPosts = array_slice($allPosts, $offset, $limit);
+            $nextOffset = $offset + count($pagedPosts);
+
+            return response()->json([
+                'success' => true,
+                'posts' => $pagedPosts,
+                'total' => $total,
+                'has_more' => $nextOffset < $total,
+                'next_offset' => $nextOffset,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'posts' => $allPosts,
+            'total' => $total,
+            'has_more' => false,
+            'next_offset' => $total,
+        ]);
     }
 
     /**
