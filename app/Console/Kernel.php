@@ -9,6 +9,7 @@ use App\Console\Commands\CleanupTikTokTestPosts;
 use App\Console\Commands\DownloadPhotoCron;
 use App\Console\Commands\FacebookPublishCron;
 use App\Console\Commands\FeedCron;
+use App\Console\Commands\SyncFacebookPostCreatedDate;
 use App\Console\Commands\PinterestPublishCron;
 use App\Console\Commands\PublishPendingCommentsCron;
 use App\Console\Commands\PublishRssPostsCron;
@@ -58,6 +59,7 @@ class Kernel extends ConsoleKernel
         ShuffleRssPosts::class, // app:shuffle-rss-posts
         SyncPageInsights::class, // insights:sync-page
         SyncPagePosts::class, // insights:sync-posts
+        SyncFacebookPostCreatedDate::class, // facebook:sync-post-created-date
         SyncThreadInsights::class, // insights:sync-threads
         SyncThreadPosts::class, // insights:sync-threads-posts
         PurgeOldPosts::class, // posts:purge-old
@@ -106,6 +108,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('insights:sync-page')->dailyAt('00:00');
         // Command to sync page posts and post insights for all pages and durations (runs every 3 hours)
         $schedule->command('insights:sync-posts')->everyThreeHours();
+        // Backfill post_created_date from facebook_posts.post_data.created_time
+        $schedule->command('facebook:sync-post-created-date')->everyThreeHours();
         // Command to sync Threads account insights (runs twice daily)
         $schedule->command('insights:sync-threads')->dailyAt('00:30');
         // Command to sync Threads posts and post insights (runs every 3 hours)

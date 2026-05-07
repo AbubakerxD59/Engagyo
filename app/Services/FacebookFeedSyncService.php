@@ -130,6 +130,8 @@ class FacebookFeedSyncService
             $posts = array_slice($posts, 0, $this->fullYearPostsLimit);
         }
 
+        $posts = $this->normalizePostCreatedDate($posts);
+
         return [
             'success' => true,
             'posts' => is_array($posts) ? $posts : [],
@@ -294,6 +296,8 @@ class FacebookFeedSyncService
             return;
         }
 
+        $posts = $this->normalizePostCreatedDate($posts);
+
         $cacheKey = $this->facebookDurationPostsCacheKey((string) $page->page_id, $duration, $since, $until);
         Cache::put($cacheKey, $posts, now()->addHours(24));
 
@@ -310,6 +314,39 @@ class FacebookFeedSyncService
             $this->facebookDurationPostsCachePath((string) $page->page_id, $duration, $since, $until),
             json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES)
         );
+    }
+
+    /**
+     * Ensure each post has post_created_date for downstream usage.
+     */
+    protected function normalizePostCreatedDate(array $posts): array
+    {
+        return array_map(function ($post) {
+            if (! is_array($post)) {
+                return $post;
+            }
+
+            if (! empty($post['post_created_date'])) {
+                return $post;
+            }
+
+            $createdRaw = $post['created_time'] ?? null;
+            if (is_array($createdRaw)) {
+                $createdRaw = $createdRaw['date'] ?? null;
+            }
+            if (is_object($createdRaw) && method_exists($createdRaw, 'format')) {
+                $createdRaw = $createdRaw->format('Y-m-d H:i:s');
+            }
+
+            if (is_string($createdRaw) && $createdRaw !== '') {
+                $ts = strtotime($createdRaw);
+                if ($ts !== false) {
+                    $post['post_created_date'] = date('Y-m-d H:i:s', $ts);
+                }
+            }
+
+            return $post;
+        }, $posts);
     }
 
     protected function facebookDurationPostsCacheKey(string $pageId, string $duration, string $since, string $until): string
