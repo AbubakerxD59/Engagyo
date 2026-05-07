@@ -13,10 +13,10 @@ use App\Jobs\PublishThreadsPost;
 use App\Jobs\PublishTikTokPost;
 use App\Models\Board;
 use App\Models\Facebook;
+use App\Models\FacebookPost;
 use App\Models\InstagramAccount;
 use App\Models\Notification;
 use App\Models\Page;
-use App\Models\PagePost;
 use App\Models\Pinterest;
 use App\Models\Post;
 use App\Models\Tiktok;
@@ -4077,7 +4077,7 @@ class ScheduleController extends Controller
             $allPosts = array_merge($allPosts, $posts);
         }
 
-        // Posts published via the app but not yet present in PagePost / Graph cache: show from DB with zeroed metrics.
+        // Posts published via the app but not yet present in facebook_posts / Graph cache: show from DB with zeroed metrics.
         $sinceStart = Carbon::parse($since)->startOfDay();
         $untilEnd = Carbon::parse($until)->endOfDay();
         $pageIds = $pages->pluck('id')->all();
@@ -4724,13 +4724,32 @@ class ScheduleController extends Controller
             return null;
         }
 
-        $stored = PagePost::where('page_id', $page->id)
-            ->where('since', $since)
-            ->where('until', $until)
-            ->first();
+        $stored = FacebookPost::query()
+            ->where('fb_page_id', $page->page_id)
+            ->whereBetween('post_created_date', [$since.' 00:00:00', $until.' 23:59:59'])
+            ->orderByDesc('post_created_date')
+            ->get();
 
-        if ($stored && $stored->posts !== null) {
-            return $stored->posts;
+        if ($stored->isNotEmpty()) {
+            return $stored->map(function (FacebookPost $row) {
+                $post = is_array($row->post_data) ? $row->post_data : [];
+                $insights = is_array($row->post_insights) ? $row->post_insights : [];
+
+                if (! isset($post['insights']) || ! is_array($post['insights'])) {
+                    $post['insights'] = $insights;
+                }
+
+                $post['post_id'] = $post['post_id'] ?? $row->fb_post_id;
+                $post['id'] = $post['id'] ?? $row->fb_post_id;
+                $post['created_time'] = $post['created_time'] ?? $row->post_created_date;
+                $post['permalink_url'] = $post['permalink_url'] ?? $row->permalink_url;
+                $post['status_type'] = $post['status_type'] ?? $row->status_type;
+                $post['type'] = $post['type'] ?? $row->post_type;
+                $post['shares'] = $post['shares'] ?? $row->shares_count;
+                $post['comments'] = $post['comments'] ?? $row->comments_count;
+
+                return $post;
+            })->values()->all();
         }
 
         $tokenCheck = FacebookService::validateToken($page);
@@ -4742,19 +4761,6 @@ class ScheduleController extends Controller
         $facebookService = new FacebookService;
         $insightsPreset = $duration === 'full_year' ? 'sent_tab' : 'default';
         $posts = $facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until, $insightsPreset);
-
-        PagePost::updateOrCreate(
-            [
-                'page_id' => $page->id,
-                'since' => $since,
-                'until' => $until,
-            ],
-            [
-                'duration' => $duration,
-                'posts' => $posts,
-                'synced_at' => now(),
-            ]
-        );
 
         return $posts;
     }
@@ -4943,17 +4949,10 @@ class ScheduleController extends Controller
             return;
         }
 
-        $rows = PagePost::where('page_id', $page->id)->get();
-        foreach ($rows as $row) {
-            $posts = is_array($row->posts) ? $row->posts : [];
-            $filtered = array_values(array_filter($posts, function ($p) use ($externalPostId) {
-                return (string) ($p['id'] ?? '') !== $externalPostId;
-            }));
-            if (count($filtered) !== count($posts)) {
-                $row->posts = $filtered;
-                $row->save();
-            }
-        }
+        FacebookPost::query()
+            ->where('fb_page_id', $page->page_id)
+            ->where('fb_post_id', $externalPostId)
+            ->delete();
 
         $userId = (int) Auth::id();
         $duration = 'full_year';

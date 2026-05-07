@@ -3,9 +3,9 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\FacebookPost;
 use App\Models\Page;
 use App\Models\PageInsight;
-use App\Models\PagePost;
 use App\Models\Thread;
 use App\Models\ThreadInsight;
 use App\Models\ThreadPost;
@@ -260,14 +260,36 @@ class AnalyticsController extends Controller
             return $cachedPosts;
         }
 
-        $stored = PagePost::where('page_id', $page->id)
-            ->where('since', $since)
-            ->where('until', $until)
-            ->first();
+        $stored = FacebookPost::query()
+            ->where('fb_page_id', $page->page_id)
+            ->whereBetween('post_created_date', [$since.' 00:00:00', $until.' 23:59:59'])
+            ->orderByDesc('post_created_date')
+            ->get();
 
-        if ($stored && $stored->posts !== null) {
-            Cache::put($cacheKey, $stored->posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-            return $stored->posts;
+        if ($stored->isNotEmpty()) {
+            $storedPosts = $stored->map(function (FacebookPost $row) {
+                $post = is_array($row->post_data) ? $row->post_data : [];
+                $insights = is_array($row->post_insights) ? $row->post_insights : [];
+
+                if (! isset($post['insights']) || ! is_array($post['insights'])) {
+                    $post['insights'] = $insights;
+                }
+
+                $post['post_id'] = $post['post_id'] ?? $row->fb_post_id;
+                $post['id'] = $post['id'] ?? $row->fb_post_id;
+                $post['created_time'] = $post['created_time'] ?? $row->post_created_date;
+                $post['permalink_url'] = $post['permalink_url'] ?? $row->permalink_url;
+                $post['status_type'] = $post['status_type'] ?? $row->status_type;
+                $post['type'] = $post['type'] ?? $row->post_type;
+                $post['shares'] = $post['shares'] ?? $row->shares_count;
+                $post['comments'] = $post['comments'] ?? $row->comments_count;
+
+                return $post;
+            })->values()->all();
+
+            Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+
+            return $storedPosts;
         }
 
         $tokenCheck = FacebookService::validateToken($page);
@@ -278,19 +300,6 @@ class AnalyticsController extends Controller
         $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
         $insightsPreset = $duration === 'full_year' ? 'sent_tab' : 'default';
         $posts = $this->facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until, $insightsPreset);
-
-        PagePost::updateOrCreate(
-            [
-                'page_id' => $page->id,
-                'since' => $since,
-                'until' => $until,
-            ],
-            [
-                'duration' => $duration,
-                'posts' => $posts,
-                'synced_at' => now(),
-            ]
-        );
 
         Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
 
