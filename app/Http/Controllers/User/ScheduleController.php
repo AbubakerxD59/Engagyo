@@ -4024,7 +4024,6 @@ class ScheduleController extends Controller
         }
         if ($posts === null) {
             $posts = $this->fetchPagePostsFromStore($page, $since, $until);
-            dd($posts);
             if ($posts !== null) {
                 try {
                     Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
@@ -4779,6 +4778,7 @@ class ScheduleController extends Controller
             ->whereBetween('post_created_date', [$since . ' 00:00:00', $until . ' 23:59:59'])
             ->orderByDesc('post_created_date')
             ->get();
+        dd($stored);
 
         if ($stored->isNotEmpty()) {
             return $stored->map(function (FacebookPost $row) {
