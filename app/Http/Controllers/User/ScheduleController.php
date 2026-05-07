@@ -4778,7 +4778,6 @@ class ScheduleController extends Controller
             ->whereBetween('post_created_date', [$since . ' 00:00:00', $until . ' 23:59:59'])
             ->orderByDesc('post_created_date')
             ->get();
-        dd($stored);
 
         if ($stored->isNotEmpty()) {
             return $stored->map(function (FacebookPost $row) {
