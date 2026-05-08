@@ -5717,7 +5717,7 @@
 
     @media (max-width: 576px) {
         .accounts-sidebar {
-            width: 180px;
+            width: 14rem;
         }
 
         .accounts-sidebar.collapsed .account-card {
