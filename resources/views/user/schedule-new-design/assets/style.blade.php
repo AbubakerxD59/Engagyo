@@ -2454,6 +2454,7 @@
     }
 
     .queue-settings-modal-redesign .queue-settings-platform-badge {
+        background: #0A66C2;
         position: absolute;
         bottom: -2px;
         right: -2px;
