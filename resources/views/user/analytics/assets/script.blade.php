@@ -22,6 +22,7 @@
             var analyticsPostsHasMore = false;
             var analyticsPostsLoadingMore = false;
             var analyticsPostsScrollBindVersion = 0;
+            var currentPostsTotal = 0;
 
             function formatInUserTimezone(date, options) {
                 if (!date || isNaN(date.getTime())) return '';
@@ -298,11 +299,12 @@
                 return null;
             }
 
-            function renderPostsList(posts, since, until, searchQuery, sortBy, sortOrder, platform) {
+            function renderPostsList(posts, since, until, searchQuery, sortBy, sortOrder, platform, totalPosts) {
                 platform = platform || currentPlatform || 'facebook';
                 searchQuery = (searchQuery || '').trim().toLowerCase();
                 sortBy = sortBy || 'created_time';
                 sortOrder = sortOrder || 'desc';
+                totalPosts = Number(totalPosts || 0);
                 if (posts === null) {
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
                         '<i class="fas fa-th-large fa-4x text-muted mb-3"></i>' +
@@ -369,8 +371,8 @@
                 var html = '<div class="analytics-posts-tab-content">' +
                     '<div class="analytics-posts-header mb-3">' +
                     '<div class="analytics-posts-header-left">' +
-                    '<div class="analytics-posts-title mb-2"><i class="fas fa-newspaper mr-2"></i>POSTS (' + filtered.length + (
-                        searchQuery ? ' of ' + posts.length + ')' : ')') + '</div>' +
+                    '<div class="analytics-posts-title mb-2"><i class="fas fa-newspaper mr-2"></i>POSTS (' + totalPosts +
+                    (searchQuery ? ', filtered ' + filtered.length : '') + ')</div>' +
                     searchBar + '</div>' +
                     '<div class="analytics-posts-header-right">' + sortDropdown + '</div></div>' +
                     '<div class="analytics-posts-list">';
@@ -482,7 +484,7 @@
                     overviewContent += renderEngagementsChart(insights, comp);
                     overviewContent += '</div>';
                 }
-                var postsContent = renderPostsList(pagePosts, since, until, currentPostsSearchQuery, currentPostsSortBy, currentPostsSortOrder, platform);
+                var postsContent = renderPostsList(pagePosts, since, until, currentPostsSearchQuery, currentPostsSortBy, currentPostsSortOrder, platform, currentPostsTotal);
                 var durationDropdown = renderDurationDropdown(duration, since, until);
                 return '<div class="analytics-tabs-row d-flex flex-wrap align-items-center justify-content-between mb-3">' +
                     '<ul class="nav nav-tabs analytics-insight-tabs mb-0" role="tablist">' +
@@ -554,9 +556,11 @@
                             } else {
                                 analyticsPostsHasMore = false;
                             }
+                            currentPostsTotal = 0;
                             return;
                         }
                         var incomingPosts = Array.isArray(res.pagePosts) ? res.pagePosts : [];
+                        currentPostsTotal = Number(res.pagePostsTotal || 0);
                         var mergedPosts;
                         if (isLoadMoreRequest && Array.isArray(window.currentPagePosts)) {
                             mergedPosts = window.currentPagePosts.concat(incomingPosts);
@@ -653,7 +657,7 @@
                 if (posts === null || !Array.isArray(posts)) return;
                 var query = $('#analyticsPostsSearch').length ? $('#analyticsPostsSearch').val().trim() : currentPostsSearchQuery;
                 currentPostsSearchQuery = query;
-                var postsContent = renderPostsList(posts, currentSince, currentUntil, query, currentPostsSortBy, currentPostsSortOrder, currentPlatform);
+                var postsContent = renderPostsList(posts, currentSince, currentUntil, query, currentPostsSortBy, currentPostsSortOrder, currentPlatform, currentPostsTotal);
                 $('#analyticsPostsTab').html(postsContent);
                 bindPostsSearchHandler();
                 bindPostsSortHandler();
