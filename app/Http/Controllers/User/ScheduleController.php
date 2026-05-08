@@ -4664,6 +4664,53 @@ class ScheduleController extends Controller
     }
 
     /**
+     * LinkedIn Sent tab: published schedule posts for selected accounts.
+     */
+    public function getLinkedInSentPosts(Request $request)
+    {
+        $viewer = Auth::guard('user')->user();
+        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::guard('user')->id()];
+        $accountIds = (array) $request->input('account_id', []);
+        if (empty($accountIds)) {
+            return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
+        }
+
+        $ownerId = (int) ($viewer instanceof User ? ($viewer->getEffectiveUser()?->id ?? $viewer->id) : Auth::guard('user')->id());
+        $accounts = Linkedin::query()
+            ->whereIn('id', $accountIds)
+            ->where('user_id', $ownerId)
+            ->get();
+        if ($accounts->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No LinkedIn accounts found', 'posts' => []]);
+        }
+
+        $accountIds = $accounts->pluck('id')->all();
+        $accountsById = $accounts->keyBy('id');
+
+        $dbPosts = Post::withoutGlobalScopes()
+            ->whereIn('user_id', $postCreatorIds)
+            ->where('social_type', 'like', '%linkedin%')
+            ->whereIn('account_id', $accountIds)
+            ->where('status', 1)
+            ->whereNotNull('published_at')
+            ->where('source', 'schedule')
+            ->with('user', 'linkedin')
+            ->orderByDesc('published_at')
+            ->get();
+
+        $allPosts = [];
+        foreach ($dbPosts as $dbPost) {
+            $account = $accountsById->get($dbPost->account_id) ?? $dbPost->linkedin;
+            if (! $account instanceof Linkedin) {
+                continue;
+            }
+            $allPosts[] = $this->sentTabPostFromLinkedInRecord($dbPost, $account);
+        }
+
+        return response()->json(['success' => true, 'posts' => $allPosts]);
+    }
+
+    /**
      * Minimal Sent-tab payload from a published Instagram Post row (same keys as Pinterest / Facebook sent cards).
      */
     private function sentTabPostFromInstagramRecord(Post $dbPost, InstagramAccount $account): array
@@ -4780,6 +4827,63 @@ class ScheduleController extends Controller
 
         if ($videoUrl !== null) {
             $payload['video_url'] = $videoUrl;
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Minimal Sent-tab payload from a published LinkedIn Post row.
+     */
+    private function sentTabPostFromLinkedInRecord(Post $dbPost, Linkedin $account): array
+    {
+        $published = Carbon::parse($dbPost->published_at);
+        $createdTime = $published->toIso8601String();
+
+        $fullPicture = '';
+        $rawImage = $dbPost->getAttributes()['image'] ?? null;
+        if (! empty($rawImage)) {
+            $img = (string) $rawImage;
+            if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                $fullPicture = $img;
+            } else {
+                $fullPicture = url(getImage('', $img));
+            }
+        }
+
+        $videoUrl = $this->postStoredVideoUrl($dbPost);
+        $username = ltrim((string) ($account->username ?? ''), '@');
+        $permalink = $username !== ''
+            ? 'https://www.linkedin.com/in/' . rawurlencode($username)
+            : null;
+
+        $payload = [
+            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-' . $dbPost->id),
+            'created_time' => $createdTime,
+            'message' => (string) ($dbPost->title ?? ''),
+            'story' => '',
+            'type' => (string) ($dbPost->getAttributes()['type'] ?? $dbPost->type ?? ''),
+            'full_picture' => $fullPicture,
+            'permalink_url' => $permalink,
+            'account_name' => $username !== '' ? '@' . $username : 'LinkedIn',
+            'account_profile' => (string) ($account->profile_image ?? ''),
+            'social_type' => 'linkedin',
+            'page_db_id' => $account->id,
+            'db_post_id' => $dbPost->id,
+            'insights' => [
+                'post_reactions' => 0,
+                'post_impressions' => 0,
+                'post_clicks' => 0,
+            ],
+            'comments' => 0,
+            'shares' => 0,
+            'from_local_db' => true,
+            'video_url' => $videoUrl,
+        ];
+
+        if ($dbPost->user) {
+            $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
+            $payload['publisher_email'] = $dbPost->user->email ?? '';
         }
 
         return $payload;

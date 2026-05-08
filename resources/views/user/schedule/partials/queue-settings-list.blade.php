@@ -18,6 +18,10 @@
                     <img class="queue-settings-avatar" src="{{ $account->profile_image }}"
                         onerror="this.onerror=null; this.src='{{ social_logo('threads') }}';" alt="" loading="lazy">
                     <span class="queue-settings-platform-badge queue-settings-badge-threads"><img src="{{ social_logo('threads') }}" alt="Threads" style="width:12px;height:12px;object-fit:contain;"></span>
+                @elseif($account->type == 'linkedin')
+                    <img class="queue-settings-avatar" src="{{ $account->profile_image }}"
+                        onerror="this.onerror=null; this.src='{{ social_logo('linkedin') }}';" alt="" loading="lazy">
+                    <span class="queue-settings-platform-badge queue-settings-badge-linkedin"><i class="fab fa-linkedin-in"></i></span>
                 @endif
             </div>
             <div class="queue-settings-account-info">
@@ -31,6 +35,8 @@
                         {{ $account->username ?? $account->display_name ?? 'TikTok' }}
                     @elseif($account->type == 'threads')
                         {{ $account->username ? '@' . $account->username : 'Threads' }}
+                    @elseif($account->type == 'linkedin')
+                        {{ $account->username ? '@' . $account->username : 'LinkedIn' }}
                     @else
                         {{ ucfirst($account->type) }}
                     @endif

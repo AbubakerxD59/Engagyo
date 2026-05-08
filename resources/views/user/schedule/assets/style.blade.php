@@ -1343,6 +1343,14 @@
         background: #010101;
     }
 
+    .queue-settings-modal-redesign .queue-settings-badge-threads {
+        background: #010101;
+    }
+
+    .queue-settings-modal-redesign .queue-settings-badge-linkedin {
+        background: #0A66C2;
+    }
+
     .queue-settings-modal-redesign .queue-settings-badge-instagram {
         background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
     }
