@@ -52,6 +52,11 @@ class Linkedin extends Model
         $query->where('schedule_status', 'active');
     }
 
+    public function timeslots()
+    {
+        return $this->hasMany(Timeslot::class, 'account_id', 'id')->where('account_type', 'linkedin');
+    }
+
     protected function profileImage(): Attribute
     {
         return Attribute::make(
