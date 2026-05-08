@@ -125,6 +125,10 @@
         background: #000000;
     }
 
+    .platform-badge.linkedin {
+        background: #0A66C2;
+    }
+
     .account-details {
         display: flex;
         flex-direction: column;

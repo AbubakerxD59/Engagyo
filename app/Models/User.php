@@ -263,8 +263,9 @@ class User extends Authenticatable
         $tiktoks = Tiktok::with('timeslots')->orderBy('username')->get();
         $instagram = $this->instagramAccountsForSchedule(false);
         $threads = Thread::with('timeslots')->where('user_id', $this->id)->orderBy('username')->get();
+        $linkedins = Linkedin::with('timeslots')->where('user_id', $this->id)->orderBy('username')->get();
 
-        return $pages->concat($boards)->concat($tiktoks)->concat($instagram)->concat($threads);
+        return $pages->concat($boards)->concat($tiktoks)->concat($instagram)->concat($threads)->concat($linkedins);
     }
 
     /**
@@ -357,8 +358,9 @@ class User extends Authenticatable
         $tiktoks = Tiktok::with('timeslots')->whereScheduledActive()->get();
         $instagram = $this->instagramAccountsForSchedule(true);
         $threads = Thread::with('timeslots')->whereScheduledActive()->get();
+        $linkedins = Linkedin::with('timeslots')->whereScheduledActive()->get();
 
-        return $boards->concat($pages)->concat($tiktoks)->concat($instagram)->concat($threads);
+        return $boards->concat($pages)->concat($tiktoks)->concat($instagram)->concat($threads)->concat($linkedins);
     }
 
     /**
@@ -412,6 +414,16 @@ class User extends Authenticatable
                         ->first();
                     if ($thread) {
                         $accounts->push($thread);
+                    }
+                } elseif ($type === 'linkedin') {
+                    $ownerId = (int) ($this->getEffectiveUser()?->id ?? $this->id);
+                    $linkedin = Linkedin::query()
+                        ->with('timeslots')
+                        ->where('id', $id)
+                        ->where('user_id', $ownerId)
+                        ->first();
+                    if ($linkedin) {
+                        $accounts->push($linkedin);
                     }
                 }
             }

@@ -8,6 +8,7 @@ use App\Jobs\DeleteFacebookPostJob;
 use App\Jobs\DeleteSentPostJob;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishInstagramPost;
+use App\Jobs\PublishLinkedInPost;
 use App\Jobs\PublishPinterestPost;
 use App\Jobs\PublishThreadsPost;
 use App\Jobs\PublishTikTokPost;
@@ -15,6 +16,7 @@ use App\Models\Board;
 use App\Models\Facebook;
 use App\Models\FacebookPost;
 use App\Models\InstagramAccount;
+use App\Models\Linkedin;
 use App\Models\Notification;
 use App\Models\Page;
 use App\Models\Pinterest;
@@ -691,8 +693,9 @@ class ScheduleController extends Controller
         $tiktok = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'tiktok'));
         $instagram = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'instagram'));
         $threads = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'threads'));
+        $linkedin = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'linkedin'));
 
-        return $facebook->concat($pinterest)->concat($tiktok)->concat($instagram)->concat($threads);
+        return $facebook->concat($pinterest)->concat($tiktok)->concat($instagram)->concat($threads)->concat($linkedin);
     }
 
     /**
@@ -1264,7 +1267,7 @@ class ScheduleController extends Controller
 
             return count($this->instagramContentFormatsFromRequest($request, $stub));
         }
-        if ($account->type === 'facebook' || $account->type === 'pinterest' || $account->type === 'tiktok') {
+        if ($account->type === 'facebook' || $account->type === 'pinterest' || $account->type === 'tiktok' || $account->type === 'linkedin') {
             return 1;
         }
 
@@ -1416,6 +1419,36 @@ class ScheduleController extends Controller
                 }
                 $this->logService->logQueuedPost('instagram', $created['post']->id, ['type' => $created['plan']['type'], 'publish_date' => $nextTime]);
             }
+
+            return;
+        }
+
+        if ($account->type === 'linkedin') {
+            Linkedin::where('id', $account->id)->firstOrFail();
+            $nextTime = (new Post)->nextScheduleTime(
+                ['account_id' => $account->id, 'social_type' => 'linkedin', 'source' => 'schedule'],
+                $account->timeslots,
+                $user
+            );
+            $type = ! empty($image) ? 'photo' : 'video';
+            $data = [
+                'user_id' => $user->id,
+                'account_id' => $account->id,
+                'social_type' => 'linkedin',
+                'type' => $type,
+                'source' => $this->source,
+                'title' => $content,
+                'comment' => $comment,
+                'image' => $image,
+                'video' => $video,
+                'status' => 0,
+                'publish_date' => $nextTime,
+            ];
+            $post = PostService::create($data);
+            if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+            }
+            $this->logService->logQueuedPost('linkedin', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
 
             return;
         }
@@ -1742,6 +1775,8 @@ class ScheduleController extends Controller
                     $totalPostsToCreate++;
                 } elseif ($account->type === 'instagram' && $file) {
                     $totalPostsToCreate += count($this->instagramContentFormatsFromRequest($request, $upload));
+                } elseif ($account->type === 'linkedin') {
+                    $totalPostsToCreate++;
                 }
             }
 
@@ -2014,6 +2049,28 @@ class ScheduleController extends Controller
                     $post = $created['post'];
                     $this->logService->logPost('threads', (string) ($created['plan']['type'] ?? 'content_only'), $post->id, ['action' => 'publish'], 'pending');
                     PublishThreadsPost::dispatch($post->id);
+                }
+                if ($account->type === 'linkedin') {
+                    $type = $file ? (! empty($image) ? 'photo' : 'video') : 'content_only';
+                    $data = [
+                        'user_id' => $user->id,
+                        'account_id' => $account->id,
+                        'social_type' => 'linkedin',
+                        'type' => $type,
+                        'source' => $this->source,
+                        'title' => $content,
+                        'comment' => $comment,
+                        'image' => $image,
+                        'video' => $video,
+                        'status' => 0,
+                        'publish_date' => $publishDateNow,
+                    ];
+                    $post = PostService::create($data);
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
+                    $this->logService->logPost('linkedin', $type, $post->id, ['action' => 'publish'], 'pending');
+                    PublishLinkedInPost::dispatch($post->id);
                 }
             }
             $response = [
@@ -2319,6 +2376,8 @@ class ScheduleController extends Controller
                         $postsToCreate++;
                     } elseif ($account->type === 'instagram' && $file) {
                         $postsToCreate += count($this->instagramContentFormatsFromRequest($request, $upload));
+                    } elseif ($account->type === 'linkedin') {
+                        $postsToCreate++;
                     }
                 }
             }
@@ -2462,6 +2521,33 @@ class ScheduleController extends Controller
                         }
                         $this->logService->logQueuedPost('threads', $created['post']->id, ['type' => $created['plan']['type'] ?? 'content_only', 'publish_date' => $nextTime]);
                     }
+                    if ($account->type === 'linkedin') {
+                        Linkedin::where('id', $account->id)->firstOrFail();
+                        $nextTime = (new Post)->nextScheduleTime(
+                            ['account_id' => $account->id, 'social_type' => 'linkedin', 'source' => 'schedule'],
+                            $account->timeslots,
+                            $user
+                        );
+                        $type = $file ? (! empty($image) ? 'photo' : 'video') : 'content_only';
+                        $data = [
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'linkedin',
+                            'type' => $type,
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'image' => $image,
+                            'video' => $video,
+                            'status' => 0,
+                            'publish_date' => $nextTime,
+                        ];
+                        $post = PostService::create($data);
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        }
+                        $this->logService->logQueuedPost('linkedin', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
+                    }
                     $response = [
                         'success' => true,
                         'message' => 'Your posts are queued for Later!',
@@ -2512,6 +2598,8 @@ class ScheduleController extends Controller
                     $postsToCreate++;
                 } elseif ($account->type === 'instagram' && $file) {
                     $postsToCreate += count($this->instagramContentFormatsFromRequest($request, $upload));
+                } elseif ($account->type === 'linkedin') {
+                    $postsToCreate++;
                 }
             }
 
@@ -2640,6 +2728,29 @@ class ScheduleController extends Controller
                         return ['success' => false, 'message' => $created['error']];
                     }
                     $this->logService->logScheduledPost('threads', $created['post']->id, $scheduleDateTime, ['type' => $created['plan']['type'] ?? 'content_only']);
+                }
+                if ($account->type === 'linkedin') {
+                    Linkedin::where('id', $account->id)->firstOrFail();
+                    $type = $file ? (! empty($image) ? 'photo' : 'video') : 'content_only';
+                    $data = [
+                        'user_id' => $user->id,
+                        'account_id' => $account->id,
+                        'social_type' => 'linkedin',
+                        'type' => $type,
+                        'source' => $this->source,
+                        'title' => $content,
+                        'comment' => $comment,
+                        'image' => $image,
+                        'video' => $video,
+                        'status' => 0,
+                        'publish_date' => $scheduleDateTime,
+                        'scheduled' => 1,
+                    ];
+                    $post = PostService::create($data);
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
+                    $this->logService->logScheduledPost('linkedin', $post->id, $scheduleDateTime, ['type' => $type]);
                 }
                 $response = [
                     'success' => true,
@@ -2798,6 +2909,26 @@ class ScheduleController extends Controller
                         $postData = PostService::postTypeBody($post);
                         PublishTikTokPost::dispatch($post->id, $postData, $access_token, 'photo'); // Changed from "link" to "photo"
                     }
+                    if ($account->type === 'linkedin') {
+                        $data = [
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'linkedin',
+                            'type' => 'link',
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'url' => $url,
+                            'image' => $image,
+                            'status' => 0,
+                            'publish_date' => $publishDateNow,
+                        ];
+                        $post = PostService::create($data);
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        }
+                        PublishLinkedInPost::dispatch($post->id);
+                    }
                 }
                 $response = [
                     'success' => true,
@@ -2943,6 +3074,30 @@ class ScheduleController extends Controller
                                 }
                             }
                         }
+                        if ($account->type === 'linkedin') {
+                            $nextTime = (new Post)->nextScheduleTime(
+                                ['account_id' => $account->id, 'social_type' => 'linkedin', 'source' => 'schedule'],
+                                $account->timeslots,
+                                $user
+                            );
+                            $data = [
+                                'user_id' => $user->id,
+                                'account_id' => $account->id,
+                                'social_type' => 'linkedin',
+                                'type' => 'link',
+                                'source' => $this->source,
+                                'title' => $content,
+                                'comment' => $comment,
+                                'url' => $url,
+                                'image' => $image,
+                                'status' => 0,
+                                'publish_date' => $nextTime,
+                            ];
+                            $post = PostService::create($data);
+                            if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                                $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                            }
+                        }
                     }
                 }
                 $response = [
@@ -3077,6 +3232,25 @@ class ScheduleController extends Controller
                             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                             }
+                        }
+                    }
+                    if ($account->type === 'linkedin') {
+                        $data = [
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'linkedin',
+                            'type' => 'link',
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'url' => $url,
+                            'image' => $image,
+                            'status' => 0,
+                            'publish_date' => $scheduleDateTime,
+                        ];
+                        $post = PostService::create($data);
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                         }
                     }
                 }

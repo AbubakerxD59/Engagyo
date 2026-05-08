@@ -193,6 +193,36 @@
                                                         class="fas fa-check"></i></span>
                                             </label>
                                         </div>
+                                    @elseif ($type === 'linkedin')
+                                        @php
+                                            $username = $account->username ?? '';
+                                            $name = $account->name ?: ($username !== '' ? '@'.$username : 'LinkedIn');
+                                            $profileImg = $account->profile_image ?? '';
+                                            $tooltip = trim(($account->name ?? '').($username !== '' ? ' - '.$username : ''));
+                                            if ($tooltip === '') {
+                                                $tooltip = $name;
+                                            }
+                                        @endphp
+                                        <div class="channels-dropdown-item" data-id="{{ $account->id }}"
+                                            data-type="{{ $type }}"
+                                            data-name="{{ Str::lower($name.' '.$username) }}"
+                                            data-tooltip="{{ $tooltip }}">
+                                            <div class="channels-dropdown-item-avatar">
+                                                <img src="{{ $profileImg }}"
+                                                    onerror="this.onerror=null; this.src='{{ social_logo('linkedin') }}';"
+                                                    loading="lazy" alt="">
+                                                <span class="channels-dropdown-item-badge linkedin"><i
+                                                        class="fab fa-linkedin-in"></i></span>
+                                            </div>
+                                            <span class="channels-dropdown-item-name">{{ $name }}</span>
+                                            <label class="channels-dropdown-item-checkbox">
+                                                <input type="checkbox" class="channels-dropdown-checkbox"
+                                                    data-id="{{ $account->id }}" data-type="{{ $type }}"
+                                                    data-schedule-status="{{ $account->schedule_status ?? 'inactive' }}">
+                                                <span class="channels-dropdown-checkbox-icon"><i
+                                                        class="fas fa-check"></i></span>
+                                            </label>
+                                        </div>
                                     @endif
                                 @endforeach
                             </div>

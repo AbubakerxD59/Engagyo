@@ -172,6 +172,32 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    @elseif ($account->type == 'linkedin')
+                                        @php
+                                            $liProfile = $account->profile_image ?? '';
+                                            $liUsernameRaw = $account->username ?? '';
+                                            $liName = $account->name ?: ($liUsernameRaw !== '' ? '@'.$liUsernameRaw : 'LinkedIn');
+                                            $liUsernameLine = $liUsernameRaw !== ''
+                                                ? (str_starts_with($liUsernameRaw, '@') ? $liUsernameRaw : '@'.$liUsernameRaw)
+                                                : '';
+                                        @endphp
+                                        <div class="account-card {{ ($hasSelectedAccount && $selectedAccountId == (string) $account->id && ($saved['type'] ?? '') === 'linkedin') ? 'active' : (!$hasSelectedAccount ? 'active' : '') }}" data-type="linkedin"
+                                            data-id="{{ $account->id }}">
+                                            <div class="account-card-inner">
+                                                <div class="account-avatar">
+                                                    <img src="{{ $liProfile }}"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('linkedin') }}';"
+                                                        loading="lazy" alt="">
+                                                    <span class="platform-badge linkedin">
+                                                        <i class="fab fa-linkedin-in"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-details">
+                                                    <span class="account-name">{{ Str::limit($liName, 18) }}</span>
+                                                    <span class="account-username">{{ Str::limit($liUsernameLine, 15) }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     @endif
                                 @endforeach
                             </div>

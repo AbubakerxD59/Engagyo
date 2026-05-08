@@ -428,6 +428,10 @@
         background: #000;
     }
 
+    .platform-badge.linkedin {
+        background: #0A66C2;
+    }
+
     .account-details {
         display: flex;
         flex-direction: column;
@@ -677,6 +681,10 @@
 
     .selected-account-platform-badge.threads {
         background: #000;
+    }
+
+    .selected-account-platform-badge.linkedin {
+        background: #0A66C2;
     }
 
     .selected-account-text {
@@ -1338,6 +1346,10 @@
         background: #000;
     }
 
+    .queue-post-platform-badge.linkedin {
+        background: #0A66C2;
+    }
+
     .queue-post-format-badge {
         position: static;
         bottom: auto;
@@ -1899,6 +1911,10 @@
 
     .sent-card-platform-badge.threads {
         background: #000;
+    }
+
+    .sent-card-platform-badge.linkedin {
+        background: #0A66C2;
     }
 
     .sent-card-account-name {
@@ -4042,7 +4058,7 @@
     }
 
     #createPostModal .create-post-channels-real {
-        flex: 1;
+        /* flex: 1; */
         min-width: 0;
     }
 
@@ -4424,6 +4440,10 @@
 
     .channels-dropdown-item-badge.threads {
         background: #000;
+    }
+
+    .channels-dropdown-item-badge.linkedin {
+        background: #0A66C2;
     }
 
     .channels-dropdown-item-name {

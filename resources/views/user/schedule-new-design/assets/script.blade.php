@@ -314,11 +314,12 @@
                 } else {
                     $parentName.hide();
                 }
-                var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok instagram threads').addClass(type);
+                var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok instagram threads linkedin').addClass(type);
                 var headerIconClass = 'fab fa-facebook-f';
                 if (type === 'pinterest') headerIconClass = 'fab fa-pinterest-p';
                 else if (type === 'tiktok') headerIconClass = 'fab fa-tiktok';
                 else if (type === 'instagram') headerIconClass = 'fab fa-instagram';
+                else if (type === 'linkedin') headerIconClass = 'fab fa-linkedin-in';
                 if (type === 'threads') {
                     $badge.html('<img src="' + socialLogos.threads + '" alt="Threads" class="threads-circle-icon" width="100%">');
                 } else {
@@ -1051,7 +1052,8 @@
             pinterest: "{{ social_logo('pinterest') }}",
             tiktok: "{{ social_logo('tiktok') }}",
             instagram: "{{ social_logo('instagram') }}",
-            threads: "{{ social_logo('threads') }}"
+            threads: "{{ social_logo('threads') }}",
+            linkedin: "{{ social_logo('linkedin') }}"
         };
 
         function threadsCircleIconHtml(extraClass) {
@@ -1066,6 +1068,7 @@
             if (t.indexOf('tiktok') !== -1) return 'fab fa-tiktok';
             if (t.indexOf('instagram') !== -1) return 'fab fa-instagram';
             if (t.indexOf('threads') !== -1) return 'threads-circle-icon';
+            if (t.indexOf('linkedin') !== -1) return 'fab fa-linkedin-in';
             return 'fab fa-facebook-f';
         }
 
@@ -2163,8 +2166,8 @@
                 var un = $card.find('.account-username').text().trim();
                 tooltip = (nm + (un ? ' - ' + un : '')).trim();
             }
-            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon' };
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}", linkedin: "{{ social_logo('linkedin') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon', linkedin: 'fab fa-linkedin-in' };
             var type = p.type || 'facebook';
             var logo = socialLogos[type] || socialLogos.facebook;
             var icon = iconMap[type] || iconMap.facebook;

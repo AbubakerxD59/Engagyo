@@ -209,6 +209,27 @@
                                                     </div>
                                                 </div>
                                             </div>
+                                        @elseif($account->type == 'linkedin')
+                                            <div class="account-card has-tooltip @if ($account->schedule_status == 'active') active @endif"
+                                                data-type="{{ $account->type }}" data-id="{{ $account->id }}"
+                                                data-tooltip="{{ $account->username }}">
+                                                <div class="account-card-inner">
+                                                    <div class="account-avatar">
+                                                        <img src="{{ $account->profile_image }}"
+                                                            onerror="this.onerror=null; this.src='{{ social_logo('linkedin') }}';"
+                                                            loading="lazy">
+                                                        <span class="platform-badge linkedin">
+                                                            <i class="fab fa-linkedin-in"></i>
+                                                        </span>
+                                                    </div>
+                                                    <div class="account-details">
+                                                        <span
+                                                            class="account-name">{{ Str::limit($account->name ?: ($account->username ? '@'.$account->username : 'LinkedIn'), 18) }}</span>
+                                                        <span
+                                                            class="account-username">{{ Str::limit($account->username ? '@'.$account->username : '', 15) }}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         @endif
                                     @endforeach
                                 </div>
