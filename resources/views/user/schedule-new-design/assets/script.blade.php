@@ -2407,6 +2407,31 @@
             return false;
         }
 
+        function createPostHasOnlyLinkedInChannelsSelected() {
+            if (isQueueNewPostModalVisible()) {
+                var pair = getSidebarSingleAccountPairForQueueModal();
+                return !!(pair && pair.type === 'linkedin');
+            }
+            var checked = $('.channels-dropdown-checkbox:checked');
+            if (checked.length === 0) return false;
+            var onlyLinkedIn = true;
+            checked.each(function() {
+                if (($(this).data('type') || '') !== 'linkedin') {
+                    onlyLinkedIn = false;
+                    return false;
+                }
+            });
+            return onlyLinkedIn;
+        }
+
+        function shouldSendLinkedInContentFormats() {
+            var acc = getCreatePostSelectedAccounts();
+            for (var i = 0; i < acc.length; i++) {
+                if ((acc[i].type || '') === 'linkedin') return true;
+            }
+            return false;
+        }
+
         function getInstagramContentFormatsPayload() {
             var fmts = ['post'];
             if (createPostHasOnlyInstagramChannelsSelected()) {
@@ -2429,6 +2454,17 @@
             return JSON.stringify(fmts);
         }
 
+        function getLinkedInContentFormatsPayload() {
+            var fmts = ['post'];
+            if (createPostHasOnlyLinkedInChannelsSelected()) {
+                fmts = activeComposeModal$().find('input[name="create_post_linkedin_formats[]"]:checked').map(function() {
+                    return $(this).val();
+                }).get();
+                if (!fmts.length) fmts = ['post'];
+            }
+            return JSON.stringify(fmts);
+        }
+
         function createPostInstagramCarouselModeActive() {
             if (!createPostHasOnlyInstagramChannelsSelected()) return false;
             var hasCarousel = activeComposeModal$().find('input[name="create_post_instagram_formats[]"][value="carousel"]').is(':checked');
@@ -2439,6 +2475,17 @@
             if (!createPostHasOnlyThreadsChannelsSelected()) return false;
             var hasCarousel = activeComposeModal$().find('input[name="create_post_threads_formats[]"][value="carousel"]').is(':checked');
             return hasCarousel && createPostFiles.length >= 2;
+        }
+
+        function createPostLinkedInCarouselModeActive() {
+            if (!createPostHasOnlyLinkedInChannelsSelected()) return false;
+            var hasCarousel = activeComposeModal$().find('input[name="create_post_linkedin_formats[]"][value="carousel"]').is(':checked');
+            return hasCarousel && createPostFiles.length >= 2;
+        }
+
+        function createPostLinkedInDocumentModeActive() {
+            if (!createPostHasOnlyLinkedInChannelsSelected()) return false;
+            return activeComposeModal$().find('input[name="create_post_linkedin_formats[]"][value="document"]').is(':checked');
         }
 
         function createPostHasVideoInQueue() {
@@ -2483,6 +2530,7 @@
             }
             updateCreatePostInstagramFormatRow();
             updateCreatePostThreadsFormatRow();
+            updateCreatePostLinkedInFormatRow();
             updateCreatePostTextareasVisibility();
         }
 
@@ -2534,6 +2582,30 @@
             }
         }
 
+        function updateCreatePostLinkedInFormatRow() {
+            var show = createPostHasOnlyLinkedInChannelsSelected() && !is_link;
+            var $wrap = pm$('LinkedinFormatWrap');
+            var nFiles = createPostFiles.length;
+            var $carouselOpt = pm$('FormatLiCarousel').closest('.create-post-format-option');
+            if (show) {
+                $wrap.show();
+                if (nFiles >= 2) {
+                    $carouselOpt.show();
+                } else {
+                    $carouselOpt.hide();
+                    if (pm$('FormatLiCarousel').is(':checked')) {
+                        pm$('FormatLiCarousel').prop('checked', false);
+                        pm$('FormatLiPost').prop('checked', true);
+                    }
+                }
+            } else {
+                $wrap.hide();
+                $carouselOpt.show();
+                pm$('FormatLiPost').prop('checked', true);
+                pm$('FormatLiCarousel').add(pm$('FormatLiDocument')).prop('checked', false);
+            }
+        }
+
         function updateCreatePostTextareasVisibility() {
             var checkedCount;
             if (isQueueNewPostModalVisible()) {
@@ -2571,6 +2643,14 @@
 
             var thFormatVisible = pm$('ThreadsFormatWrap').is(':visible');
             if (thFormatVisible) {
+                pm$('CommentWrap').hide();
+                pm$('EditorTextarea').show();
+                pm$('EmojiBtn').show();
+                return;
+            }
+
+            var liFormatVisible = pm$('LinkedinFormatWrap').is(':visible');
+            if (liFormatVisible) {
                 pm$('CommentWrap').hide();
                 pm$('EditorTextarea').show();
                 pm$('EmojiBtn').show();
@@ -2645,6 +2725,19 @@
             updateCreatePostTextareasVisibility();
         });
 
+        $(document).on('change', 'input[name="create_post_linkedin_formats[]"]', function() {
+            var $cb = $(this);
+            var $modal = $cb.closest('.create-post-modal');
+            if ($cb.is(':checked')) {
+                $modal.find('input[name="create_post_linkedin_formats[]"]').not($cb).prop('checked', false);
+            }
+            var $checked = $modal.find('input[name="create_post_linkedin_formats[]"]:checked');
+            if ($checked.length === 0) {
+                $modal.find('input[name="create_post_linkedin_formats[]"][value="post"]').prop('checked', true);
+            }
+            updateCreatePostTextareasVisibility();
+        });
+
         function renderLastUsed() {
             var $container = $('#createPostLastUsed');
             $container.empty().hide();
@@ -2657,8 +2750,8 @@
             if (!$item.length) return;
             var type = $item.data('type') || accType;
             var src = acc.profile_image || $item.find('.channels-dropdown-item-avatar img').attr('src') || '';
-            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon' };
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}", linkedin: "{{ social_logo('linkedin') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon', linkedin: 'fab fa-linkedin-in' };
             var logo = socialLogos[type] || socialLogos.facebook;
             var icon = iconMap[type] || iconMap.facebook;
             var badgeIconHtml = icon === 'threads-circle-icon'
@@ -2772,8 +2865,8 @@
         function renderSelectedChannels() {
             var $container = $('#createPostSelectedChannels');
             $container.empty();
-            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon' };
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}", linkedin: "{{ social_logo('linkedin') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon', linkedin: 'fab fa-linkedin-in' };
             var chipHtmls = [];
             $('.channels-dropdown-checkbox:checked').each(function() {
                 var $item = $(this).closest('.channels-dropdown-item');
@@ -2968,6 +3061,8 @@
             $('#createPostFormatIgPost').prop('checked', true);
             $('#createPostModal').find('input[name="create_post_threads_formats[]"]').prop('checked', false);
             $('#createPostFormatThPost').prop('checked', true);
+            $('#createPostModal').find('input[name="create_post_linkedin_formats[]"]').prop('checked', false);
+            $('#createPostFormatLiPost').prop('checked', true);
             $('#createPostLinkPreview').empty();
             createPostFiles = [];
             createPostRevokeUrls();
@@ -2988,6 +3083,8 @@
             $('#queueNewPostFormatIgPost').prop('checked', true);
             $('#queueNewPostModal').find('input[name="create_post_threads_formats[]"]').prop('checked', false);
             $('#queueNewPostFormatThPost').prop('checked', true);
+            $('#queueNewPostModal').find('input[name="create_post_linkedin_formats[]"]').prop('checked', false);
+            $('#queueNewPostFormatLiPost').prop('checked', true);
             $('#queueNewPostUploadPreviews').empty();
             createPostUploadStates = {};
             $('#queueNewPostScheduleDropdown').removeClass('is-open');
@@ -3032,6 +3129,8 @@
             $('#queueNewPostFormatIgPost').prop('checked', true);
             $('#queueNewPostModal').find('input[name="create_post_threads_formats[]"]').prop('checked', false);
             $('#queueNewPostFormatThPost').prop('checked', true);
+            $('#queueNewPostModal').find('input[name="create_post_linkedin_formats[]"]').prop('checked', false);
+            $('#queueNewPostFormatLiPost').prop('checked', true);
             $('#queueNewPostLinkPreview').empty();
             createPostFiles = [];
             createPostRevokeUrls();
@@ -3878,6 +3977,11 @@
                 processCreatePostInstagramCarouselBatch();
                 return;
             }
+            if (createPostLinkedInCarouselModeActive()) {
+                if (!validateCreatePostTikTokSettings()) return;
+                processCreatePostInstagramCarouselBatch();
+                return;
+            }
             if (createPostChainPostsMode && action_name === 'queue') {
                 if (!validateCreatePostTikTokSettings()) return;
                 processCreatePostChainQueue();
@@ -3909,6 +4013,9 @@
             }
             if (shouldSendThreadsContentFormats()) {
                 formData.append('threads_content_formats', getThreadsContentFormatsPayload());
+            }
+            if (shouldSendLinkedInContentFormats()) {
+                formData.append('linkedin_content_formats', getLinkedInContentFormatsPayload());
             }
             var selectedAccounts = getCreatePostSelectedAccounts();
             if (selectedAccounts.length > 0) {
@@ -3983,9 +4090,15 @@
         function processCreatePostInstagramCarouselBatch() {
             if (!validateCreatePostTikTokSettings()) return;
             var isThreadsCarousel = createPostThreadsCarouselModeActive();
+            var isLinkedInCarousel = createPostLinkedInCarouselModeActive();
             if (isThreadsCarousel) {
                 if (createPostFiles.length < 2 || createPostFiles.length > 20) {
                     toastr.error('Threads carousel requires between 2 and 20 media files.');
+                    return;
+                }
+            } else if (isLinkedInCarousel) {
+                if (createPostFiles.length < 2 || createPostFiles.length > 20) {
+                    toastr.error('LinkedIn carousel requires between 2 and 20 media files.');
                     return;
                 }
             } else {
@@ -4011,6 +4124,9 @@
             if (isThreadsCarousel) {
                 formData.append("threads_content_format", "carousel");
                 formData.append("threads_content_formats", JSON.stringify(['carousel']));
+            } else if (isLinkedInCarousel) {
+                formData.append("linkedin_content_format", "carousel");
+                formData.append("linkedin_content_formats", JSON.stringify(['carousel']));
             } else {
                 formData.append("instagram_content_format", "carousel");
                 formData.append("instagram_content_formats", JSON.stringify(['carousel']));
@@ -4098,6 +4214,14 @@
                 formData.append('threads_content_formats', getThreadsContentFormatsPayload());
                 if (createPostThreadsCarouselModeActive()) {
                     formData.append('threads_content_format', 'carousel');
+                }
+            }
+            if (shouldSendLinkedInContentFormats()) {
+                formData.append('linkedin_content_formats', getLinkedInContentFormatsPayload());
+                if (createPostLinkedInCarouselModeActive()) {
+                    formData.append('linkedin_content_format', 'carousel');
+                } else if (createPostLinkedInDocumentModeActive()) {
+                    formData.append('linkedin_content_format', 'document');
                 }
             }
             var selectedAccounts = getCreatePostSelectedAccounts();

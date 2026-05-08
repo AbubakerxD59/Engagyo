@@ -136,6 +136,8 @@ class ScheduleController extends Controller
             'image' => null,
             'images' => [],
             'video' => null,
+            'document' => null,
+            'document_name' => null,
             'instagram_carousel_items' => [],
         ];
 
@@ -155,32 +157,52 @@ class ScheduleController extends Controller
                 }
             }
         }
+        $linkedinFormat = strtolower((string) $request->input('linkedin_content_format', ''));
+        if ($linkedinFormat === '') {
+            $linkedinRaw = $request->input('linkedin_content_formats');
+            if (is_string($linkedinRaw) && $linkedinRaw !== '') {
+                $decoded = json_decode($linkedinRaw, true);
+                if (is_array($decoded)) {
+                    $normalized = array_map(fn ($v) => strtolower((string) $v), $decoded);
+                    if (in_array('carousel', $normalized, true)) {
+                        $linkedinFormat = 'carousel';
+                    } elseif (in_array('document', $normalized, true)) {
+                        $linkedinFormat = 'document';
+                    }
+                }
+            }
+        }
         $files = is_array($raw) ? array_values(array_filter($raw)) : [$raw];
 
-        if ($igFormat === 'carousel' || $threadsFormat === 'carousel') {
+        if ($igFormat === 'carousel' || $threadsFormat === 'carousel' || $linkedinFormat === 'carousel') {
             if (count($files) < 2) {
                 return [
                     'error' => [
                         'success' => false,
-                        'message' => 'Instagram carousel requires at least 2 media files.',
+                        'message' => 'Carousel requires at least 2 media files.',
                     ],
                     'has_files' => false,
                     'image' => null,
                     'images' => [],
                     'video' => null,
+                    'document' => null,
+                    'document_name' => null,
                     'instagram_carousel_items' => [],
                 ];
             }
-            if (count($files) > 10) {
+            $maxCarousel = $threadsFormat === 'carousel' || $linkedinFormat === 'carousel' ? 20 : 10;
+            if (count($files) > $maxCarousel) {
                 return [
                     'error' => [
                         'success' => false,
-                        'message' => 'Instagram carousel allows at most 10 media files.',
+                        'message' => 'Carousel allows at most '.$maxCarousel.' media files.',
                     ],
                     'has_files' => false,
                     'image' => null,
                     'images' => [],
                     'video' => null,
+                    'document' => null,
+                    'document_name' => null,
                     'instagram_carousel_items' => [],
                 ];
             }
@@ -196,6 +218,8 @@ class ScheduleController extends Controller
                         'image' => null,
                         'images' => [],
                         'video' => null,
+                        'document' => null,
+                        'document_name' => null,
                         'instagram_carousel_items' => [],
                     ];
                 }
@@ -214,7 +238,40 @@ class ScheduleController extends Controller
                 'image' => null,
                 'images' => [],
                 'video' => null,
+                'document' => null,
+                'document_name' => null,
                 'instagram_carousel_items' => $items,
+            ];
+        }
+
+        if ($linkedinFormat === 'document') {
+            $file = $files[0] ?? null;
+            if (! $file instanceof UploadedFile || ! $file->isValid()) {
+                return $empty;
+            }
+            $ext = strtolower((string) ($file->getClientOriginalExtension() ?: ''));
+            if (! in_array($ext, ['pdf', 'doc', 'docx', 'ppt', 'pptx'], true)) {
+                return [
+                    'error' => ['success' => false, 'message' => 'LinkedIn document post requires a PDF, DOC, DOCX, PPT, or PPTX file.'],
+                    'has_files' => false,
+                    'image' => null,
+                    'images' => [],
+                    'video' => null,
+                    'document' => null,
+                    'document_name' => null,
+                    'instagram_carousel_items' => [],
+                ];
+            }
+
+            return [
+                'error' => null,
+                'has_files' => true,
+                'image' => null,
+                'images' => [],
+                'video' => null,
+                'document' => saveToS3($file),
+                'document_name' => (string) ($file->getClientOriginalName() ?: 'document.'.$ext),
+                'instagram_carousel_items' => [],
             ];
         }
 
@@ -229,6 +286,8 @@ class ScheduleController extends Controller
                 'image' => null,
                 'images' => [],
                 'video' => saveToS3($file),
+                'document' => null,
+                'document_name' => null,
                 'instagram_carousel_items' => [],
             ];
         }
@@ -240,6 +299,8 @@ class ScheduleController extends Controller
             'image' => $img,
             'images' => [$img],
             'video' => null,
+            'document' => null,
+            'document_name' => null,
             'instagram_carousel_items' => [],
         ];
     }
@@ -555,6 +616,99 @@ class ScheduleController extends Controller
         }
 
         return ['error' => null, 'post' => $post, 'plan' => $plan];
+    }
+
+    private function linkedinContentFormatFromRequest(Request $request): string
+    {
+        $formats = ['post'];
+        $raw = $request->input('linkedin_content_formats');
+        if (is_array($raw)) {
+            $formats = array_values(array_filter(array_map(fn ($v) => strtolower((string) $v), $raw)));
+        } elseif (is_string($raw) && $raw !== '') {
+            $decoded = json_decode($raw, true);
+            if (is_array($decoded)) {
+                $formats = array_values(array_filter(array_map(fn ($v) => strtolower((string) $v), $decoded)));
+            }
+        }
+        $single = strtolower((string) $request->input('linkedin_content_format', ''));
+        if ($single !== '' && ! in_array($single, $formats, true)) {
+            $formats[] = $single;
+        }
+        if ($formats === []) {
+            $formats = ['post'];
+        }
+        if (in_array('document', $formats, true)) {
+            return 'document';
+        }
+        if (in_array('carousel', $formats, true)) {
+            return 'carousel';
+        }
+
+        return 'post';
+    }
+
+    private function linkedinComposePlan(Request $request, array $upload): array
+    {
+        $format = $this->linkedinContentFormatFromRequest($request);
+        $plan = [
+            'type' => 'content_only',
+            'image' => null,
+            'video' => null,
+            'metadata' => null,
+        ];
+
+        if ($format === 'document') {
+            if (empty($upload['document'])) {
+                return ['success' => false, 'message' => 'LinkedIn document post requires a document file.'];
+            }
+            $plan['type'] = 'document';
+            $plan['metadata'] = json_encode([
+                'linkedin_document' => (string) $upload['document'],
+                'linkedin_document_name' => (string) ($upload['document_name'] ?? ''),
+            ]);
+
+            return ['success' => true] + $plan;
+        }
+
+        if ($format === 'carousel') {
+            $items = $upload['instagram_carousel_items'] ?? [];
+            if (! is_array($items) || count($items) < 2) {
+                return ['success' => false, 'message' => 'LinkedIn carousel requires at least 2 media files.'];
+            }
+            if (count($items) > 20) {
+                return ['success' => false, 'message' => 'LinkedIn carousel supports at most 20 media files.'];
+            }
+            $carousel = [];
+            foreach ($items as $item) {
+                if (! is_array($item) || empty($item['path'])) {
+                    continue;
+                }
+                if (($item['type'] ?? '') === 'video') {
+                    $carousel[] = ['video' => $item['path']];
+                } else {
+                    $carousel[] = ['image' => $item['path']];
+                }
+            }
+            if (count($carousel) < 2) {
+                return ['success' => false, 'message' => 'LinkedIn carousel requires at least 2 valid media files.'];
+            }
+            $plan['type'] = 'carousel';
+            $plan['metadata'] = json_encode(['linkedin_carousel' => $carousel]);
+
+            return ['success' => true] + $plan;
+        }
+
+        if (! empty($upload['video'])) {
+            $plan['type'] = 'video';
+            $plan['video'] = $upload['video'];
+        } elseif (! empty($upload['image'])) {
+            $plan['type'] = 'photo';
+            $plan['image'] = $upload['image'];
+        } elseif (! empty($upload['document'])) {
+            return ['success' => false, 'message' => 'Select LinkedIn Document post type for document uploads.'];
+        }
+
+        return ['success' => true] + $plan;
     }
 
     /**
@@ -1327,10 +1481,16 @@ class ScheduleController extends Controller
     {
         $ext = strtolower($file->getClientOriginalExtension() ?: '');
         $isVideo = in_array($ext, ['mp4', 'mkv', 'mov', 'mpeg', 'webm'], true);
+        $isDocument = in_array($ext, ['pdf', 'doc', 'docx', 'ppt', 'pptx'], true);
         $image = null;
         $video = null;
+        $document = null;
+        $documentName = null;
         if ($isVideo) {
             $video = saveToS3($file);
+        } elseif ($isDocument) {
+            $document = saveToS3($file);
+            $documentName = (string) ($file->getClientOriginalName() ?: 'document.'.$ext);
         } else {
             $image = saveImage($file);
         }
@@ -1479,7 +1639,18 @@ class ScheduleController extends Controller
                 $account->timeslots,
                 $user
             );
-            $type = ! empty($image) ? 'photo' : 'video';
+            $liUpload = [
+                'image' => $image,
+                'video' => $video,
+                'document' => $document,
+                'document_name' => $documentName,
+                'instagram_carousel_items' => [],
+            ];
+            $plan = $this->linkedinComposePlan($request, $liUpload);
+            if (! ($plan['success'] ?? false)) {
+                throw new Exception((string) ($plan['message'] ?? 'Invalid LinkedIn post format.'));
+            }
+            $type = (string) $plan['type'];
             $data = [
                 'user_id' => $user->id,
                 'account_id' => $account->id,
@@ -1488,11 +1659,14 @@ class ScheduleController extends Controller
                 'source' => $this->source,
                 'title' => $content,
                 'comment' => $comment,
-                'image' => $image,
-                'video' => $video,
+                'image' => $plan['image'],
+                'video' => $plan['video'],
                 'status' => 0,
                 'publish_date' => $nextTime,
             ];
+            if (! empty($plan['metadata'])) {
+                $data['metadata'] = $plan['metadata'];
+            }
             $post = PostService::create($data);
             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
@@ -2100,7 +2274,11 @@ class ScheduleController extends Controller
                     PublishThreadsPost::dispatch($post->id);
                 }
                 if ($account->type === 'linkedin') {
-                    $type = $file ? (! empty($image) ? 'photo' : 'video') : 'content_only';
+                    $plan = $this->linkedinComposePlan($request, $upload);
+                    if (! ($plan['success'] ?? false)) {
+                        return ['success' => false, 'message' => (string) ($plan['message'] ?? 'Invalid LinkedIn post format.')];
+                    }
+                    $type = (string) $plan['type'];
                     $data = [
                         'user_id' => $user->id,
                         'account_id' => $account->id,
@@ -2109,11 +2287,14 @@ class ScheduleController extends Controller
                         'source' => $this->source,
                         'title' => $content,
                         'comment' => $comment,
-                        'image' => $image,
-                        'video' => $video,
+                        'image' => $plan['image'],
+                        'video' => $plan['video'],
                         'status' => 0,
                         'publish_date' => $publishDateNow,
                     ];
+                    if (! empty($plan['metadata'])) {
+                        $data['metadata'] = $plan['metadata'];
+                    }
                     $post = PostService::create($data);
                     if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                         $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
@@ -2577,7 +2758,11 @@ class ScheduleController extends Controller
                             $account->timeslots,
                             $user
                         );
-                        $type = $file ? (! empty($image) ? 'photo' : 'video') : 'content_only';
+                        $plan = $this->linkedinComposePlan($request, $upload);
+                        if (! ($plan['success'] ?? false)) {
+                            return ['success' => false, 'message' => (string) ($plan['message'] ?? 'Invalid LinkedIn post format.')];
+                        }
+                        $type = (string) $plan['type'];
                         $data = [
                             'user_id' => $user->id,
                             'account_id' => $account->id,
@@ -2586,11 +2771,14 @@ class ScheduleController extends Controller
                             'source' => $this->source,
                             'title' => $content,
                             'comment' => $comment,
-                            'image' => $image,
-                            'video' => $video,
+                            'image' => $plan['image'],
+                            'video' => $plan['video'],
                             'status' => 0,
                             'publish_date' => $nextTime,
                         ];
+                        if (! empty($plan['metadata'])) {
+                            $data['metadata'] = $plan['metadata'];
+                        }
                         $post = PostService::create($data);
                         if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                             $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
@@ -2780,7 +2968,11 @@ class ScheduleController extends Controller
                 }
                 if ($account->type === 'linkedin') {
                     Linkedin::where('id', $account->id)->firstOrFail();
-                    $type = $file ? (! empty($image) ? 'photo' : 'video') : 'content_only';
+                    $plan = $this->linkedinComposePlan($request, $upload);
+                    if (! ($plan['success'] ?? false)) {
+                        return ['success' => false, 'message' => (string) ($plan['message'] ?? 'Invalid LinkedIn post format.')];
+                    }
+                    $type = (string) $plan['type'];
                     $data = [
                         'user_id' => $user->id,
                         'account_id' => $account->id,
@@ -2789,12 +2981,15 @@ class ScheduleController extends Controller
                         'source' => $this->source,
                         'title' => $content,
                         'comment' => $comment,
-                        'image' => $image,
-                        'video' => $video,
+                        'image' => $plan['image'],
+                        'video' => $plan['video'],
                         'status' => 0,
                         'publish_date' => $scheduleDateTime,
                         'scheduled' => 1,
                     ];
+                    if (! empty($plan['metadata'])) {
+                        $data['metadata'] = $plan['metadata'];
+                    }
                     $post = PostService::create($data);
                     if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                         $user->incrementFeatureUsage('scheduled_posts_per_account', 1);

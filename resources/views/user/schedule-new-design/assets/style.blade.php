@@ -4857,6 +4857,19 @@
         flex-shrink: 0;
     }
 
+    .create-post-linkedin-format-icon {
+        width: 25px;
+        height: 25px;
+        border-radius: 50%;
+        background: #0A66C2;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        color: #ffffff;
+        font-size: 14px;
+        flex-shrink: 0;
+    }
+
     .create-post-instagram-format-radios {
         flex-wrap: wrap;
         row-gap: 8px;

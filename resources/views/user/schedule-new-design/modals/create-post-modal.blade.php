@@ -364,13 +364,52 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="create-post-instagram-format-wrap create-post-facebook-format-wrap"
+                                id="createPostLinkedinFormatWrap" style="display: none;"
+                                role="group" aria-label="LinkedIn content format">
+                                <div class="create-post-facebook-format-bar">
+                                    <span class="create-post-linkedin-format-icon" aria-hidden="true"><i
+                                            class="fab fa-linkedin-in"></i></span>
+                                    <div class="create-post-instagram-format-radios create-post-facebook-format-radios">
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_linkedin_formats[]"
+                                                id="createPostFormatLiPost" value="post" checked>
+                                            <span>Post</span>
+                                        </label>
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_linkedin_formats[]"
+                                                id="createPostFormatLiCarousel" value="carousel">
+                                            <span>Carousel</span>
+                                        </label>
+                                        <label class="create-post-format-option">
+                                            <input type="checkbox" name="create_post_linkedin_formats[]"
+                                                id="createPostFormatLiDocument" value="document">
+                                            <span>Document</span>
+                                        </label>
+                                    </div>
+                                    <div class="create-post-format-help-wrap" id="createPostLinkedinFormatHelpWrap">
+                                        <button type="button" class="create-post-format-help-btn"
+                                            id="createPostLinkedinFormatHelpBtn">
+                                            <i class="far fa-question-circle"></i>
+                                        </button>
+                                        <div class="create-post-format-help-popover" role="tooltip"
+                                            aria-hidden="true">
+                                            <ul class="create-post-format-help-list">
+                                                <li><strong>Post</strong>: Publish one image or one video per post.</li>
+                                                <li><strong>Carousel</strong>: Publish multiple images/videos in one post.</li>
+                                                <li><strong>Document</strong>: Publish a single document file.</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                             <textarea class="create-post-editor-textarea" id="createPostEditorTextarea"
                                 placeholder="Paste your link or write something..."></textarea>
                         </div>
                         <div class="create-post-editor-bottom">
                             <div id="createPostLinkPreview" class="create-post-link-preview"></div>
                             <input type="file" id="createPostFileInput"
-                                accept="image/jpeg,image/jpg,image/png,image/bmp,image/gif,image/tiff,image/webp,video/mp4,video/x-matroska,video/quicktime,video/mpeg,video/webm"
+                                accept="image/jpeg,image/jpg,image/png,image/bmp,image/gif,image/tiff,image/webp,video/mp4,video/x-matroska,video/quicktime,video/mpeg,video/webm,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation"
                                 multiple hidden>
                             <div class="create-post-emoji-trigger-wrap">
                                 <button type="button" class="create-post-action-btn" id="createPostEmojiBtn"
