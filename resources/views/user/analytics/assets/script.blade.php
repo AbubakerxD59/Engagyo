@@ -21,6 +21,7 @@
             var analyticsPostsLimit = 10;
             var analyticsPostsHasMore = false;
             var analyticsPostsLoadingMore = false;
+            var analyticsPostsScrollBindVersion = 0;
 
             function formatInUserTimezone(date, options) {
                 if (!date || isNaN(date.getTime())) return '';
@@ -512,6 +513,7 @@
                 if (analyticsRequest && analyticsRequest.readyState !== 4) {
                     analyticsRequest.abort();
                 }
+                var isLoadMoreRequest = Number(postsOffset || 0) > 0;
                 currentAccountRef = accountRef || currentAccountRef;
                 currentDuration = duration || currentDuration;
                 currentSince = since || currentSince;
@@ -524,9 +526,11 @@
 
                 var wasPostsTabActive = $content.find('a[href="#analyticsPostsTab"]').hasClass('active');
 
-                $content.html(
-                    '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="mt-2 text-muted">Loading analytics...</p></div>'
-                );
+                if (!isLoadMoreRequest) {
+                    $content.html(
+                        '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i><p class="mt-2 text-muted">Loading analytics...</p></div>'
+                    );
+                }
                 var params = {
                     account_ref: currentAccountRef || '',
                     posts_offset: postsOffset,
@@ -545,35 +549,46 @@
                     })
                     .done(function(res) {
                         if (!res.success) {
-                            $content.html(renderEmptyState(!!currentAccountRef));
+                            if (!isLoadMoreRequest) {
+                                $content.html(renderEmptyState(!!currentAccountRef));
+                            } else {
+                                analyticsPostsHasMore = false;
+                            }
                             return;
                         }
+                        var incomingPosts = Array.isArray(res.pagePosts) ? res.pagePosts : [];
+                        var mergedPosts;
+                        if (isLoadMoreRequest && Array.isArray(window.currentPagePosts)) {
+                            mergedPosts = window.currentPagePosts.concat(incomingPosts);
+                        } else {
+                            mergedPosts = incomingPosts;
+                        }
+                        window.currentPagePosts = mergedPosts;
                         var html = '';
                         if (res.selectedPage) {
                             if (res.since) currentSince = res.since;
                             if (res.until) currentUntil = res.until;
                             currentPlatform = res.platform || currentPlatform;
                             html += renderPageInsights(res.pageInsights, res.selectedPage.name, currentDuration,
-                                currentSince, currentUntil, res.pagePosts, currentPlatform);
+                                currentSince, currentUntil, mergedPosts, currentPlatform);
                         } else {
                             html += renderEmptyState(!!currentAccountRef);
                         }
-                        $content.html(html);
-                        if (wasPostsTabActive) {
-                            $content.find('a[href="#analyticsOverviewTab"]').removeClass('active');
-                            $content.find('a[href="#analyticsPostsTab"]').addClass('active');
-                            $content.find('#analyticsOverviewTab').removeClass('show active');
-                            $content.find('#analyticsPostsTab').addClass('show active');
+                        if (!isLoadMoreRequest) {
+                            $content.html(html);
+                            if (wasPostsTabActive) {
+                                $content.find('a[href="#analyticsOverviewTab"]').removeClass('active');
+                                $content.find('a[href="#analyticsPostsTab"]').addClass('active');
+                                $content.find('#analyticsOverviewTab').removeClass('show active');
+                                $content.find('#analyticsPostsTab').addClass('show active');
+                            }
+                        } else {
+                            refreshPostsTab();
                         }
                         window.currentAnalyticsInsights = res.pageInsights || null;
-                        if (postsOffset > 0 && Array.isArray(window.currentPagePosts) && Array.isArray(res.pagePosts)) {
-                            window.currentPagePosts = window.currentPagePosts.concat(res.pagePosts);
-                        } else {
-                            window.currentPagePosts = res.pagePosts || null;
-                        }
                         currentPostsFetching = !!res.posts_fetching;
                         currentPostsFetchingMessage = res.posts_fetching_message || '';
-                        analyticsPostsOffset = Number(res.pagePostsNextOffset || (Array.isArray(window.currentPagePosts) ? window.currentPagePosts.length : 0));
+                        analyticsPostsOffset = Number(res.pagePostsNextOffset || (Array.isArray(mergedPosts) ? mergedPosts.length : 0));
                         analyticsPostsHasMore = !!res.pagePostsHasMore;
                         analyticsPostsLoadingMore = false;
                         bindDurationHandlers();
@@ -597,7 +612,9 @@
                     .fail(function(xhr, textStatus) {
                         if (textStatus === 'abort') return;
                         analyticsPostsLoadingMore = false;
-                        $content.html(renderEmptyState(!!currentAccountRef));
+                        if (!isLoadMoreRequest) {
+                            $content.html(renderEmptyState(!!currentAccountRef));
+                        }
                         if (typeof toastr !== 'undefined') toastr.error('Failed to load analytics.');
                     });
             }
@@ -669,13 +686,20 @@
             }
 
             function bindAnalyticsPostsInfiniteScroll() {
+                analyticsPostsScrollBindVersion += 1;
+                var bindVersion = analyticsPostsScrollBindVersion;
                 $(window).off('scroll.analyticsPostsLoadMore');
                 $(window).on('scroll.analyticsPostsLoadMore', function() {
                     var $postsTabLink = $content.find('a[href="#analyticsPostsTab"]');
                     if (!$postsTabLink.hasClass('active')) return;
+                    var $cards = $content.find('#analyticsPostsTab .analytics-post-card');
+                    if (!$cards.length) return;
+                    var triggerIndex = Math.max(0, $cards.length - 5);
+                    var $triggerCard = $cards.eq(triggerIndex);
+                    if (!$triggerCard.length) return;
                     var scrollBottom = $(window).scrollTop() + $(window).height();
-                    var triggerPoint = $(document).height() - 120;
-                    if (scrollBottom >= triggerPoint) {
+                    var triggerPoint = $triggerCard.offset().top + ($triggerCard.outerHeight() / 2);
+                    if (scrollBottom >= triggerPoint && bindVersion === analyticsPostsScrollBindVersion) {
                         loadMoreAnalyticsPosts();
                     }
                 });
