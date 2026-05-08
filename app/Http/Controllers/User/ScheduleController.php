@@ -763,6 +763,16 @@ class ScheduleController extends Controller
                         'profile_image' => $thread->profile_image ?? '',
                     ];
                 }
+            } elseif (str_contains($st, 'linkedin')) {
+                $linkedinRow = Linkedin::find($post->account_id);
+                if ($linkedinRow) {
+                    $account = [
+                        'id' => $linkedinRow->id,
+                        'type' => 'linkedin',
+                        'name' => $linkedinRow->username ? '@' . $linkedinRow->username : 'LinkedIn',
+                        'profile_image' => $linkedinRow->profile_image ?? '',
+                    ];
+                }
             }
         }
 
@@ -801,6 +811,13 @@ class ScheduleController extends Controller
                     'id' => $threadRow->id,
                     'type' => 'threads',
                     'schedule_status' => $threadRow->schedule_status ?? 'inactive',
+                ]);
+            });
+            $user->linkedin()->get(['id', 'schedule_status'])->each(function ($linkedinRow) use ($accountsStatus) {
+                $accountsStatus->push([
+                    'id' => $linkedinRow->id,
+                    'type' => 'linkedin',
+                    'schedule_status' => $linkedinRow->schedule_status ?? 'inactive',
                 ]);
             });
         }
@@ -854,6 +871,13 @@ class ScheduleController extends Controller
                 'id' => $threadRow->id,
                 'type' => 'threads',
                 'schedule_status' => $threadRow->schedule_status ?? 'inactive',
+            ]);
+        });
+        $user->linkedin()->get(['id', 'schedule_status'])->each(function ($linkedinRow) use ($accountsStatus) {
+            $accountsStatus->push([
+                'id' => $linkedinRow->id,
+                'type' => 'linkedin',
+                'schedule_status' => $linkedinRow->schedule_status ?? 'inactive',
             ]);
         });
 
@@ -911,6 +935,16 @@ class ScheduleController extends Controller
                         'type' => 'threads',
                         'name' => $thread->username ? '@' . $thread->username : 'Threads',
                         'profile_image' => $thread->profile_image ?? '',
+                    ];
+                }
+            } elseif (str_contains($st, 'linkedin')) {
+                $linkedinRow = Linkedin::find($post->account_id);
+                if ($linkedinRow) {
+                    $account = [
+                        'id' => $linkedinRow->id,
+                        'type' => 'linkedin',
+                        'name' => $linkedinRow->username ? '@' . $linkedinRow->username : 'LinkedIn',
+                        'profile_image' => $linkedinRow->profile_image ?? '',
                     ];
                 }
             }
@@ -1016,7 +1050,7 @@ class ScheduleController extends Controller
     public function saveSelectedAccount(Request $request)
     {
         $request->validate([
-            'type' => 'required|string|in:all,facebook,pinterest,tiktok,instagram,threads',
+            'type' => 'required|string|in:all,facebook,pinterest,tiktok,instagram,threads,linkedin',
             'id' => 'nullable|string',
         ]);
         $user = User::find(Auth::guard('user')->id());
@@ -1107,6 +1141,21 @@ class ScheduleController extends Controller
             if ($thread) {
                 $thread->schedule_status = $status == 1 ? 'active' : 'inactive';
                 $thread->save();
+                $response = [
+                    'success' => true,
+                    'message' => 'Status changed Successfully!',
+                ];
+            } else {
+                $response = [
+                    'success' => false,
+                    'message' => 'Something went Wrong!',
+                ];
+            }
+        } elseif ($type == 'linkedin') {
+            $linkedin = Linkedin::find($id);
+            if ($linkedin) {
+                $linkedin->schedule_status = $status == 1 ? 'active' : 'inactive';
+                $linkedin->save();
                 $response = [
                     'success' => true,
                     'message' => 'Status changed Successfully!',
@@ -3290,7 +3339,7 @@ class ScheduleController extends Controller
 
     public function getQueueSettings(Request $request)
     {
-        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'instagramAccounts', 'threads.timeslots')->find(Auth::guard('user')->id());
+        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'instagramAccounts', 'threads.timeslots', 'linkedin.timeslots')->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $view = view('user.schedule.partials.queue-settings-list', compact('accounts'));
 
@@ -3322,6 +3371,9 @@ class ScheduleController extends Controller
                 $account_id = $account->id;
             } elseif ($type == 'threads') {
                 $account = Thread::with('timeslots')->where('id', $id)->where('user_id', $user->id)->firstOrFail();
+                $account_id = $account->id;
+            } elseif ($type == 'linkedin') {
+                $account = Linkedin::with('timeslots')->where('id', $id)->where('user_id', $user->id)->firstOrFail();
                 $account_id = $account->id;
             }
             if ($account) {
@@ -3459,6 +3511,11 @@ class ScheduleController extends Controller
                     }
                 } elseif ($type == 'threads') {
                     $account = Thread::with('timeslots')->where('id', $id)->where('user_id', $user->id)->first();
+                    if ($account) {
+                        $accountId = $account->id;
+                    }
+                } elseif ($type == 'linkedin') {
+                    $account = Linkedin::with('timeslots')->where('id', $id)->where('user_id', $user->id)->first();
                     if ($account) {
                         $accountId = $account->id;
                     }
