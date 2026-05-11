@@ -163,7 +163,7 @@ class ScheduleController extends Controller
             if (is_string($linkedinRaw) && $linkedinRaw !== '') {
                 $decoded = json_decode($linkedinRaw, true);
                 if (is_array($decoded)) {
-                    $normalized = array_map(fn ($v) => strtolower((string) $v), $decoded);
+                    $normalized = array_map(fn($v) => strtolower((string) $v), $decoded);
                     if (in_array('carousel', $normalized, true)) {
                         $linkedinFormat = 'carousel';
                     } elseif (in_array('document', $normalized, true)) {
@@ -195,7 +195,7 @@ class ScheduleController extends Controller
                 return [
                     'error' => [
                         'success' => false,
-                        'message' => 'Carousel allows at most '.$maxCarousel.' media files.',
+                        'message' => 'Carousel allows at most ' . $maxCarousel . ' media files.',
                     ],
                     'has_files' => false,
                     'image' => null,
@@ -270,7 +270,7 @@ class ScheduleController extends Controller
                 'images' => [],
                 'video' => null,
                 'document' => saveToS3($file),
-                'document_name' => (string) ($file->getClientOriginalName() ?: 'document.'.$ext),
+                'document_name' => (string) ($file->getClientOriginalName() ?: 'document.' . $ext),
                 'instagram_carousel_items' => [],
             ];
         }
@@ -623,11 +623,11 @@ class ScheduleController extends Controller
         $formats = ['post'];
         $raw = $request->input('linkedin_content_formats');
         if (is_array($raw)) {
-            $formats = array_values(array_filter(array_map(fn ($v) => strtolower((string) $v), $raw)));
+            $formats = array_values(array_filter(array_map(fn($v) => strtolower((string) $v), $raw)));
         } elseif (is_string($raw) && $raw !== '') {
             $decoded = json_decode($raw, true);
             if (is_array($decoded)) {
-                $formats = array_values(array_filter(array_map(fn ($v) => strtolower((string) $v), $decoded)));
+                $formats = array_values(array_filter(array_map(fn($v) => strtolower((string) $v), $decoded)));
             }
         }
         $single = strtolower((string) $request->input('linkedin_content_format', ''));
@@ -781,14 +781,6 @@ class ScheduleController extends Controller
             'remaining' => $limit - $totalAfterAdding,
         ];
     }
-    // old design code
-    // public function index()
-    // {
-    //     $user = User::with("boards.pinterest", "pages.facebook", "tiktok", "timezone")->find(Auth::guard('user')->id());
-    //     $accounts = $user->getAccounts();
-    //     $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
-    //     return view("user.schedule.index", compact("accounts", "userTimezoneName"));
-    // }
 
     // new design code
     public function index()
@@ -1490,7 +1482,7 @@ class ScheduleController extends Controller
             $video = saveToS3($file);
         } elseif ($isDocument) {
             $document = saveToS3($file);
-            $documentName = (string) ($file->getClientOriginalName() ?: 'document.'.$ext);
+            $documentName = (string) ($file->getClientOriginalName() ?: 'document.' . $ext);
         } else {
             $image = saveImage($file);
         }
@@ -1971,7 +1963,7 @@ class ScheduleController extends Controller
     private function publishPost($request): array
     {
         try {
-            $user = User::with('boards.pinterest', 'pages.facebook')->findOrFail(Auth::guard('user')->id());
+            $user = User::with('boards.pinterest', 'pages.facebook', 'linkedins')->findOrFail(Auth::guard('user')->id());
             $accounts = $this->resolveAccountsForPost($request, $user);
             $content = $request->get('content') ?? null;
             $comment = $request->get('comment') ?? null;

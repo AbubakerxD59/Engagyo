@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Jobs\DeleteFacebookPostJob;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishInstagramPost;
+use App\Jobs\PublishLinkedInPost;
 use App\Jobs\PublishPinterestPost;
 use App\Jobs\PublishThreadsPost;
 use App\Models\Board;
@@ -114,7 +115,7 @@ class PostService
     {
         try {
             $user = Auth::user();
-            $post = Post::with('page.facebook', 'board.pinterest', 'instagramAccount', 'thread')->where('status', '!=', 1)->where('id', $id)->firstOrFail();
+            $post = Post::with('page.facebook', 'board.pinterest', 'instagramAccount', 'thread', 'linkedin')->where('status', '!=', 1)->where('id', $id)->firstOrFail();
             if ($post->social_type == 'facebook') {
                 $page = $post->page;
                 $response = FacebookService::validateToken($page);
@@ -160,6 +161,22 @@ class PostService
                     ];
                 }
                 PublishThreadsPost::dispatch($post->id);
+            }
+            if (str_contains(strtolower((string) $post->social_type), 'linkedin')) {
+                $linkedin = $post->linkedin;
+                if (! $linkedin) {
+                    return [
+                        'success' => false,
+                        'message' => 'LinkedIn account not found for this post.',
+                    ];
+                }
+                if (! $linkedin->validToken()) {
+                    return [
+                        'success' => false,
+                        'message' => 'LinkedIn access token expired. Reconnect your LinkedIn account.',
+                    ];
+                }
+                PublishLinkedInPost::dispatch($post->id);
             }
             $response = [
                 'success' => true,
