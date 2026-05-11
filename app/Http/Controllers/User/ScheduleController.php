@@ -2265,7 +2265,7 @@ class ScheduleController extends Controller
                         $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                     }
                     $this->logService->logPost('linkedin', $type, $post->id, ['action' => 'publish'], 'pending');
-                    PublishLinkedInPost::dispatch($post->id);
+                    PublishLinkedInPost::dispatch($post->id)->delay(now()->addSeconds(5));
                 }
             }
             $response = [
@@ -4178,6 +4178,7 @@ class ScheduleController extends Controller
             'tiktok' => 'tiktok',
             'instagram' => 'instagram',
             'threads' => 'threads',
+            'linkedin' => 'linkedin',
             default => 'facebook',
         };
 
@@ -4187,7 +4188,7 @@ class ScheduleController extends Controller
         $postCreatorIds = $user->schedulePostCreatorUserIds();
 
         $postsQuery = Post::withoutGlobalScopes()
-            ->with('page.facebook', 'board.pinterest', 'tiktok', 'instagramAccount', 'user')
+            ->with('page.facebook', 'board.pinterest', 'tiktok', 'instagramAccount', 'thread', 'linkedin', 'user')
             ->whereIn('user_id', $postCreatorIds)
             ->where('account_id', $accountId)
             ->where('social_type', 'like', "%{$socialType}%")
@@ -4345,6 +4346,7 @@ class ScheduleController extends Controller
             'tiktok' => 'tiktok',
             'instagram' => 'instagram',
             'threads' => 'threads',
+            'linkedin' => 'linkedin',
             default => 'facebook',
         };
         $nextLocal = (new Post)->nextScheduleTime(
