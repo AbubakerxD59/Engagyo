@@ -9,6 +9,7 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Log;
 
 class PublishLinkedInPost implements ShouldQueue
 {
@@ -22,51 +23,68 @@ class PublishLinkedInPost implements ShouldQueue
         public int $postId,
     ) {}
 
-    public function handle(LinkedInPublishService $linkedInPublishService): void
+    public function handle(): void
     {
         $post = Post::with('linkedin')->find($this->postId);
-        if (! $post || $post->social_type !== 'linkedin') {
-            return;
-        }
+        try {
+            if (! $post || $post->social_type !== 'linkedin') {
+                Log::error("PublishLinkedInPost: missing post or not LinkedIn (id {$this->postId})");
+                return;
+            }
 
-        $account = $post->linkedin;
-        if (! $account) {
+            $account = $post->linkedin;
+            if (! $account) {
+                $post->update([
+                    'status' => -1,
+                    'published_at' => now(),
+                    'response' => json_encode(['success' => false, 'message' => 'LinkedIn account not found.']),
+                ]);
+
+                return;
+            }
+
+            if (! $account->validToken()) {
+                $post->update([
+                    'status' => -1,
+                    'published_at' => now(),
+                    'response' => json_encode(['success' => false, 'message' => 'LinkedIn access token expired. Reconnect your account.']),
+                ]);
+
+                return;
+            }
+
+            $linkedInPublishService = new LinkedInPublishService();
+            $result = $linkedInPublishService->publish($post, $account);
+            if (! ($result['success'] ?? false)) {
+                $post->update([
+                    'status' => -1,
+                    'published_at' => now(),
+                    'response' => json_encode($result),
+                ]);
+
+                return;
+            }
+
             $post->update([
-                'status' => -1,
-                'published_at' => now(),
-                'response' => json_encode(['success' => false, 'message' => 'LinkedIn account not found.']),
-            ]);
-
-            return;
-        }
-
-        if (! $account->validToken()) {
-            $post->update([
-                'status' => -1,
-                'published_at' => now(),
-                'response' => json_encode(['success' => false, 'message' => 'LinkedIn access token expired. Reconnect your account.']),
-            ]);
-
-            return;
-        }
-
-        $result = $linkedInPublishService->publish($post, $account);
-        if (! ($result['success'] ?? false)) {
-            $post->update([
-                'status' => -1,
+                'status' => 1,
+                'post_id' => $result['id'] ?? null,
                 'published_at' => now(),
                 'response' => json_encode($result),
             ]);
-
-            return;
+        } catch (\Throwable $e) {
+            $post->update([
+                'status' => -1,
+                'published_at' => now(),
+                'response' => json_encode(['success' => false, 'message' => $e->getMessage()]),
+            ]);
         }
+    }
 
-        $post->update([
-            'status' => 1,
-            'post_id' => $result['id'] ?? null,
-            'published_at' => now(),
-            'response' => json_encode($result),
+    public function failed(\Throwable $exception): void
+    {
+        Log::error('PublishLinkedInPost job failed', [
+            'postId' => $this->postId,
+            'error' => $exception->getMessage(),
         ]);
     }
 }
-

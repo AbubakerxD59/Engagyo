@@ -17,7 +17,6 @@ use App\Models\Facebook;
 use App\Models\FacebookPost;
 use App\Models\InstagramAccount;
 use App\Models\Linkedin;
-use App\Models\Notification;
 use App\Models\Page;
 use App\Models\Pinterest;
 use App\Models\Post;
@@ -26,7 +25,6 @@ use App\Models\Thread;
 use App\Models\ThreadPost;
 use App\Models\Timeslot;
 use App\Models\User;
-use App\Services\FacebookFeedSyncService;
 use App\Services\FacebookService;
 use App\Services\FeatureUsageService;
 use App\Services\PinterestService;
@@ -115,6 +113,14 @@ class ScheduleController extends Controller
                 $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
 
                 return Thread::where('id', $post->account_id)
+                    ->where('user_id', $ownerId)
+                    ->exists();
+
+            case 'linkedin':
+                $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
+
+                Log::info('verifyPostAccountBelongsToUser: linkedin', ['ownerId' => $ownerId, 'postAccountId' => $post->account_id]);
+                return Linkedin::where('id', $post->account_id)
                     ->where('user_id', $ownerId)
                     ->exists();
 
