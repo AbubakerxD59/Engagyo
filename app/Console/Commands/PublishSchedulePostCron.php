@@ -9,6 +9,7 @@ use App\Models\Post;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
 use App\Services\PostService;
+use App\Services\ScheduledQueuePostPublisher;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 
@@ -73,14 +74,14 @@ class PublishSchedulePostCron extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(ScheduledQueuePostPublisher $queuePublisher)
     {
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
-        $posts = Post::with('user.timezone', 'page.facebook', 'board.pinterest')
+        $posts = Post::with('user.timezone', 'page.facebook', 'board.pinterest', 'instagramAccount', 'thread', 'linkedin')
             ->past($now)
             ->notPublished()
             ->schedule()
-            ->whereIn('social_type', ['facebook', 'pinterest'])
+            ->whereIn('social_type', ['facebook', 'pinterest', 'instagram', 'threads', 'linkedin'])
             ->orderBy('publish_date')
             ->get();
         foreach ($posts as $key => $post) {
@@ -93,6 +94,15 @@ class PublishSchedulePostCron extends Command
                         break;
                     case 'pinterest':
                         $this->processPinterestPost($post);
+                        break;
+                    case 'instagram':
+                        $queuePublisher->publishInstagram($post);
+                        break;
+                    case 'threads':
+                        $queuePublisher->publishThreads($post);
+                        break;
+                    case 'linkedin':
+                        $queuePublisher->publishLinkedIn($post);
                         break;
                 }
             } catch (\Exception $e) {

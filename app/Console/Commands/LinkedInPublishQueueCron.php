@@ -11,17 +11,17 @@ class LinkedInPublishQueueCron extends Command
 {
     protected $signature = 'linkedin:publish-queue';
 
-    protected $description = 'Publish due LinkedIn posts from the schedule queue (scheduled slot posts).';
+    protected $description = 'Publish due LinkedIn posts that are not calendar-queue items (same pattern as facebook:publish).';
 
     public function handle(ScheduledQueuePostPublisher $publisher): void
     {
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
         $posts = Post::with('user.timezone', 'linkedin')
-            ->past($now)
             ->notPublished()
-            ->schedule()
-            ->notRss()
+            ->past($now)
             ->linkedin()
+            ->notSchedule()
+            ->notRss()
             ->orderBy('publish_date')
             ->get();
 

@@ -11,17 +11,17 @@ class InstagramPublishQueueCron extends Command
 {
     protected $signature = 'instagram:publish-queue';
 
-    protected $description = 'Publish due Instagram posts from the schedule queue (scheduled slot posts).';
+    protected $description = 'Publish due Instagram posts that are not calendar-queue items (same pattern as facebook:publish).';
 
     public function handle(ScheduledQueuePostPublisher $publisher): void
     {
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
         $posts = Post::with('user.timezone', 'instagramAccount')
-            ->past($now)
             ->notPublished()
-            ->schedule()
-            ->notRss()
+            ->past($now)
             ->instagram()
+            ->notSchedule()
+            ->notRss()
             ->orderBy('publish_date')
             ->get();
 

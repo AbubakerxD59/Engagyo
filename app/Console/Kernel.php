@@ -90,7 +90,7 @@ class Kernel extends ConsoleKernel
         $schedule->command('tiktok:publish')->everyFiveMinutes();
         // Command to publish Scheduled posts
         $schedule->command('schedule:publish')->everyMinute();
-        // Queue (scheduled slot) posts — Instagram, Threads, LinkedIn (split from schedule:publish)
+        // Instagram / Threads / LinkedIn due posts with notSchedule (same idea as facebook:publish)
         $schedule->command('instagram:publish-queue')->everyMinute();
         $schedule->command('threads:publish-queue')->everyMinute();
         $schedule->command('linkedin:publish-queue')->everyMinute();
