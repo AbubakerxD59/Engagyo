@@ -903,7 +903,7 @@ class User extends Authenticatable
         if (! $teamMember) {
             return [];
         }
-        $social_types = ['page', 'board', 'tiktok', 'instagram'];
+        $social_types = ['page', 'board', 'tiktok', 'instagram', 'threads', 'linkedin'];
 
         return TeamMemberAccount::where('team_member_id', $teamMember->id)
             ->whereIn('account_type', $social_types)

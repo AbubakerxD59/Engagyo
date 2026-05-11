@@ -22,7 +22,7 @@
                         <div class="form-group">
                             <label for="urlShortenerPlatforms">Platforms</label>
                             <select id="urlShortenerPlatforms" class="form-control select2" multiple
-                                data-placeholder="Select platforms (Facebook, Pinterest, TikTok, Threads)">
+                                data-placeholder="Select platforms (Facebook, Pinterest, TikTok, Threads, Instagram, LinkedIn)">
                                 <option value="facebook"
                                     {{ in_array('facebook', $urlShortenPlatforms ?? []) ? 'selected' : '' }}>Facebook</option>
                                 <option value="pinterest"
@@ -32,6 +32,10 @@
                                     TikTok</option>
                                 <option value="threads" {{ in_array('threads', $urlShortenPlatforms ?? []) ? 'selected' : '' }}>
                                     Threads</option>
+                                <option value="instagram" {{ in_array('instagram', $urlShortenPlatforms ?? []) ? 'selected' : '' }}>
+                                    Instagram</option>
+                                <option value="linkedin" {{ in_array('linkedin', $urlShortenPlatforms ?? []) ? 'selected' : '' }}>
+                                    LinkedIn</option>
                             </select>
                             <small class="form-text text-muted">
                                 All accounts connected to the selected platforms will have URL shortener enabled.

@@ -367,6 +367,7 @@ class InstagramLoginService
                     'profile_image' => $profileStored,
                     'access_token' => $accessToken,
                     'expires_in' => time(),
+                    'url_shortener_enabled' => in_array('instagram', $user->url_shorten_platforms ?? []),
                 ]
             );
 

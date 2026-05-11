@@ -131,13 +131,28 @@ class TeamMemberController extends BaseController
                 'account_id' => $thread->threads_id ?? $thread->id,
             ];
         });
-        
+
+        // LinkedIn Accounts
+        $linkedinAccounts = $user->linkedins()->get()->map(function ($linkedin) {
+            $handle = $linkedin->username ? '@'.$linkedin->username : 'LinkedIn';
+
+            return [
+                'id' => $linkedin->id,
+                'type' => 'linkedin',
+                'name' => $handle,
+                'username' => $handle,
+                'profile_image' => $linkedin->profile_image ?? social_logo('linkedin'),
+                'account_id' => $linkedin->linkedin_id ?? $linkedin->id,
+            ];
+        });
+
         $accounts = $accounts
             ->concat($pages)
             ->concat($boards)
             ->concat($tiktoks)
             ->concat($instagramAccounts)
-            ->concat($threadsAccounts);
+            ->concat($threadsAccounts)
+            ->concat($linkedinAccounts);
 
         return view('user.team-members.create', compact('menuItems', 'features', 'accounts'));
     }
@@ -284,13 +299,28 @@ class TeamMemberController extends BaseController
             ];
         });
 
+        // LinkedIn Accounts
+        $linkedinAccounts = $user->linkedins()->get()->map(function ($linkedin) {
+            $handle = $linkedin->username ? '@'.$linkedin->username : 'LinkedIn';
+
+            return [
+                'id' => $linkedin->id,
+                'type' => 'linkedin',
+                'name' => $handle,
+                'username' => $handle,
+                'profile_image' => $linkedin->profile_image ?? social_logo('linkedin'),
+                'account_id' => $linkedin->linkedin_id ?? $linkedin->id,
+            ];
+        });
+
         $accounts = $accounts
             ->concat($pages)
             ->concat($boards)
             ->concat($tiktoks)
             ->concat($instagramAccounts)
-            ->concat($threadsAccounts);
-        
+            ->concat($threadsAccounts)
+            ->concat($linkedinAccounts);
+
         // Load team member relationships
         $teamMember->load('menus', 'featureLimits', 'accounts');
 

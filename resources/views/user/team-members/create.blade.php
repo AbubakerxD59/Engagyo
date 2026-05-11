@@ -115,6 +115,7 @@
                                                 $tiktokAccounts = $accounts->where('type', 'tiktok');
                                                 $instagramAccounts = $accounts->where('type', 'instagram');
                                                 $threadsAccounts = $accounts->where('type', 'threads');
+                                                $linkedinAccounts = $accounts->where('type', 'linkedin');
                                             @endphp
 
                                             @if ($facebookAccounts->count() > 0)
@@ -145,10 +146,10 @@
                                                                         </div>
                                                                         <div class="account-info">
                                                                             <div class="account-name">
-                                                                                {{ Str::limit($account['name'], 18) }}
+                                                                                {{ $account['name'] }}
                                                                             </div>
                                                                             <div class="account-username">
-                                                                                {{ Str::limit($account['username'], 15) }}
+                                                                                {{ $account['username'] }}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -197,10 +198,10 @@
                                                                         </div>
                                                                         <div class="account-info">
                                                                             <div class="account-name">
-                                                                                {{ Str::limit($account['name'], 18) }}
+                                                                                {{ $account['name'] }}
                                                                             </div>
                                                                             <div class="account-username">
-                                                                                {{ Str::limit($account['username'], 15) }}
+                                                                                {{ $account['username'] }}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -249,10 +250,10 @@
                                                                         </div>
                                                                         <div class="account-info">
                                                                             <div class="account-name">
-                                                                                {{ Str::limit($account['name'], 18) }}
+                                                                                {{ $account['name'] }}
                                                                             </div>
                                                                             <div class="account-username">
-                                                                                {{ Str::limit($account['username'], 15) }}
+                                                                                {{ $account['username'] }}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -300,10 +301,10 @@
                                                                         </div>
                                                                         <div class="account-info">
                                                                             <div class="account-name">
-                                                                                {{ Str::limit($account['name'], 18) }}
+                                                                                {{ $account['name'] }}
                                                                             </div>
                                                                             <div class="account-username">
-                                                                                {{ Str::limit($account['username'], 15) }}
+                                                                                {{ $account['username'] }}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -352,10 +353,62 @@
                                                                         </div>
                                                                         <div class="account-info">
                                                                             <div class="account-name">
-                                                                                {{ Str::limit($account['name'], 18) }}
+                                                                                {{ $account['name'] }}
                                                                             </div>
                                                                             <div class="account-username">
-                                                                                {{ Str::limit($account['username'], 15) }}
+                                                                                {{ $account['username'] }}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="account-card-checkbox">
+                                                                        <input type="checkbox" class="account-checkbox"
+                                                                            name="accounts[{{ $account['id'] }}][type]"
+                                                                            value="{{ $account['type'] }}"
+                                                                            id="acc_{{ $account['type'] }}_{{ $account['id'] }}"
+                                                                            data-account-id="{{ $account['id'] }}">
+                                                                        <input type="hidden"
+                                                                            name="accounts[{{ $account['id'] }}][id]"
+                                                                            value="{{ $account['id'] }}">
+                                                                    </div>
+                                                                </article>
+                                                            @endforeach
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            @endif
+
+                                            @if ($linkedinAccounts->count() > 0)
+                                                <div class="mb-4">
+                                                    <h6 class="mb-3">
+                                                        <img src="{{ social_logo('linkedin') }}" loading="lazy"
+                                                            style="width: 24px; height: 24px; margin-right: 8px;">
+                                                        LinkedIn Accounts
+                                                    </h6>
+                                                    <div class="accounts-grid-wrapper">
+                                                        <div class="accounts-grid" data-platform="linkedin">
+                                                            @foreach ($linkedinAccounts as $account)
+                                                                <article
+                                                                    class="account-card linkedin-card account-select-card has-tooltip"
+                                                                    data-account-id="{{ $account['id'] }}"
+                                                                    data-account-type="{{ $account['type'] }}"
+                                                                    data-tooltip="{{ $account['username'] }}">
+                                                                    <div class="account-card-accent"></div>
+                                                                    <div class="account-card-content">
+                                                                        <div class="account-avatar-wrapper">
+                                                                            <img src="{{ $account['profile_image'] }}"
+                                                                                class="account-avatar"
+                                                                                onerror="this.onerror=null; this.src='{{ social_logo('linkedin') }}';" loading="lazy">
+                                                                            <span
+                                                                                class="platform-indicator linkedin-indicator">
+                                                                                <i class="fab fa-linkedin-in"></i>
+                                                                            </span>
+                                                                        </div>
+                                                                        <div class="account-info">
+                                                                            <div class="account-name">
+                                                                                {{ $account['name'] }}
+                                                                            </div>
+                                                                            <div class="account-username">
+                                                                                {{ $account['username'] }}
                                                                             </div>
                                                                         </div>
                                                                     </div>
@@ -509,12 +562,18 @@
             background: linear-gradient(180deg, #1f1f1f, #000000);
         }
 
+        .linkedin-card .account-card-accent {
+            background: linear-gradient(180deg, #0a66c2, #004182);
+        }
+
         .account-card:hover .account-card-accent {
             width: 6px;
         }
 
         .account-card-content {
             flex: 1;
+            min-width: 0;
+            overflow: hidden;
             display: flex;
             align-items: center;
             gap: 14px;
@@ -551,6 +610,10 @@
             border-color: #1f1f1f;
         }
 
+        .linkedin-card:hover .account-avatar {
+            border-color: #0a66c2;
+        }
+
         .platform-indicator {
             position: absolute;
             bottom: -2px;
@@ -583,6 +646,10 @@
             background: #1f1f1f;
         }
 
+        .linkedin-indicator {
+            background: #0a66c2;
+        }
+
         .account-info {
             flex: 1;
             min-width: 0;
@@ -611,6 +678,7 @@
         .account-card-checkbox {
             display: flex;
             align-items: center;
+            flex-shrink: 0;
             padding-right: 12px;
         }
 

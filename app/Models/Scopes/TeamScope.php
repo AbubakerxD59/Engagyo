@@ -3,6 +3,7 @@
 namespace App\Models\Scopes;
 
 use App\Models\Board;
+use App\Models\Linkedin;
 use App\Models\Page;
 use App\Models\Tiktok;
 use App\Models\User;
@@ -21,6 +22,7 @@ class TeamScope implements Scope
         Page::class => 'page',
         Board::class => 'board',
         Tiktok::class => 'tiktok',
+        Linkedin::class => 'linkedin',
     ];
 
     /**

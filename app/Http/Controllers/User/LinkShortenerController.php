@@ -5,6 +5,8 @@ namespace App\Http\Controllers\User;
 use Exception;
 use App\Models\Page;
 use App\Models\Board;
+use App\Models\InstagramAccount;
+use App\Models\Linkedin;
 use App\Models\Tiktok;
 use App\Models\Thread;
 use App\Models\ShortLink;
@@ -29,7 +31,7 @@ class LinkShortenerController extends Controller
      */
     public function index()
     {
-        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'threads')->find(Auth::guard('user')->id());
+        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'threads', 'instagramAccounts', 'linkedins')->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $shortLinks = ShortLink::where('user_id', $user->id)
             ->orderByDesc('created_at')
@@ -48,7 +50,7 @@ class LinkShortenerController extends Controller
     {
         $request->validate([
             'platforms' => 'nullable|array',
-            'platforms.*' => 'in:facebook,pinterest,tiktok,threads',
+            'platforms.*' => 'in:facebook,pinterest,tiktok,threads,instagram,linkedin',
         ]);
 
         $platforms = $request->platforms ?? [];
@@ -76,6 +78,14 @@ class LinkShortenerController extends Controller
 
         // Threads accounts
         $count = Thread::where('user_id', $userId)->update(['url_shortener_enabled' => in_array('threads', $platforms)]);
+        $updated += $count;
+
+        // Instagram accounts
+        $count = InstagramAccount::where('user_id', $userId)->update(['url_shortener_enabled' => in_array('instagram', $platforms)]);
+        $updated += $count;
+
+        // LinkedIn accounts
+        $count = Linkedin::where('user_id', $userId)->update(['url_shortener_enabled' => in_array('linkedin', $platforms)]);
         $updated += $count;
 
         return response()->json([
@@ -130,6 +140,24 @@ class LinkShortenerController extends Controller
             }
         }
 
+        if ($type === 'instagram') {
+            $instagram = InstagramAccount::where('id', $id)->where('user_id', Auth::guard('user')->id())->first();
+            if ($instagram) {
+                $instagram->url_shortener_enabled = (bool) $status;
+                $instagram->save();
+                return response()->json(['success' => true, 'message' => 'Status changed successfully!']);
+            }
+        }
+
+        if ($type === 'linkedin') {
+            $linkedin = Linkedin::where('id', $id)->where('user_id', Auth::guard('user')->id())->first();
+            if ($linkedin) {
+                $linkedin->url_shortener_enabled = (bool) $status;
+                $linkedin->save();
+                return response()->json(['success' => true, 'message' => 'Status changed successfully!']);
+            }
+        }
+
         return response()->json(['success' => false, 'message' => 'Account not found.']);
     }
 
@@ -141,7 +169,7 @@ class LinkShortenerController extends Controller
     {
         $request->validate([
             'accounts' => 'required|array',
-            'accounts.*.type' => 'required|in:facebook,pinterest,tiktok,threads',
+            'accounts.*.type' => 'required|in:facebook,pinterest,tiktok,threads,instagram,linkedin',
             'accounts.*.id' => 'required|integer',
             'status' => 'required|in:0,1',
         ]);
@@ -181,6 +209,20 @@ class LinkShortenerController extends Controller
                 if ($thread) {
                     $thread->url_shortener_enabled = $status;
                     $thread->save();
+                    $updated++;
+                }
+            } elseif ($type === 'instagram') {
+                $instagram = InstagramAccount::where('id', $id)->where('user_id', $userId)->first();
+                if ($instagram) {
+                    $instagram->url_shortener_enabled = $status;
+                    $instagram->save();
+                    $updated++;
+                }
+            } elseif ($type === 'linkedin') {
+                $linkedin = Linkedin::where('id', $id)->where('user_id', $userId)->first();
+                if ($linkedin) {
+                    $linkedin->url_shortener_enabled = $status;
+                    $linkedin->save();
                     $updated++;
                 }
             }
