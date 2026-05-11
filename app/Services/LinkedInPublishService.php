@@ -29,29 +29,19 @@ class LinkedInPublishService
 
         $account = $post->linkedin;
         if (! $account) {
-            $typeLabel = $this->linkedinTypeLabel($post);
-            $errorMessage = 'LinkedIn account not found for this post.';
-            $this->markPostFailed($post, ['success' => false, 'message' => $errorMessage]);
-            $this->errorNotification(
-                $post->user_id,
-                'Post Publishing Failed',
-                "Failed to publish LinkedIn {$typeLabel}. {$errorMessage}",
-                $post
-            );
+            $this->failQueuedPublish($post, [
+                'success' => false,
+                'message' => 'LinkedIn account not found for this post.',
+            ]);
 
             return;
         }
 
         if (! $account->validToken()) {
-            $typeLabel = $this->linkedinTypeLabel($post);
-            $errorMessage = 'LinkedIn access token expired. Please reconnect LinkedIn.';
-            $this->markPostFailed($post, ['success' => false, 'message' => $errorMessage]);
-            $this->errorNotification(
-                $post->user_id,
-                'Post Publishing Failed',
-                "Failed to publish LinkedIn {$typeLabel}. {$errorMessage}",
-                $post
-            );
+            $this->failQueuedPublish($post, [
+                'success' => false,
+                'message' => 'LinkedIn access token expired. Please reconnect LinkedIn.',
+            ]);
 
             return;
         }
@@ -59,15 +49,7 @@ class LinkedInPublishService
         try {
             $result = $this->publish($post, $account);
             if (! ($result['success'] ?? false)) {
-                $typeLabel = $this->linkedinTypeLabel($post);
-                $detail = $this->flattenPublishErrorMessage($result);
-                $this->markPostFailed($post, $result);
-                $this->errorNotification(
-                    $post->user_id,
-                    'Post Publishing Failed',
-                    "Failed to publish LinkedIn {$typeLabel}. {$detail}",
-                    $post
-                );
+                $this->failQueuedPublish($post, $result);
 
                 return;
             }
@@ -90,20 +72,16 @@ class LinkedInPublishService
                 'postId' => $postId,
                 'error' => $e->getMessage(),
             ]);
-            $typeLabel = $this->linkedinTypeLabel($post);
-            $this->markPostFailed($post, ['success' => false, 'message' => $e->getMessage()]);
-            $this->errorNotification(
-                $post->user_id,
-                'Post Publishing Failed',
-                "Failed to publish LinkedIn {$typeLabel}. ".$e->getMessage(),
-                $post
-            );
+            $this->failQueuedPublish($post, [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ]);
         }
     }
 
     /**
-     * Called from job failed() when the worker throws before publishQueuedPost completes.
-     * Avoids duplicate work if the post was already marked failed/success.
+     * Called from {@see PublishLinkedInPost} when handle() catches an exception or when the job {@see PublishLinkedInPost::failed()} hook runs (e.g. timeout).
+     * Skips if the post already published or already marked failed (avoids duplicate notifications).
      */
     public function publishQueuedPostFailed(int $postId, string $exceptionMessage): void
     {
@@ -111,21 +89,42 @@ class LinkedInPublishService
         if (! $post || $post->social_type !== 'linkedin') {
             return;
         }
-        if ((int) $post->status !== 0) {
+        $status = (int) $post->status;
+        if ($status === 1 || $status === -1) {
             return;
         }
 
-        $typeLabel = $this->linkedinTypeLabel($post);
-        $this->markPostFailed($post, [
+        $this->failQueuedPublish($post, [
             'success' => false,
             'message' => 'Publishing job failed: '.$exceptionMessage,
         ]);
-        $this->errorNotification(
-            $post->user_id,
-            'Post Publishing Failed',
-            "Failed to publish LinkedIn {$typeLabel}. Publishing job failed: {$exceptionMessage}",
-            $post
-        );
+    }
+
+    /**
+     * Persist failed publish state and create the user error notification when {@see $responsePayload} indicates failure.
+     */
+    private function failQueuedPublish(Post $post, array $responsePayload): void
+    {
+        if (($responsePayload['success'] ?? false) === true) {
+            return;
+        }
+
+        $this->markPostFailed($post, $responsePayload);
+        $typeLabel = $this->linkedinTypeLabel($post);
+        $detail = $this->flattenPublishErrorMessage($responsePayload);
+        try {
+            $this->errorNotification(
+                $post->user_id,
+                'Post Publishing Failed',
+                "Failed to publish LinkedIn {$typeLabel}. {$detail}",
+                $post
+            );
+        } catch (\Throwable $e) {
+            Log::warning('LinkedInPublishService: could not create failure notification', [
+                'post_id' => $post->id,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function publish(Post $post, Linkedin $account): array

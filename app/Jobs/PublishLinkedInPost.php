@@ -24,10 +24,22 @@ class PublishLinkedInPost implements ShouldQueue
 
     public function handle(): void
     {
-        $linkedInPublishService = new LinkedInPublishService();
-        $linkedInPublishService->publishQueuedPost($this->postId);
+        $service = new LinkedInPublishService();
+        try {
+            $service->publishQueuedPost($this->postId);
+        } catch (\Throwable $e) {
+            Log::error('PublishLinkedInPost: handle exception', [
+                'postId' => $this->postId,
+                'error' => $e->getMessage(),
+            ]);
+            $service->publishQueuedPostFailed($this->postId, $e->getMessage());
+        }
     }
 
+    /**
+     * Covers timeouts and other worker-level failures when {@see handle()} does not catch.
+     * Notifications are created only in {@see LinkedInPublishService::publishQueuedPostFailed()}.
+     */
     public function failed(\Throwable $exception): void
     {
         Log::error('PublishLinkedInPost job failed', [
