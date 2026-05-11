@@ -3963,6 +3963,11 @@ class ScheduleController extends Controller
         return response()->json($response);
     }
 
+    /**
+     * Summary of postDelete
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
     public function postDelete(Request $request)
     {
         try {

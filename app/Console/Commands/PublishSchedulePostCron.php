@@ -77,13 +77,10 @@ class PublishSchedulePostCron extends Command
     /**
      * Execute the console command.
      */
-    public function handle(Post $post, PinterestService $pinterestService, FacebookService $facebookService)
+    public function handle()
     {
-        // $now = date('Y-m-d H:i');
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
-        $query = $post->with('user.timezone', 'page.facebook', 'board.pinterest', 'instagramAccount', 'thread', 'linkedin')->past($now)->notPublished()->schedule();
-        $posts = $query->orderBy('publish_date')->get();
-
+        $posts = Post::with('user.timezone', 'page.facebook', 'board.pinterest', 'instagramAccount', 'thread', 'linkedin')->past($now)->notPublished()->schedule()->orderBy('publish_date')->get();
         foreach ($posts as $key => $post) {
             $social_type = $post->social_type;
             $account_image = $post->account_profile;

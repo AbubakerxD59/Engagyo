@@ -5107,6 +5107,7 @@
             else if (st.indexOf('tiktok') !== -1) st = 'tiktok';
             else if (st.indexOf('instagram') !== -1) st = 'instagram';
             else if (st.indexOf('threads') !== -1) st = 'threads';
+            else if (st.indexOf('linkedin') !== -1) st = 'linkedin';
             else st = 'facebook';
 
             // Reel/Story badge in the Sent UI (Facebook feed payload includes `type`).
@@ -5132,7 +5133,7 @@
 
             var profileImg = post.account_profile || '';
             var socialLogo = socialLogos[st] || socialLogos.facebook;
-            var accountName = post.account_name || (st === 'pinterest' ? 'Pinterest board' : (st === 'tiktok' ? 'TikTok' : (st === 'instagram' ? 'Instagram' : 'Facebook Page')));
+            var accountName = post.account_name || (st === 'pinterest' ? 'Pinterest board' : (st === 'tiktok' ? 'TikTok' : (st === 'instagram' ? 'Instagram' : (st === 'linkedin' ? 'LinkedIn' : 'Facebook Page'))));
 
             var videoUrl = (post.video_url || '').toString().trim();
             var mediaType = (post.media_type || '').toString().toLowerCase();
@@ -5166,7 +5167,7 @@
             var viewPostBtn = '';
             if (post.permalink_url) {
                 var perm = $('<span>').text(post.permalink_url).html();
-                var viewLabel = st === 'pinterest' ? 'View Pin' : (st === 'tiktok' ? 'View on TikTok' : (st === 'instagram' ? 'View on Instagram' : 'View Post'));
+                var viewLabel = st === 'pinterest' ? 'View Pin' : (st === 'tiktok' ? 'View on TikTok' : (st === 'instagram' ? 'View on Instagram' : (st === 'linkedin' ? 'View on LinkedIn' : 'View Post')));
                 viewPostBtn = '<a href="' + perm + '" target="_blank" rel="noopener noreferrer" class="sent-card-view-btn"><i class="fas fa-external-link-alt"></i> ' + viewLabel + '</a>';
             }
             var dbPostId = post.db_post_id || '';
@@ -5193,6 +5194,8 @@
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon instagram"><i class="fab fa-instagram"></i></span> Instagram';
             } else if (st === 'threads') {
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon threads">' + threadsCircleIconHtml('threads-circle-icon') + '</span> Threads';
+            } else if (st === 'linkedin') {
+                publishedViaHtml = 'Published via <span class="sent-card-platform-icon linkedin"><i class="fab fa-linkedin-in"></i></span> LinkedIn';
             } else {
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon facebook"><i class="fab fa-facebook-f"></i></span> Facebook';
             }
@@ -5222,7 +5225,7 @@
                 sentStatusHtml = '<span class="sent-card-status-badge ' + sentClass + '">' + sentLabel + '</span>';
             }
 
-            var badgeIcon = st === 'pinterest' ? 'fab fa-pinterest-p' : (st === 'tiktok' ? 'fab fa-tiktok' : (st === 'instagram' ? 'fab fa-instagram' : (st === 'threads' ? 'threads-circle-icon' : 'fab fa-facebook-f')));
+            var badgeIcon = st === 'pinterest' ? 'fab fa-pinterest-p' : (st === 'tiktok' ? 'fab fa-tiktok' : (st === 'instagram' ? 'fab fa-instagram' : (st === 'threads' ? 'threads-circle-icon' : (st === 'linkedin' ? 'fab fa-linkedin-in' : 'fab fa-facebook-f'))));
             var badgeIconHtml = badgeIcon === 'threads-circle-icon'
                 ? threadsCircleIconHtml('threads-circle-icon')
                 : '<i class="' + badgeIcon + '"></i>';
@@ -5295,6 +5298,7 @@
             else if (post.social_type === 'tiktok') platformIcon = 'fab fa-tiktok';
             else if (post.social_type === 'instagram') platformIcon = 'fab fa-instagram';
             else if (post.social_type === 'threads') platformIcon = 'threads-circle-icon';
+            else if (String(post.social_type || '').toLowerCase().indexOf('linkedin') !== -1) platformIcon = 'fab fa-linkedin-in';
             var platformIconHtml = platformIcon === 'threads-circle-icon'
                 ? threadsCircleIconHtml('threads-circle-icon')
                 : '<i class="' + platformIcon + '"></i>';
