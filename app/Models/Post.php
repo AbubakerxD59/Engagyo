@@ -517,6 +517,14 @@ class Post extends Model
         );
     }
 
+    /**
+     * Get the image URL for the post.
+     * If the image URL is already an absolute URL, return it as-is.
+     * If the image URL is a relative URL, convert it to an absolute URL.
+     * If the image URL is empty, return the automation placeholder image.
+     * 
+     * @return string
+     */
     protected function image(): Attribute
     {
         return Attribute::make(
@@ -531,6 +539,13 @@ class Post extends Model
         );
     }
 
+    /**
+     * Get the video key for the post.
+     * If the video key is not empty, return the video URL.
+     * If the video key is empty, return an empty string.
+     * 
+     * @return string
+     */
     public function getVideoKeyAttribute(): string
     {
         $video_key = $this->video;

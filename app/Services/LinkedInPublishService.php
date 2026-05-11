@@ -20,14 +20,14 @@ class LinkedInPublishService
             return ['success' => false, 'message' => 'LinkedIn access token is missing.'];
         }
 
-        $authorUrn = 'urn:li:person:'.$account->linkedin_id;
+        $authorUrn = 'urn:li:person:' . $account->linkedin_id;
         $ugcPayload = $this->buildUgcPayload($post, $authorUrn, $token);
         if (! ($ugcPayload['success'] ?? false)) {
             return $ugcPayload;
         }
 
         $response = Http::withHeaders($this->jsonHeaders($token))
-            ->post(self::API_BASE_V2.'/ugcPosts', $ugcPayload['payload']);
+            ->post(self::API_BASE_V2 . '/ugcPosts', $ugcPayload['payload']);
 
         if (! $response->successful()) {
             return [
@@ -139,7 +139,7 @@ class LinkedInPublishService
         $title = trim((string) ($post->title ?? ''));
         $comment = trim((string) ($post->comment ?? ''));
         if ($title !== '' && $comment !== '') {
-            return $title."\n\n".$comment;
+            return $title . "\n\n" . $comment;
         }
 
         return $title !== '' ? $title : $comment;
@@ -159,7 +159,7 @@ class LinkedInPublishService
             : 'urn:li:digitalmediaRecipe:feedshare-image';
 
         $registerResponse = Http::withHeaders($this->jsonHeaders($token))
-            ->post(self::API_BASE_V2.'/assets?action=registerUpload', [
+            ->post(self::API_BASE_V2 . '/assets?action=registerUpload', [
                 'registerUploadRequest' => [
                     'recipes' => [$recipe],
                     'owner' => $ownerUrn,
@@ -211,7 +211,7 @@ class LinkedInPublishService
 
         $contentType = (string) ($binaryResponse->header('Content-Type') ?: 'application/octet-stream');
         $upload = Http::withHeaders([
-            'Authorization' => 'Bearer '.$token,
+            'Authorization' => 'Bearer ' . $token,
             'Content-Type' => $contentType,
         ])
             ->withBody($binaryResponse->body(), $contentType)
@@ -235,7 +235,8 @@ class LinkedInPublishService
 
     private function resolveImageUrl(Post $post): string
     {
-        $raw = (string) ($post->getRawOriginal('image') ?: $post->image ?: '');
+        $raw = (string) ($post->image ?? '');
+        // $raw = (string) ($post->getRawOriginal('image') ?: $post->image ?: '');
         if ($raw === '') {
             return '';
         }
@@ -254,7 +255,8 @@ class LinkedInPublishService
 
     private function resolveVideoUrl(Post $post): string
     {
-        $raw = (string) ($post->getRawOriginal('video') ?: $post->video ?: '');
+        $raw = (string) ($post->video_key ?? '');
+        // $raw = (string) ($post->getRawOriginal('video') ?: $post->video ?: '');
         if ($raw === '') {
             return '';
         }
@@ -280,16 +282,15 @@ class LinkedInPublishService
             return $value;
         }
 
-        return $baseUrl.'/'.ltrim($value, '/');
+        return $baseUrl . '/' . ltrim($value, '/');
     }
 
     private function jsonHeaders(string $token): array
     {
         return [
-            'Authorization' => 'Bearer '.$token,
+            'Authorization' => 'Bearer ' . $token,
             'Content-Type' => 'application/json',
             'X-Restli-Protocol-Version' => self::RESTLI_VERSION,
         ];
     }
 }
-
