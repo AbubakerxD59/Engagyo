@@ -22,6 +22,7 @@ class LinkedInPublishService
     {
         $post = Post::with('linkedin')->find($postId);
         if (! $post || $post->social_type !== 'linkedin') {
+            dd('LinkedInPublishService: missing post or not LinkedIn', $post, $postId);
             Log::error("LinkedInPublishService: missing post or not LinkedIn (id {$postId})");
 
             return;
@@ -29,6 +30,7 @@ class LinkedInPublishService
 
         $account = $post->linkedin;
         if (! $account) {
+            dd('LinkedInPublishService: LinkedIn account not found', $post, $postId);
             $this->markPostFailed($post, ['success' => false, 'message' => 'LinkedIn account not found.']);
             $this->errorNotification($post, 'LinkedIn account not found for this post.');
 
@@ -36,6 +38,7 @@ class LinkedInPublishService
         }
 
         if (! $account->validToken()) {
+            dd('LinkedInPublishService: LinkedIn access token expired', $post, $postId);
             $this->markPostFailed($post, ['success' => false, 'message' => 'LinkedIn access token expired. Reconnect your account.']);
             $this->errorNotification($post, 'LinkedIn access token expired. Reconnect your account.');
 
@@ -44,7 +47,9 @@ class LinkedInPublishService
 
         try {
             $result = $this->publish($post, $account);
+            dd($result);
             if (! ($result['success'] ?? false)) {
+                dd('LinkedInPublishService: LinkedIn publish failed', $post, $postId, $result);
                 $this->markPostFailed($post, $result);
                 $this->errorNotification($post, $this->flattenPublishErrorMessage($result));
 
@@ -93,6 +98,7 @@ class LinkedInPublishService
     {
         $token = (string) ($account->getRawOriginal('access_token') ?? $account->access_token ?? '');
         if ($token === '') {
+            dd('LinkedInPublishService: LinkedIn access token is missing', $post, $account);
             return ['success' => false, 'message' => 'LinkedIn access token is missing.'];
         }
 
@@ -136,10 +142,13 @@ class LinkedInPublishService
         if ($post->type === 'photo') {
             $imageUrl = $this->resolveImageUrl($post);
             if ($imageUrl === '') {
+                dd('LinkedInPublishService: Photo publish requires a valid image URL or uploaded image.', $post, $authorUrn, $token);
                 return ['success' => false, 'message' => 'Photo publish requires a valid image URL or uploaded image.'];
             }
             $assetResult = $this->registerAndUploadAsset($token, $authorUrn, 'image', $imageUrl);
+            dd($imageUrl, $assetResult);
             if (! ($assetResult['success'] ?? false)) {
+                dd('LinkedInPublishService: Failed to register/upload image asset to LinkedIn.', $post, $authorUrn, $token, $assetResult);
                 return [
                     'success' => false,
                     'message' => 'Failed to register/upload image asset to LinkedIn.',

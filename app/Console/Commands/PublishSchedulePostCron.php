@@ -10,6 +10,7 @@ use App\Jobs\PublishThreadsPost;
 use App\Models\Notification;
 use App\Models\Post;
 use App\Services\FacebookService;
+use App\Services\LinkedInPublishService;
 use App\Services\PinterestService;
 use App\Services\PostService;
 use Carbon\Carbon;
@@ -87,27 +88,33 @@ class PublishSchedulePostCron extends Command
             $social_type = $post->social_type;
             $account_image = $post->account_profile;
             try {
-                if ($post->social_type == 'facebook') {
-                    $this->processFacebookPost($post);
-                } elseif ($post->social_type == 'pinterest') {
-                    $this->processPinterestPost($post);
-                } elseif (str_contains(strtolower(trim((string) $post->social_type)), 'instagram')) {
-                    $this->processInstagramPost($post);
-                } elseif (str_contains(strtolower(trim((string) $post->social_type)), 'threads')) {
-                    $this->processThreadsPost($post);
-                } elseif (str_contains(strtolower(trim((string) $post->social_type)), 'linkedin')) {
-                    $this->processLinkedInPost($post);
+                switch ($post->social_type) {
+                    case 'facebook':
+                        $this->processFacebookPost($post);
+                        break;
+                    case 'pinterest':
+                        $this->processPinterestPost($post);
+                        break;
+                    case 'instagram':
+                        $this->processInstagramPost($post);
+                        break;
+                    case 'threads':
+                        $this->processThreadsPost($post);
+                        break;
+                    case 'linkedin':
+                        $this->processLinkedInPost($post);
+                        break;
                 }
             } catch (\Exception $e) {
                 $errorMessage = $e->getMessage();
-                info("Schedule Publish Error for Post ID {$post->id}: ".$errorMessage);
+                info("Schedule Publish Error for Post ID {$post->id}: " . $errorMessage);
                 $post->update([
                     'status' => -1,
-                    'response' => 'Error: '.$errorMessage,
+                    'response' => 'Error: ' . $errorMessage,
                 ]);
                 // Create error notification (cron job)
                 $platform = ucfirst($post->social_type);
-                $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', "Failed to publish scheduled {$platform} post. ".$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+                $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', "Failed to publish scheduled {$platform} post. " . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
             }
         }
     }
@@ -128,7 +135,7 @@ class PublishSchedulePostCron extends Command
                 'response' => $errorMessage,
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Facebook post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Facebook post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
@@ -142,7 +149,7 @@ class PublishSchedulePostCron extends Command
                 'response' => $errorMessage,
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Facebook post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Facebook post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
@@ -157,7 +164,7 @@ class PublishSchedulePostCron extends Command
                 'response' => $errorMessage,
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Facebook post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Facebook post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
@@ -168,13 +175,13 @@ class PublishSchedulePostCron extends Command
             $postData = PostService::postTypeBody($post);
             PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
         } catch (\Exception $e) {
-            $errorMessage = 'Error preparing post: '.$e->getMessage();
+            $errorMessage = 'Error preparing post: ' . $e->getMessage();
             $post->update([
                 'status' => -1,
                 'response' => $errorMessage,
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Facebook post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Facebook post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
         }
     }
 
@@ -194,7 +201,7 @@ class PublishSchedulePostCron extends Command
                 'response' => $errorMessage,
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Pinterest post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Pinterest post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
@@ -208,7 +215,7 @@ class PublishSchedulePostCron extends Command
                 'response' => $errorMessage,
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Pinterest post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Pinterest post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
@@ -223,7 +230,7 @@ class PublishSchedulePostCron extends Command
                 'response' => $errorMessage,
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Pinterest post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Pinterest post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
@@ -234,13 +241,13 @@ class PublishSchedulePostCron extends Command
             $postData = PostService::postTypeBody($post);
             PublishPinterestPost::dispatch($post->id, $postData, $access_token, $post->type);
         } catch (\Exception $e) {
-            $errorMessage = 'Error preparing post: '.$e->getMessage();
+            $errorMessage = 'Error preparing post: ' . $e->getMessage();
             $post->update([
                 'status' => -1,
                 'response' => $errorMessage,
             ]);
             // Create error notification (cron job)
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Pinterest post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Pinterest post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
         }
     }
 
@@ -256,7 +263,7 @@ class PublishSchedulePostCron extends Command
                 'status' => -1,
                 'response' => $errorMessage,
             ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
@@ -267,7 +274,7 @@ class PublishSchedulePostCron extends Command
                 'status' => -1,
                 'response' => $errorMessage,
             ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
@@ -275,12 +282,12 @@ class PublishSchedulePostCron extends Command
         try {
             PublishInstagramPost::dispatch($post->id);
         } catch (\Exception $e) {
-            $errorMessage = 'Error preparing post: '.$e->getMessage();
+            $errorMessage = 'Error preparing post: ' . $e->getMessage();
             $post->update([
                 'status' => -1,
                 'response' => $errorMessage,
             ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
         }
     }
 
@@ -296,7 +303,7 @@ class PublishSchedulePostCron extends Command
                 'status' => -1,
                 'response' => $errorMessage,
             ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
@@ -307,7 +314,7 @@ class PublishSchedulePostCron extends Command
                 'status' => -1,
                 'response' => $errorMessage,
             ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
@@ -315,12 +322,12 @@ class PublishSchedulePostCron extends Command
         try {
             PublishThreadsPost::dispatch($post->id);
         } catch (\Exception $e) {
-            $errorMessage = 'Error preparing post: '.$e->getMessage();
+            $errorMessage = 'Error preparing post: ' . $e->getMessage();
             $post->update([
                 'status' => -1,
                 'response' => $errorMessage,
             ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
         }
     }
 
@@ -336,7 +343,7 @@ class PublishSchedulePostCron extends Command
                 'status' => -1,
                 'response' => $errorMessage,
             ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled LinkedIn post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled LinkedIn post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
@@ -347,20 +354,21 @@ class PublishSchedulePostCron extends Command
                 'status' => -1,
                 'response' => $errorMessage,
             ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled LinkedIn post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled LinkedIn post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
 
             return;
         }
 
         try {
-            PublishLinkedInPost::dispatch($post->id);
+            $linkedInPublishService = new LinkedInPublishService();
+            $linkedInPublishService->publishQueuedPost($post->id);
         } catch (\Exception $e) {
-            $errorMessage = 'Error preparing post: '.$e->getMessage();
+            $errorMessage = 'Error preparing post: ' . $e->getMessage();
             $post->update([
                 'status' => -1,
                 'response' => $errorMessage,
             ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled LinkedIn post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled LinkedIn post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
         }
     }
 }
