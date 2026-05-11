@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Linkedin;
+use App\Models\Notification;
 use App\Models\Post;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
@@ -12,6 +13,81 @@ class LinkedInPublishService
     private const API_BASE_V2 = 'https://api.linkedin.com/v2';
 
     private const RESTLI_VERSION = '2.0.0';
+
+    /**
+     * Queue job entrypoint: load post, validate account/token, call LinkedIn API,
+     * persist status/response, and create user notifications (success or error).
+     */
+    public function publishQueuedPost(int $postId): void
+    {
+        $post = Post::with('linkedin')->find($postId);
+        if (! $post || $post->social_type !== 'linkedin') {
+            Log::error("LinkedInPublishService: missing post or not LinkedIn (id {$postId})");
+
+            return;
+        }
+
+        $account = $post->linkedin;
+        if (! $account) {
+            $this->markPostFailed($post, ['success' => false, 'message' => 'LinkedIn account not found.']);
+            $this->errorNotification($post, 'LinkedIn account not found for this post.');
+
+            return;
+        }
+
+        if (! $account->validToken()) {
+            $this->markPostFailed($post, ['success' => false, 'message' => 'LinkedIn access token expired. Reconnect your account.']);
+            $this->errorNotification($post, 'LinkedIn access token expired. Reconnect your account.');
+
+            return;
+        }
+
+        try {
+            $result = $this->publish($post, $account);
+            if (! ($result['success'] ?? false)) {
+                $this->markPostFailed($post, $result);
+                $this->errorNotification($post, $this->flattenPublishErrorMessage($result));
+
+                return;
+            }
+
+            $post->update([
+                'status' => 1,
+                'post_id' => $result['id'] ?? null,
+                'published_at' => now(),
+                'response' => json_encode($result),
+            ]);
+            $this->successNotification($post);
+        } catch (\Throwable $e) {
+            Log::error('LinkedInPublishService: publishQueuedPost exception', [
+                'postId' => $postId,
+                'error' => $e->getMessage(),
+            ]);
+            $this->markPostFailed($post, ['success' => false, 'message' => $e->getMessage()]);
+            $this->errorNotification($post, $e->getMessage());
+        }
+    }
+
+    /**
+     * Called from job failed() when the worker throws before publishQueuedPost completes.
+     * Avoids duplicate work if the post was already marked failed/success.
+     */
+    public function publishQueuedPostFailed(int $postId, string $exceptionMessage): void
+    {
+        $post = Post::with('linkedin')->find($postId);
+        if (! $post || $post->social_type !== 'linkedin') {
+            return;
+        }
+        if ((int) $post->status !== 0) {
+            return;
+        }
+
+        $this->markPostFailed($post, [
+            'success' => false,
+            'message' => 'Publishing job failed: '.$exceptionMessage,
+        ]);
+        $this->errorNotification($post, 'Publishing job failed: '.$exceptionMessage);
+    }
 
     public function publish(Post $post, Linkedin $account): array
     {
@@ -59,7 +135,6 @@ class LinkedInPublishService
 
         if ($post->type === 'photo') {
             $imageUrl = $this->resolveImageUrl($post);
-            return ['success' => false, 'imageUrl' => $imageUrl];
             if ($imageUrl === '') {
                 return ['success' => false, 'message' => 'Photo publish requires a valid image URL or uploaded image.'];
             }
@@ -293,5 +368,94 @@ class LinkedInPublishService
             'Content-Type' => 'application/json',
             'X-Restli-Protocol-Version' => self::RESTLI_VERSION,
         ];
+    }
+
+    private function markPostFailed(Post $post, array $responsePayload): void
+    {
+        $post->update([
+            'status' => -1,
+            'published_at' => now(),
+            'response' => json_encode($responsePayload),
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $result
+     */
+    private function flattenPublishErrorMessage(array $result): string
+    {
+        $message = (string) ($result['message'] ?? '');
+        if ($message !== '') {
+            return $message;
+        }
+        $details = $result['details'] ?? null;
+        if (is_array($details)) {
+            $nested = $details['response'] ?? $details['message'] ?? null;
+            if (is_string($nested) && $nested !== '') {
+                return $nested;
+            }
+
+            return json_encode($details);
+        }
+
+        return 'LinkedIn API returned an error.';
+    }
+
+    private function successNotification(Post $post): void
+    {
+        $post->loadMissing('linkedin');
+        $li = $post->linkedin;
+        $message = match ((string) $post->type) {
+            'video' => 'Your LinkedIn video has been published successfully.',
+            'link' => 'Your LinkedIn link post has been published successfully.',
+            'carousel' => 'Your LinkedIn carousel has been published successfully.',
+            'document' => 'Your LinkedIn document has been published successfully.',
+            'content_only' => 'Your LinkedIn post has been published successfully.',
+            default => 'Your LinkedIn photo post has been published successfully.',
+        };
+
+        Notification::create([
+            'user_id' => $post->user_id,
+            'title' => 'Post Published',
+            'body' => [
+                'type' => 'success',
+                'message' => $message,
+                'social_type' => 'linkedin',
+                'account_image' => $li?->profile_image ?? null,
+                'account_name' => ($li && $li->username !== '') ? '@'.$li->username : 'LinkedIn',
+                'account_username' => $li?->username ?? '',
+            ],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
+    }
+
+    private function errorNotification(Post $post, string $message): void
+    {
+        $post->loadMissing('linkedin');
+        $li = $post->linkedin;
+        $kind = match ((string) $post->type) {
+            'video' => 'video',
+            'link' => 'link post',
+            'carousel' => 'carousel',
+            'document' => 'document',
+            'content_only' => 'post',
+            default => 'photo post',
+        };
+
+        Notification::create([
+            'user_id' => $post->user_id,
+            'title' => 'Post Publishing Failed',
+            'body' => [
+                'type' => 'error',
+                'message' => 'Failed to publish LinkedIn '.$kind.'. '.$message,
+                'social_type' => 'linkedin',
+                'account_image' => $li?->profile_image ?? null,
+                'account_name' => ($li && $li->username !== '') ? '@'.$li->username : 'LinkedIn',
+                'account_username' => $li?->username ?? '',
+            ],
+            'is_read' => false,
+            'is_system' => false,
+        ]);
     }
 }
