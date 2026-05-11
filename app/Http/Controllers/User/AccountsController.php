@@ -87,7 +87,7 @@ class AccountsController extends Controller
 
     public function index(InstagramLoginService $instagramLoginService)
     {
-        $user = User::with('facebook', 'pinterest', 'tiktok', 'instagramAccounts', 'threads', 'linkedin')->findOrFail(Auth::guard('user')->id());
+        $user = User::with('facebook', 'pinterest', 'tiktok', 'instagramAccounts', 'threads', 'linkedins')->findOrFail(Auth::guard('user')->id());
         $facebookUrl = route('panel.accounts.facebook.socialite');
         try {
             $instagramUrl = $instagramLoginService->authorizeUrl();

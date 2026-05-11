@@ -327,7 +327,7 @@
                     <div class="card-body">
                         <div class="accounts-grid-wrapper">
                             <div class="accounts-grid" data-platform="linkedin">
-                                @forelse ($user->linkedin as $index => $linkedin)
+                                @forelse ($user->linkedins as $index => $linkedin)
                                     <article class="account-card linkedin-card has-tooltip" @style(['display:none;' => $index >= 12])
                                         data-tooltip="{{ $linkedin->username }}" data-index="{{ $index }}">
                                         <div class="account-card-accent"></div>
@@ -375,7 +375,7 @@
                                     </div>
                                 @endforelse
                             </div>
-                            @if (count($user->linkedin) > 12)
+                            @if (count($user->linkedins) > 12)
                                 <div class="accounts-toggle-wrapper">
                                     <button class="btn-accounts-toggle" data-platform="linkedin" type="button">
                                         <span class="toggle-text">Show All</span>

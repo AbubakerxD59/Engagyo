@@ -116,7 +116,7 @@ class UserController extends BaseController
             ];
         });
 
-        $linkedinAccounts = $user->linkedin()->get()->map(function ($linkedin) {
+        $linkedinAccounts = $user->linkedins()->get()->map(function ($linkedin) {
             return [
                 '_id' => (string) $linkedin->linkedin_id,
                 'name' => $linkedin->username,
@@ -231,7 +231,7 @@ class UserController extends BaseController
             'stats' => [
                 'pinterest_accounts' => $user->pinterest()->count(),
                 'facebook_accounts' => $user->facebook()->count(),
-                'linkedin_accounts' => $user->linkedin()->count(),
+                'linkedin_accounts' => $user->linkedins()->count(),
                 'boards' => $user->boards()->count(),
                 'pages' => $user->pages()->count(),
                 'domains' => $user->domains()->count(),

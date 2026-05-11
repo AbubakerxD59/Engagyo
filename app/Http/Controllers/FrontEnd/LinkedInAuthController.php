@@ -27,7 +27,7 @@ class LinkedInAuthController extends Controller
     public function linkedInCallback(Request $request, FeatureUsageService $featureUsageService)
     {
         $userId = Auth::guard('user')->id();
-        $user = User::with('linkedin')->find($userId);
+        $user = User::with('linkedins')->find($userId);
 
         if (! $user) {
             return redirect(route('panel.accounts'))->with('error', 'User session expired. Please login again.');
@@ -63,7 +63,7 @@ class LinkedInAuthController extends Controller
             return redirect(route('panel.accounts'))->with('error', $errorMessage);
         }
 
-        $existing = $user->linkedin()->where('linkedin_id', $userInfo['sub'])->first();
+            $existing = $user->linkedins()->where('linkedin_id', $userInfo['sub'])->first();
         $didIncrement = false;
         if (! $existing) {
             $result = $featureUsageService->checkAndIncrement($user, Feature::$features_list[0], 1);
@@ -96,7 +96,7 @@ class LinkedInAuthController extends Controller
                 $payload['url_shortener_enabled'] = in_array('linkedin', $user->url_shorten_platforms ?? []);
             }
 
-            $linkedinAccount = $user->linkedin()->updateOrCreate(
+            $linkedinAccount = $user->linkedins()->updateOrCreate(
                 ['linkedin_id' => $userInfo['sub']],
                 $payload
             );

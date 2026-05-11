@@ -3499,7 +3499,7 @@ class ScheduleController extends Controller
 
     public function getQueueSettings(Request $request)
     {
-        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'instagramAccounts', 'threads.timeslots', 'linkedin.timeslots')->find(Auth::guard('user')->id());
+        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'instagramAccounts', 'threads.timeslots', 'linkedins.timeslots')->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $view = view('user.schedule.partials.queue-settings-list', compact('accounts'));
 
