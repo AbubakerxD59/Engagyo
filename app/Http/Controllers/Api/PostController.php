@@ -352,7 +352,10 @@ class PostController extends BaseController
         $selectionCount += (is_array($imageUrls) && count($imageUrls) > 0) ? 1 : 0;
         $selectionCount += ! empty($documentUrl) ? 1 : 0;
         if ($selectionCount > 1) {
-            return $this->errorResponse('For LinkedIn, provide exactly one content option: image_url, video_url, image_urls (carousel), or document_url.', 422);
+            return $this->errorResponse('For LinkedIn, provide exactly one content option: image_url, video_url, or document_url.', 422);
+        }
+        if (is_array($imageUrls) && count($imageUrls) > 0) {
+            return $this->errorResponse('LinkedIn does not support multi-image (carousel) posts. Use image_url for a single image.', 422);
         }
         if ($selectionCount === 0 && $text === '') {
             return $this->errorResponse('LinkedIn post requires text or one media selection.', 422);
@@ -376,9 +379,6 @@ class PostController extends BaseController
                     'name' => basename((string) parse_url($documentUrl, PHP_URL_PATH)) ?: 'document.'.$ext,
                 ],
             ]);
-        } elseif (is_array($imageUrls) && count($imageUrls) > 0) {
-            $type = 'carousel';
-            $metadata = json_encode(['linkedin_carousel' => array_values($imageUrls)]);
         } elseif (! empty($videoUrl)) {
             $type = 'video';
             $video = $videoUrl;

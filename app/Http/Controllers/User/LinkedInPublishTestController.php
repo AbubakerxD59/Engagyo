@@ -8,7 +8,6 @@ use App\Models\Post;
 use App\Models\User;
 use App\Services\LinkedInPublishService;
 use Illuminate\Http\Request;
-use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
 
@@ -44,16 +43,13 @@ class LinkedInPublishTestController extends Controller
                 'integer',
                 Rule::exists('linkedins', 'id')->where('user_id', $ownerId),
             ],
-            'type' => ['required', Rule::in(['content_only', 'photo', 'video', 'carousel', 'document'])],
+            'type' => ['required', Rule::in(['content_only', 'photo', 'video', 'document'])],
             'title' => ['nullable', 'string', 'max:3000'],
             'comment' => ['nullable', 'string', 'max:3000'],
             'image_url' => ['nullable', 'url'],
             'image_file' => ['nullable', 'file', 'image', 'max:15360'],
             'video_url' => ['nullable', 'url'],
             'video_file' => ['nullable', 'file', 'mimetypes:video/mp4,video/quicktime,video/x-msvideo,video/x-matroska,video/webm', 'max:102400'],
-            'carousel_urls' => ['nullable', 'string'],
-            'carousel_files' => ['nullable', 'array'],
-            'carousel_files.*' => ['file', 'image', 'max:15360'],
             'document_url' => ['nullable', 'url'],
             'document_name' => ['nullable', 'string', 'max:255'],
             'document_file' => ['nullable', 'file', 'mimes:pdf,doc,docx,ppt,pptx', 'max:51200'],
@@ -137,31 +133,6 @@ class LinkedInPublishTestController extends Controller
                     ->with('linkedin_publish_test_result', ['success' => false]);
             }
             $post->video = $videoPath;
-        } elseif ($type === 'carousel') {
-            $carouselItems = [];
-            $rawCarousel = trim((string) ($validated['carousel_urls'] ?? ''));
-            $urls = array_values(array_filter(array_map('trim', preg_split('/\r\n|\r|\n/', $rawCarousel ?: ''))));
-            foreach ($urls as $url) {
-                $carouselItems[] = $url;
-            }
-            $files = $request->file('carousel_files', []);
-            if (! is_array($files)) {
-                $files = [$files];
-            }
-            foreach (array_filter($files) as $file) {
-                if ($file instanceof UploadedFile && $file->isValid()) {
-                    $carouselItems[] = saveImage($file);
-                }
-            }
-
-            if (count($carouselItems) < 2) {
-                $addStep('build_payload', 'error', ['message' => 'Carousel type requires at least 2 image URLs (one per line).']);
-
-                return back()->withInput()
-                    ->with('linkedin_publish_test_steps', $steps)
-                    ->with('linkedin_publish_test_result', ['success' => false]);
-            }
-            $post->metadata = json_encode(['linkedin_carousel' => $carouselItems]);
         } elseif ($type === 'document') {
             $documentPath = null;
             if ($request->hasFile('document_file')) {

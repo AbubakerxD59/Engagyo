@@ -170,9 +170,7 @@ class ScheduleController extends Controller
                 $decoded = json_decode($linkedinRaw, true);
                 if (is_array($decoded)) {
                     $normalized = array_map(fn($v) => strtolower((string) $v), $decoded);
-                    if (in_array('carousel', $normalized, true)) {
-                        $linkedinFormat = 'carousel';
-                    } elseif (in_array('document', $normalized, true)) {
+                    if (in_array('document', $normalized, true)) {
                         $linkedinFormat = 'document';
                     }
                 }
@@ -180,7 +178,7 @@ class ScheduleController extends Controller
         }
         $files = is_array($raw) ? array_values(array_filter($raw)) : [$raw];
 
-        if ($igFormat === 'carousel' || $threadsFormat === 'carousel' || $linkedinFormat === 'carousel') {
+        if ($igFormat === 'carousel' || $threadsFormat === 'carousel') {
             if (count($files) < 2) {
                 return [
                     'error' => [
@@ -196,7 +194,7 @@ class ScheduleController extends Controller
                     'instagram_carousel_items' => [],
                 ];
             }
-            $maxCarousel = $threadsFormat === 'carousel' || $linkedinFormat === 'carousel' ? 20 : 10;
+            $maxCarousel = $threadsFormat === 'carousel' ? 20 : 10;
             if (count($files) > $maxCarousel) {
                 return [
                     'error' => [
@@ -646,9 +644,6 @@ class ScheduleController extends Controller
         if (in_array('document', $formats, true)) {
             return 'document';
         }
-        if (in_array('carousel', $formats, true)) {
-            return 'carousel';
-        }
 
         return 'post';
     }
@@ -672,34 +667,6 @@ class ScheduleController extends Controller
                 'linkedin_document' => (string) $upload['document'],
                 'linkedin_document_name' => (string) ($upload['document_name'] ?? ''),
             ]);
-
-            return ['success' => true] + $plan;
-        }
-
-        if ($format === 'carousel') {
-            $items = $upload['instagram_carousel_items'] ?? [];
-            if (! is_array($items) || count($items) < 2) {
-                return ['success' => false, 'message' => 'LinkedIn carousel requires at least 2 media files.'];
-            }
-            if (count($items) > 20) {
-                return ['success' => false, 'message' => 'LinkedIn carousel supports at most 20 media files.'];
-            }
-            $carousel = [];
-            foreach ($items as $item) {
-                if (! is_array($item) || empty($item['path'])) {
-                    continue;
-                }
-                if (($item['type'] ?? '') === 'video') {
-                    $carousel[] = ['video' => $item['path']];
-                } else {
-                    $carousel[] = ['image' => $item['path']];
-                }
-            }
-            if (count($carousel) < 2) {
-                return ['success' => false, 'message' => 'LinkedIn carousel requires at least 2 valid media files.'];
-            }
-            $plan['type'] = 'carousel';
-            $plan['metadata'] = json_encode(['linkedin_carousel' => $carousel]);
 
             return ['success' => true] + $plan;
         }

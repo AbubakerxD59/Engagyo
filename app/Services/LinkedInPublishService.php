@@ -215,7 +215,7 @@ class LinkedInPublishService
         } elseif ($post->type === 'carousel') {
             return [
                 'success' => false,
-                'message' => 'LinkedIn Share API (ugcPosts) does not support carousel in this implementation.',
+                'message' => 'LinkedIn does not support carousel posts.',
             ];
         } elseif ($post->type === 'document') {
             return [
@@ -450,9 +450,9 @@ class LinkedInPublishService
         return match ($type) {
             'link' => 'link',
             'video' => 'video',
-            'carousel' => 'carousel',
             'document' => 'document',
             'content_only' => 'post',
+            'carousel' => 'post',
             default => 'photo',
         };
     }
