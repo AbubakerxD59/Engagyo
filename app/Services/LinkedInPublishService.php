@@ -59,6 +59,7 @@ class LinkedInPublishService
 
         if ($post->type === 'photo') {
             $imageUrl = $this->resolveImageUrl($post);
+            return ['success' => false, 'imageUrl' => $imageUrl];
             if ($imageUrl === '') {
                 return ['success' => false, 'message' => 'Photo publish requires a valid image URL or uploaded image.'];
             }
