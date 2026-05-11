@@ -104,14 +104,13 @@ class LinkedInPublishService
 
         $authorUrn = 'urn:li:person:' . $account->linkedin_id;
         $ugcPayload = $this->buildUgcPayload($post, $authorUrn, $token);
-        dd($ugcPayload);
         if (! ($ugcPayload['success'] ?? false)) {
             return $ugcPayload;
         }
 
         $response = Http::withHeaders($this->jsonHeaders($token))
             ->post(self::API_BASE_V2 . '/ugcPosts', $ugcPayload['payload']);
-
+        dd($response, $response->body());
         if (! $response->successful()) {
             return [
                 'success' => false,
