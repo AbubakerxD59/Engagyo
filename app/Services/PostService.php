@@ -74,6 +74,26 @@ class PostService
                 $service->delete($post);
             }
 
+            // LinkedIn: delete UGC post via API before deleting local row.
+            if ($status == 1 && $social_type == 'linkedin' && ! empty($post->post_id)) {
+                $linkedin = $post->linkedin;
+                if (! $linkedin) {
+                    throw new Exception('LinkedIn account not found for this post.');
+                }
+                $linkedInPublish = new LinkedInPublishService;
+                $liDelete = $linkedInPublish->deletePublishedUgcPost($linkedin, (string) $post->post_id);
+                if (! ($liDelete['success'] ?? false)) {
+                    $apiMessage = (string) ($liDelete['message'] ?? 'Failed to delete LinkedIn post.');
+                    Log::warning('LinkedIn delete failed', [
+                        'post_id' => $post->id,
+                        'linkedin_ugc_urn' => $post->post_id,
+                        'status' => $liDelete['status'] ?? null,
+                        'response' => $liDelete['response'] ?? null,
+                    ]);
+                    throw new Exception($apiMessage);
+                }
+            }
+
             // Threads: delete from Threads API before deleting local row.
             if ($status == 1 && str_contains($socialType, 'thread') && ! empty($post->post_id)) {
                 $thread = $post->thread;

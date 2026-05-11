@@ -165,6 +165,47 @@ class LinkedInPublishService
         ];
     }
 
+    /**
+     * Delete a published UGC post on LinkedIn. {@see https://learn.microsoft.com/en-us/linkedin/compliance/integrations/shares/ugc-post-api}
+     * {@code post_id} on our {@see Post} row is the ugcPost or share URN returned at publish time.
+     *
+     * @return array{success: bool, message?: string}
+     */
+    public function deletePublishedUgcPost(Linkedin $account, string $ugcPostUrn): array
+    {
+        $ugcPostUrn = trim($ugcPostUrn);
+        if ($ugcPostUrn === '') {
+            return ['success' => false, 'message' => 'Missing LinkedIn post URN.'];
+        }
+
+        $token = (string) ($account->getRawOriginal('access_token') ?? $account->access_token ?? '');
+        if ($token === '') {
+            return ['success' => false, 'message' => 'LinkedIn access token is missing.'];
+        }
+
+        if (! $account->validToken()) {
+            return ['success' => false, 'message' => 'LinkedIn access token expired. Please reconnect LinkedIn.'];
+        }
+
+        $encoded = rawurlencode($ugcPostUrn);
+        $response = Http::withHeaders($this->jsonHeaders($token))
+            ->timeout(30)
+            ->delete(self::API_BASE_V2.'/ugcPosts/'.$encoded);
+
+        if ($response->status() === 204 || $response->successful()) {
+            return ['success' => true];
+        }
+
+        return [
+            'success' => false,
+            'message' => (string) ($response->json('message')
+                ?? $response->json('error.message')
+                ?? 'Failed to delete LinkedIn post.'),
+            'status' => $response->status(),
+            'response' => $response->body(),
+        ];
+    }
+
     private function buildUgcPayload(Post $post, string $authorUrn, string $token): array
     {
         $commentary = $this->buildCommentary($post);
