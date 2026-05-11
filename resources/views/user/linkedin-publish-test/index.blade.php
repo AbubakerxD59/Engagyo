@@ -41,7 +41,6 @@
                                         <option value="content_only" {{ $type === 'content_only' ? 'selected' : '' }}>Text</option>
                                         <option value="photo" {{ $type === 'photo' ? 'selected' : '' }}>Image</option>
                                         <option value="video" {{ $type === 'video' ? 'selected' : '' }}>Video</option>
-                                        <option value="carousel" {{ $type === 'carousel' ? 'selected' : '' }}>Carousel (multiple images)</option>
                                         <option value="document" {{ $type === 'document' ? 'selected' : '' }}>Document</option>
                                     </select>
                                 </div>
@@ -72,14 +71,6 @@
                                 <div class="col-md-6 mb-3">
                                     <label class="font-weight-bold">Video File (video)</label>
                                     <input type="file" name="video_file" class="form-control" accept="video/*">
-                                </div>
-                                <div class="col-md-12 mb-3">
-                                    <label class="font-weight-bold">Carousel Image URLs (carousel)</label>
-                                    <textarea name="carousel_urls" rows="4" class="form-control" placeholder="One image URL per line">{{ old('carousel_urls') }}</textarea>
-                                </div>
-                                <div class="col-md-12 mb-3">
-                                    <label class="font-weight-bold">Carousel Files (carousel)</label>
-                                    <input type="file" name="carousel_files[]" class="form-control" accept="image/*" multiple>
                                 </div>
                                 <div class="col-md-8 mb-3">
                                     <label class="font-weight-bold">Document URL (document)</label>

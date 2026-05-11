@@ -378,11 +378,6 @@
                                         </label>
                                         <label class="create-post-format-option">
                                             <input type="checkbox" name="create_post_linkedin_formats[]"
-                                                id="createPostFormatLiCarousel" value="carousel">
-                                            <span>Carousel</span>
-                                        </label>
-                                        <label class="create-post-format-option">
-                                            <input type="checkbox" name="create_post_linkedin_formats[]"
                                                 id="createPostFormatLiDocument" value="document">
                                             <span>Document</span>
                                         </label>
@@ -396,7 +391,6 @@
                                             aria-hidden="true">
                                             <ul class="create-post-format-help-list">
                                                 <li><strong>Post</strong>: Publish one image or one video per post.</li>
-                                                <li><strong>Carousel</strong>: Publish multiple images/videos in one post.</li>
                                                 <li><strong>Document</strong>: Publish a single document file.</li>
                                             </ul>
                                         </div>

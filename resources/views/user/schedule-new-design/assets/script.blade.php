@@ -2477,12 +2477,6 @@
             return hasCarousel && createPostFiles.length >= 2;
         }
 
-        function createPostLinkedInCarouselModeActive() {
-            if (!createPostHasOnlyLinkedInChannelsSelected()) return false;
-            var hasCarousel = activeComposeModal$().find('input[name="create_post_linkedin_formats[]"][value="carousel"]').is(':checked');
-            return hasCarousel && createPostFiles.length >= 2;
-        }
-
         function createPostLinkedInDocumentModeActive() {
             if (!createPostHasOnlyLinkedInChannelsSelected()) return false;
             return activeComposeModal$().find('input[name="create_post_linkedin_formats[]"][value="document"]').is(':checked');
@@ -2585,24 +2579,12 @@
         function updateCreatePostLinkedInFormatRow() {
             var show = createPostHasOnlyLinkedInChannelsSelected() && !is_link;
             var $wrap = pm$('LinkedinFormatWrap');
-            var nFiles = createPostFiles.length;
-            var $carouselOpt = pm$('FormatLiCarousel').closest('.create-post-format-option');
             if (show) {
                 $wrap.show();
-                if (nFiles >= 2) {
-                    $carouselOpt.show();
-                } else {
-                    $carouselOpt.hide();
-                    if (pm$('FormatLiCarousel').is(':checked')) {
-                        pm$('FormatLiCarousel').prop('checked', false);
-                        pm$('FormatLiPost').prop('checked', true);
-                    }
-                }
             } else {
                 $wrap.hide();
-                $carouselOpt.show();
                 pm$('FormatLiPost').prop('checked', true);
-                pm$('FormatLiCarousel').add(pm$('FormatLiDocument')).prop('checked', false);
+                pm$('FormatLiDocument').prop('checked', false);
             }
         }
 
@@ -3977,11 +3959,6 @@
                 processCreatePostInstagramCarouselBatch();
                 return;
             }
-            if (createPostLinkedInCarouselModeActive()) {
-                if (!validateCreatePostTikTokSettings()) return;
-                processCreatePostInstagramCarouselBatch();
-                return;
-            }
             if (createPostChainPostsMode && action_name === 'queue') {
                 if (!validateCreatePostTikTokSettings()) return;
                 processCreatePostChainQueue();
@@ -4090,15 +4067,9 @@
         function processCreatePostInstagramCarouselBatch() {
             if (!validateCreatePostTikTokSettings()) return;
             var isThreadsCarousel = createPostThreadsCarouselModeActive();
-            var isLinkedInCarousel = createPostLinkedInCarouselModeActive();
             if (isThreadsCarousel) {
                 if (createPostFiles.length < 2 || createPostFiles.length > 20) {
                     toastr.error('Threads carousel requires between 2 and 20 media files.');
-                    return;
-                }
-            } else if (isLinkedInCarousel) {
-                if (createPostFiles.length < 2 || createPostFiles.length > 20) {
-                    toastr.error('LinkedIn carousel requires between 2 and 20 media files.');
                     return;
                 }
             } else {
@@ -4124,9 +4095,6 @@
             if (isThreadsCarousel) {
                 formData.append("threads_content_format", "carousel");
                 formData.append("threads_content_formats", JSON.stringify(['carousel']));
-            } else if (isLinkedInCarousel) {
-                formData.append("linkedin_content_format", "carousel");
-                formData.append("linkedin_content_formats", JSON.stringify(['carousel']));
             } else {
                 formData.append("instagram_content_format", "carousel");
                 formData.append("instagram_content_formats", JSON.stringify(['carousel']));
@@ -4218,9 +4186,7 @@
             }
             if (shouldSendLinkedInContentFormats()) {
                 formData.append('linkedin_content_formats', getLinkedInContentFormatsPayload());
-                if (createPostLinkedInCarouselModeActive()) {
-                    formData.append('linkedin_content_format', 'carousel');
-                } else if (createPostLinkedInDocumentModeActive()) {
+                if (createPostLinkedInDocumentModeActive()) {
                     formData.append('linkedin_content_format', 'document');
                 }
             }
