@@ -79,8 +79,9 @@ class ScheduleController extends Controller
             return false;
         }
 
-        // Check based on social type
-        switch ($post->social_type) {
+        // Check based on social type (use normalized match for values like "linkedin")
+        $socialNorm = strtolower((string) $post->social_type);
+        switch ($socialNorm) {
             case 'pinterest':
                 $board = Board::where('id', $post->account_id)
                     ->where('user_id', $user->id)
@@ -119,7 +120,6 @@ class ScheduleController extends Controller
             case 'linkedin':
                 $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
 
-                Log::info('verifyPostAccountBelongsToUser: linkedin', ['ownerId' => $ownerId, 'postAccountId' => $post->account_id]);
                 return Linkedin::where('id', $post->account_id)
                     ->where('user_id', $ownerId)
                     ->exists();
@@ -3966,13 +3966,28 @@ class ScheduleController extends Controller
     public function postDelete(Request $request)
     {
         try {
-            $post = Post::find($request->id);
+            /** @var User|null $viewer */
+            $viewer = Auth::guard('user')->user();
+            if (! $viewer instanceof User) {
+                return response()->json(['success' => false, 'message' => 'Unauthorized'], 401);
+            }
+
+            $postId = (int) $request->input('id', 0);
+            if ($postId <= 0) {
+                return response()->json(['success' => false, 'message' => 'Invalid post.'], 422);
+            }
+
+            $postCreatorIds = $viewer->schedulePostCreatorUserIds();
+            $post = Post::withoutGlobalScopes()
+                ->whereIn('user_id', $postCreatorIds)
+                ->where('id', $postId)
+                ->first();
 
             if ($post) {
-                $user = User::findOrFail($post->user_id);
+                $owner = User::findOrFail($post->user_id);
                 // Decrement feature usage if this is a scheduled post and account belongs to user
-                if ($post->source === 'schedule' && $this->verifyPostAccountBelongsToUser($post, $user)) {
-                    $user->decrementFeatureUsage('scheduled_posts_per_account', 1);
+                if ($post->source === 'schedule' && $this->verifyPostAccountBelongsToUser($post, $owner)) {
+                    $owner->decrementFeatureUsage('scheduled_posts_per_account', 1);
                 }
 
                 $post->photo()->delete();
@@ -3986,6 +4001,11 @@ class ScheduleController extends Controller
                     if ($page) {
                         DeleteFacebookPostJob::dispatch($facebookPostId, (int) $pageId, null);
                     }
+                } else {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Post not found or you do not have access to delete it.',
+                    ], 404);
                 }
             }
 

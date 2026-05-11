@@ -56,7 +56,10 @@ class PostService
 
     public static function delete($post_id)
     {
-        $post = Post::with('page', 'board.pinterest', 'tiktok', 'instagramAccount', 'thread')->where('id', $post_id)->first();
+        $post = Post::withoutGlobalScopes()
+            ->with('page', 'board.pinterest', 'tiktok', 'instagramAccount', 'thread', 'linkedin')
+            ->where('id', $post_id)
+            ->first();
         if ($post) {
             $status = $post->status;
             $social_type = $post->social_type;
