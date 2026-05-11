@@ -104,6 +104,7 @@ class LinkedInPublishService
 
         $authorUrn = 'urn:li:person:' . $account->linkedin_id;
         $ugcPayload = $this->buildUgcPayload($post, $authorUrn, $token);
+        dd($ugcPayload);
         if (! ($ugcPayload['success'] ?? false)) {
             return $ugcPayload;
         }
@@ -146,9 +147,7 @@ class LinkedInPublishService
                 return ['success' => false, 'message' => 'Photo publish requires a valid image URL or uploaded image.'];
             }
             $assetResult = $this->registerAndUploadAsset($token, $authorUrn, 'image', $imageUrl);
-            dd($imageUrl, $assetResult);
             if (! ($assetResult['success'] ?? false)) {
-                dd('LinkedInPublishService: Failed to register/upload image asset to LinkedIn.', $post, $authorUrn, $token, $assetResult);
                 return [
                     'success' => false,
                     'message' => 'Failed to register/upload image asset to LinkedIn.',
