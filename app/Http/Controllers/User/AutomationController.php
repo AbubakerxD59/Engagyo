@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Jobs\FetchPost;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishPinterestPost;
-use App\Jobs\PublishTikTokPost;
 use App\Jobs\RefreshPosts;
 use App\Models\Board;
 use App\Models\Domain;
@@ -14,14 +13,12 @@ use App\Models\Facebook;
 use App\Models\Page;
 use App\Models\Pinterest;
 use App\Models\Post;
-use App\Models\Tiktok;
 use App\Models\User;
 use App\Services\FacebookService;
 use App\Services\FeedService;
 use App\Services\HtmlParseService;
 use App\Services\PinterestService;
 use App\Services\PostService;
-use App\Services\TikTokService;
 use App\Services\TimezoneService;
 use Exception;
 use Illuminate\Http\Request;
@@ -53,7 +50,7 @@ class AutomationController extends Controller
     {
         $user = User::with("boards.pinterest", "pages.facebook")->findOrFail(Auth::guard('user')->id());
         $timeslots = timeslots();
-        $accounts = $user->getAccounts();
+        $accounts = $user->getAccountsForRss();
         return view("user.automation.index", compact("user", "timeslots", "accounts"));
     }
 
@@ -69,6 +66,16 @@ class AutomationController extends Controller
         $search = null;
         $domain = isset($data["domain"]) ? $data["domain"] : [];
         $lastFetch = '';
+        if ($type && ! in_array($type, ['facebook', 'pinterest'], true)) {
+            return response()->json([
+                'draw' => intval($data['draw'] ?? 1),
+                'iTotalRecords' => 0,
+                'iTotalDisplayRecords' => 0,
+                'scheduled_till' => '',
+                'last_fetch' => '',
+                'data' => [],
+            ]);
+        }
         $posts = $this->post->with("page.facebook", "board.pinterest", "domain", "user.timezone")->isRss()->accountExist();
         if ($account) {
             if ($type == 'pinterest') {
@@ -78,11 +85,6 @@ class AutomationController extends Controller
             }
             if ($type == 'facebook') {
                 $account = $this->page->findOrFail($account);
-                $lastFetch = $account->last_fetched;
-                $account_id = $account->id;
-            }
-            if ($type == 'tiktok') {
-                $account = Tiktok::findOrFail($account);
                 $lastFetch = $account->last_fetched;
                 $account_id = $account->id;
             }
@@ -108,8 +110,6 @@ class AutomationController extends Controller
                 $post->account_name = $post->page->name;
             } elseif ($post->social_type == 'pinterest' && $post->board) {
                 $post->account_name = $post->board->name;
-            } elseif ($post->social_type == 'tiktok' && $post->tiktok) {
-                $post->account_name = $post->tiktok->name;
             } else {
                 $post->account_name = 'Unknown';
             }
@@ -205,16 +205,18 @@ class AutomationController extends Controller
             $type = $feedBody['type'];
             $account = $feedBody['account'];
             $body = $feedBody['body'];
+            if (! in_array($type, ['facebook', 'pinterest'], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'RSS feeds are only supported for Facebook and Pinterest.',
+                ]);
+            }
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($account);
                 $account_id = $account->id;
             }
             if ($type == 'facebook') {
                 $account = $this->page->findOrFail($account);
-                $account_id = $account->id;
-            }
-            if ($type == 'tiktok') {
-                $account = Tiktok::findOrFail($account);
                 $account_id = $account->id;
             }
 
@@ -225,6 +227,10 @@ class AutomationController extends Controller
                     "message" => "RSS automation is paused for this account. Please enable RSS automation to fetch posts."
                 ]);
             }
+            $response = [
+                'success' => false,
+                'message' => 'No feed URLs processed.',
+            ];
             foreach ($body as $item) {
                 $times = $item['time'];
                 $domain = $item['feed_url'];
@@ -323,14 +329,17 @@ class AutomationController extends Controller
         if (!empty($id)) {
             $user = User::with("boards.pinterest", "pages.facebook")->find(Auth::guard('user')->id());
             $type = $request->type;
+            if (! in_array($type, ['facebook', 'pinterest'], true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'RSS feeds are only supported for Facebook and Pinterest.',
+                ]);
+            }
             if ($type == 'pinterest') {
                 $account = $this->board->findOrFail($id);
             }
             if ($type == 'facebook') {
-                $account = $this->page->find($id);
-            }
-            if ($type == 'tiktok') {
-                $account = Tiktok::find($id);
+                $account = $this->page->findOrFail($id);
             }
             $domains = $user->getDomains($account->id, $type);
             $response = [
@@ -352,7 +361,7 @@ class AutomationController extends Controller
             $user = Auth::guard('user')->user();
             if (!empty($id)) {
                 $type = $request->type;
-                $post = $this->post->with(["board.pinterest", "page.facebook", "tiktok"])->where("status", "!=", 1)->findOrFail($id);
+                $post = $this->post->with(['board.pinterest', 'page.facebook'])->where('status', '!=', 1)->findOrFail($id);
                 $pinterest_active = $post->social_type == "pinterest" ? true : false;
                 $dom = new HtmlParseService($pinterest_active);
                 $get_info = $dom->get_info($post->url, 1);
@@ -429,37 +438,6 @@ class AutomationController extends Controller
                         "success" => true,
                         "message" => "Your post is being Published!"
                     );
-                } else if ($type == 'tiktok') {
-                    $post = $this->post->with(relations: "tiktok")->notPublished()->where("id", $id)->firstOrFail();
-                    $tiktok = $post->tiktok;
-
-                    if (!$tiktok) {
-                        return response()->json([
-                            "success" => false,
-                            "message" => "Tiktok account not found."
-                        ]);
-                    }
-
-                    // Use validateToken for proper error handling
-                    $tokenResponse = TikTokService::validateToken($tiktok);
-
-                    if (!$tokenResponse['success']) {
-                        return response()->json([
-                            "success" => false,
-                            "message" => $tokenResponse["message"] ?? "Failed to validate Tiktok access token."
-                        ]);
-                    }
-
-                    $access_token = $tokenResponse['access_token'];
-                    $postData = PostService::postTypeBody($post);
-
-                    $postData['url'] = saveImageFromUrl($postData['url'], 'uploads') ?? $postData['url'];
-
-                    PublishTikTokPost::dispatch($post->id, $postData, $access_token, "photo");
-                    $response = array(
-                        "success" => true,
-                        "message" => "Your post is being Published!"
-                    );
                 } else {
                     Log::info("invalid social type", [
                         "type" => $request->type,
@@ -496,14 +474,12 @@ class AutomationController extends Controller
         $shuffle = $request->shuffle;
         if (!empty($id)) {
             $user = Auth::guard('user')->user();
+            $account = null;
             if ($type == 'pinterest') {
                 $account = $this->board->where("id", $id)->first();
             }
             if ($type == 'facebook') {
                 $account = $this->page->where("id", $id)->first();
-            }
-            if ($type == 'tiktok') {
-                $account = Tiktok::where("id", $id)->first();
             }
             if ($account) {
                 $account->update([
@@ -535,14 +511,12 @@ class AutomationController extends Controller
         $domain = $request->has("domain") ? $request->domain : [];
         if (!empty($id)) {
             $user = Auth::guard('user')->user();
+            $account = null;
             if ($type == 'pinterest') {
                 $account = $this->board->with("posts.photo")->where("id", $id)->first();
             }
             if ($type == 'facebook') {
                 $account = $this->page->with("posts.photo")->where("id", $id)->first();
-            }
-            if ($type == 'tiktok') {
-                $account = Tiktok::find($id);
             }
             if ($account) {
                 $posts = $account->posts()->notPublished();
@@ -693,8 +667,6 @@ class AutomationController extends Controller
                 $account = $this->board->findOrFail($accountId);
             } elseif ($type == 'facebook') {
                 $account = $this->page->findOrFail($accountId);
-            } elseif ($type == 'tiktok') {
-                $account = Tiktok::findOrFail($accountId);
             } else {
                 return response()->json([
                     "success" => false,

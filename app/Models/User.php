@@ -269,6 +269,17 @@ class User extends Authenticatable
     }
 
     /**
+     * Accounts eligible for RSS automation (Facebook pages and Pinterest boards only).
+     */
+    public function getAccountsForRss(): \Illuminate\Support\Collection
+    {
+        $pages = Page::with('facebook', 'timeslots')->orderBy('name')->get();
+        $boards = Board::with('pinterest', 'timeslots')->orderBy('name')->get();
+
+        return $pages->concat($boards);
+    }
+
+    /**
      * Instagram professional accounts for the schedule UI (optional filter: schedule-active only).
      *
      * @return \Illuminate\Support\Collection<int, InstagramAccount>

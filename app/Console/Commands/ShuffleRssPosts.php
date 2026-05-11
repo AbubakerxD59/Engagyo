@@ -5,7 +5,6 @@ namespace App\Console\Commands;
 use App\Models\Board;
 use App\Models\Page;
 use App\Models\Post;
-use App\Models\Tiktok;
 use App\Services\TimezoneService;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -32,7 +31,12 @@ class ShuffleRssPosts extends Command
     public function handle()
     {
         // get posts
-        $posts = Post::with(["domain", "board", "page", "tiktok"])->whereNotNull("domain_id")->isRss()->notPublished()->get();
+        $posts = Post::with(['domain', 'board', 'page'])
+            ->whereNotNull('domain_id')
+            ->isRss()
+            ->whereIn('social_type', ['facebook', 'pinterest'])
+            ->notPublished()
+            ->get();
         echo 'total posts: ' . count($posts) . '<br>';
         $socialTypeBasedPosts = $posts->groupBy('social_type');
         foreach ($socialTypeBasedPosts as $social_type => $socialTypeBasedPost) {
@@ -48,9 +52,6 @@ class ShuffleRssPosts extends Command
                 }
                 if ($social_type == "pinterest") {
                     $account = Board::find($account_id);
-                }
-                if ($social_type == "tiktok") {
-                    $account = Tiktok::find($account_id); 
                 }
                 $shuffle = $account ? $account->shuffle : false;
                 echo 'shuffle: ' . $shuffle . '<br>';

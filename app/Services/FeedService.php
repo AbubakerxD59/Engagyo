@@ -77,6 +77,12 @@ class FeedService
     public function fetch()
     {
         $social_type = $this->data["social_type"];
+        if (! in_array($social_type, ['facebook', 'pinterest'], true)) {
+            return [
+                'success' => false,
+                'message' => 'RSS automation is only available for Facebook and Pinterest.',
+            ];
+        }
         $this->data["type"] = LinkPostEnable::isLinkPostEnabledFor($social_type) ? "link" : "photo";
         $account_image = null;
         $account_name = null;
