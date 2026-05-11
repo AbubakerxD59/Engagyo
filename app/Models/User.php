@@ -92,7 +92,7 @@ class User extends Authenticatable
         return $this->hasMany(Thread::class, 'user_id', 'id');
     }
 
-    public function linkedin()
+    public function linkedins()
     {
         return $this->hasMany(Linkedin::class, 'user_id', 'id');
     }

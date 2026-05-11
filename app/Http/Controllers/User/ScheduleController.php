@@ -959,7 +959,7 @@ class ScheduleController extends Controller
                     'schedule_status' => $threadRow->schedule_status ?? 'inactive',
                 ]);
             });
-            $user->linkedin()->get(['id', 'schedule_status'])->each(function ($linkedinRow) use ($accountsStatus) {
+            $user->linkedins()->get(['id', 'schedule_status'])->each(function ($linkedinRow) use ($accountsStatus) {
                 $accountsStatus->push([
                     'id' => $linkedinRow->id,
                     'type' => 'linkedin',
@@ -1019,7 +1019,7 @@ class ScheduleController extends Controller
                 'schedule_status' => $threadRow->schedule_status ?? 'inactive',
             ]);
         });
-        $user->linkedin()->get(['id', 'schedule_status'])->each(function ($linkedinRow) use ($accountsStatus) {
+        $user->linkedins()->get(['id', 'schedule_status'])->each(function ($linkedinRow) use ($accountsStatus) {
             $accountsStatus->push([
                 'id' => $linkedinRow->id,
                 'type' => 'linkedin',
