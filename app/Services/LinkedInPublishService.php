@@ -249,7 +249,7 @@ class LinkedInPublishService
             return $path;
         }
 
-        return getImage('', $path);
+        return $this->ensureAbsoluteUrl(getImage('', $path));
     }
 
     private function resolveVideoUrl(Post $post): string
@@ -262,7 +262,25 @@ class LinkedInPublishService
             return $raw;
         }
 
-        return (string) fetchFromS3($raw);
+        return $this->ensureAbsoluteUrl((string) fetchFromS3($raw));
+    }
+
+    private function ensureAbsoluteUrl(string $urlOrPath): string
+    {
+        $value = trim($urlOrPath);
+        if ($value === '') {
+            return '';
+        }
+        if (str_starts_with($value, 'http://') || str_starts_with($value, 'https://')) {
+            return $value;
+        }
+
+        $baseUrl = rtrim((string) config('app.url', ''), '/');
+        if ($baseUrl === '') {
+            return $value;
+        }
+
+        return $baseUrl.'/'.ltrim($value, '/');
     }
 
     private function jsonHeaders(string $token): array
