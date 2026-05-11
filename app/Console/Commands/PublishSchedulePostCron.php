@@ -3,14 +3,10 @@
 namespace App\Console\Commands;
 
 use App\Jobs\PublishFacebookPost;
-use App\Jobs\PublishInstagramPost;
-use App\Jobs\PublishLinkedInPost;
 use App\Jobs\PublishPinterestPost;
-use App\Jobs\PublishThreadsPost;
 use App\Models\Notification;
 use App\Models\Post;
 use App\Services\FacebookService;
-use App\Services\LinkedInPublishService;
 use App\Services\PinterestService;
 use App\Services\PostService;
 use Carbon\Carbon;
@@ -80,7 +76,13 @@ class PublishSchedulePostCron extends Command
     public function handle()
     {
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
-        $posts = Post::with('user.timezone', 'page.facebook', 'board.pinterest', 'instagramAccount', 'thread', 'linkedin')->past($now)->notPublished()->schedule()->orderBy('publish_date')->get();
+        $posts = Post::with('user.timezone', 'page.facebook', 'board.pinterest')
+            ->past($now)
+            ->notPublished()
+            ->schedule()
+            ->whereIn('social_type', ['facebook', 'pinterest'])
+            ->orderBy('publish_date')
+            ->get();
         foreach ($posts as $key => $post) {
             $social_type = $post->social_type;
             $account_image = $post->account_profile;
@@ -91,15 +93,6 @@ class PublishSchedulePostCron extends Command
                         break;
                     case 'pinterest':
                         $this->processPinterestPost($post);
-                        break;
-                    case 'instagram':
-                        $this->processInstagramPost($post);
-                        break;
-                    case 'threads':
-                        $this->processThreadsPost($post);
-                        break;
-                    case 'linkedin':
-                        $this->processLinkedInPost($post);
                         break;
                 }
             } catch (\Exception $e) {
@@ -245,127 +238,6 @@ class PublishSchedulePostCron extends Command
             ]);
             // Create error notification (cron job)
             $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Pinterest post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
-        }
-    }
-
-    private function processInstagramPost(Post $post): void
-    {
-        $social_type = $post->social_type;
-        $account_image = $post->account_profile;
-        $ig = $post->instagramAccount;
-
-        if (! $ig) {
-            $errorMessage = 'Error: Instagram account not found.';
-            $post->update([
-                'status' => -1,
-                'response' => $errorMessage,
-            ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
-
-            return;
-        }
-
-        if (! $ig->validToken()) {
-            $errorMessage = 'Error: Instagram access token expired. Please reconnect Instagram.';
-            $post->update([
-                'status' => -1,
-                'response' => $errorMessage,
-            ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
-
-            return;
-        }
-
-        try {
-            PublishInstagramPost::dispatch($post->id);
-        } catch (\Exception $e) {
-            $errorMessage = 'Error preparing post: ' . $e->getMessage();
-            $post->update([
-                'status' => -1,
-                'response' => $errorMessage,
-            ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Instagram post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
-        }
-    }
-
-    private function processThreadsPost(Post $post): void
-    {
-        $social_type = $post->social_type;
-        $account_image = $post->account_profile;
-        $thread = $post->thread;
-
-        if (! $thread) {
-            $errorMessage = 'Error: Threads account not found.';
-            $post->update([
-                'status' => -1,
-                'response' => $errorMessage,
-            ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
-
-            return;
-        }
-
-        if (! $thread->validToken()) {
-            $errorMessage = 'Error: Threads access token expired. Please reconnect Threads.';
-            $post->update([
-                'status' => -1,
-                'response' => $errorMessage,
-            ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
-
-            return;
-        }
-
-        try {
-            PublishThreadsPost::dispatch($post->id);
-        } catch (\Exception $e) {
-            $errorMessage = 'Error preparing post: ' . $e->getMessage();
-            $post->update([
-                'status' => -1,
-                'response' => $errorMessage,
-            ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled Threads post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
-        }
-    }
-
-    private function processLinkedInPost(Post $post): void
-    {
-        $social_type = $post->social_type;
-        $account_image = $post->account_profile;
-        $linkedin = $post->linkedin;
-
-        if (! $linkedin) {
-            $errorMessage = 'Error: LinkedIn account not found.';
-            $post->update([
-                'status' => -1,
-                'response' => $errorMessage,
-            ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled LinkedIn post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
-
-            return;
-        }
-
-        if (! $linkedin->validToken()) {
-            $errorMessage = 'Error: LinkedIn access token expired. Please reconnect LinkedIn.';
-            $post->update([
-                'status' => -1,
-                'response' => $errorMessage,
-            ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled LinkedIn post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
-
-            return;
-        }
-
-        try {
-            $linkedInPublishService = new LinkedInPublishService();
-            $linkedInPublishService->publishQueuedPost($post->id);
-        } catch (\Exception $e) {
-            $errorMessage = 'Error preparing post: ' . $e->getMessage();
-            $post->update([
-                'status' => -1,
-                'response' => $errorMessage,
-            ]);
-            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled LinkedIn post. ' . $errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
         }
     }
 }

@@ -8,7 +8,9 @@ use App\Console\Commands\CleanupTestPosts;
 use App\Console\Commands\CleanupTikTokTestPosts;
 use App\Console\Commands\DownloadPhotoCron;
 use App\Console\Commands\FacebookPublishCron;
+use App\Console\Commands\InstagramPublishQueueCron;
 use App\Console\Commands\FeedCron;
+use App\Console\Commands\LinkedInPublishQueueCron;
 use App\Console\Commands\SyncFacebookPostCreatedDate;
 use App\Console\Commands\PinterestPublishCron;
 use App\Console\Commands\PublishPendingCommentsCron;
@@ -27,6 +29,7 @@ use App\Console\Commands\SyncThreadInsights;
 use App\Console\Commands\SyncThreadPosts;
 use App\Console\Commands\SyncUserUsage;
 use App\Console\Commands\TikTokFetchPublishStatus;
+use App\Console\Commands\ThreadsPublishQueueCron;
 use App\Console\Commands\TikTokPublishCron;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
@@ -47,6 +50,9 @@ class Kernel extends ConsoleKernel
         PinterestPublishCron::class, // pinterest:publish
         FacebookPublishCron::class, // facebook:publish
         TikTokPublishCron::class, // tiktok:publish
+        InstagramPublishQueueCron::class, // instagram:publish-queue
+        ThreadsPublishQueueCron::class, // threads:publish-queue
+        LinkedInPublishQueueCron::class, // linkedin:publish-queue
         PublishSchedulePostCron::class, // schedule:publish
         DownloadPhotoCron::class, // download:photo
         RunFacebookTests::class, // facebook:run-tests
@@ -84,6 +90,10 @@ class Kernel extends ConsoleKernel
         $schedule->command('tiktok:publish')->everyFiveMinutes();
         // Command to publish Scheduled posts
         $schedule->command('schedule:publish')->everyMinute();
+        // Queue (scheduled slot) posts — Instagram, Threads, LinkedIn (split from schedule:publish)
+        $schedule->command('instagram:publish-queue')->everyMinute();
+        $schedule->command('threads:publish-queue')->everyMinute();
+        $schedule->command('linkedin:publish-queue')->everyMinute();
         // Command to download photos
         $schedule->command('download:photo')->everyFiveMinutes();
         // Command to reset monthly feature usage (runs on the 1st of each month at 00:00)

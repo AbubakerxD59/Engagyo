@@ -193,6 +193,16 @@ class Post extends Model
         $query->where("social_type", "like", "%instagram%");
     }
 
+    public function scopeThreads($query)
+    {
+        $query->where("social_type", "like", "%threads%");
+    }
+
+    public function scopeLinkedin($query)
+    {
+        $query->where("social_type", "like", "%linkedin%");
+    }
+
     public function scopePast($query, $date_time)
     {
         $query->where("publish_date", "<=", $date_time);
