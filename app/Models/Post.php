@@ -14,30 +14,30 @@ class Post extends Model
     use HasFactory;
 
     protected $fillable = [
-        "user_id",
-        "api_key_id",
-        "post_id",
-        "comment_id",
-        "account_id",
-        "social_type",
-        "type",
-        "source",
-        "title",
-        "description",
-        "comment",
-        "domain_id",
-        "url",
-        "image",
-        "video",
-        "publish_date",
-        "status",
-        "published_at",
-        "scheduled",
-        "response",
-        "metadata",
+        'user_id',
+        'api_key_id',
+        'post_id',
+        'comment_id',
+        'account_id',
+        'social_type',
+        'type',
+        'source',
+        'title',
+        'description',
+        'comment',
+        'domain_id',
+        'url',
+        'image',
+        'video',
+        'publish_date',
+        'status',
+        'published_at',
+        'scheduled',
+        'response',
+        'metadata',
     ];
 
-    protected $appends = ["date", "time", "modal_time", "message", "response_message"];
+    protected $appends = ['date', 'time', 'modal_time', 'message', 'response_message'];
 
     public function user()
     {
@@ -83,6 +83,7 @@ class Post extends Model
     {
         return $this->belongsTo(Domain::class, 'domain_id', 'id');
     }
+
     public function photo()
     {
         return $this->hasOne(Photo::class, 'post_id', 'id');
@@ -90,17 +91,17 @@ class Post extends Model
 
     public function scopeSchedule($query)
     {
-        $query->where("scheduled", 1);
+        $query->where('scheduled', 1);
     }
 
     public function scopeNotSchedule($query)
     {
-        $query->where("scheduled", 0);
+        $query->where('scheduled', 0);
     }
 
     public function scopeSearch($query, $search)
     {
-        $query->where("title", "like", "%{$search}%")
+        $query->where('title', 'like', "%{$search}%")
             ->orWhere(function ($q) use ($search) {
                 $q->whereHas('domain', function ($q) use ($search) {
                     $q->where('name', 'like', "%{$search}%");
@@ -110,112 +111,112 @@ class Post extends Model
 
     public function scopeExist($query, $search)
     {
-        if (isset($search["account_id"])) {
-            $query->where("account_id", $search["account_id"]);
+        if (isset($search['account_id'])) {
+            $query->where('account_id', $search['account_id']);
         }
-        if (isset($search["social_type"])) {
-            $query->where("social_type", $search["social_type"]);
+        if (isset($search['social_type'])) {
+            $query->where('social_type', $search['social_type']);
         }
-        if (isset($search["type"])) {
-            $query->where("type", $search["type"]);
+        if (isset($search['type'])) {
+            $query->where('type', $search['type']);
         }
-        if (isset($search["source"])) {
-            $query->where("source", $search["source"]);
+        if (isset($search['source'])) {
+            $query->where('source', $search['source']);
         }
-        if (isset($search["domain_id"])) {
-            $query->where("domain_id", $search["domain_id"]);
+        if (isset($search['domain_id'])) {
+            $query->where('domain_id', $search['domain_id']);
         }
-        if (isset($search["url"])) {
-            $query->where("url", "like", "%" . $search["url"] . "%");
+        if (isset($search['url'])) {
+            $query->where('url', 'like', '%'.$search['url'].'%');
         }
     }
 
     public function scopeAccountExist($query)
     {
-        $query->has("page")->orHas("board")->orHas("tiktok")->orHas("instagramAccount")->orHas("thread")->orHas("linkedin");
+        $query->has('page')->orHas('board')->orHas('tiktok')->orHas('instagramAccount')->orHas('thread')->orHas('linkedin');
     }
 
     public function scopePageExist($query)
     {
-        $query->has("page");
+        $query->has('page');
     }
 
     public function scopeBoardExist($query)
     {
-        $query->has("board");
+        $query->has('board');
     }
 
     public function scopeDomainSearch($query, $id)
     {
         if (is_array($id) && count($id) > 0) {
-            $query->whereIn("domain_id", $id);
+            $query->whereIn('domain_id', $id);
         } else {
-            $query->where("domain_id", $id);
+            $query->where('domain_id', $id);
         }
     }
 
     public function scopeAccounts($query, $id)
     {
         if (is_array($id) && count($id) > 0) {
-            $query->whereIn("account_id", $id);
+            $query->whereIn('account_id', $id);
         } else {
-            $query->where("account_id", $id);
+            $query->where('account_id', $id);
         }
     }
 
     public function scopePublished($query)
     {
-        $query->where("status", "1");
+        $query->where('status', '1');
     }
 
     public function scopeNotPublished($query)
     {
-        $query->whereIn("status", ["0"]);
+        $query->whereIn('status', ['0']);
     }
 
     public function scopePinterest($query)
     {
-        $query->where("social_type", "like", "%pinterest%");
+        $query->where('social_type', 'like', '%pinterest%');
     }
 
     public function scopeFacebook($query)
     {
-        $query->where("social_type", "like", "%facebook%");
+        $query->where('social_type', 'like', '%facebook%');
     }
 
     public function scopeTiktok($query)
     {
-        $query->where("social_type", "like", "%tiktok%");
+        $query->where('social_type', 'like', '%tiktok%');
     }
 
     public function scopeInstagram($query)
     {
-        $query->where("social_type", "like", "%instagram%");
+        $query->where('social_type', 'like', '%instagram%');
     }
 
     public function scopeThreads($query)
     {
-        $query->where("social_type", "like", "%threads%");
+        $query->where('social_type', 'like', '%threads%');
     }
 
     public function scopeLinkedin($query)
     {
-        $query->where("social_type", "like", "%linkedin%");
+        $query->where('social_type', 'like', '%linkedin%');
     }
 
     public function scopePast($query, $date_time)
     {
-        $query->where("publish_date", "<=", $date_time);
+        $query->where('publish_date', '<=', $date_time);
     }
 
     public function scopeNext($query, $date_time)
     {
-        $query->where("publish_date", ">=", $date_time);
+        $query->where('publish_date', '>=', $date_time);
     }
 
     public function scopeIsRss($query)
     {
-        $query->whereIn("source", ["rss"]);
+        $query->whereIn('source', ['rss']);
     }
 
     /**
@@ -230,20 +231,21 @@ class Post extends Model
 
     public function scopeIsScheduled($query)
     {
-        $query->whereIn("source", ["schedule"]);
+        $query->whereIn('source', ['schedule']);
     }
 
     public function getAccount($social_type, $id)
     {
         if ($social_type == 'pinterest') {
-            $account = $this->board()->where("board_id", $id)->first();
+            $account = $this->board()->where('board_id', $id)->first();
         }
         if ($social_type == 'facebook') {
-            $account = $this->page()->where("page_id", $id)->first();
+            $account = $this->page()->where('page_id', $id)->first();
         }
         if ($social_type == 'tiktok') {
-            $account = $this->tiktok()->where("id", $id)->first();
+            $account = $this->tiktok()->where('id', $id)->first();
         }
+
         return $account;
     }
 
@@ -252,14 +254,15 @@ class Post extends Model
         $account = self::getAccount($social_type, $account_id);
         if ($social_type == 'pinterest') {
             $mainAccount = $account->getPinterest($account->pin_id);
-            $accountUrl = "https://www.pinterest.com/" . $mainAccount->username . '/' . $account->name;
+            $accountUrl = 'https://www.pinterest.com/'.$mainAccount->username.'/'.$account->name;
         }
         if ($social_type == 'facebook') {
-            $accountUrl = "https://www.facebook.com/" . $account->page_id;
+            $accountUrl = 'https://www.facebook.com/'.$account->page_id;
         }
         if ($social_type == 'tiktok') {
-            $accountUrl = "https://www.tiktok.com/" . $account->tiktok_id;
+            $accountUrl = 'https://www.tiktok.com/'.$account->tiktok_id;
         }
+
         return $accountUrl;
     }
 
@@ -267,9 +270,9 @@ class Post extends Model
      * Get next available (date, time) from given timeslots.
      * When $user is provided, uses user's timezone for "now" and for interpreting existing publish_date.
      *
-     * @param array $search Search criteria (account_id, social_type, source, type, etc.)
-     * @param array $times Timeslot strings (e.g. ["09:00", "14:00"])
-     * @param \App\Models\User|null $user User for timezone
+     * @param  array  $search  Search criteria (account_id, social_type, source, type, etc.)
+     * @param  array  $times  Timeslot strings (e.g. ["09:00", "14:00"])
+     * @param  \App\Models\User|null  $user  User for timezone
      * @return string "Y-m-d H:i:s"
      */
     public function nextTime($search, array $times, $user = null)
@@ -277,6 +280,7 @@ class Post extends Model
         usort($times, function ($a, $b) {
             $timeA = strtotime($a);
             $timeB = strtotime($b);
+
             return $timeA - $timeB;
         });
 
@@ -329,7 +333,7 @@ class Post extends Model
                     : Carbon::parse($post->publish_date);
                 $postDate = $postLocal->format('Y-m-d');
                 $postTime = $postLocal->format('H:i:s');
-                if (!isset($usedTimeslotsByDate[$postDate])) {
+                if (! isset($usedTimeslotsByDate[$postDate])) {
                     $usedTimeslotsByDate[$postDate] = [];
                 }
                 $usedTimeslotsByDate[$postDate][] = $postTime;
@@ -341,9 +345,9 @@ class Post extends Model
             $selectedDate = null;
             $selectedTimeslot = null;
 
-            while ($attempts < $maxAttempts && !$selectedDate) {
+            while ($attempts < $maxAttempts && ! $selectedDate) {
                 // Initialize used timeslots array for current date if not exists
-                if (!isset($usedTimeslotsByDate[$startDate])) {
+                if (! isset($usedTimeslotsByDate[$startDate])) {
                     $usedTimeslotsByDate[$startDate] = [];
                 }
 
@@ -358,13 +362,14 @@ class Post extends Model
                     $timeslotIndex++;
                     if ($timeslotIndex >= count($times)) {
                         // All timeslots used for this day, move to next day
-                        $startDate = date('Y-m-d', strtotime($startDate . ' +1 day'));
+                        $startDate = date('Y-m-d', strtotime($startDate.' +1 day'));
                         $timeslotIndex = 0;
-                        if (!isset($usedTimeslotsByDate[$startDate])) {
+                        if (! isset($usedTimeslotsByDate[$startDate])) {
                             $usedTimeslotsByDate[$startDate] = [];
                         }
                     }
                     $attempts++;
+
                     continue;
                 }
 
@@ -372,13 +377,14 @@ class Post extends Model
                 if ($startDate == $currentDate && $timeslot24Hour <= $currentTime) {
                     $timeslotIndex++;
                     if ($timeslotIndex >= count($times)) {
-                        $startDate = date('Y-m-d', strtotime($startDate . ' +1 day'));
+                        $startDate = date('Y-m-d', strtotime($startDate.' +1 day'));
                         $timeslotIndex = 0;
-                        if (!isset($usedTimeslotsByDate[$startDate])) {
+                        if (! isset($usedTimeslotsByDate[$startDate])) {
                             $usedTimeslotsByDate[$startDate] = [];
                         }
                     }
                     $attempts++;
+
                     continue;
                 }
 
@@ -389,12 +395,12 @@ class Post extends Model
             }
 
             // Fallback if no timeslot found
-            if (!$selectedDate) {
-                $selectedDate = date('Y-m-d', strtotime($startDate . ' +1 day'));
+            if (! $selectedDate) {
+                $selectedDate = date('Y-m-d', strtotime($startDate.' +1 day'));
                 $selectedTimeslot = $times[0];
             }
 
-            return $selectedDate . ' ' . date('H:i:s', strtotime($selectedTimeslot));
+            return $selectedDate.' '.date('H:i:s', strtotime($selectedTimeslot));
         } else {
             // No posts exist, find first available timeslot from today
             $selectedDate = $currentDate;
@@ -412,12 +418,12 @@ class Post extends Model
             }
 
             // If no timeslot available today, use first timeslot tomorrow
-            if (!$selectedTimeslot) {
-                $selectedDate = date('Y-m-d', strtotime($currentDate . ' +1 day'));
+            if (! $selectedTimeslot) {
+                $selectedDate = date('Y-m-d', strtotime($currentDate.' +1 day'));
                 $selectedTimeslot = $times[0];
             }
 
-            return $selectedDate . ' ' . date('H:i:s', strtotime($selectedTimeslot));
+            return $selectedDate.' '.date('H:i:s', strtotime($selectedTimeslot));
         }
     }
 
@@ -448,7 +454,7 @@ class Post extends Model
                 : Carbon::parse($post->publish_date);
             $postDate = $local->format('Y-m-d');
             $postTime = $local->format('H:i:s');
-            if (!isset($usedTimeslotsByDate[$postDate])) {
+            if (! isset($usedTimeslotsByDate[$postDate])) {
                 $usedTimeslotsByDate[$postDate] = [];
             }
             $usedTimeslotsByDate[$postDate][] = $postTime;
@@ -475,24 +481,25 @@ class Post extends Model
                 }
 
                 // This (date, timeslot) is free and valid
-                return $checkDate . ' ' . date('H:i', strtotime($timeslot->timeslot));
+                return $checkDate.' '.date('H:i', strtotime($timeslot->timeslot));
             }
 
             // All timeslots used for this day; try next day
-            $checkDate = date('Y-m-d', strtotime($checkDate . ' +1 day'));
+            $checkDate = date('Y-m-d', strtotime($checkDate.' +1 day'));
         }
 
         // Fallback (should not be reached)
-        return $checkDate . ' ' . date('H:i', strtotime($timeslots->first()->timeslot));
+        return $checkDate.' '.date('H:i', strtotime($timeslots->first()->timeslot));
     }
 
     public function publishDate($date, $time)
     {
-        $date_time = $date . ' ' . $time;
+        $date_time = $date.' '.$time;
+
         return $date_time;
     }
 
-    public function scheduledTill($search = null, $social_type, $account, $domain, $status, $user_id)
+    public function scheduledTill($search, $social_type, $account, $domain, $status, $user_id)
     {
         $post = $this->orderBy('publish_date', 'DESC');
         if ($account) {
@@ -505,15 +512,16 @@ class Post extends Model
             if ($social_type == 'tiktok') {
                 $account = Tiktok::findOrFail($account);
             }
-            $post = $post->where("account_id", $account->id);
+            $post = $post->where('account_id', $account->id);
         }
         if (count($domain) > 0) {
-            $post = $post->whereIn("domain_id", $domain);
+            $post = $post->whereIn('domain_id', $domain);
         }
         if (in_array($status, ['-1', '0', '1'])) {
-            $post = $post->where("status", $status);
+            $post = $post->where('status', $status);
         }
         $post = $post->first();
+
         return $post ? $post->load('user.timezone')->getPublishDateInUserTimezone()->format('jS M, Y') : 'NA';
     }
 
@@ -521,7 +529,8 @@ class Post extends Model
     {
         return Attribute::make(
             get: function ($value) {
-                $title = !empty($value) ? htmlspecialchars_decode($value) : $value;
+                $title = ! empty($value) ? htmlspecialchars_decode($value) : $value;
+
                 return $title;
             }
         );
@@ -532,17 +541,18 @@ class Post extends Model
      * If the image URL is already an absolute URL, return it as-is.
      * If the image URL is a relative URL, convert it to an absolute URL.
      * If the image URL is empty, return the automation placeholder image.
-     * 
+     *
      * @return string
      */
     protected function image(): Attribute
     {
         return Attribute::make(
             get: function ($value) {
-                if (!empty($value) && str_contains($value, "http")) {
+                if (! empty($value) && str_contains($value, 'http')) {
                     return $value;
                 } else {
-                    $image = !empty($value) ? url(getImage('', $value)) : automation_placeholder_image();
+                    $image = ! empty($value) ? url(getImage('', $value)) : automation_placeholder_image();
+
                     return $image;
                 }
             }
@@ -553,13 +563,12 @@ class Post extends Model
      * Get the video key for the post.
      * If the video key is not empty, return the video URL.
      * If the video key is empty, return an empty string.
-     * 
-     * @return string
      */
     public function getVideoKeyAttribute(): string
     {
         $video_key = $this->video;
-        return !empty($video_key) ? fetchFromS3($video_key) : '';
+
+        return ! empty($video_key) ? fetchFromS3($video_key) : '';
     }
 
     /**
@@ -569,6 +578,7 @@ class Post extends Model
     protected function getPublishDateInUserTimezone(): Carbon
     {
         $user = $this->relationLoaded('user') ? $this->user : $this->user()->with('timezone')->first();
+
         return TimezoneService::publishDateForDisplay($this->publish_date, $user);
     }
 
@@ -606,10 +616,10 @@ class Post extends Model
                 $message = '';
                 if ($this->status == -1) {
                     $response = $this->response;
-                    if (!empty($response)) {
+                    if (! empty($response)) {
                         $response = json_decode($response);
                         if ($this->social_type == 'pinterest') {
-                            if (!empty($response)) {
+                            if (! empty($response)) {
                                 $message_object = isset($response->message) ? $response->message : $response;
                                 $message_object = isset($message_object->error) ? $message_object->error : $message_object;
                                 $message = getError($message_object);
@@ -619,6 +629,7 @@ class Post extends Model
                         }
                     }
                 }
+
                 return $message;
             }
         );
@@ -627,7 +638,7 @@ class Post extends Model
     /**
      * Get a user-friendly response message for the post
      * Returns success message if published, or error message if failed
-     * 
+     *
      * @return string
      */
     public function getResponseMessageAttribute()
@@ -635,22 +646,37 @@ class Post extends Model
         // If post is successfully published
         if ($this->status == 1) {
             $response = $this->response;
-            if (!empty($response)) {
+            $base = null;
+            if (! empty($response)) {
                 $decoded = json_decode($response, true);
                 if (is_array($decoded) && isset($decoded['message'])) {
-                    return $decoded['message'];
+                    $base = $decoded['message'];
                 }
             }
-            // Default success message based on platform
-            $platform = ucfirst($this->social_type ?? 'social media');
-            return "Post published successfully to {$platform}";
+            if ($base === null) {
+                $platform = ucfirst($this->social_type ?? 'social media');
+                $base = "Post published successfully to {$platform}";
+            }
+            if (! empty($response)) {
+                $decoded = json_decode($response, true);
+                if (is_array($decoded) && isset($decoded['first_reply']) && is_array($decoded['first_reply'])) {
+                    $fr = $decoded['first_reply'];
+                    if (array_key_exists('success', $fr) && $fr['success'] === false) {
+                        $err = $fr['error'] ?? 'First reply could not be published.';
+
+                        return $base.' First reply: '.$err;
+                    }
+                }
+            }
+
+            return $base;
         }
 
         // If post failed to publish
         if ($this->status == -1) {
             $response = $this->response;
             if (empty($response)) {
-                return "Failed to publish post. Please try again.";
+                return 'Failed to publish post. Please try again.';
             }
 
             // Try to decode JSON response
@@ -660,6 +686,7 @@ class Post extends Model
                 // Check for error message in JSON
                 if (isset($decoded['error'])) {
                     $error = $decoded['error'];
+
                     return $this->formatErrorMessage($error);
                 }
 
@@ -687,18 +714,18 @@ class Post extends Model
             }
 
             // Fallback
-            return "Failed to publish post. Please check your account connection and try again.";
+            return 'Failed to publish post. Please check your account connection and try again.';
         }
 
         // If post is pending
-        return "Post is scheduled and waiting to be published.";
+        return 'Post is scheduled and waiting to be published.';
     }
 
     /**
      * Format error message to be user-friendly
      * Removes technical codes, JSON formatting, and makes it readable
-     * 
-     * @param mixed $error
+     *
+     * @param  mixed  $error
      * @return string
      */
     private function formatErrorMessage($error)
@@ -714,6 +741,7 @@ class Post extends Model
             if (isset($error['error'])) {
                 return $this->cleanErrorMessage($error['error']);
             }
+
             // If it's an array with numeric keys, join them
             return $this->cleanErrorMessage(implode(', ', array_filter($error)));
         }
@@ -734,14 +762,14 @@ class Post extends Model
 
     /**
      * Clean error message to remove technical details and make it readable
-     * 
-     * @param string $message
+     *
+     * @param  string  $message
      * @return string
      */
     private function cleanErrorMessage($message)
     {
         if (empty($message)) {
-            return "An unknown error occurred. Please try again.";
+            return 'An unknown error occurred. Please try again.';
         }
 
         $message = trim($message);
@@ -775,6 +803,7 @@ class Post extends Model
         // If message is still empty or too technical, provide a generic message
         if (empty($message) || strlen($message) < 3) {
             $platform = ucfirst($this->social_type ?? 'social media');
+
             return "Failed to publish post to {$platform}. Please check your account connection and try again.";
         }
 
@@ -782,7 +811,7 @@ class Post extends Model
         $message = ucfirst($message);
 
         // Add period if missing
-        if (!preg_match('/[.!?]$/', $message)) {
+        if (! preg_match('/[.!?]$/', $message)) {
             $message .= '.';
         }
 
@@ -803,7 +832,7 @@ class Post extends Model
         }
 
         $page = $this->page;
-        if (!$page || empty($page->page_id)) {
+        if (! $page || empty($page->page_id)) {
             return null;
         }
 
@@ -818,31 +847,32 @@ class Post extends Model
             $storyFbid = $postId;
         }
 
-        return 'https://www.facebook.com/permalink.php?story_fbid=' . urlencode($storyFbid) . '&id=' . urlencode($pageId);
+        return 'https://www.facebook.com/permalink.php?story_fbid='.urlencode($storyFbid).'&id='.urlencode($pageId);
     }
 
     public function getAccountNameAttribute()
     {
         $social_type = $this->social_type;
         $account_name = '';
-        if ($social_type == "facebook") {
+        if ($social_type == 'facebook') {
             $account_name = $this->page?->name;
         }
-        if ($social_type == "pinterest") {
+        if ($social_type == 'pinterest') {
             $account_name = $this->board?->name;
         }
-        if ($social_type == "tiktok") {
+        if ($social_type == 'tiktok') {
             $account_name = $this->tiktok?->display_name;
         }
-        if ($social_type == "instagram") {
+        if ($social_type == 'instagram') {
             $account_name = $this->instagramAccount?->name ?? $this->instagramAccount?->username;
         }
-        if ($social_type == "threads") {
+        if ($social_type == 'threads') {
             $account_name = $this->thread?->username;
         }
-        if ($social_type == "linkedin") {
+        if ($social_type == 'linkedin') {
             $account_name = $this->linkedin?->username;
         }
+
         return $account_name;
     }
 
@@ -870,6 +900,7 @@ class Post extends Model
         if ($social_type === 'linkedin') {
             return $this->linkedin?->username ?? '';
         }
+
         return '';
     }
 
@@ -877,42 +908,45 @@ class Post extends Model
     {
         $social_type = $this->social_type;
         $profile_image = '';
-        if ($social_type == "facebook") {
+        if ($social_type == 'facebook') {
             // Use page's profile image if available, otherwise fall back to parent Facebook account's profile image
-            if ($this->page && !empty($this->page->profile_image)) {
+            if ($this->page && ! empty($this->page->profile_image)) {
                 $profile_image = $this->page->profile_image;
             } elseif ($this->page?->facebook) {
                 $profile_image = $this->page->facebook->profile_image;
             }
         }
-        if ($social_type == "pinterest") {
+        if ($social_type == 'pinterest') {
             $profile_image = $this->board?->pinterest ? $this->board->pinterest->profile_image : null;
         }
-        if ($social_type == "tiktok") {
+        if ($social_type == 'tiktok') {
             $profile_image = $this->tiktok?->profile_image ?? null;
         }
-        if ($social_type == "instagram") {
+        if ($social_type == 'instagram') {
             $profile_image = $this->instagramAccount?->profile_image ?? null;
         }
-        if ($social_type == "threads") {
+        if ($social_type == 'threads') {
             $profile_image = $this->thread?->profile_image ?? null;
         }
-        if ($social_type == "linkedin") {
+        if ($social_type == 'linkedin') {
             $profile_image = $this->linkedin?->profile_image ?? null;
         }
+
         return $profile_image;
     }
 
     public function getPostDetailsAttribute()
     {
         // Use pinterest_post_details for all social types
-        $view = view("user.schedule.dataTable.pinterest_post_details")->with("post", $this);
+        $view = view('user.schedule.dataTable.pinterest_post_details')->with('post', $this);
+
         return $view->render();
     }
 
     public function getAccountDetailAttribute()
     {
-        $view = view("user.schedule.dataTable.account_detail")->with("post", $this);
+        $view = view('user.schedule.dataTable.account_detail')->with('post', $this);
+
         return $view->render();
     }
 
@@ -925,41 +959,47 @@ class Post extends Model
     {
         if ($this->published_at) {
             $user = $this->relationLoaded('user') ? $this->user : $this->user()->with('timezone')->first();
-            $user_tz = $user->timezone ? $user->timezone->name : "UTC";
+            $user_tz = $user->timezone ? $user->timezone->name : 'UTC';
             $published_at = Carbon::parse($this->published_at, 'UTC')->setTimezone($user_tz)->format('Y-m-d h:i A');
+
             return $published_at;
             // return date("Y-m-d h:i A", strtotime($this->published_at));
         }
+
         return null;
     }
 
     public function getStatusViewAttribute()
     {
-        $view = view("user.schedule.dataTable.status_view")->with("post", $this);
+        $view = view('user.schedule.dataTable.status_view')->with('post', $this);
+
         return $view->render();
     }
 
     public function getActionAttribute()
     {
-        $view = view("user.schedule.dataTable.action")->with("post", $this);
+        $view = view('user.schedule.dataTable.action')->with('post', $this);
+
         return $view->render();
     }
 
     public function getIsPinterestAttribute()
     {
-        return $this->social_type == "pinterest" ? true : false;
+        return $this->social_type == 'pinterest' ? true : false;
     }
 
     public function getDomainNameAttribute()
     {
         $domain = $this->domain;
-        return $domain ? $domain->name : "";
+
+        return $domain ? $domain->name : '';
     }
 
     public function getFixAttribute()
     {
         $title = $this->title;
         $image = $this->image;
+
         return empty($title) || empty($image) ? true : false;
     }
 

@@ -114,7 +114,7 @@ class ThreadsGraphService
         $this->markSuccess($post, $postId, $mediaType === 'TEXT'
             ? 'Text post published successfully to Threads'
             : 'Post published successfully to Threads');
-        $this->publishFirstReplyIfNeeded($post, $threadsUserId, $accessToken, $postId);
+        $this->publishFirstReplyIfNeeded($post, $threadsUserId, $accessToken, $postId, $mediaType);
     }
 
     private function publishCarousel(Post $post, string $threadsUserId, string $accessToken, array $body): void
@@ -209,22 +209,21 @@ class ThreadsGraphService
         }
 
         $this->markSuccess($post, $postId, 'Carousel published successfully to Threads');
-        $this->publishFirstReplyIfNeeded($post, $threadsUserId, $accessToken, $postId);
+        $this->publishFirstReplyIfNeeded($post, $threadsUserId, $accessToken, $postId, 'CAROUSEL');
     }
 
     /**
      * Publish optional "first comment" as a text reply to the root thread (Threads API: reply_to_id).
-     * Does not fail the post if the reply step fails; logs a warning instead.
+     * Does not fail the post if the reply step fails; logs a warning and stores details on the post response.
      */
-    private function publishFirstReplyIfNeeded(Post $post, string $threadsUserId, string $accessToken, string $rootThreadMediaId): void
+    private function publishFirstReplyIfNeeded(Post $post, string $threadsUserId, string $accessToken, string $rootThreadMediaId, string $rootMediaKind): void
     {
         $comment = trim((string) ($post->comment ?? ''));
         if ($comment === '') {
             return;
         }
 
-        // Root thread should be committed before creating a reply container (see Threads publishing docs).
-        sleep(3);
+        $this->waitBeforeFirstReply($rootThreadMediaId, $accessToken, $rootMediaKind);
 
         $replyPayload = [
             'access_token' => $accessToken,
@@ -233,24 +232,170 @@ class ThreadsGraphService
             'reply_to_id' => $rootThreadMediaId,
         ];
 
-        $replyCreationId = $this->createThreadsContainer($threadsUserId, $replyPayload);
-        if ($replyCreationId === null) {
-            Log::warning('Threads first-reply container create failed', ['post_id' => $post->id]);
+        $createResult = $this->createThreadsContainerEx($threadsUserId, $replyPayload);
+        if ($createResult['id'] === null) {
+            $detail = $this->threadsApiErrorSummary($createResult['error_body']);
+            Log::warning('Threads first-reply container create failed', [
+                'post_id' => $post->id,
+                'http_status' => $createResult['http_status'],
+                'response' => $createResult['error_body'],
+            ]);
+            $this->mergeFirstReplyIntoPostResponse($post, [
+                'success' => false,
+                'step' => 'create_container',
+                'error' => $detail,
+            ]);
 
             return;
         }
 
-        $replyMediaId = $this->publishThreadsContainer($threadsUserId, $replyCreationId, $accessToken);
-        if ($replyMediaId === null) {
-            Log::warning('Threads first-reply publish failed', ['post_id' => $post->id, 'creation_id' => $replyCreationId]);
+        $publishResult = $this->publishThreadsContainerEx($threadsUserId, $createResult['id'], $accessToken);
+        if ($publishResult['id'] === null) {
+            $detail = $this->threadsApiErrorSummary($publishResult['error_body']);
+            Log::warning('Threads first-reply publish failed', [
+                'post_id' => $post->id,
+                'creation_id' => $createResult['id'],
+                'http_status' => $publishResult['http_status'],
+                'response' => $publishResult['error_body'],
+            ]);
+            $this->mergeFirstReplyIntoPostResponse($post, [
+                'success' => false,
+                'step' => 'publish',
+                'creation_id' => $createResult['id'],
+                'error' => $detail,
+            ]);
 
             return;
         }
 
-        Post::withoutGlobalScopes()->where('id', $post->id)->update(['comment_id' => $replyMediaId]);
+        Post::withoutGlobalScopes()->where('id', $post->id)->update(['comment_id' => $publishResult['id']]);
+        $this->mergeFirstReplyIntoPostResponse($post, [
+            'success' => true,
+            'reply_media_id' => $publishResult['id'],
+        ]);
     }
 
-    private function createThreadsContainer(string $threadsUserId, array $payload): ?string
+    /**
+     * Give the root thread time to become replyable. Text posts use a short fixed delay; media uses
+     * GET status polling (see Threads API troubleshooting — status on media id).
+     */
+    private function waitBeforeFirstReply(string $rootThreadMediaId, string $accessToken, string $rootMediaKind): void
+    {
+        $kind = strtoupper($rootMediaKind);
+        if ($kind === 'TEXT') {
+            sleep(6);
+
+            return;
+        }
+
+        $maxAttempts = 28;
+        for ($attempt = 0; $attempt < $maxAttempts; $attempt++) {
+            if ($attempt > 0) {
+                sleep(4);
+            }
+
+            $data = $this->fetchThreadsMediaPublishingStatus($rootThreadMediaId, $accessToken);
+            if (! is_array($data)) {
+                if ($attempt >= 4) {
+                    Log::warning('Threads first-reply wait: status requests failing, continuing', [
+                        'media_id' => $rootThreadMediaId,
+                        'kind' => $kind,
+                    ]);
+                    sleep(12);
+
+                    return;
+                }
+
+                continue;
+            }
+
+            if (! array_key_exists('status', $data) || $data['status'] === null || $data['status'] === '') {
+                sleep(15);
+
+                return;
+            }
+
+            $status = strtoupper((string) $data['status']);
+            if (in_array($status, ['PUBLISHED', 'FINISHED'], true)) {
+                sleep(2);
+
+                return;
+            }
+            if ($status === 'ERROR') {
+                Log::warning('Threads root media reported ERROR before first reply', [
+                    'media_id' => $rootThreadMediaId,
+                    'error_message' => $data['error_message'] ?? null,
+                ]);
+                sleep(10);
+
+                return;
+            }
+        }
+
+        Log::warning('Threads root media did not report PUBLISHED/FINISHED before first reply; attempting reply anyway', [
+            'media_id' => $rootThreadMediaId,
+            'kind' => $kind,
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function fetchThreadsMediaPublishingStatus(string $mediaId, string $accessToken): ?array
+    {
+        $resp = Http::acceptJson()
+            ->timeout(45)
+            ->get('https://graph.threads.net/v1.0/'.rawurlencode($mediaId), [
+                'fields' => 'status,error_message',
+                'access_token' => $accessToken,
+            ]);
+
+        if (! $resp->successful()) {
+            return null;
+        }
+
+        $json = $resp->json();
+
+        return is_array($json) ? $json : null;
+    }
+
+    /**
+     * @param  array{success: bool, step?: string, creation_id?: string, error?: string, reply_media_id?: string}  $payload
+     */
+    private function mergeFirstReplyIntoPostResponse(Post $post, array $payload): void
+    {
+        $post->refresh();
+        $raw = $post->getAttributes()['response'] ?? $post->response ?? '';
+        $decoded = is_string($raw) ? json_decode($raw, true) : null;
+        if (! is_array($decoded)) {
+            $decoded = [];
+        }
+        $decoded['first_reply'] = $payload;
+        Post::withoutGlobalScopes()->where('id', $post->id)->update([
+            'response' => json_encode($decoded),
+        ]);
+    }
+
+    private function threadsApiErrorSummary(?string $body): string
+    {
+        if ($body === null || $body === '') {
+            return 'Empty API response.';
+        }
+        $decoded = json_decode($body, true);
+        if (is_array($decoded)) {
+            $msg = $decoded['error']['message'] ?? $decoded['error_message'] ?? $decoded['message'] ?? null;
+            if (is_string($msg) && $msg !== '') {
+                return $msg;
+            }
+        }
+
+        return strlen($body) > 500 ? substr($body, 0, 500).'…' : $body;
+    }
+
+    /**
+     * @return array{id: ?string, error_body: ?string, http_status: ?int}
+     */
+    private function createThreadsContainerEx(string $threadsUserId, array $payload): array
     {
         $resp = Http::asForm()
             ->acceptJson()
@@ -258,17 +403,25 @@ class ThreadsGraphService
             ->post("https://graph.threads.net/v1.0/{$threadsUserId}/threads", $payload);
 
         if (! $resp->successful()) {
-            Log::warning('Threads container create failed', ['response' => $resp->body()]);
+            Log::warning('Threads container create failed', ['response' => $resp->body(), 'http_status' => $resp->status()]);
 
-            return null;
+            return ['id' => null, 'error_body' => $resp->body(), 'http_status' => $resp->status()];
         }
 
         $id = $resp->json('id');
+        if (! is_string($id) || $id === '') {
+            Log::warning('Threads container create missing id', ['response' => $resp->body()]);
 
-        return is_string($id) && $id !== '' ? $id : null;
+            return ['id' => null, 'error_body' => $resp->body(), 'http_status' => $resp->status()];
+        }
+
+        return ['id' => $id, 'error_body' => null, 'http_status' => $resp->status()];
     }
 
-    private function publishThreadsContainer(string $threadsUserId, string $creationId, string $accessToken): ?string
+    /**
+     * @return array{id: ?string, error_body: ?string, http_status: ?int}
+     */
+    private function publishThreadsContainerEx(string $threadsUserId, string $creationId, string $accessToken): array
     {
         $resp = Http::asForm()
             ->acceptJson()
@@ -279,14 +432,33 @@ class ThreadsGraphService
             ]);
 
         if (! $resp->successful()) {
-            Log::warning('Threads publish failed', ['response' => $resp->body(), 'creation_id' => $creationId]);
+            Log::warning('Threads publish failed', ['response' => $resp->body(), 'creation_id' => $creationId, 'http_status' => $resp->status()]);
 
-            return null;
+            return ['id' => null, 'error_body' => $resp->body(), 'http_status' => $resp->status()];
         }
 
         $id = $resp->json('id');
+        if (! is_string($id) || $id === '') {
+            Log::warning('Threads publish missing id', ['response' => $resp->body(), 'creation_id' => $creationId]);
 
-        return is_string($id) && $id !== '' ? $id : null;
+            return ['id' => null, 'error_body' => $resp->body(), 'http_status' => $resp->status()];
+        }
+
+        return ['id' => $id, 'error_body' => null, 'http_status' => $resp->status()];
+    }
+
+    private function createThreadsContainer(string $threadsUserId, array $payload): ?string
+    {
+        $r = $this->createThreadsContainerEx($threadsUserId, $payload);
+
+        return $r['id'];
+    }
+
+    private function publishThreadsContainer(string $threadsUserId, string $creationId, string $accessToken): ?string
+    {
+        $r = $this->publishThreadsContainerEx($threadsUserId, $creationId, $accessToken);
+
+        return $r['id'];
     }
 
     private function markSuccess(Post $post, string $postId, string $message): void
