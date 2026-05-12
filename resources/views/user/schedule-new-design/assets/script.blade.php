@@ -2625,7 +2625,7 @@
 
             var thFormatVisible = pm$('ThreadsFormatWrap').is(':visible');
             if (thFormatVisible) {
-                pm$('CommentWrap').hide();
+                pm$('CommentWrap').show();
                 pm$('EditorTextarea').show();
                 pm$('EmojiBtn').show();
                 return;

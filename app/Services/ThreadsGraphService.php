@@ -114,6 +114,7 @@ class ThreadsGraphService
         $this->markSuccess($post, $postId, $mediaType === 'TEXT'
             ? 'Text post published successfully to Threads'
             : 'Post published successfully to Threads');
+        $this->publishFirstReplyIfNeeded($post, $threadsUserId, $accessToken, $postId);
     }
 
     private function publishCarousel(Post $post, string $threadsUserId, string $accessToken, array $body): void
@@ -208,6 +209,45 @@ class ThreadsGraphService
         }
 
         $this->markSuccess($post, $postId, 'Carousel published successfully to Threads');
+        $this->publishFirstReplyIfNeeded($post, $threadsUserId, $accessToken, $postId);
+    }
+
+    /**
+     * Publish optional "first comment" as a text reply to the root thread (Threads API: reply_to_id).
+     * Does not fail the post if the reply step fails; logs a warning instead.
+     */
+    private function publishFirstReplyIfNeeded(Post $post, string $threadsUserId, string $accessToken, string $rootThreadMediaId): void
+    {
+        $comment = trim((string) ($post->comment ?? ''));
+        if ($comment === '') {
+            return;
+        }
+
+        // Root thread should be committed before creating a reply container (see Threads publishing docs).
+        sleep(3);
+
+        $replyPayload = [
+            'access_token' => $accessToken,
+            'media_type' => 'TEXT',
+            'text' => $comment,
+            'reply_to_id' => $rootThreadMediaId,
+        ];
+
+        $replyCreationId = $this->createThreadsContainer($threadsUserId, $replyPayload);
+        if ($replyCreationId === null) {
+            Log::warning('Threads first-reply container create failed', ['post_id' => $post->id]);
+
+            return;
+        }
+
+        $replyMediaId = $this->publishThreadsContainer($threadsUserId, $replyCreationId, $accessToken);
+        if ($replyMediaId === null) {
+            Log::warning('Threads first-reply publish failed', ['post_id' => $post->id, 'creation_id' => $replyCreationId]);
+
+            return;
+        }
+
+        Post::withoutGlobalScopes()->where('id', $post->id)->update(['comment_id' => $replyMediaId]);
     }
 
     private function createThreadsContainer(string $threadsUserId, array $payload): ?string
