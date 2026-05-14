@@ -516,11 +516,10 @@
                 var overviewContent = '<div class="analytics-page-insights mb-4">';
                 if (!hasMeaningfulInsights(insights, platform)) {
                     overviewContent += '<div class="alert alert-info mb-0" role="alert">' +
-                        '<strong><i class="fas fa-info-circle mr-2"></i>Insights can\'t be fetched for this account.</strong>' +
-                        '<ol class="mb-0 mt-2 pl-3">' +
-                        '<li>The connected account may not have the required permissions.</li>' +
-                        '<li><a href="{{ route('panel.accounts') }}" class="alert-link font-weight-bold">Reconnect your account</a> to grant access.</li>' +
-                        '</ol></div></div>';
+                        '<strong><i class="fas fa-clock mr-2"></i>Insights will appear shortly</strong>' +
+                        '<p class="mb-2 mt-2 mb-0">Account metrics are synced on a schedule. Check back in a few minutes—data usually shows up soon after you connect an account or after the next sync run.</p>' +
+                        '<p class="small text-muted mb-0 mt-2">If nothing appears after a longer wait, open <a href="{{ route('panel.accounts') }}" class="alert-link font-weight-bold">Accounts</a> to confirm permissions or reconnect.</p>' +
+                        '</div></div>';
                 } else {
                     var comp = insights.comparison || {};
                     var cards = platform === 'pinterest' ? [
