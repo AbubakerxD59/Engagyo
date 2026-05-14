@@ -5515,7 +5515,8 @@
             }
 
             if (social === 'threads') {
-                if (!dbPostId || !pageId) {
+                var threadsMediaId = (postId || '').toString().trim();
+                if (!pageId || (!dbPostId && !threadsMediaId)) {
                     toastr.error('Cannot delete: missing post or account info.');
                     return;
                 }
@@ -5527,8 +5528,9 @@
                     data: {
                         "_token": "{{ csrf_token() }}",
                         "social_type": "threads",
-                        "db_post_id": dbPostId,
-                        "page_id": pageId
+                        "db_post_id": dbPostId || 0,
+                        "page_id": pageId,
+                        "threads_post_id": threadsMediaId
                     },
                     success: function(response) {
                         if (response && response.success) {

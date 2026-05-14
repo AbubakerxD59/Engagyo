@@ -97,29 +97,10 @@ class PostService
             // Threads: delete from Threads API before deleting local row.
             if ($status == 1 && str_contains($socialType, 'thread') && ! empty($post->post_id)) {
                 $thread = $post->thread;
-                if (! $thread || empty($thread->access_token)) {
-                    throw new Exception('Threads access token is missing. Reconnect your Threads account and try again.');
+                if (! $thread) {
+                    throw new Exception('Threads account not found for this post.');
                 }
-
-                $endpoint = 'https://graph.threads.net/v1.0/'.rawurlencode((string) $post->post_id)
-                    .'?access_token='.urlencode((string) $thread->access_token);
-
-                $response = Http::acceptJson()
-                    ->timeout(30)
-                    ->delete($endpoint);
-
-                if (! $response->successful() || ! $response->json('success')) {
-                    $apiMessage = (string) ($response->json('error.message')
-                        ?? $response->json('message')
-                        ?? 'Failed to delete Threads post.');
-                    Log::warning('Threads delete failed', [
-                        'post_id' => $post->id,
-                        'threads_media_id' => $post->post_id,
-                        'status' => $response->status(),
-                        'response' => $response->body(),
-                    ]);
-                    throw new Exception($apiMessage);
-                }
+                self::deleteThreadsMediaFromApi($thread, (string) $post->post_id);
             }
 
             // Delete from database instantly
@@ -132,6 +113,43 @@ class PostService
         }
 
         return true;
+    }
+
+    /**
+     * Delete a Threads media container via Graph API (used for scheduled posts and feed-only snapshots).
+     *
+     * @throws Exception
+     */
+    public static function deleteThreadsMediaFromApi(Thread $thread, string $mediaId): void
+    {
+        $mediaId = trim($mediaId);
+        if ($mediaId === '') {
+            throw new Exception('Threads post id is required.');
+        }
+
+        if (empty($thread->access_token)) {
+            throw new Exception('Threads access token is missing. Reconnect your Threads account and try again.');
+        }
+
+        $endpoint = 'https://graph.threads.net/v1.0/'.rawurlencode($mediaId)
+            .'?access_token='.urlencode((string) $thread->access_token);
+
+        $response = Http::acceptJson()
+            ->timeout(30)
+            ->delete($endpoint);
+
+        if (! $response->successful() || ! $response->json('success')) {
+            $apiMessage = (string) ($response->json('error.message')
+                ?? $response->json('message')
+                ?? 'Failed to delete Threads post.');
+            Log::warning('Threads delete failed', [
+                'threads_media_id' => $mediaId,
+                'thread_account_id' => $thread->id,
+                'status' => $response->status(),
+                'response' => $response->body(),
+            ]);
+            throw new Exception($apiMessage);
+        }
     }
 
     public static function publishNow($id)

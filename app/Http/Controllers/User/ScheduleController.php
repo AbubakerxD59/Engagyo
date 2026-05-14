@@ -5394,7 +5394,8 @@ class ScheduleController extends Controller
     /**
      * Delete a sent post.
      * - Facebook: delete by external post id + page id (background job).
-     * - Threads: delete by local db post id (calls Threads API then removes local row).
+     * - Threads: delete via `posts` row (`db_post_id`) when scheduled in-app, or by Threads media id
+     *   (`threads_post_id` / data-post-id) for feed-only rows; API delete and `thread_posts` purge run in both cases.
      */
     public function deleteSentPost(Request $request)
     {
@@ -5404,8 +5405,14 @@ class ScheduleController extends Controller
         $dbPostId = (int) $request->input('db_post_id');
 
         if ($socialType === 'threads') {
-            if ($dbPostId <= 0 || empty($pageId)) {
-                return response()->json(['success' => false, 'message' => 'Post and account info are required.'], 400);
+            $threadsPostId = trim((string) $request->input('threads_post_id', $request->input('post_id', '')));
+
+            if (empty($pageId)) {
+                return response()->json(['success' => false, 'message' => 'Account info is required.'], 400);
+            }
+
+            if ($dbPostId <= 0 && $threadsPostId === '') {
+                return response()->json(['success' => false, 'message' => 'Post id or Threads media id is required.'], 400);
             }
 
             $user = Auth::user();
@@ -5414,21 +5421,36 @@ class ScheduleController extends Controller
                 return response()->json(['success' => false, 'message' => 'Account not found or access denied.'], 404);
             }
 
-            $dbPost = Post::withoutGlobalScopes()
-                ->where('id', $dbPostId)
-                ->where('account_id', $threadAccount->id)
-                ->where(function ($q) {
-                    $q->where('social_type', 'like', '%threads%')
-                        ->orWhere('social_type', 'like', '%thread%');
-                })
-                ->first();
-            if (! $dbPost) {
-                return response()->json(['success' => false, 'message' => 'Post not found or access denied.'], 404);
-            }
-
             try {
-                PostService::delete($dbPost->id);
-                $externalPostId = (string) ($dbPost->post_id ?? '');
+                if ($dbPostId > 0) {
+                    $dbPost = Post::withoutGlobalScopes()
+                        ->where('id', $dbPostId)
+                        ->where('account_id', $threadAccount->id)
+                        ->where(function ($q) {
+                            $q->where('social_type', 'like', '%threads%')
+                                ->orWhere('social_type', 'like', '%thread%');
+                        })
+                        ->first();
+                    if (! $dbPost) {
+                        return response()->json(['success' => false, 'message' => 'Post not found or access denied.'], 404);
+                    }
+
+                    $storedMediaId = (string) ($dbPost->post_id ?? '');
+                    if ($dbPost->status == 1 && str_contains(strtolower((string) $dbPost->social_type), 'thread')
+                        && $storedMediaId === '' && $threadsPostId !== '') {
+                        PostService::deleteThreadsMediaFromApi($threadAccount, $threadsPostId);
+                    }
+
+                    PostService::delete($dbPost->id);
+                    $externalPostId = $storedMediaId !== '' ? $storedMediaId : $threadsPostId;
+                } else {
+                    if (! $threadAccount->validToken()) {
+                        return response()->json(['success' => false, 'message' => 'Threads token is invalid or expired. Reconnect your account and try again.'], 422);
+                    }
+                    PostService::deleteThreadsMediaFromApi($threadAccount, $threadsPostId);
+                    $externalPostId = $threadsPostId;
+                }
+
                 if ($externalPostId !== '') {
                     $this->purgeThreadsSentSnapshotPost($threadAccount, $externalPostId);
                 }
