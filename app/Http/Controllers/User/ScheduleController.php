@@ -5279,6 +5279,9 @@ class ScheduleController extends Controller
         $reactions = (int) ($ins['pin_saves'] ?? $ins['post_reactions'] ?? 0);
         $impressions = (int) ($ins['post_impressions'] ?? 0);
         $clicks = (int) ($ins['post_clicks'] ?? 0);
+        if ($clicks === 0) {
+            $clicks = (int) ($ins['outbound_clicks'] ?? 0) + (int) ($ins['pin_clicks'] ?? 0);
+        }
 
         $rawCreated = $post['created_time'] ?? $pin->pin_created_at;
         if ($rawCreated instanceof \DateTimeInterface) {

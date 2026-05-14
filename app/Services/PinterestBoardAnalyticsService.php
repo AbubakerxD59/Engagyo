@@ -14,7 +14,8 @@ class PinterestBoardAnalyticsService
 {
     private const BASE_URL = 'https://api.pinterest.com/v5/';
 
-    private const MAX_PINS = 40;
+    /** Max pins to list from the Pinterest API and to run pin analytics on per board sync. */
+    private const MAX_BOARD_PINS = 100;
 
     private const REQUEST_DELAY_US = 100000;
 
@@ -75,7 +76,7 @@ class PinterestBoardAnalyticsService
 
         [$sinceClamped, $untilClamped] = $this->clampToPinterestAnalyticsWindow($since, $until);
         $pins = $this->listBoardPins($token, (string) $board->board_id);
-        $clips = array_slice($pins, 0, self::MAX_PINS);
+        $clips = array_slice($pins, 0, self::MAX_BOARD_PINS);
 
         $aggCurrent = ['totals' => [], 'by_day' => []];
         $aggPrevious = ['totals' => [], 'by_day' => []];
@@ -154,8 +155,10 @@ class PinterestBoardAnalyticsService
     {
         $all = [];
         $bookmark = null;
-        $pages = 0;
         do {
+            if (count($all) >= self::MAX_BOARD_PINS) {
+                break;
+            }
             $query = ['page_size' => 100];
             if ($bookmark) {
                 $query['bookmark'] = $bookmark;
@@ -167,18 +170,24 @@ class PinterestBoardAnalyticsService
             $items = $response['items'] ?? [];
             if (is_array($items)) {
                 foreach ($items as $row) {
+                    if (count($all) >= self::MAX_BOARD_PINS) {
+                        break 2;
+                    }
                     if (is_array($row)) {
                         $all[] = $row;
                     }
                 }
             }
             $bookmark = $response['bookmark'] ?? null;
-            $pages++;
-            if ($pages > 10 || empty($bookmark)) {
+            if (empty($bookmark) || count($all) >= self::MAX_BOARD_PINS) {
                 break;
             }
             usleep(self::REQUEST_DELAY_US);
         } while (true);
+
+        if (count($all) > self::MAX_BOARD_PINS) {
+            $all = array_slice($all, 0, self::MAX_BOARD_PINS);
+        }
 
         usort($all, static function (array $a, array $b): int {
             $ta = strtotime((string) ($a['created_at'] ?? '')) ?: 0;
@@ -326,8 +335,6 @@ class PinterestBoardAnalyticsService
         $videoViews = (int) round($pinTotals['VIDEO_MRC_VIEW'] ?? 0);
         $comments = (int) round($pinTotals['TOTAL_COMMENTS'] ?? 0);
         $reactions = (int) round($pinTotals['TOTAL_REACTIONS'] ?? 0);
-        $engagements = $saves + $outbound + $pinClicks + $comments + $reactions;
-        $rate = $impressions > 0 ? round(($engagements / $impressions) * 100, 2) : 0.0;
 
         $imageUrl = $this->pickPinImageUrl($pinRow);
         $title = (string) ($pinRow['title'] ?? '');
@@ -347,18 +354,15 @@ class PinterestBoardAnalyticsService
             'permalink_url' => $permalink,
             'type' => $mediaType,
             'media_type' => $mediaType,
+            // Only metrics returned by Pinterest pin analytics API (`metric_types`); no derived aliases.
             'insights' => [
                 'post_impressions' => $impressions,
-                'post_reach' => $impressions,
                 'pin_saves' => $saves,
                 'outbound_clicks' => $outbound,
                 'pin_clicks' => $pinClicks,
-                'post_clicks' => $outbound + $pinClicks,
                 'video_mrc_view' => $videoViews,
                 'total_comments' => $comments,
                 'total_reactions' => $reactions,
-                'post_reactions' => $saves,
-                'post_engagement_rate' => $rate,
             ],
         ];
     }

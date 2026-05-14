@@ -477,7 +477,7 @@ class AnalyticsController extends Controller
             return $cachedPosts;
         }
 
-        $stored = PinterestPin::latestForBoard((int) $board->id, 120);
+        $stored = PinterestPin::latestForBoard((int) $board->id);
         if ($stored->isNotEmpty()) {
             $storedPosts = $stored->map(fn (PinterestPin $row) => $row->toAnalyticsPostArray())->values()->all();
             Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));

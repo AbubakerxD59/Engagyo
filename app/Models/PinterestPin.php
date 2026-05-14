@@ -107,13 +107,13 @@ class PinterestPin extends Model
      *
      * @return Collection<int, self>
      */
-    public static function latestForBoard(int $boardId, int $limit = 120): Collection
+    public static function latestForBoard(int $boardId, int $limit = 100): Collection
     {
         return self::query()
             ->where('board_id', $boardId)
             ->orderByDesc('pin_created_at')
             ->orderByDesc('id')
-            ->limit($limit)
+            // ->limit($limit)
             ->get();
     }
 

@@ -113,11 +113,30 @@
                 }
             ];
 
-            function renderEngagementsChart(insights, comp, selectedMetricKey) {
-                selectedMetricKey = selectedMetricKey || 'engagements';
-                var opt = chartMetricOptions.find(function(o) {
+            /** Pinterest: only daily series that come from Pinterest pin analytics (not app-derived totals). */
+            var chartMetricOptionsPinterest = [{
+                    key: 'reach',
+                    label: 'Impressions',
+                    byDayKey: 'reach_by_day'
+                },
+                {
+                    key: 'video_views',
+                    label: 'Video Views',
+                    byDayKey: 'video_views_by_day'
+                }
+            ];
+
+            function chartMetricOptionsForPlatform(platform) {
+                return platform === 'pinterest' ? chartMetricOptionsPinterest : chartMetricOptions;
+            }
+
+            function renderEngagementsChart(insights, comp, selectedMetricKey, platform) {
+                platform = platform || 'facebook';
+                var opts = chartMetricOptionsForPlatform(platform);
+                selectedMetricKey = selectedMetricKey || (platform === 'pinterest' ? 'reach' : 'engagements');
+                var opt = opts.find(function(o) {
                     return o.key === selectedMetricKey;
-                }) || chartMetricOptions[3];
+                }) || (platform === 'pinterest' ? opts[0] : chartMetricOptions[3]);
                 var byDay = insights[opt.byDayKey] || {};
                 var dates = Object.keys(byDay).sort();
                 var total = 0;
@@ -132,7 +151,7 @@
                     '<div class="chart-container" style="position: relative; height: 280px;"><canvas id="engagementsChartCanvas"></canvas></div>' :
                     '<div class="alert alert-light border text-muted mb-0"><i class="fas fa-info-circle mr-2"></i>No daily ' +
                     opt.label.toLowerCase() + ' data available for this period.</div>';
-                var dropdownItems = chartMetricOptions.map(function(o) {
+                var dropdownItems = opts.map(function(o) {
                     var isSelected = o.key === selectedMetricKey;
                     return '<a class="chart-metric-option' + (isSelected ? ' active' : '') +
                         '" href="#" data-metric="' + o.key + '"><span class="chart-metric-option-circle' + (
@@ -152,11 +171,13 @@
                     chartHtml + '</div>';
             }
 
-            function initEngagementsChart(insights, metricKey) {
-                metricKey = metricKey || 'engagements';
-                var opt = chartMetricOptions.find(function(o) {
+            function initEngagementsChart(insights, metricKey, platform) {
+                platform = platform || 'facebook';
+                var opts = chartMetricOptionsForPlatform(platform);
+                metricKey = metricKey || (platform === 'pinterest' ? 'reach' : 'engagements');
+                var opt = opts.find(function(o) {
                     return o.key === metricKey;
-                }) || chartMetricOptions[3];
+                }) || (platform === 'pinterest' ? opts[0] : chartMetricOptions[3]);
                 var byDay = insights[opt.byDayKey] || {};
                 var dates = Object.keys(byDay).sort();
                 if (dates.length === 0 || typeof Chart === 'undefined') return;
@@ -228,11 +249,22 @@
                 });
             }
 
-            function hasMeaningfulInsights(insights) {
+            function hasMeaningfulInsights(insights, platform) {
+                platform = platform || 'facebook';
                 if (!insights) return false;
+                if (platform === 'pinterest') {
+                    var pk = ['followers', 'reach', 'video_views'];
+                    for (var i = 0; i < pk.length; i++) {
+                        var pv = insights[pk[i]];
+                        if (pv != null && !isNaN(pv)) return true;
+                    }
+                    if (insights.reach_by_day && Object.keys(insights.reach_by_day).length > 0) return true;
+                    if (insights.video_views_by_day && Object.keys(insights.video_views_by_day).length > 0) return true;
+                    return false;
+                }
                 var keys = ['followers', 'reach', 'video_views', 'engagements'];
-                for (var i = 0; i < keys.length; i++) {
-                    var v = insights[keys[i]];
+                for (var j = 0; j < keys.length; j++) {
+                    var v = insights[keys[j]];
                     if (v != null && !isNaN(v)) return true;
                 }
                 if (insights.engagements_by_day && Object.keys(insights.engagements_by_day).length > 0) return true;
@@ -289,7 +321,7 @@
 
             var postInsightDisplayOrder = ['post_clicks', 'post_reactions', 'post_impressions', 'post_reach', 'post_engagement_rate'];
 
-            var postInsightDisplayOrderPinterest = ['post_impressions', 'post_reach', 'pin_saves', 'outbound_clicks', 'pin_clicks', 'post_clicks', 'video_mrc_view', 'total_comments', 'total_reactions', 'post_engagement_rate'];
+            var postInsightDisplayOrderPinterest = ['post_impressions', 'pin_saves', 'outbound_clicks', 'pin_clicks', 'video_mrc_view', 'total_comments', 'total_reactions'];
 
             var postSortOptions = [
                 { key: 'post_impressions', label: 'Impressions' },
@@ -303,8 +335,11 @@
             var postSortOptionsPinterest = [
                 { key: 'post_impressions', label: 'Impressions' },
                 { key: 'pin_saves', label: 'Saves' },
-                { key: 'post_clicks', label: 'Clicks' },
-                { key: 'post_engagement_rate', label: 'Eng. Rate' },
+                { key: 'outbound_clicks', label: 'Outbound clicks' },
+                { key: 'pin_clicks', label: 'Pin clicks' },
+                { key: 'video_mrc_view', label: 'Video views' },
+                { key: 'total_comments', label: 'Comments' },
+                { key: 'total_reactions', label: 'Reactions' },
                 { key: 'created_time', label: 'Date' }
             ];
 
@@ -433,6 +468,9 @@
                         }
                     }
                     for (var key in insights) {
+                        if (platform === 'pinterest') {
+                            break;
+                        }
                         if (insights.hasOwnProperty(key) && order.indexOf(key) === -1) {
                             var val = insights[key];
                             var displayVal = (key === 'post_engagement_rate') ? (val || 0) + '%' : (val ||
@@ -476,7 +514,7 @@
                 since = since || '';
                 until = until || '';
                 var overviewContent = '<div class="analytics-page-insights mb-4">';
-                if (!hasMeaningfulInsights(insights)) {
+                if (!hasMeaningfulInsights(insights, platform)) {
                     overviewContent += '<div class="alert alert-info mb-0" role="alert">' +
                         '<strong><i class="fas fa-info-circle mr-2"></i>Insights can\'t be fetched for this account.</strong>' +
                         '<ol class="mb-0 mt-2 pl-3">' +
@@ -485,7 +523,11 @@
                         '</ol></div></div>';
                 } else {
                     var comp = insights.comparison || {};
-                    var cards = [
+                    var cards = platform === 'pinterest' ? [
+                        ['followers', 'Followers', false],
+                        ['reach', 'Impressions', false],
+                        ['video_views', 'Video Views', false]
+                    ] : [
                         ['followers', 'Followers', false],
                         ['reach', 'Reach', false],
                         ['video_views', 'Video Views', false],
@@ -501,7 +543,7 @@
                         overviewContent += renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]);
                     });
                     overviewContent += '</div>';
-                    overviewContent += renderEngagementsChart(insights, comp);
+                    overviewContent += renderEngagementsChart(insights, comp, platform === 'pinterest' ? 'reach' : undefined, platform);
                     overviewContent += '</div>';
                 }
                 var postsContent = renderPostsList(pagePosts, since, until, currentPostsSearchQuery, currentPostsSortBy, currentPostsSortOrder, platform, currentPostsTotal);
@@ -620,16 +662,23 @@
                         bindPostsSearchHandler();
                         bindPostsSortHandler();
                         bindAnalyticsPostsInfiniteScroll();
+                        var plt = res.platform || currentPlatform || 'facebook';
+                        var chartOpts = chartMetricOptionsForPlatform(plt);
                         var selectedMetric = $('.chart-metric-section').data('selected-metric') ||
-                        'engagements';
+                            (plt === 'pinterest' ? 'reach' : 'engagements');
+                        if (!chartOpts.find(function(o) {
+                                return o.key === selectedMetric;
+                            })) {
+                            selectedMetric = plt === 'pinterest' ? 'reach' : 'engagements';
+                        }
                         if (res.selectedPage && res.pageInsights) {
-                            var byDayKey = chartMetricOptions.find(function(o) {
+                            var optRow = chartOpts.find(function(o) {
                                 return o.key === selectedMetric;
                             });
-                            byDayKey = byDayKey ? byDayKey.byDayKey : 'engagements_by_day';
-                            var byDay = (res.pageInsights[byDayKey] || {});
+                            var byDayKeyResolved = optRow ? optRow.byDayKey : (plt === 'pinterest' ? 'reach_by_day' : 'engagements_by_day');
+                            var byDay = (res.pageInsights[byDayKeyResolved] || {});
                             if (Object.keys(byDay).length > 0) {
-                                initEngagementsChart(res.pageInsights, selectedMetric);
+                                initEngagementsChart(res.pageInsights, selectedMetric, plt);
                             }
                         }
                     })
@@ -659,15 +708,17 @@
                     var $section = $(this).closest('.chart-metric-section');
                     var insights = window.currentAnalyticsInsights;
                     if (!insights || !$section.length) return;
+                    var plt = (typeof currentPlatform !== 'undefined' && currentPlatform) ? currentPlatform : 'facebook';
                     var comp = insights.comparison || {};
-                    var newHtml = renderEngagementsChart(insights, comp, metric);
+                    var newHtml = renderEngagementsChart(insights, comp, metric, plt);
                     $section.replaceWith(newHtml);
-                    var opt = chartMetricOptions.find(function(o) {
+                    var opts = chartMetricOptionsForPlatform(plt);
+                    var opt = opts.find(function(o) {
                         return o.key === metric;
                     });
                     var byDay = opt ? (insights[opt.byDayKey] || {}) : {};
                     if (Object.keys(byDay).length > 0 && typeof Chart !== 'undefined') {
-                        initEngagementsChart(insights, metric);
+                        initEngagementsChart(insights, metric, plt);
                     }
                 });
             }
