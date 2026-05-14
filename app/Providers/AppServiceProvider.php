@@ -24,6 +24,10 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->ensureFrameworkStoragePathsExist();
 
+        if ($this->app->runningInConsole()) {
+            config(['cache.stores.file.permission' => 0777]);
+        }
+
         // Custom Blade directive to check if user can use a feature
         Blade::if('canUseFeature', function ($featureKey = null) {
             $user = User::find(auth()->user()->id);
@@ -59,7 +63,10 @@ class AppServiceProvider extends ServiceProvider
             }
 
             try {
-                @mkdir($path, 0775, true);
+                $mode = ($path === storage_path('framework/cache/data') && $this->app->runningInConsole())
+                    ? 0777
+                    : 0775;
+                @mkdir($path, $mode, true);
             } catch (\Throwable $e) {
                 Log::warning('Failed to create framework storage path.', [
                     'path' => $path,
