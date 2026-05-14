@@ -231,7 +231,7 @@
                                                 <div class="alert alert-info mb-0" role="alert">
                                                     <strong><i class="fas fa-clock mr-2"></i>Insights will appear shortly</strong>
                                                     <p class="mb-2 mt-2 mb-0">Account metrics are synced on a schedule. Check back in a few minutes—data usually shows up soon after you connect an account or after the next sync run.</p>
-                                                    <p class="small text-muted mb-0 mt-2">Facebook Page Insights require 100+ page likes. If nothing appears after a longer wait, open <a href="{{ route('panel.accounts') }}" class="alert-link font-weight-bold">Accounts</a> to confirm permissions or reconnect.</p>
+                                                    <p class="small mb-0 mt-2">Facebook Page Insights require 100+ page likes. If nothing appears after a longer wait, open <a href="{{ route('panel.accounts') }}" class="alert-link font-weight-bold">Accounts</a> to confirm permissions or reconnect.</p>
                                                 </div>
                                             @endif
                                         </div>
