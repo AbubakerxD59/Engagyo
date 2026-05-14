@@ -13,9 +13,6 @@ use App\Models\Thread;
 use App\Models\ThreadInsight;
 use App\Models\ThreadPost;
 use App\Models\User;
-use App\Services\FacebookService;
-use App\Services\PinterestBoardAnalyticsService;
-use App\Services\ThreadsAnalyticsService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -80,11 +77,7 @@ class AnalyticsController extends Controller
             default => [$today->copy()->subDays(28)->format('Y-m-d'), $today->format('Y-m-d')],
         };
     }
-    public function __construct(
-        protected FacebookService $facebookService,
-        protected ThreadsAnalyticsService $threadsAnalyticsService,
-        protected PinterestBoardAnalyticsService $pinterestBoardAnalyticsService
-    ) {}
+    public function __construct() {}
 
     /**
      * Display page-level analytics (insights).
@@ -352,7 +345,7 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Fetch Threads account insights.
+     * Fetch Threads account insights (cron-synced `thread_insights` rows only).
      */
     private function fetchThreadInsights(?Thread $thread, ?string $since = null, ?string $until = null): ?array
     {
@@ -360,7 +353,6 @@ class AnalyticsController extends Controller
             return null;
         }
 
-        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
         $stored = ThreadInsight::where('thread_id', $thread->id)
             ->where('since', $since)
             ->where('until', $until)
@@ -369,29 +361,11 @@ class AnalyticsController extends Controller
             return $stored->insights;
         }
 
-        if (! $thread->validToken()) {
-            return null;
-        }
-
-        $insights = $this->threadsAnalyticsService->getAccountInsightsWithComparison($thread, $since, $until);
-        ThreadInsight::updateOrCreate(
-            [
-                'thread_id' => $thread->id,
-                'since' => $since,
-                'until' => $until,
-            ],
-            [
-                'duration' => $duration,
-                'insights' => $insights,
-                'synced_at' => now(),
-            ]
-        );
-
-        return $insights;
+        return null;
     }
 
     /**
-     * Fetch Threads posts with insights.
+     * Fetch Threads posts with insights (`thread_posts` / cache only; no live API from this controller).
      */
     private function fetchThreadPosts(?Thread $thread, ?string $since = null, ?string $until = null): ?array
     {
@@ -415,20 +389,11 @@ class AnalyticsController extends Controller
             return $storedPosts;
         }
 
-        if (! $thread->validToken()) {
-            return null;
-        }
-
-        $posts = $this->threadsAnalyticsService->getPostsWithInsights($thread, $since, $until);
-        ThreadPost::persistFromAnalyticsPosts((int) $thread->id, $posts);
-
-        Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-
-        return $posts;
+        return [];
     }
 
     /**
-     * Pinterest board-level insights (aggregated from pin analytics for pins on the board).
+     * Pinterest board-level insights (`board_insights` only; sync runs on schedule/cron).
      */
     private function fetchPinterestBoardInsights(?Board $board, ?string $since = null, ?string $until = null): ?array
     {
@@ -436,7 +401,6 @@ class AnalyticsController extends Controller
             return null;
         }
 
-        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
         $stored = BoardInsight::where('board_id', $board->id)
             ->where('since', $since)
             ->where('until', $until)
@@ -445,21 +409,11 @@ class AnalyticsController extends Controller
             return $stored->insights;
         }
 
-        if ($this->pinterestBoardAnalyticsService->resolveAccessToken($board) === null) {
-            return null;
-        }
-
-        try {
-            $synced = $this->pinterestBoardAnalyticsService->syncBoard($board, (string) $since, (string) $until, $duration);
-
-            return $synced['insights'];
-        } catch (\Throwable) {
-            return null;
-        }
+        return null;
     }
 
     /**
-     * Pinterest pins for the board in the selected date range (from DB / cache, else synced from API).
+     * Pinterest pins for the board (DB / cache only; sync runs on schedule/cron).
      *
      * @return array<int, array<string, mixed>>|null
      */
@@ -485,19 +439,7 @@ class AnalyticsController extends Controller
             return $storedPosts;
         }
 
-        if ($this->pinterestBoardAnalyticsService->resolveAccessToken($board) === null) {
-            return null;
-        }
-
-        try {
-            $synced = $this->pinterestBoardAnalyticsService->syncBoard($board, (string) $since, (string) $until, $duration);
-            $posts = $synced['pins'];
-            Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-
-            return $posts;
-        } catch (\Throwable) {
-            return [];
-        }
+        return [];
     }
 
     private function analyticsPostsCacheKey(int $userId, int $accountId, string $duration, ?string $since, ?string $until, string $platform = 'facebook'): string
@@ -653,7 +595,7 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Fetch page posts for analytics test endpoint with raw status payload.
+     * Fetch page posts for analytics test view (database / app cache only; no live Graph API).
      */
     private function fetchPagePostsForTest(?Page $page, ?string $since = null, ?string $until = null): array
     {
@@ -667,121 +609,22 @@ class AnalyticsController extends Controller
         }
 
         $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
-
-        $tokenCheck = FacebookService::validateToken($page);
-        if (!$tokenCheck['success']) {
-            return [
-                'success' => false,
-                'source' => 'token_validation',
-                'posts' => null,
-                'error' => $tokenCheck['message'] ?? 'Invalid or expired access token.',
-            ];
+        if ($since !== null && $until !== null) {
+            request()->merge([
+                'since' => $since,
+                'until' => $until,
+                'duration' => $duration,
+            ]);
         }
 
-        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
-        $insightsPreset = $duration === 'full_year' ? 'sent_tab' : 'default';
-
-        try {
-            $posts = $this->facebookService->getPagePostsWithInsights($page->page_id, $accessToken, $since, $until, $insightsPreset);
-        } catch (\Throwable $e) {
-            if ($this->isFacebookReduceDataError($e)) {
-                try {
-                    $posts = $this->fetchPagePostsInChunksForTest($page->page_id, $accessToken, $since, $until, $insightsPreset, 30);
-                    return [
-                        'success' => true,
-                        'source' => 'api_live_chunked',
-                        'posts' => $posts,
-                        'error' => null,
-                    ];
-                } catch (\Throwable $chunkError) {
-                    return [
-                        'success' => false,
-                        'source' => 'api',
-                        'posts' => null,
-                        'error' => $chunkError->getMessage(),
-                    ];
-                }
-            }
-
-            return [
-                'success' => false,
-                'source' => 'api',
-                'posts' => null,
-                'error' => $e->getMessage(),
-            ];
-        }
+        $posts = $this->fetchPagePosts($page, $since, $until);
 
         return [
             'success' => true,
-            'source' => 'api_live',
-            'posts' => $posts,
+            'source' => 'database',
+            'posts' => is_array($posts) ? $posts : [],
             'error' => null,
         ];
-    }
-
-    private function isFacebookReduceDataError(\Throwable $e): bool
-    {
-        return str_contains(strtolower($e->getMessage()), "reduce the amount of data you're asking for");
-    }
-
-    private function fetchPagePostsInChunksForTest(string $pageId, string $accessToken, ?string $since, ?string $until, string $insightsPreset, int $chunkDays = 30): array
-    {
-        $safeUntil = $until ?: Carbon::today()->format('Y-m-d');
-        $safeSince = $since ?: Carbon::parse($safeUntil)->subDays(28)->format('Y-m-d');
-
-        $currentStart = Carbon::parse($safeSince)->startOfDay();
-        $end = Carbon::parse($safeUntil)->endOfDay();
-        $mergedById = [];
-
-        while ($currentStart->lte($end)) {
-            $chunkStart = $currentStart->copy();
-            $chunkEnd = $chunkStart->copy()->addDays($chunkDays - 1)->endOfDay();
-            if ($chunkEnd->gt($end)) {
-                $chunkEnd = $end->copy();
-            }
-
-            $chunkPosts = $this->facebookService->getPagePostsWithInsights(
-                $pageId,
-                $accessToken,
-                $chunkStart->format('Y-m-d'),
-                $chunkEnd->format('Y-m-d'),
-                $insightsPreset
-            );
-
-            foreach ($chunkPosts as $post) {
-                $postId = (string) ($post['id'] ?? $post['post_id'] ?? '');
-                if ($postId === '') {
-                    $mergedById[] = $post;
-                    continue;
-                }
-                $mergedById[$postId] = $post;
-            }
-
-            $currentStart = $chunkEnd->copy()->addDay()->startOfDay();
-        }
-
-        $posts = array_values($mergedById);
-        usort($posts, function (array $a, array $b) {
-            $aTimeRaw = $a['created_time'] ?? null;
-            $bTimeRaw = $b['created_time'] ?? null;
-            $aTime = is_array($aTimeRaw) ? ($aTimeRaw['date'] ?? $aTimeRaw['datetime'] ?? null) : $aTimeRaw;
-            $bTime = is_array($bTimeRaw) ? ($bTimeRaw['date'] ?? $bTimeRaw['datetime'] ?? null) : $bTimeRaw;
-
-            try {
-                $aTs = is_string($aTime) ? Carbon::parse($aTime)->timestamp : 0;
-            } catch (\Throwable $e) {
-                $aTs = 0;
-            }
-            try {
-                $bTs = is_string($bTime) ? Carbon::parse($bTime)->timestamp : 0;
-            } catch (\Throwable $e) {
-                $bTs = 0;
-            }
-
-            return $bTs <=> $aTs;
-        });
-
-        return $posts;
     }
 
     /**
@@ -837,7 +680,7 @@ class AnalyticsController extends Controller
     }
 
     /**
-     * Test route: fetch posts and insights for a page for last_7 days and display all data.
+     * Test route: show posts and insights from DB/cache only (last 7 days). No live Graph API.
      * Route: GET panel/test/page-insights/{page_id}
      */
     public function testPagePostsInsights(int $page_id)
@@ -855,43 +698,25 @@ class AnalyticsController extends Controller
             abort(404, 'Page not found or missing Facebook credentials.');
         }
 
-        $tokenCheck = FacebookService::validateToken($page);
-        if (!$tokenCheck['success']) {
-            return view('user.analytics.test-page-insights', [
-                'page' => $page,
-                'since' => null,
-                'until' => null,
-                'pageInsights' => null,
-                'posts' => [],
-                'error' => 'Invalid or expired access token.',
-            ]);
-        }
-
         $today = Carbon::today();
         $since = $today->copy()->subDays(7)->format('Y-m-d');
         $until = $today->format('Y-m-d');
-        $accessToken = $tokenCheck['access_token'] ?? $page->access_token;
 
-        $pageInsights = $this->facebookService->getPageInsightsWithComparison(
-            $page->page_id,
-            $accessToken,
-            $since,
-            $until
-        );
+        request()->merge([
+            'since' => $since,
+            'until' => $until,
+            'duration' => 'last_7',
+        ]);
 
-        $posts = $this->facebookService->getPagePostsWithInsights(
-            $page->page_id,
-            $accessToken,
-            $since,
-            $until
-        );
+        $pageInsights = $this->fetchPageInsights($page, $since, $until);
+        $posts = $this->fetchPagePosts($page, $since, $until);
 
         return view('user.analytics.test-page-insights', [
             'page' => $page,
             'since' => $since,
             'until' => $until,
             'pageInsights' => $pageInsights,
-            'posts' => $posts,
+            'posts' => is_array($posts) ? $posts : [],
             'error' => null,
         ]);
     }

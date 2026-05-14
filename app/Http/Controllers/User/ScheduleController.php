@@ -28,12 +28,10 @@ use App\Models\Timeslot;
 use App\Models\User;
 use App\Services\FacebookService;
 use App\Services\FeatureUsageService;
-use App\Services\PinterestBoardAnalyticsService;
 use App\Services\PinterestService;
 use App\Services\PostService;
 use App\Services\SocialMediaLogService;
 use App\Services\TikTokService;
-use App\Services\ThreadsAnalyticsService;
 use App\Services\TimezoneService;
 use Carbon\Carbon;
 use Exception;
@@ -5554,22 +5552,13 @@ class ScheduleController extends Controller
             return $stored->map(fn (ThreadPost $row) => $row->toAnalyticsPostArray())->values()->all();
         }
 
-        if (! $thread->validToken()) {
-            return null;
-        }
-
-        $threadsAnalyticsService = new ThreadsAnalyticsService;
-        $posts = $threadsAnalyticsService->getPostsWithInsights($thread, $since, $until);
-
-        ThreadPost::persistFromAnalyticsPosts((int) $thread->id, $posts);
-
-        return $posts;
+        return [];
     }
 
     /**
-     * Load Pinterest pins for Sent tab from `pinterest_pins`, or sync from the Pinterest API when empty.
+     * Load Pinterest pins for Sent tab from `pinterest_pins` only (sync runs on schedule/cron).
      *
-     * @return array<int, array<string, mixed>>|null null when the board cannot authenticate (caller may show fetching state)
+     * @return array<int, array<string, mixed>>|null null when the board has no rows in range
      */
     private function fetchPinterestPinsFromStore(Board $board, string $since, string $until, string $duration = 'full_year'): ?array
     {
@@ -5587,33 +5576,7 @@ class ScheduleController extends Controller
             return $stored->map(fn (PinterestPin $row) => $this->sentTabPostFromPinterestPin($row, $board))->values()->all();
         }
 
-        $analytics = app(PinterestBoardAnalyticsService::class);
-        if ($analytics->resolveAccessToken($board) === null) {
-            return null;
-        }
-
-        try {
-            $analytics->syncBoard($board, $since, $until, $duration);
-        } catch (\Throwable $e) {
-            Log::warning('Pinterest sent tab board sync failed', [
-                'board_id' => $board->id,
-                'error' => $e->getMessage(),
-            ]);
-
-            return [];
-        }
-
-        $stored = PinterestPin::query()
-            ->where('board_id', $board->id)
-            ->whereBetween('pin_created_at', [$since.' 00:00:00', $until.' 23:59:59'])
-            ->orderByDesc('pin_created_at')
-            ->get();
-
-        if ($stored->isEmpty()) {
-            return [];
-        }
-
-        return $stored->map(fn (PinterestPin $row) => $this->sentTabPostFromPinterestPin($row, $board))->values()->all();
+        return [];
     }
 
     private function parseCreatedTime($value): int
