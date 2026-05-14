@@ -278,16 +278,32 @@
                 post_reactions: 'Reactions',
                 post_impressions: 'Impressions',
                 post_reach: 'Reach',
-                post_engagement_rate: 'Engagement Rate'
+                post_engagement_rate: 'Engagement Rate',
+                pin_saves: 'Saves',
+                outbound_clicks: 'Outbound Clicks',
+                pin_clicks: 'Pin Clicks',
+                video_mrc_view: 'Video Views',
+                total_comments: 'Comments',
+                total_reactions: 'Pin Reactions'
             };
 
             var postInsightDisplayOrder = ['post_clicks', 'post_reactions', 'post_impressions', 'post_reach', 'post_engagement_rate'];
+
+            var postInsightDisplayOrderPinterest = ['post_impressions', 'post_reach', 'pin_saves', 'outbound_clicks', 'pin_clicks', 'post_clicks', 'video_mrc_view', 'total_comments', 'total_reactions', 'post_engagement_rate'];
 
             var postSortOptions = [
                 { key: 'post_impressions', label: 'Impressions' },
                 { key: 'post_reach', label: 'Reach' },
                 { key: 'post_clicks', label: 'Post Clicks' },
                 { key: 'post_reactions', label: 'Reactions' },
+                { key: 'post_engagement_rate', label: 'Eng. Rate' },
+                { key: 'created_time', label: 'Date' }
+            ];
+
+            var postSortOptionsPinterest = [
+                { key: 'post_impressions', label: 'Impressions' },
+                { key: 'pin_saves', label: 'Saves' },
+                { key: 'post_clicks', label: 'Clicks' },
                 { key: 'post_engagement_rate', label: 'Eng. Rate' },
                 { key: 'created_time', label: 'Date' }
             ];
@@ -305,6 +321,8 @@
                 sortBy = sortBy || 'created_time';
                 sortOrder = sortOrder || 'desc';
                 totalPosts = Number(totalPosts || 0);
+                var insightOrder = (platform === 'pinterest') ? postInsightDisplayOrderPinterest : postInsightDisplayOrder;
+                var sortOptionsList = (platform === 'pinterest') ? postSortOptionsPinterest : postSortOptions;
                 if (posts === null) {
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
                         '<i class="fas fa-th-large fa-4x text-muted mb-3"></i>' +
@@ -351,7 +369,7 @@
                     '<input type="search" id="analyticsPostsSearch" class="form-control" placeholder="Search posts by message..." aria-label="Search posts" value="' +
                     escapeHtml(searchQuery) + '">' +
                     '</div></div>';
-                var sortLabel = (postSortOptions.find(function(o) { return o.key === sortBy; }) || postSortOptions[0]).label;
+                var sortLabel = (sortOptionsList.find(function(o) { return o.key === sortBy; }) || sortOptionsList[0]).label;
                 var sortDropdown = '<div class="analytics-posts-sort-wrap">' +
                     '<div class="analytics-posts-sort-group">' +
                     '<label class="analytics-posts-sort-label">Sort by</label>' +
@@ -359,7 +377,7 @@
                     '<button type="button" class="btn btn-sm btn-light dropdown-toggle analytics-posts-sort-btn d-flex align-items-center" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">' +
                     escapeHtml(sortLabel) + ' <i class="fas fa-chevron-down ml-1"></i></button>' +
                     '<div class="dropdown-menu dropdown-menu-right">' +
-                    postSortOptions.map(function(o) {
+                    sortOptionsList.map(function(o) {
                         return '<a class="dropdown-item" href="#" data-sort="' + o.key + '">' + (o.key === sortBy ? '<i class="fas fa-check mr-2 text-primary"></i>' : '<span class="mr-2" style="width:1em;display:inline-block;"></span>') + escapeHtml(o.label) + '</a>';
                     }).join('') + '</div></div></div>' +
                     '<div class="analytics-posts-sort-group">' +
@@ -401,7 +419,7 @@
                     }
                     var insights = post.insights || {};
                     var insightItems = [];
-                    var order = postInsightDisplayOrder;
+                    var order = insightOrder;
                     for (var k = 0; k < order.length; k++) {
                         var key = order[k];
                         if (key in insights) {
@@ -428,7 +446,7 @@
                     var insightHtml = insightItems.length > 0 ?
                         '<div class="analytics-post-insights-grid">' + insightItems.join('') + '</div>' :
                         '<p class="text-muted small mb-0">No insights available</p>';
-                    var viewLabel = platform === 'threads' ? 'View on Threads' : 'View on Facebook';
+                    var viewLabel = platform === 'threads' ? 'View on Threads' : (platform === 'pinterest' ? 'View on Pinterest' : 'View on Facebook');
                     var link = post.permalink_url ? '<a href="' + escapeHtml(post.permalink_url) +
                         '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary analytics-post-view-btn"><i class="fas fa-external-link-alt mr-1"></i>' + viewLabel + '</a>' :
                         '';
@@ -475,7 +493,9 @@
                     ];
                     var note = platform === 'facebook' ?
                         '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>Page Insights data is only available on Pages with 100 or more likes.</p>' :
-                        '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Threads insights are aggregated from available media metrics for the selected date range.</p>';
+                        (platform === 'pinterest' ?
+                            '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Pinterest board metrics aggregate pin analytics (impressions, saves, clicks) for pins on this board. Pinterest limits analytics history (typically up to ~90 days).</p>' :
+                            '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Threads insights are aggregated from available media metrics for the selected date range.</p>');
                     overviewContent += note + '<div class="analytics-insight-cards">';
                     cards.forEach(function(c) {
                         overviewContent += renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]);

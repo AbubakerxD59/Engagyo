@@ -46,6 +46,16 @@ class Board extends Model
         return $this->hasMany(Post::class, 'account_id', 'id');
     }
 
+    public function boardInsights(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(BoardInsight::class, 'board_id', 'id');
+    }
+
+    public function pinterestPins(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(PinterestPin::class, 'board_id', 'id');
+    }
+
     public function domains()
     {
         return $this->hasMany(Domain::class, 'account_id', 'id');

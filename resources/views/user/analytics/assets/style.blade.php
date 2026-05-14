@@ -231,7 +231,8 @@
     }
 
     .analytics-page-avatar .platform-badge.facebook,
-    .analytics-page-avatar .platform-badge.threads {
+    .analytics-page-avatar .platform-badge.threads,
+    .analytics-page-avatar .platform-badge.pinterest {
         position: absolute;
         bottom: -2px;
         right: -2px;
@@ -249,6 +250,10 @@
 
     .analytics-page-avatar .platform-badge.threads {
         background: #111827;
+    }
+
+    .analytics-page-avatar .platform-badge.pinterest {
+        background: #E60023;
     }
 
     .analytics-page-details {

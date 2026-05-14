@@ -3,14 +3,18 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Models\Board;
+use App\Models\BoardInsight;
 use App\Models\FacebookPost;
 use App\Models\Page;
 use App\Models\PageInsight;
+use App\Models\PinterestPin;
 use App\Models\Thread;
 use App\Models\ThreadInsight;
 use App\Models\ThreadPost;
 use App\Models\User;
 use App\Services\FacebookService;
+use App\Services\PinterestBoardAnalyticsService;
 use App\Services\ThreadsAnalyticsService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -78,7 +82,8 @@ class AnalyticsController extends Controller
     }
     public function __construct(
         protected FacebookService $facebookService,
-        protected ThreadsAnalyticsService $threadsAnalyticsService
+        protected ThreadsAnalyticsService $threadsAnalyticsService,
+        protected PinterestBoardAnalyticsService $pinterestBoardAnalyticsService
     ) {}
 
     /**
@@ -94,6 +99,7 @@ class AnalyticsController extends Controller
         $accounts = $user->getAccounts();
         $facebookPages = $accounts->where('type', 'facebook')->values();
         $threadsAccounts = $accounts->where('type', 'threads')->values();
+        $pinterestBoards = $accounts->where('type', 'pinterest')->values();
         $analyticsAccounts = $facebookPages->map(function ($page) {
             return [
                 'ref' => 'facebook:'.$page->id,
@@ -114,6 +120,19 @@ class AnalyticsController extends Controller
                     'profile_image' => $thread->profile_image ?? social_logo('threads'),
                 ];
             })->values()
+        )->concat(
+            $pinterestBoards->map(function ($board) {
+                $p = $board->pinterest;
+
+                return [
+                    'ref' => 'pinterest-board:'.$board->id,
+                    'platform' => 'pinterest',
+                    'id' => $board->id,
+                    'name' => $board->name,
+                    'username' => $p ? ('@'.$p->username) : 'Pinterest',
+                    'profile_image' => $p ? ($p->profile_image ?? social_logo('pinterest')) : social_logo('pinterest'),
+                ];
+            })->values()
         )->values();
         $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
 
@@ -123,7 +142,7 @@ class AnalyticsController extends Controller
         $duration = 'last_28';
 
         $selectedPage = null;
-        return view('user.analytics.index', compact('facebookPages', 'threadsAccounts', 'analyticsAccounts', 'selectedPage', 'since', 'until', 'duration', 'userTimezoneName'));
+        return view('user.analytics.index', compact('facebookPages', 'threadsAccounts', 'pinterestBoards', 'analyticsAccounts', 'selectedPage', 'since', 'until', 'duration', 'userTimezoneName'));
     }
 
     /**
@@ -138,6 +157,7 @@ class AnalyticsController extends Controller
         $accounts = $user->getAccounts();
         $facebookPages = $accounts->where('type', 'facebook')->values();
         $threadsAccounts = $accounts->where('type', 'threads')->values();
+        $pinterestBoards = $accounts->where('type', 'pinterest')->values();
 
         [$since, $until] = $this->resolveDateRange($request);
 
@@ -212,6 +232,31 @@ class AnalyticsController extends Controller
                     $selectedPage = ['id' => $selected->id, 'name' => $selected->username];
                 }
             }
+        } elseif (str_starts_with($accountRef, 'pinterest-board:')) {
+            $platform = 'pinterest';
+            $id = (int) str_replace('pinterest-board:', '', $accountRef);
+            if ($pinterestBoards->contains('id', $id)) {
+                $selected = Board::with('pinterest')->find($id);
+                if ($selected) {
+                    $pageInsights = $this->fetchPinterestBoardInsights($selected, $since, $until);
+                    $pagePosts = $this->fetchPinterestBoardPosts($selected, $since, $until);
+                    if (is_array($pagePosts)) {
+                        $pagePostsTotal = count($pagePosts);
+                        if ($postsLimit !== null) {
+                            $pagePosts = array_slice($pagePosts, $postsOffset, $postsLimit);
+                            $pagePostsNextOffset = $postsOffset + count($pagePosts);
+                            $pagePostsHasMore = $pagePostsNextOffset < $pagePostsTotal;
+                        } else {
+                            $pagePostsNextOffset = $pagePostsTotal;
+                        }
+                    }
+                    $pinterest = $selected->pinterest;
+                    $selectedPage = [
+                        'id' => $selected->id,
+                        'name' => $selected->name.($pinterest ? ' · @'.$pinterest->username : ''),
+                    ];
+                }
+            }
         }
 
         return response()->json([
@@ -224,7 +269,7 @@ class AnalyticsController extends Controller
             'pagePostsHasMore' => $pagePostsHasMore,
             'pagePostsNextOffset' => $pagePostsNextOffset,
             'selectedPage' => $selectedPage,
-            'hasPages' => ($facebookPages->count() + $threadsAccounts->count()) > 0,
+            'hasPages' => ($facebookPages->count() + $threadsAccounts->count() + $pinterestBoards->count()) > 0,
             'platform' => $platform,
             'accountRef' => $accountRef,
             'since' => $since,
@@ -380,6 +425,79 @@ class AnalyticsController extends Controller
         Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
 
         return $posts;
+    }
+
+    /**
+     * Pinterest board-level insights (aggregated from pin analytics for pins on the board).
+     */
+    private function fetchPinterestBoardInsights(?Board $board, ?string $since = null, ?string $until = null): ?array
+    {
+        if (! $board || empty($board->board_id)) {
+            return null;
+        }
+
+        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
+        $stored = BoardInsight::where('board_id', $board->id)
+            ->where('since', $since)
+            ->where('until', $until)
+            ->first();
+        if ($stored && $stored->insights) {
+            return $stored->insights;
+        }
+
+        if ($this->pinterestBoardAnalyticsService->resolveAccessToken($board) === null) {
+            return null;
+        }
+
+        try {
+            $synced = $this->pinterestBoardAnalyticsService->syncBoard($board, (string) $since, (string) $until, $duration);
+
+            return $synced['insights'];
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /**
+     * Pinterest pins for the board in the selected date range (from DB / cache, else synced from API).
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function fetchPinterestBoardPosts(?Board $board, ?string $since = null, ?string $until = null): ?array
+    {
+        if (! $board || empty($board->board_id)) {
+            return null;
+        }
+
+        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
+        $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $board->id, $duration, $since, $until, 'pinterest-board');
+
+        $cachedPosts = Cache::get($cacheKey);
+        if ($cachedPosts !== null) {
+            return $cachedPosts;
+        }
+
+        $stored = PinterestPin::latestForBoard((int) $board->id, 120);
+        if ($stored->isNotEmpty()) {
+            $storedPosts = $stored->map(fn (PinterestPin $row) => $row->toAnalyticsPostArray())->values()->all();
+            Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+
+            return $storedPosts;
+        }
+
+        if ($this->pinterestBoardAnalyticsService->resolveAccessToken($board) === null) {
+            return null;
+        }
+
+        try {
+            $synced = $this->pinterestBoardAnalyticsService->syncBoard($board, (string) $since, (string) $until, $duration);
+            $posts = $synced['pins'];
+            Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+
+            return $posts;
+        } catch (\Throwable) {
+            return [];
+        }
     }
 
     private function analyticsPostsCacheKey(int $userId, int $accountId, string $duration, ?string $since, ?string $until, string $platform = 'facebook'): string

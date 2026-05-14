@@ -20,6 +20,7 @@ use App\Models\Linkedin;
 use App\Models\Page;
 use App\Models\Pinterest;
 use App\Models\Post;
+use App\Models\PinterestPin;
 use App\Models\Tiktok;
 use App\Models\Thread;
 use App\Models\ThreadPost;
@@ -27,6 +28,7 @@ use App\Models\Timeslot;
 use App\Models\User;
 use App\Services\FacebookService;
 use App\Services\FeatureUsageService;
+use App\Services\PinterestBoardAnalyticsService;
 use App\Services\PinterestService;
 use App\Services\PostService;
 use App\Services\SocialMediaLogService;
@@ -4570,19 +4572,24 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Pinterest Sent tab: all published schedule pins for selected boards, same card shape as Facebook sent API.
+     * Pinterest Sent tab: pins from `pinterest_pins` (synced board feed) merged with scheduled `posts`
+     * not present in that snapshot — same pattern as Facebook sent page + `facebook_posts`.
      */
     public function getPinterestSentPosts(Request $request)
     {
         $userId = (int) Auth::id();
         $viewer = Auth::guard('user')->user();
         $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [$userId];
+        $offset = max(0, (int) $request->input('offset', 0));
+        $limitInput = $request->input('limit');
+        $limit = is_null($limitInput) ? null : max(1, min(50, (int) $limitInput));
+
         $accountIds = (array) $request->input('account_id', []);
         if (empty($accountIds)) {
             return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
         }
 
-        $boards = Board::whereIn('id', $accountIds)->get();
+        $boards = Board::with('pinterest')->whereIn('id', $accountIds)->get();
         if ($boards->isEmpty()) {
             return response()->json(['success' => false, 'message' => 'No boards found', 'posts' => []]);
         }
@@ -4590,28 +4597,147 @@ class ScheduleController extends Controller
         $boardIds = $boards->pluck('id')->all();
         $boardsById = $boards->keyBy('id');
 
-        $dbPosts = Post::withoutGlobalScopes()
+        $until = now()->format('Y-m-d');
+        $since = now()->subYear()->format('Y-m-d');
+        $duration = 'full_year';
+
+        $allPosts = [];
+        $pinIdsSeen = [];
+
+        foreach ($boards as $board) {
+            $cacheKey = $this->pinterestSentPostsCacheKey($userId, (int) $board->id, $duration, $since, $until);
+            $posts = null;
+            try {
+                $posts = Cache::get($cacheKey);
+            } catch (\Throwable $e) {
+                Log::warning('Pinterest sent posts cache read failed', [
+                    'key' => $cacheKey,
+                    'message' => $e->getMessage(),
+                ]);
+            }
+            if ($posts === null) {
+                $posts = $this->fetchPinterestPinsFromStore($board, $since, $until, $duration);
+                if ($posts !== null) {
+                    try {
+                        Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+                    } catch (\Throwable $e) {
+                        Log::warning('Pinterest sent posts cache write failed', [
+                            'key' => $cacheKey,
+                            'message' => $e->getMessage(),
+                        ]);
+                    }
+                }
+            }
+            if (! is_array($posts)) {
+                $posts = [];
+            }
+
+            $postIds = collect($posts)
+                ->pluck('id')
+                ->filter()
+                ->map(fn ($id) => (string) $id)
+                ->unique()
+                ->values()
+                ->all();
+
+            $ourPostsByExternalId = empty($postIds)
+                ? collect()
+                : Post::withoutGlobalScopes()
+                    ->whereIn('user_id', $postCreatorIds)
+                    ->whereIn('post_id', $postIds)
+                    ->with('user')
+                    ->get()
+                    ->keyBy(fn ($p) => (string) $p->post_id);
+
+            foreach ($posts as &$post) {
+                $post['account_name'] = $board->name;
+                $post['account_profile'] = $board->pinterest?->profile_image ?? '';
+                $post['social_type'] = 'pinterest';
+                $post['page_db_id'] = $board->id;
+                $ourPost = $ourPostsByExternalId->get((string) ($post['id'] ?? ''));
+                if ($ourPost) {
+                    $post['db_post_id'] = $ourPost->id;
+                    if ($ourPost->user) {
+                        $post['publisher_username'] = $ourPost->user->username ?? $ourPost->user->full_name ?? $ourPost->user->email ?? '';
+                        $post['publisher_email'] = $ourPost->user->email ?? '';
+                    }
+                }
+            }
+            unset($post);
+
+            foreach ($posts as $p) {
+                $pid = (string) ($p['id'] ?? '');
+                if ($pid !== '') {
+                    $pinIdsSeen[$pid] = true;
+                }
+            }
+
+            $allPosts = array_merge($allPosts, $posts);
+        }
+
+        $sinceStart = Carbon::parse($since)->startOfDay();
+        $untilEnd = Carbon::parse($until)->endOfDay();
+        $dbSentPosts = Post::withoutGlobalScopes()
             ->whereIn('user_id', $postCreatorIds)
             ->where('social_type', 'like', '%pinterest%')
             ->whereIn('account_id', $boardIds)
             ->where('status', 1)
+            ->whereNotNull('post_id')
             ->whereNotNull('published_at')
-            // ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
+            ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
+            ->whereBetween('published_at', [$sinceStart, $untilEnd])
             ->where('source', 'schedule')
             ->with('user', 'board.pinterest')
-            ->orderByDesc('published_at')
             ->get();
 
-        $allPosts = [];
-        foreach ($dbPosts as $dbPost) {
+        foreach ($dbSentPosts as $dbPost) {
+            $extId = (string) $dbPost->post_id;
+            if ($extId === '' || isset($pinIdsSeen[$extId])) {
+                continue;
+            }
             $board = $boardsById->get($dbPost->account_id) ?? $dbPost->board;
             if (! $board) {
                 continue;
             }
+            $pinIdsSeen[$extId] = true;
             $allPosts[] = $this->sentTabPostFromPinterestRecord($dbPost, $board);
         }
 
-        return response()->json(['success' => true, 'posts' => $allPosts]);
+        usort($allPosts, function ($a, $b) {
+            $ta = $this->parseCreatedTime($a['created_time'] ?? null);
+            $tb = $this->parseCreatedTime($b['created_time'] ?? null);
+
+            return $tb - $ta;
+        });
+
+        $isFetching = empty($allPosts);
+        $fetchingMessage = $isFetching ? 'Pins for this board are being fetched. Please check back shortly.' : null;
+        $total = count($allPosts);
+
+        if ($limit !== null) {
+            $pagedPosts = array_slice($allPosts, $offset, $limit);
+            $nextOffset = $offset + count($pagedPosts);
+
+            return response()->json([
+                'success' => true,
+                'posts' => $pagedPosts,
+                'posts_fetching' => $isFetching,
+                'posts_fetching_message' => $fetchingMessage,
+                'total' => $total,
+                'has_more' => $nextOffset < $total,
+                'next_offset' => $nextOffset,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'posts' => $allPosts,
+            'posts_fetching' => $isFetching,
+            'posts_fetching_message' => $fetchingMessage,
+            'total' => $total,
+            'has_more' => false,
+            'next_offset' => $total,
+        ]);
     }
 
     /**
@@ -5143,6 +5269,49 @@ class ScheduleController extends Controller
     }
 
     /**
+     * Sent-tab payload from a `pinterest_pins` row (metrics from stored pin analytics).
+     */
+    private function sentTabPostFromPinterestPin(PinterestPin $pin, Board $board): array
+    {
+        $post = $pin->toAnalyticsPostArray();
+        $ins = is_array($post['insights'] ?? null) ? $post['insights'] : [];
+
+        $reactions = (int) ($ins['pin_saves'] ?? $ins['post_reactions'] ?? 0);
+        $impressions = (int) ($ins['post_impressions'] ?? 0);
+        $clicks = (int) ($ins['post_clicks'] ?? 0);
+
+        $rawCreated = $post['created_time'] ?? $pin->pin_created_at;
+        if ($rawCreated instanceof \DateTimeInterface) {
+            $createdTime = $rawCreated->format(\DateTimeInterface::ATOM);
+        } else {
+            $createdTime = is_string($rawCreated) ? $rawCreated : '';
+        }
+
+        return [
+            'id' => (string) ($post['id'] ?? $pin->pinterest_pin_id),
+            'created_time' => $createdTime,
+            'message' => (string) ($post['message'] ?? $post['title'] ?? ''),
+            'story' => '',
+            'full_picture' => (string) ($post['full_picture'] ?? ''),
+            'permalink_url' => $post['permalink_url'] ?? null,
+            'media_type' => (string) ($post['media_type'] ?? $post['type'] ?? ''),
+            'type' => (string) ($post['type'] ?? $post['media_type'] ?? ''),
+            'account_name' => $board->name,
+            'account_profile' => $board->pinterest?->profile_image ?? '',
+            'social_type' => 'pinterest',
+            'page_db_id' => $board->id,
+            'insights' => [
+                'post_reactions' => $reactions,
+                'post_impressions' => $impressions,
+                'post_clicks' => $clicks,
+            ],
+            'comments' => (int) ($ins['total_comments'] ?? 0),
+            'shares' => 0,
+            'video_url' => '',
+        ];
+    }
+
+    /**
      * Minimal Sent-tab payload from a published Pinterest Post row (metrics zeroed; same keys as Facebook sent cards).
      */
     private function sentTabPostFromPinterestRecord(Post $dbPost, Board $board): array
@@ -5273,6 +5442,24 @@ class ScheduleController extends Controller
         ]);
     }
 
+    private function pinterestSentPostsCacheKey(int $userId, int $boardId, string $duration, ?string $since, ?string $until): string
+    {
+        return implode(':', [
+            'schedule_sent_pinterest_pins',
+            'v1',
+            'user',
+            $userId,
+            'board',
+            $boardId,
+            'duration',
+            $duration,
+            'since',
+            (string) ($since ?? ''),
+            'until',
+            (string) ($until ?? ''),
+        ]);
+    }
+
     private function facebookDurationPostsCacheKey(string $pageId, string $duration, string $since, string $until): string
     {
         return implode(':', [
@@ -5374,6 +5561,56 @@ class ScheduleController extends Controller
         ThreadPost::persistFromAnalyticsPosts((int) $thread->id, $posts);
 
         return $posts;
+    }
+
+    /**
+     * Load Pinterest pins for Sent tab from `pinterest_pins`, or sync from the Pinterest API when empty.
+     *
+     * @return array<int, array<string, mixed>>|null null when the board cannot authenticate (caller may show fetching state)
+     */
+    private function fetchPinterestPinsFromStore(Board $board, string $since, string $until, string $duration = 'full_year'): ?array
+    {
+        if (empty($board->board_id)) {
+            return null;
+        }
+
+        $stored = PinterestPin::query()
+            ->where('board_id', $board->id)
+            ->whereBetween('pin_created_at', [$since.' 00:00:00', $until.' 23:59:59'])
+            ->orderByDesc('pin_created_at')
+            ->get();
+
+        if ($stored->isNotEmpty()) {
+            return $stored->map(fn (PinterestPin $row) => $this->sentTabPostFromPinterestPin($row, $board))->values()->all();
+        }
+
+        $analytics = app(PinterestBoardAnalyticsService::class);
+        if ($analytics->resolveAccessToken($board) === null) {
+            return null;
+        }
+
+        try {
+            $analytics->syncBoard($board, $since, $until, $duration);
+        } catch (\Throwable $e) {
+            Log::warning('Pinterest sent tab board sync failed', [
+                'board_id' => $board->id,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [];
+        }
+
+        $stored = PinterestPin::query()
+            ->where('board_id', $board->id)
+            ->whereBetween('pin_created_at', [$since.' 00:00:00', $until.' 23:59:59'])
+            ->orderByDesc('pin_created_at')
+            ->get();
+
+        if ($stored->isEmpty()) {
+            return [];
+        }
+
+        return $stored->map(fn (PinterestPin $row) => $this->sentTabPostFromPinterestPin($row, $board))->values()->all();
     }
 
     private function parseCreatedTime($value): int

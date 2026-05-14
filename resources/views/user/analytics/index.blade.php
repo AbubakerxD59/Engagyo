@@ -44,7 +44,13 @@
                                                     <img src="{{ $account['profile_image'] }}" loading="lazy"
                                                         onerror="this.onerror=null; this.src='{{ social_logo($account['platform']) }}';">
                                                     <span class="platform-badge {{ $account['platform'] }}">
-                                                        <i class="{{ $account['platform'] === 'threads' ? 'fas fa-at' : 'fab fa-facebook-f' }}"></i>
+                                                        @if($account['platform'] === 'threads')
+                                                            <i class="fas fa-at"></i>
+                                                        @elseif($account['platform'] === 'pinterest')
+                                                            <i class="fab fa-pinterest-p"></i>
+                                                        @else
+                                                            <i class="fab fa-facebook-f"></i>
+                                                        @endif
                                                     </span>
                                                 </div>
                                                 <div class="analytics-page-details">
