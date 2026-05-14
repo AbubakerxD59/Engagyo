@@ -15,8 +15,6 @@ class ThreadPostsSyncService
 
     protected array $durations = ['last_7', 'last_28', 'last_90', 'this_month', 'this_year'];
 
-    protected int $maxRecordsPerDuration = 7;
-
     public function __construct(protected ThreadsAnalyticsService $threadsAnalyticsService) {}
 
     /**
@@ -45,21 +43,9 @@ class ThreadPostsSyncService
         [$since, $until] = $this->resolveDateRange($duration);
         $posts = $this->threadsAnalyticsService->getPostsWithInsights($thread, $since, $until);
 
-        ThreadPost::updateOrCreate(
-            [
-                'thread_id' => $thread->id,
-                'since' => $since,
-                'until' => $until,
-            ],
-            [
-                'duration' => $duration,
-                'posts' => $posts,
-                'synced_at' => now(),
-            ]
-        );
+        ThreadPost::persistFromAnalyticsPosts((int) $thread->id, $posts);
 
         $this->refreshPostsCache($thread, $duration, $since, $until, $posts);
-        $this->pruneThreadPosts($thread->id, $duration);
 
         return true;
     }
@@ -74,20 +60,6 @@ class ThreadPostsSyncService
         $key = $this->analyticsPostsCacheKey($userId, (int) $thread->id, $duration, $since, $until);
         Cache::forget($key);
         Cache::put($key, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-    }
-
-    protected function pruneThreadPosts(int $threadId, string $duration): void
-    {
-        $idsToKeep = ThreadPost::where('thread_id', $threadId)
-            ->where('duration', $duration)
-            ->orderByDesc('synced_at')
-            ->limit($this->maxRecordsPerDuration)
-            ->pluck('id');
-
-        ThreadPost::where('thread_id', $threadId)
-            ->where('duration', $duration)
-            ->whereNotIn('id', $idsToKeep)
-            ->delete();
     }
 
     private function analyticsPostsCacheKey(int $userId, int $threadId, string $duration, ?string $since, ?string $until): string

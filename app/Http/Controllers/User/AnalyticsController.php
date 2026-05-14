@@ -362,13 +362,12 @@ class AnalyticsController extends Controller
             return $cachedPosts;
         }
 
-        $stored = ThreadPost::where('thread_id', $thread->id)
-            ->where('since', $since)
-            ->where('until', $until)
-            ->first();
-        if ($stored && $stored->posts !== null) {
-            Cache::put($cacheKey, $stored->posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
-            return $stored->posts;
+        $stored = ThreadPost::forCreatedDateRange((int) $thread->id, $since, $until);
+        if ($stored->isNotEmpty()) {
+            $storedPosts = $stored->map(fn (ThreadPost $row) => $row->toAnalyticsPostArray())->values()->all();
+            Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+
+            return $storedPosts;
         }
 
         if (! $thread->validToken()) {
@@ -376,18 +375,7 @@ class AnalyticsController extends Controller
         }
 
         $posts = $this->threadsAnalyticsService->getPostsWithInsights($thread, $since, $until);
-        ThreadPost::updateOrCreate(
-            [
-                'thread_id' => $thread->id,
-                'since' => $since,
-                'until' => $until,
-            ],
-            [
-                'duration' => $duration,
-                'posts' => $posts,
-                'synced_at' => now(),
-            ]
-        );
+        ThreadPost::persistFromAnalyticsPosts((int) $thread->id, $posts);
 
         Cache::put($cacheKey, $posts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
 

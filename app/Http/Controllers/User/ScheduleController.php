@@ -5359,13 +5359,9 @@ class ScheduleController extends Controller
             return null;
         }
 
-        $stored = ThreadPost::where('thread_id', $thread->id)
-            ->where('since', $since)
-            ->where('until', $until)
-            ->first();
-
-        if ($stored && $stored->posts !== null) {
-            return $stored->posts;
+        $stored = ThreadPost::forCreatedDateRange((int) $thread->id, $since, $until);
+        if ($stored->isNotEmpty()) {
+            return $stored->map(fn (ThreadPost $row) => $row->toAnalyticsPostArray())->values()->all();
         }
 
         if (! $thread->validToken()) {
@@ -5375,18 +5371,7 @@ class ScheduleController extends Controller
         $threadsAnalyticsService = new ThreadsAnalyticsService;
         $posts = $threadsAnalyticsService->getPostsWithInsights($thread, $since, $until);
 
-        ThreadPost::updateOrCreate(
-            [
-                'thread_id' => $thread->id,
-                'since' => $since,
-                'until' => $until,
-            ],
-            [
-                'duration' => $duration,
-                'posts' => $posts,
-                'synced_at' => now(),
-            ]
-        );
+        ThreadPost::persistFromAnalyticsPosts((int) $thread->id, $posts);
 
         return $posts;
     }
@@ -5501,17 +5486,10 @@ class ScheduleController extends Controller
             return;
         }
 
-        $rows = ThreadPost::where('thread_id', $thread->id)->get();
-        foreach ($rows as $row) {
-            $posts = is_array($row->posts) ? $row->posts : [];
-            $filtered = array_values(array_filter($posts, function ($p) use ($externalPostId) {
-                return (string) ($p['id'] ?? '') !== $externalPostId;
-            }));
-            if (count($filtered) !== count($posts)) {
-                $row->posts = $filtered;
-                $row->save();
-            }
-        }
+        ThreadPost::query()
+            ->where('thread_id', $thread->id)
+            ->where('threads_post_id', $externalPostId)
+            ->delete();
 
         $userId = (int) Auth::id();
         $duration = 'full_year';
