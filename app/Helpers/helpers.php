@@ -10,6 +10,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Storage;
 
+require_once __DIR__ . '/api_platform_publishing_docs.php';
+
 function site_logo()
 {
     $logo = asset('assets/frontend/images/logo.png');
@@ -827,9 +829,47 @@ function getApiEndpoints()
                             "profile_image" => "https://example.com/fb-image.jpg",
                             "created_at" => "2025-01-01T00:00:00+00:00"
                         ]
+                    ],
+                    "linkedin" => [
+                        [
+                            "_id" => "urn:li:person:AbCdEf",
+                            "name" => "jane.doe",
+                            "type" => "linkedin",
+                            "profile_image" => "https://example.com/li.jpg",
+                            "created_at" => "2025-01-01T00:00:00+00:00"
+                        ]
+                    ],
+                    "instagram" => [
+                        [
+                            "_id" => "17841400000000000",
+                            "username" => "mybrand",
+                            "name" => "My Brand",
+                            "type" => "instagram",
+                            "profile_image" => "https://example.com/ig.jpg",
+                            "created_at" => "2025-01-01T00:00:00+00:00"
+                        ]
+                    ],
+                    "threads" => [
+                        [
+                            "_id" => "1234567890",
+                            "username" => "my_threads",
+                            "type" => "threads",
+                            "profile_image" => "https://example.com/th.jpg",
+                            "created_at" => "2025-01-01T00:00:00+00:00"
+                        ]
+                    ],
+                    "tiktok" => [
+                        [
+                            "_id" => "open.tiktok.com/mount/…",
+                            "username" => "creator_handle",
+                            "display_name" => "Creator",
+                            "type" => "tiktok",
+                            "profile_image" => "https://example.com/tt.jpg",
+                            "created_at" => "2025-01-01T00:00:00+00:00"
+                        ]
                     ]
                 ],
-                "total" => 2
+                "total" => 6
             ]
         ]
     ];
@@ -934,17 +974,34 @@ function getApiEndpoints()
         "id" => "posts-create",
         "method" => "POST",
         "endpoint" => "/posts",
-        "description" => "Create a post (photo or link) to Facebook or Pinterest. Use publish_now=1 to publish immediately. Otherwise scheduling follows: optional scheduled_at, else the next free queue timeslot for that page/board, else 14:00 today (user timezone) or tomorrow if 14:00 has passed.",
+        "description" => "Create and queue or publish a post to a connected account. Supports Facebook, Pinterest, Instagram, Threads, TikTok (same JSON shape for image posts), and LinkedIn (different body — see Publishing by platform → LinkedIn in the API docs sidebar). Scheduling: publish_now=1 → immediate; else optional scheduled_at; else next queue timeslot for that account; else default 14:00 in the user timezone (today or next day).",
         "category" => "Posts",
+        "supported_media" => [
+            ["type" => "Facebook", "supported" => "Yes", "details" => "Photo: image_url + title (link optional for link post with preview). Use page_id as account_id. Not via this API: Stories/Reels compose (use POST /posts/video for feed video)."],
+            ["type" => "Pinterest", "supported" => "Yes", "details" => "Pin image: image_url + title; optional link for destination URL. Use board_id (Pinterest board id) as account_id."],
+            ["type" => "Instagram", "supported" => "Yes", "details" => "Single feed photo only: image_url + title/description. Use ig_user_id (or numeric instagram_accounts.id) as account_id. Not via this API: carousel, stories, reels (reels/video use POST /posts/video)."],
+            ["type" => "Threads", "supported" => "Yes", "details" => "Text-only: title and/or description (image_url optional). Image post: image_url + text. Use threads_id (or numeric threads.id) as account_id. Not via this API: carousel, video."],
+            ["type" => "TikTok", "supported" => "Yes", "details" => "Photo post: image_url required + title. Optional tiktok_privacy_level, tiktok_allow_comment, tiktok_allow_duet, tiktok_allow_stitch, tiktok_commercial_toggle, tiktok_your_brand, tiktok_branded_content, tiktok_auto_add_music. Use tiktok_id as account_id. Video: POST /posts/video."],
+            ["type" => "LinkedIn", "supported" => "Yes", "details" => "Same URL POST /posts with platform=linkedin: text-only and/or exactly one of image_url, video_url, document_url (see LinkedIn guide). Carousel/multi-image not supported via API."],
+        ],
         "parameters" => [
-            ["name" => "platform", "type" => "string", "required" => true, "description" => "Target platform: 'facebook' or 'pinterest'"],
-            ["name" => "account_id", "type" => "string", "required" => true, "description" => "Page ID (Facebook) or Board ID (Pinterest)"],
-            ["name" => "image_url", "type" => "string", "required" => true, "description" => "Publicly accessible URL of the image to post"],
-            ["name" => "title", "type" => "string", "required" => true, "description" => "Post title/message (max 500 characters)"],
-            ["name" => "description", "type" => "string", "required" => false, "description" => "Additional description (max 2000 characters)"],
-            ["name" => "link", "type" => "string", "required" => false, "description" => "Destination URL for link posts"],
-            ["name" => "publish_now", "type" => "integer", "required" => false, "description" => "Set to 1 to publish immediately. If 0 or omitted, scheduled_at and queue logic apply (publish_now takes precedence over scheduled_at when set to 1)."],
-            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Used only when publish_now is not 1. Schedule for this date/time (must be after now; format e.g. Y-m-d H:i:s). Interpreted in the user's timezone then stored in UTC."]
+            ["name" => "platform", "type" => "string", "required" => true, "description" => "facebook | pinterest | instagram | threads | tiktok | linkedin"],
+            ["name" => "account_id", "type" => "string", "required" => true, "description" => "Facebook: page_id. Pinterest: board_id. Instagram: ig_user_id or DB id. Threads: threads_id or DB id. TikTok: tiktok_id or DB id. LinkedIn: linkedin_id."],
+            ["name" => "image_url", "type" => "string (URL)", "required" => false, "description" => "Required for Facebook, Pinterest, Instagram, and TikTok photo posts. Optional for Threads if posting text only; required for Threads image posts."],
+            ["name" => "title", "type" => "string", "required" => true, "description" => "Primary caption / headline."],
+            ["name" => "description", "type" => "string", "required" => false, "description" => "Extra body text (Threads maps to comment; TikTok as comment)."],
+            ["name" => "link", "type" => "string (URL)", "required" => false, "description" => "Facebook/Pinterest destination link when publishing a link-style post."],
+            ["name" => "publish_now", "type" => "0|1", "required" => false, "description" => "1 = publish immediately; omit or 0 to schedule using scheduled_at, queue slots, or default 14:00."],
+            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "When publish_now is not 1: schedule at this local datetime (must be after now)."],
+            ["name" => "api_key_id", "type" => "integer", "required" => false, "description" => "Optional: associate the created post with an API key row."],
+            ["name" => "tiktok_privacy_level", "type" => "string", "required" => false, "description" => "TikTok only: privacy level for Direct Post (e.g. PUBLIC_TO_EVERYONE — must match TikTok app settings)."],
+            ["name" => "tiktok_allow_comment", "type" => "0|1", "required" => false, "description" => "TikTok: allow comments (default 0 = disabled per app convention)."],
+            ["name" => "tiktok_allow_duet", "type" => "0|1", "required" => false, "description" => "TikTok: allow duet."],
+            ["name" => "tiktok_allow_stitch", "type" => "0|1", "required" => false, "description" => "TikTok: allow stitch."],
+            ["name" => "tiktok_commercial_toggle", "type" => "0|1", "required" => false, "description" => "TikTok commercial content toggle."],
+            ["name" => "tiktok_your_brand", "type" => "0|1", "required" => false, "description" => "TikTok branded content flag."],
+            ["name" => "tiktok_branded_content", "type" => "0|1", "required" => false, "description" => "TikTok branded content flag."],
+            ["name" => "tiktok_auto_add_music", "type" => "boolean", "required" => false, "description" => "TikTok photo: when true, request auto-add music where supported."],
         ],
         "request" => [
             "headers" => [
@@ -952,37 +1009,36 @@ function getApiEndpoints()
                 "Content-Type" => "application/json"
             ],
             "body" => [
-                "platform" => "facebook",
-                "account_id" => "123456789012345",
+                "platform" => "instagram",
+                "account_id" => "17841400000000000",
                 "image_url" => "https://example.com/images/my-photo.jpg",
-                "title" => "Check out this amazing post!",
-                "description" => "This is an optional description for the post.",
-                "link" => "https://example.com/my-article",
-                "scheduled_at" => "2025-12-25 10:00:00"
+                "title" => "New product drop",
+                "description" => "Optional longer caption.",
+                "publish_now" => 1
             ],
-            "curl" => 'curl -X POST "{base_url}/posts" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"facebook","account_id":"123456789","image_url":"https://example.com/image.jpg","title":"My Post","publish_now":1}\''
+            "curl" => 'curl -X POST "{base_url}/posts" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"threads","account_id":"1234567890","title":"Hello from API","description":"","publish_now":1}\''
         ],
         "response" => [
             "success" => true,
-            "message" => "Post scheduled successfully for Dec 25, 2025 at 10:00 AM",
+            "message" => "Post is being published to Instagram",
             "data" => [
                 "post" => [
                     "id" => 123,
-                    "platform" => "facebook",
-                    "status" => "scheduled",
-                    "type" => "link",
-                    "scheduled_at" => "2025-12-25 10:00:00",
+                    "platform" => "instagram",
+                    "status" => "publishing",
+                    "type" => "photo",
                     "created_at" => "2025-12-04T10:30:00+00:00"
                 ],
                 "account" => [
-                    "type" => "facebook_page",
-                    "page_id" => "123456789012345",
-                    "name" => "My Business Page",
-                    "profile_image" => "https://example.com/fb-profile.jpg"
+                    "type" => "instagram",
+                    "ig_user_id" => "17841400000000000",
+                    "username" => "mybrand",
+                    "name" => "My Brand",
+                    "profile_image" => "https://example.com/ig.jpg"
                 ]
             ]
         ],
-        "notes" => "Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id. Scheduling: (1) publish_now=1 → immediate publish, status 'publishing'. (2) Else if scheduled_at is set → schedule at that time, status 'scheduled'. (3) Else if the page/board has queue timeslots configured → next available slot among pending posts on that account. (4) Else default 14:00 local user time today, or tomorrow if 14:00 already passed. Omitting publish_now and scheduled_at no longer implies immediate publish; send publish_now=1 for that."
+        "notes" => "LinkedIn: send platform=linkedin with the LinkedIn-specific fields (see Publishing by platform → LinkedIn in the API docs sidebar); image_url is not required when posting text or document/video URLs. For TikTok photo metadata, expand TikTok in that same menu. Use GET /user/accounts to list _id values for account_id."
     ];
 
     $endpoints[] = [
@@ -1032,17 +1088,32 @@ function getApiEndpoints()
         "id" => "videos-create",
         "method" => "POST",
         "endpoint" => "/posts/video",
-        "description" => "Create a video post on Facebook or Pinterest. Same scheduling rules as POST /posts: publish_now=1 for immediate publish; otherwise scheduled_at, then queue timeslots, then default 14:00 (user timezone).",
+        "description" => "Create a video post: downloads video_url to storage, then publishes or schedules like POST /posts. Supported platforms: facebook, pinterest, instagram, tiktok. Same scheduling rules as POST /posts.",
         "category" => "Videos",
+        "supported_media" => [
+            ["type" => "Facebook", "supported" => "Yes", "details" => "Feed video. video_url must be publicly fetchable (mp4, mov, avi, mkv, webm by MIME)."],
+            ["type" => "Pinterest", "supported" => "Yes", "details" => "Video pin; optional link for destination URL."],
+            ["type" => "Instagram", "supported" => "Yes", "details" => "Feed video / reel pipeline (Instagram Content Publishing). Stored as S3 key then published via PublishInstagramPost."],
+            ["type" => "TikTok", "supported" => "Yes", "details" => "Direct Post video. Same optional tiktok_* metadata fields as TikTok photo on POST /posts."],
+            ["type" => "Threads", "supported" => "No", "details" => "Not implemented on this endpoint; use web app for Threads video."],
+            ["type" => "LinkedIn", "supported" => "No", "details" => "Use POST /posts with platform=linkedin and video_url instead."],
+        ],
         "parameters" => [
-            ["name" => "platform", "type" => "string", "required" => true, "description" => "Target platform: 'facebook' or 'pinterest'"],
-            ["name" => "account_id", "type" => "string", "required" => true, "description" => "Page ID (Facebook) or Board ID (Pinterest)"],
-            ["name" => "video_url", "type" => "string", "required" => true, "description" => "Publicly accessible URL of the video to post"],
-            ["name" => "title", "type" => "string", "required" => true, "description" => "Video title/description (max 500 characters)"],
-            ["name" => "description", "type" => "string", "required" => false, "description" => "Additional description (max 2000 characters)"],
-            ["name" => "link", "type" => "string", "required" => false, "description" => "Optional. Destination URL for the video post"],
-            ["name" => "publish_now", "type" => "integer", "required" => false, "description" => "Set to 1 to publish immediately. If 0 or omitted, scheduled_at and queue logic apply."],
-            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Used only when publish_now is not 1. Schedule for this date/time (must be after now). Interpreted in the user's timezone."]
+            ["name" => "platform", "type" => "string", "required" => true, "description" => "facebook | pinterest | instagram | tiktok"],
+            ["name" => "account_id", "type" => "string", "required" => true, "description" => "Same identifiers as POST /posts for the chosen platform."],
+            ["name" => "video_url", "type" => "string (URL)", "required" => true, "description" => "Public URL to the video file (server downloads and uploads to S3)."],
+            ["name" => "title", "type" => "string", "required" => true, "description" => "Video title / caption."],
+            ["name" => "description", "type" => "string", "required" => false, "description" => "Additional description."],
+            ["name" => "link", "type" => "string (URL)", "required" => false, "description" => "Optional destination URL (Facebook/Pinterest)."],
+            ["name" => "publish_now", "type" => "0|1", "required" => false, "description" => "1 = publish immediately."],
+            ["name" => "scheduled_at", "type" => "datetime", "required" => false, "description" => "Schedule when publish_now is not 1."],
+            ["name" => "tiktok_privacy_level", "type" => "string", "required" => false, "description" => "TikTok video: privacy level."],
+            ["name" => "tiktok_allow_comment", "type" => "0|1", "required" => false, "description" => "TikTok video options (same as POST /posts)."],
+            ["name" => "tiktok_allow_duet", "type" => "0|1", "required" => false, "description" => "TikTok."],
+            ["name" => "tiktok_allow_stitch", "type" => "0|1", "required" => false, "description" => "TikTok."],
+            ["name" => "tiktok_commercial_toggle", "type" => "0|1", "required" => false, "description" => "TikTok."],
+            ["name" => "tiktok_your_brand", "type" => "0|1", "required" => false, "description" => "TikTok."],
+            ["name" => "tiktok_branded_content", "type" => "0|1", "required" => false, "description" => "TikTok."],
         ],
         "request" => [
             "headers" => [
@@ -1050,37 +1121,36 @@ function getApiEndpoints()
                 "Content-Type" => "application/json"
             ],
             "body" => [
-                "platform" => "facebook",
-                "account_id" => "123456789012345",
+                "platform" => "instagram",
+                "account_id" => "17841400000000000",
                 "video_url" => "https://example.com/videos/my-video.mp4",
-                "title" => "Check out this amazing video!",
-                "description" => "This is an optional description for the video.",
-                "link" => "https://example.com/my-article",
-                "scheduled_at" => "2025-12-25 10:00:00"
+                "title" => "Behind the scenes",
+                "description" => "Optional",
+                "publish_now" => 1
             ],
             "curl" => 'curl -X POST "{base_url}/posts/video" \\\n  -H "Authorization: Bearer your_api_key_here" \\\n  -H "Content-Type: application/json" \\\n  -d \'{"platform":"facebook","account_id":"123456789","video_url":"https://example.com/video.mp4","title":"My Video","publish_now":1}\''
         ],
         "response" => [
             "success" => true,
-            "message" => "Video scheduled successfully for Dec 25, 2025 at 10:00 AM",
+            "message" => "Video is being published to Instagram",
             "data" => [
                 "post" => [
                     "id" => 125,
-                    "platform" => "facebook",
-                    "status" => "scheduled",
+                    "platform" => "instagram",
+                    "status" => "publishing",
                     "type" => "video",
-                    "scheduled_at" => "2025-12-25 10:00:00",
                     "created_at" => "2025-12-04T10:30:00+00:00"
                 ],
                 "account" => [
-                    "type" => "facebook_page",
-                    "page_id" => "123456789012345",
-                    "name" => "My Business Page",
-                    "profile_image" => "https://example.com/fb-profile.jpg"
+                    "type" => "instagram",
+                    "ig_user_id" => "17841400000000000",
+                    "username" => "mybrand",
+                    "name" => "My Brand",
+                    "profile_image" => "https://example.com/ig.jpg"
                 ]
             ]
         ],
-        "notes" => "Supported platforms: facebook, pinterest. For Facebook, use page_id as account_id. For Pinterest, use board_id as account_id. The video is downloaded from video_url (Google Drive share links supported the same way as Jogg AI), validated by Content-Type (e.g. video/mp4), stored on S3, then published using a public file URL. Supported types: mp4, mov, avi, mkv, webm (by MIME). Scheduling matches POST /posts: publish_now=1 → 'publishing'; else scheduled_at → 'scheduled'; else queue slot or default 14:00 local. Send publish_now=1 for immediate publish."
+        "notes" => "Video is downloaded server-side, validated by Content-Type, stored on S3, then published. Supported file types include mp4, mov, avi, mkv, webm (by MIME). For TikTok, optional metadata is stored on the post the same way as photo posts."
     ];
 
     return $endpoints;

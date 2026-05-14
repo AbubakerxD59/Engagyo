@@ -6,13 +6,20 @@ use App\Enums\Platform;
 use App\Models\Post;
 use App\Models\Page;
 use App\Models\Board;
+use App\Models\InstagramAccount;
 use App\Models\Linkedin;
+use App\Models\Thread;
+use App\Models\Tiktok;
 use App\Http\Controllers\BaseController;
 use App\Jobs\PublishFacebookPost;
+use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishLinkedInPost;
 use App\Jobs\PublishPinterestPost;
+use App\Jobs\PublishThreadsPost;
+use App\Jobs\PublishTikTokPost;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
+use App\Services\TikTokService;
 use App\Services\PostService;
 use App\Services\TimezoneService;
 use App\Services\VideoUrlDownloadService;
@@ -26,7 +33,7 @@ use Illuminate\Validation\Rule;
 class PostController extends BaseController
 {
     /**
-     * Create and publish a post to Facebook or Pinterest.
+     * Create and publish a post via API (Facebook, Pinterest, Instagram, Threads, TikTok; LinkedIn uses a separate payload).
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -46,7 +53,13 @@ class PostController extends BaseController
         $validator = Validator::make($request->all(), [
             'platform' => ['required', Rule::in($supportedPlatforms)],
             'account_id' => 'required|string',
-            'image_url' => 'required|url',
+            'image_url' => [
+                'nullable',
+                'url',
+                Rule::requiredIf(! in_array((string) $request->input('platform'), [
+                    Platform::THREADS->value,
+                ], true)),
+            ],
             'title' => 'required|string',
             'description' => 'nullable|string',
             'link' => 'nullable|url',
@@ -67,10 +80,20 @@ class PostController extends BaseController
         $description = $request->input('description', '');
         $link = $request->input('link');
 
+        if ($platform === Platform::THREADS) {
+            $hasImage = is_string($imageUrl) && trim($imageUrl) !== '';
+            $hasText = trim($title) !== '' || trim((string) $description) !== '';
+            if (! $hasImage && ! $hasText) {
+                return $this->errorResponse('Threads posts require either image_url or title/description text.', 422);
+            }
+        }
+
         return match ($platform) {
             Platform::FACEBOOK => $this->publishToFacebook($request, $user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link),
             Platform::PINTEREST => $this->publishToPinterest($request, $user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link),
-            Platform::LINKEDIN => $this->publishToLinkedIn($request),
+            Platform::INSTAGRAM => $this->publishToInstagram($request, $user, $apiKeyId, $accountId, $imageUrl, $title, $description, $link),
+            Platform::THREADS => $this->publishToThreads($request, $user, $apiKeyId, $accountId, $imageUrl, $title, $description),
+            Platform::TIKTOK => $this->publishToTikTok($request, $user, $apiKeyId, $accountId, $imageUrl, $title, $description),
             default => $this->errorResponse('Platform not supported for posting', 400),
         };
     }
@@ -587,8 +610,293 @@ class PostController extends BaseController
         ];
     }
 
+    private function publishToInstagram(Request $request, $user, $apiKeyId, string $accountId, mixed $imageUrl, string $title, string $description, mixed $link): \Illuminate\Http\JsonResponse
+    {
+        if (! is_string($imageUrl) || trim($imageUrl) === '') {
+            return $this->errorResponse('image_url is required for Instagram posts.', 422);
+        }
+
+        $ig = InstagramAccount::query()
+            ->where('user_id', $user->id)
+            ->where(function ($q) use ($accountId) {
+                $q->where('ig_user_id', (string) $accountId);
+                if (ctype_digit((string) $accountId)) {
+                    $q->orWhere('id', (int) $accountId);
+                }
+            })
+            ->first();
+
+        if (! $ig) {
+            return $this->errorResponse('Instagram account not found or not connected to your account', 404);
+        }
+
+        if (! $ig->validToken()) {
+            return $this->errorResponse('Instagram access token has expired. Please reconnect your Instagram account.', 401);
+        }
+
+        $timing = $this->resolveApiPublishTiming($request, $user, $ig, 'instagram');
+        $publishNow = $timing['publish_now'];
+        $publishDate = $publishNow ? now() : $timing['publish_date'];
+        $isScheduled = ! $publishNow;
+
+        $post = PostService::create([
+            'user_id' => $user->id,
+            'account_id' => $ig->id,
+            'social_type' => 'instagram',
+            'type' => 'photo',
+            'source' => 'api',
+            'title' => $title,
+            'description' => $description,
+            'url' => $link,
+            'image' => $imageUrl,
+            'publish_date' => $publishDate,
+            'scheduled' => $isScheduled ? 1 : 0,
+        ]);
+
+        if ($apiKeyId) {
+            $post->update(['api_key_id' => $apiKeyId]);
+        }
+
+        if ($publishNow) {
+            PublishInstagramPost::dispatch($post->id);
+
+            return $this->successResponse([
+                'post' => [
+                    'id' => $post->id,
+                    'platform' => 'instagram',
+                    'status' => 'publishing',
+                    'type' => 'photo',
+                    'created_at' => $post->created_at->toIso8601String(),
+                ],
+                'account' => $this->formatInstagramAccount($ig),
+            ], 'Post is being published to Instagram');
+        }
+
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($timing['publish_date']));
+
+        return $this->successResponse([
+            'post' => [
+                'id' => $post->id,
+                'platform' => 'instagram',
+                'status' => 'scheduled',
+                'type' => 'photo',
+                'scheduled_at' => $post->publish_datetime,
+                'created_at' => $post->created_at->toIso8601String(),
+            ],
+            'account' => $this->formatInstagramAccount($ig),
+        ], 'Post scheduled successfully for '.$scheduledDate);
+    }
+
+    private function publishToThreads(Request $request, $user, $apiKeyId, string $accountId, mixed $imageUrl, string $title, string $description): \Illuminate\Http\JsonResponse
+    {
+        $hasImage = is_string($imageUrl) && trim($imageUrl) !== '';
+
+        $thread = Thread::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->where(function ($q) use ($accountId) {
+                $q->where('threads_id', (string) $accountId);
+                if (ctype_digit((string) $accountId)) {
+                    $q->orWhere('id', (int) $accountId);
+                }
+            })
+            ->first();
+
+        if (! $thread) {
+            return $this->errorResponse('Threads account not found or not connected to your account', 404);
+        }
+
+        if (! $thread->validToken()) {
+            return $this->errorResponse('Threads access token has expired. Please reconnect your Threads account.', 401);
+        }
+
+        $timing = $this->resolveApiPublishTiming($request, $user, $thread, 'threads');
+        $publishNow = $timing['publish_now'];
+        $publishDate = $publishNow ? now() : $timing['publish_date'];
+        $isScheduled = ! $publishNow;
+
+        $planType = $hasImage ? 'photo' : 'content_only';
+
+        $post = PostService::create([
+            'user_id' => $user->id,
+            'account_id' => $thread->id,
+            'social_type' => 'threads',
+            'type' => $planType,
+            'source' => 'api',
+            'title' => $title,
+            'comment' => $description,
+            'image' => $hasImage ? $imageUrl : null,
+            'video' => null,
+            'publish_date' => $publishDate,
+            'scheduled' => $isScheduled ? 1 : 0,
+        ]);
+
+        if ($apiKeyId) {
+            $post->update(['api_key_id' => $apiKeyId]);
+        }
+
+        if ($publishNow) {
+            PublishThreadsPost::dispatch($post->id);
+
+            return $this->successResponse([
+                'post' => [
+                    'id' => $post->id,
+                    'platform' => 'threads',
+                    'status' => 'publishing',
+                    'type' => $planType,
+                    'created_at' => $post->created_at->toIso8601String(),
+                ],
+                'account' => $this->formatThreadsAccount($thread),
+            ], 'Post is being published to Threads');
+        }
+
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($timing['publish_date']));
+
+        return $this->successResponse([
+            'post' => [
+                'id' => $post->id,
+                'platform' => 'threads',
+                'status' => 'scheduled',
+                'type' => $planType,
+                'scheduled_at' => $post->publish_datetime,
+                'created_at' => $post->created_at->toIso8601String(),
+            ],
+            'account' => $this->formatThreadsAccount($thread),
+        ], 'Post scheduled successfully for '.$scheduledDate);
+    }
+
+    private function publishToTikTok(Request $request, $user, $apiKeyId, string $accountId, mixed $imageUrl, string $title, string $description): \Illuminate\Http\JsonResponse
+    {
+        if (! is_string($imageUrl) || trim($imageUrl) === '') {
+            return $this->errorResponse('image_url is required for TikTok photo posts.', 422);
+        }
+
+        $tiktok = Tiktok::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->where(function ($q) use ($accountId) {
+                $q->where('tiktok_id', (string) $accountId);
+                if (ctype_digit((string) $accountId)) {
+                    $q->orWhere('id', (int) $accountId);
+                }
+            })
+            ->first();
+
+        if (! $tiktok) {
+            return $this->errorResponse('TikTok account not found or not connected to your account', 404);
+        }
+
+        $tokenResponse = TikTokService::validateToken($tiktok);
+        if (empty($tokenResponse['success'])) {
+            return $this->errorResponse($tokenResponse['message'] ?? 'TikTok access token has expired. Please reconnect your TikTok account.', 401);
+        }
+        $accessToken = $tokenResponse['access_token'];
+
+        $tiktok->loadMissing('timeslots');
+        $timing = $this->resolveApiPublishTiming($request, $user, $tiktok, 'tiktok');
+        $publishNow = $timing['publish_now'];
+        $publishDate = $publishNow ? now() : $timing['publish_date'];
+        $isScheduled = ! $publishNow;
+
+        $tiktokMetadata = [
+            'privacy_level' => $request->input('tiktok_privacy_level'),
+            'disable_comment' => ! (bool) $request->input('tiktok_allow_comment', 0),
+            'disable_duet' => ! (bool) $request->input('tiktok_allow_duet', 0),
+            'disable_stitch' => ! (bool) $request->input('tiktok_allow_stitch', 0),
+            'commercial_content_toggle' => (bool) $request->input('tiktok_commercial_toggle', 0),
+            'your_brand' => (bool) $request->input('tiktok_your_brand', 0),
+            'branded_content' => (bool) $request->input('tiktok_branded_content', 0),
+        ];
+        if ($request->boolean('tiktok_auto_add_music')) {
+            $tiktokMetadata['auto_add_music'] = true;
+        }
+
+        $post = PostService::create([
+            'user_id' => $user->id,
+            'account_id' => $tiktok->id,
+            'social_type' => 'tiktok',
+            'type' => 'photo',
+            'source' => 'api',
+            'title' => $title,
+            'comment' => $description,
+            'image' => $imageUrl,
+            'publish_date' => $publishDate,
+            'scheduled' => $isScheduled ? 1 : 0,
+        ]);
+
+        $metaUpdate = ['metadata' => json_encode($tiktokMetadata)];
+        if ($apiKeyId) {
+            $metaUpdate['api_key_id'] = $apiKeyId;
+        }
+        $post->update($metaUpdate);
+
+        if ($publishNow) {
+            $postData = PostService::postTypeBody($post->fresh());
+            $decoded = is_string($post->metadata) ? json_decode($post->metadata, true) : $post->metadata;
+            if (is_array($decoded)) {
+                $postData = array_merge($postData, $decoded);
+            }
+            PublishTikTokPost::dispatch($post->id, $postData, $accessToken, 'photo');
+
+            return $this->successResponse([
+                'post' => [
+                    'id' => $post->id,
+                    'platform' => 'tiktok',
+                    'status' => 'publishing',
+                    'type' => 'photo',
+                    'created_at' => $post->created_at->toIso8601String(),
+                ],
+                'account' => $this->formatTikTokAccount($tiktok),
+            ], 'Post is being published to TikTok');
+        }
+
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($timing['publish_date']));
+
+        return $this->successResponse([
+            'post' => [
+                'id' => $post->id,
+                'platform' => 'tiktok',
+                'status' => 'scheduled',
+                'type' => 'photo',
+                'scheduled_at' => $post->publish_datetime,
+                'created_at' => $post->created_at->toIso8601String(),
+            ],
+            'account' => $this->formatTikTokAccount($tiktok),
+        ], 'Post scheduled successfully for '.$scheduledDate);
+    }
+
+    private function formatInstagramAccount(InstagramAccount $ig): array
+    {
+        return [
+            'type' => 'instagram',
+            'ig_user_id' => $ig->ig_user_id,
+            'username' => $ig->username,
+            'name' => $ig->name,
+            'profile_image' => $ig->profile_image,
+        ];
+    }
+
+    private function formatThreadsAccount(Thread $thread): array
+    {
+        return [
+            'type' => 'threads',
+            'threads_id' => $thread->threads_id,
+            'username' => $thread->username,
+            'profile_image' => $thread->profile_image,
+        ];
+    }
+
+    private function formatTikTokAccount(Tiktok $tiktok): array
+    {
+        return [
+            'type' => 'tiktok',
+            'tiktok_id' => $tiktok->tiktok_id,
+            'username' => $tiktok->username,
+            'display_name' => $tiktok->display_name,
+            'profile_image' => $tiktok->profile_image,
+        ];
+    }
+
     /**
-     * Create and publish a video to Facebook or Pinterest.
+     * Create and publish a video to Facebook, Pinterest, Instagram, or TikTok.
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -628,6 +936,8 @@ class PostController extends BaseController
         return match ($platform) {
             Platform::FACEBOOK => $this->publishVideoToFacebook($request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link),
             Platform::PINTEREST => $this->publishVideoToPinterest($request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link),
+            Platform::INSTAGRAM => $this->publishVideoToInstagram($request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link),
+            Platform::TIKTOK => $this->publishVideoToTikTok($request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link),
             default => $this->errorResponse('Platform not supported for video posting', 400),
         };
     }
@@ -856,6 +1166,192 @@ class PostController extends BaseController
         ], 'Video scheduled successfully for ' . $scheduledDate);
     }
 
+    private function publishVideoToInstagram(Request $request, $user, $apiKeyId, string $accountId, string $videoUrl, string $title, string $description, mixed $link = null): \Illuminate\Http\JsonResponse
+    {
+        $ig = InstagramAccount::query()
+            ->where('user_id', $user->id)
+            ->where(function ($q) use ($accountId) {
+                $q->where('ig_user_id', (string) $accountId);
+                if (ctype_digit((string) $accountId)) {
+                    $q->orWhere('id', (int) $accountId);
+                }
+            })
+            ->first();
+
+        if (! $ig) {
+            return $this->errorResponse('Instagram account not found or not connected to your account', 404);
+        }
+
+        if (! $ig->validToken()) {
+            return $this->errorResponse('Instagram access token has expired. Please reconnect your Instagram account.', 401);
+        }
+
+        $timing = $this->resolveApiPublishTiming($request, $user, $ig, 'instagram');
+        $publishNow = $timing['publish_now'];
+
+        try {
+            $videoKey = $this->downloadAndUploadVideoToS3($videoUrl);
+            if (! $videoKey) {
+                return $this->errorResponse('Failed to download video from URL. Ensure the URL is public, returns a supported video type (e.g. mp4), and Google Drive links use "Anyone with the link" when applicable.', 400);
+            }
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error processing video: '.$e->getMessage(), 500);
+        }
+
+        $publishDate = $publishNow ? now() : $timing['publish_date'];
+        $isScheduled = ! $publishNow;
+
+        $post = PostService::create([
+            'user_id' => $user->id,
+            'account_id' => $ig->id,
+            'social_type' => 'instagram',
+            'type' => 'video',
+            'source' => 'api',
+            'title' => $title,
+            'description' => $description,
+            'url' => $link,
+            'video' => $videoKey,
+            'publish_date' => $publishDate,
+            'scheduled' => $isScheduled ? 1 : 0,
+        ]);
+
+        if ($apiKeyId) {
+            $post->update(['api_key_id' => $apiKeyId]);
+        }
+
+        if ($publishNow) {
+            PublishInstagramPost::dispatch($post->id);
+
+            return $this->successResponse([
+                'post' => [
+                    'id' => $post->id,
+                    'platform' => 'instagram',
+                    'status' => 'publishing',
+                    'type' => 'video',
+                    'created_at' => $post->created_at->toIso8601String(),
+                ],
+                'account' => $this->formatInstagramAccount($ig),
+            ], 'Video is being published to Instagram');
+        }
+
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($timing['publish_date']));
+
+        return $this->successResponse([
+            'post' => [
+                'id' => $post->id,
+                'platform' => 'instagram',
+                'status' => 'scheduled',
+                'type' => 'video',
+                'scheduled_at' => $post->publish_datetime,
+                'created_at' => $post->created_at->toIso8601String(),
+            ],
+            'account' => $this->formatInstagramAccount($ig),
+        ], 'Video scheduled successfully for '.$scheduledDate);
+    }
+
+    private function publishVideoToTikTok(Request $request, $user, $apiKeyId, string $accountId, string $videoUrl, string $title, string $description, mixed $link = null): \Illuminate\Http\JsonResponse
+    {
+        $tiktok = Tiktok::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->where(function ($q) use ($accountId) {
+                $q->where('tiktok_id', (string) $accountId);
+                if (ctype_digit((string) $accountId)) {
+                    $q->orWhere('id', (int) $accountId);
+                }
+            })
+            ->first();
+
+        if (! $tiktok) {
+            return $this->errorResponse('TikTok account not found or not connected to your account', 404);
+        }
+
+        $tokenResponse = TikTokService::validateToken($tiktok);
+        if (empty($tokenResponse['success'])) {
+            return $this->errorResponse($tokenResponse['message'] ?? 'TikTok access token has expired. Please reconnect your TikTok account.', 401);
+        }
+        $accessToken = $tokenResponse['access_token'];
+
+        $tiktok->loadMissing('timeslots');
+        $timing = $this->resolveApiPublishTiming($request, $user, $tiktok, 'tiktok');
+        $publishNow = $timing['publish_now'];
+
+        try {
+            $videoKey = $this->downloadAndUploadVideoToS3($videoUrl);
+            if (! $videoKey) {
+                return $this->errorResponse('Failed to download video from URL. Please ensure the URL is accessible and points to a valid video file.', 400);
+            }
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error processing video: '.$e->getMessage(), 500);
+        }
+
+        $publishDate = $publishNow ? now() : $timing['publish_date'];
+        $isScheduled = ! $publishNow;
+
+        $tiktokMetadata = [
+            'privacy_level' => $request->input('tiktok_privacy_level'),
+            'disable_comment' => ! (bool) $request->input('tiktok_allow_comment', 0),
+            'disable_duet' => ! (bool) $request->input('tiktok_allow_duet', 0),
+            'disable_stitch' => ! (bool) $request->input('tiktok_allow_stitch', 0),
+            'commercial_content_toggle' => (bool) $request->input('tiktok_commercial_toggle', 0),
+            'your_brand' => (bool) $request->input('tiktok_your_brand', 0),
+            'branded_content' => (bool) $request->input('tiktok_branded_content', 0),
+        ];
+
+        $post = PostService::create([
+            'user_id' => $user->id,
+            'account_id' => $tiktok->id,
+            'social_type' => 'tiktok',
+            'type' => 'video',
+            'source' => 'api',
+            'title' => $title,
+            'comment' => $description,
+            'url' => $link,
+            'video' => $videoKey,
+            'publish_date' => $publishDate,
+            'scheduled' => $isScheduled ? 1 : 0,
+        ]);
+
+        $metaUpdate = ['metadata' => json_encode($tiktokMetadata)];
+        if ($apiKeyId) {
+            $metaUpdate['api_key_id'] = $apiKeyId;
+        }
+        $post->update($metaUpdate);
+
+        if ($publishNow) {
+            $postData = PostService::postTypeBody($post->fresh());
+            $decoded = is_string($post->metadata) ? json_decode($post->metadata, true) : $post->metadata;
+            if (is_array($decoded)) {
+                $postData = array_merge($postData, $decoded);
+            }
+            PublishTikTokPost::dispatch($post->id, $postData, $accessToken, 'video');
+
+            return $this->successResponse([
+                'post' => [
+                    'id' => $post->id,
+                    'platform' => 'tiktok',
+                    'status' => 'publishing',
+                    'type' => 'video',
+                    'created_at' => $post->created_at->toIso8601String(),
+                ],
+                'account' => $this->formatTikTokAccount($tiktok),
+            ], 'Video is being published to TikTok');
+        }
+
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($timing['publish_date']));
+
+        return $this->successResponse([
+            'post' => [
+                'id' => $post->id,
+                'platform' => 'tiktok',
+                'status' => 'scheduled',
+                'type' => 'video',
+                'scheduled_at' => $post->publish_datetime,
+                'created_at' => $post->created_at->toIso8601String(),
+            ],
+            'account' => $this->formatTikTokAccount($tiktok),
+        ], 'Video scheduled successfully for '.$scheduledDate);
+    }
+
     /**
      * Download video from URL and upload to S3.
      *
@@ -888,7 +1384,7 @@ class PostController extends BaseController
      * Resolve API publish timing: publish_now=1 → immediate; else scheduled_at if set;
      * else next free queue timeslot for the account; else today/next day 14:00 in user timezone.
      *
-     * @param Page|Board $account
+     * @param  Page|Board|InstagramAccount|Thread|Tiktok  $account
      * @return array{publish_now: bool, publish_date: string}
      */
     private function resolveApiPublishTiming(Request $request, $user, $account, string $socialType): array
@@ -908,8 +1404,12 @@ class PostController extends BaseController
             ];
         }
 
-        $account->loadMissing('timeslots');
-        $timeslots = $account->timeslots;
+        if ($account instanceof InstagramAccount) {
+            $timeslots = $account->timeslots;
+        } else {
+            $account->loadMissing('timeslots');
+            $timeslots = $account->timeslots;
+        }
 
         $search = [
             'account_id' => $account->id,

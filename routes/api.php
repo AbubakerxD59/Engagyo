@@ -48,7 +48,7 @@ Route::prefix('v1')->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::middleware('auth.apikey')->group(function () {
-
+ 
         /*
         |--------------------------------------------------------------------------
         | Authentication Endpoints
@@ -86,9 +86,9 @@ Route::prefix('v1')->group(function () {
         |--------------------------------------------------------------------------
         */
         Route::prefix('posts')->group(function () {
-            // Create and publish a post to Facebook or Pinterest
+            // Create and publish an image or text post to a supported platform
             Route::post('/', [PostController::class, 'create']);
-            //  Create and publish a video to Facebook or Pinterest
+            // Create and publish a video to a supported platform
             Route::post('/video', [PostController::class, 'publishVideo']);
             // Get post status by ID
             Route::get('/status/{id}', [PostController::class, 'status']);

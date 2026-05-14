@@ -85,7 +85,7 @@ class UserController extends BaseController
     }
 
     /**
-     * Get the authenticated user's connected accounts (Pinterest, Facebook, etc.).
+     * Get the authenticated user's connected accounts (Facebook, Pinterest, LinkedIn, Instagram, Threads, TikTok).
      *
      * @param Request $request
      * @return \Illuminate\Http\JsonResponse
@@ -126,13 +126,49 @@ class UserController extends BaseController
             ];
         });
 
+        $instagramAccounts = $user->instagramAccounts()->get()->map(function ($ig) {
+            return [
+                '_id' => (string) $ig->ig_user_id,
+                'username' => $ig->username,
+                'name' => $ig->name,
+                'type' => 'instagram',
+                'profile_image' => $ig->profile_image,
+                'created_at' => $ig->created_at->toIso8601String(),
+            ];
+        });
+
+        $threadsAccounts = $user->threads()->get()->map(function ($thread) {
+            return [
+                '_id' => (string) $thread->threads_id,
+                'username' => $thread->username,
+                'type' => 'threads',
+                'profile_image' => $thread->profile_image,
+                'created_at' => $thread->created_at->toIso8601String(),
+            ];
+        });
+
+        $tiktokAccounts = $user->tiktok()->get()->map(function ($tiktok) {
+            return [
+                '_id' => (string) $tiktok->tiktok_id,
+                'username' => $tiktok->username,
+                'display_name' => $tiktok->display_name,
+                'type' => 'tiktok',
+                'profile_image' => $tiktok->profile_image,
+                'created_at' => $tiktok->created_at->toIso8601String(),
+            ];
+        });
+
         return $this->successResponse([
             'accounts' => [
                 'pinterest' => $pinterestAccounts,
                 'facebook' => $facebookAccounts,
                 'linkedin' => $linkedinAccounts,
+                'instagram' => $instagramAccounts,
+                'threads' => $threadsAccounts,
+                'tiktok' => $tiktokAccounts,
             ],
-            'total' => $pinterestAccounts->count() + $facebookAccounts->count() + $linkedinAccounts->count(),
+            'total' => $pinterestAccounts->count() + $facebookAccounts->count() + $linkedinAccounts->count()
+                + $instagramAccounts->count() + $threadsAccounts->count() + $tiktokAccounts->count(),
         ]);
     }
 

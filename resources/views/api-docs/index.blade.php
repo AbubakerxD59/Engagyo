@@ -307,6 +307,59 @@
             color: var(--method-delete);
         }
 
+        .method-ref {
+            background: rgba(57, 197, 207, 0.12);
+            color: var(--accent-cyan);
+            text-transform: none;
+            letter-spacing: 0;
+        }
+
+        .method-platform {
+            background: rgba(163, 113, 247, 0.15);
+            color: var(--accent-purple);
+            text-transform: none;
+            letter-spacing: 0;
+            font-size: 9px;
+            line-height: 1.2;
+            max-width: 72px;
+            white-space: normal;
+            word-break: break-word;
+            text-align: center;
+        }
+
+        .category-title-sub {
+            font-size: 10px;
+            letter-spacing: 0.6px;
+            color: var(--text-muted);
+            padding-top: 16px;
+        }
+
+        .endpoint-desc-mono {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            color: var(--accent-cyan);
+        }
+
+        .platform-doc-path {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin: -4px 0 12px;
+        }
+
+        .platform-doc-path code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 12px;
+            color: var(--accent-cyan);
+        }
+
+        .platform-doc-path-m {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--accent-blue);
+            margin-right: 8px;
+        }
+
         .endpoint-info {
             flex: 1;
             min-width: 0;
@@ -777,7 +830,7 @@
                         <line x1="16" y1="17" x2="8" y2="17"></line>
                     </svg>
                     <span>API Endpoints</span>
-                    <span class="version-tag">v1.0</span>
+                    <span class="version-tag">v1.1</span>
                 </div>
                 <div class="base-url">
                     <span class="base-url-label">Base URL</span>
@@ -796,10 +849,16 @@
 
             <div class="endpoints-list">
                 @php
+                    $platformPublishingDocs = $platformPublishingDocs ?? [];
+                    $accountNavLinks = $accountNavLinks ?? [];
+                    $sidebarEndpoints = $sidebarEndpoints ?? $endpoints;
+                @endphp
+
+                @php
                     $currentCategory = '';
                 @endphp
 
-                @foreach ($endpoints as $index => $endpoint)
+                @foreach ($sidebarEndpoints as $index => $endpoint)
                     @if ($endpoint['category'] !== $currentCategory)
                         @php $currentCategory = $endpoint['category']; @endphp
                         <div class="category-title">{{ $currentCategory }}</div>
@@ -807,7 +866,7 @@
 
                     <div class="endpoint-item" data-endpoint="{{ $endpoint['id'] }}"
                         onclick="showEndpoint('{{ $endpoint['id'] }}')">
-                        <span class="method-badge method-{{ strtolower($endpoint['method']) }}">
+                        <span class="method-badge method-{{ $endpoint['method'] === 'REF' ? 'ref' : strtolower($endpoint['method']) }}">
                             {{ $endpoint['method'] }}
                         </span>
                         <div class="endpoint-info">
@@ -815,6 +874,55 @@
                             <div class="endpoint-desc">{{ $endpoint['description'] }}</div>
                         </div>
                     </div>
+
+                    @if (($endpoint['id'] ?? '') === 'user-domains')
+                        @if (count($accountNavLinks) > 0)
+                            <div class="category-title category-title-sub">Account endpoints</div>
+                            @foreach ($accountNavLinks as $nav)
+                                <div class="endpoint-item" data-endpoint="{{ $nav['endpoint_id'] }}"
+                                    onclick="showEndpoint('{{ $nav['endpoint_id'] }}')">
+                                    <span class="method-badge method-platform">{{ $nav['platform'] }}</span>
+                                    <div class="endpoint-info">
+                                        <div class="endpoint-path">{{ $nav['resource'] }}</div>
+                                        <div class="endpoint-desc">
+                                            <span class="endpoint-desc-mono">{{ $nav['method'] }}
+                                                {{ $nav['path'] }}</span>
+                                            <span> · {{ $nav['hint'] }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            @endforeach
+                        @endif
+
+                        @if (count($platformPublishingDocs) > 0)
+                            @foreach ($platformPublishingDocs as $platform)
+                                <div class="category-title">{{ $platform['name'] }}</div>
+                                @foreach ($platform['media'] as $media)
+                                    @php
+                                        $docId = 'pdoc-' . $platform['id'] . '-' . $media['id'];
+                                        $mediaSupported = !empty($media['supported']);
+                                    @endphp
+                                    <div class="endpoint-item" data-platform-doc="{{ $docId }}" role="button"
+                                        tabindex="0" onclick="showPlatformDoc('{{ $docId }}')"
+                                        onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();showPlatformDoc('{{ $docId }}');}">
+                                        <span class="method-badge method-platform">{{ $platform['name'] }}</span>
+                                        <div class="endpoint-info">
+                                            <div class="endpoint-path">{{ $media['label'] }}</div>
+                                            <div class="endpoint-desc">
+                                                @if ($mediaSupported && !empty($media['http_path']))
+                                                    <span class="endpoint-desc-mono">{{ $media['http_method'] }}
+                                                        {{ $media['http_path'] }}</span>
+                                                    <span> · Publishing</span>
+                                                @else
+                                                    <span>Not available via REST API</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                @endforeach
+                            @endforeach
+                        @endif
+                    @endif
                 @endforeach
             </div>
         </aside>
@@ -831,8 +939,8 @@
                     <polyline points="10 9 9 9 8 9"></polyline>
                 </svg>
                 <h2>Welcome to the API Docs</h2>
-                <p>Select an endpoint from the sidebar to view its documentation, including request parameters and
-                    response examples.</p>
+                <p>Select an endpoint from the sidebar, or under <strong>User</strong> use <strong>Account endpoints</strong>
+                    and each network section for publishing formats (same layout as HTTP routes; media lines are guides, not URLs).</p>
             </div>
 
             <!-- Endpoint Details -->
@@ -840,19 +948,21 @@
                 <div class="endpoint-detail" id="detail-{{ $endpoint['id'] }}">
                     <div class="content-wrapper">
                         <div class="detail-header">
-                            <span class="method-badge method-{{ strtolower($endpoint['method']) }}">
+                            <span class="method-badge method-{{ $endpoint['method'] === 'REF' ? 'ref' : strtolower($endpoint['method']) }}">
                                 {{ $endpoint['method'] }}
                             </span>
                             <div class="endpoint-title-wrapper">
                                 <h2>{{ $endpoint['endpoint'] }}</h2>
-                                <button class="endpoint-copy-btn-header" 
-                                    onclick="copyEndpointUrl('{{ $baseUrl }}{{ $endpoint['endpoint'] }}')" 
-                                    title="Copy full endpoint URL">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                        <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                                    </svg>
-                                </button>
+                                @if (empty($endpoint['hide_copy_url']))
+                                    <button class="endpoint-copy-btn-header" 
+                                        onclick="copyEndpointUrl('{{ $baseUrl }}{{ $endpoint['endpoint'] }}')" 
+                                        title="Copy full endpoint URL">
+                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                                        </svg>
+                                    </button>
+                                @endif
                             </div>
                             <p>{{ $endpoint['description'] }}</p>
                         </div>
@@ -889,6 +999,43 @@
                                                     </span>
                                                 </td>
                                                 <td>{{ $param['description'] }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @endif
+
+                        @if (!empty($endpoint['supported_media']))
+                            <div class="detail-section">
+                                <h3 class="section-title">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                                        <line x1="3" y1="9" x2="21" y2="9"></line>
+                                    </svg>
+                                    Supported media (Engagyo API)
+                                </h3>
+                                <p style="font-size: 13px; color: var(--text-secondary); margin: -8px 0 16px;">
+                                    What you can publish through this REST API for this platform. The web app may support additional formats (e.g. carousels) that are not exposed here.
+                                </p>
+                                <table class="params-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Content</th>
+                                            <th>API</th>
+                                            <th>How</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach ($endpoint['supported_media'] as $row)
+                                            <tr>
+                                                <td><span class="param-name">{{ $row['type'] }}</span></td>
+                                                <td>
+                                                    <span class="param-required {{ !empty($row['supported']) && strtoupper((string) $row['supported']) === 'YES' ? 'yes' : 'no' }}">
+                                                        {{ $row['supported'] ?? '—' }}
+                                                    </span>
+                                                </td>
+                                                <td style="font-size: 13px;">{!! nl2br(e($row['details'] ?? '')) !!}</td>
                                             </tr>
                                         @endforeach
                                     </tbody>
@@ -941,7 +1088,7 @@
                                 </div>
                             </div>
 
-                            @if (isset($endpoint['request']['body']) && $endpoint['method'] !== 'GET')
+                            @if (isset($endpoint['request']['body']) && !in_array($endpoint['method'], ['GET', 'REF'], true))
                                 <div class="code-block" style="margin-top: 16px;">
                                     <div class="code-header">
                                         <span>Body</span>
@@ -1015,6 +1162,20 @@
                     </div>
                 </div>
             @endforeach
+
+            @foreach ($platformPublishingDocs as $platform)
+                @foreach ($platform['media'] as $media)
+                    @php
+                        $docId = 'pdoc-' . $platform['id'] . '-' . $media['id'];
+                    @endphp
+                    @include('api-docs.partials.platform-media-detail', [
+                        'platform' => $platform,
+                        'media' => $media,
+                        'baseUrl' => $baseUrl,
+                        'docId' => $docId,
+                    ])
+                @endforeach
+            @endforeach
         </main>
     </div>
 
@@ -1077,6 +1238,39 @@
             copyToClipboard(url);
         }
 
+        function showPlatformDoc(docId) {
+            document.getElementById('welcomeScreen').style.display = 'none';
+            document.querySelectorAll('.endpoint-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            document.querySelectorAll('.endpoint-detail').forEach(detail => {
+                detail.classList.remove('active');
+            });
+            const item = document.querySelector('[data-platform-doc="' + docId + '"]');
+            const detail = document.getElementById(docId);
+            if (item) {
+                item.classList.add('active');
+            }
+            if (detail) {
+                detail.classList.add('active');
+            }
+            document.querySelector('.main-content').scrollTop = 0;
+            activeEndpoint = null;
+        }
+
+        function copyCodeBlockPlain(button) {
+            const block = button.closest('.code-block');
+            if (!block) {
+                return;
+            }
+            const pre = block.querySelector('.code-content pre');
+            if (!pre) {
+                return;
+            }
+            const text = (pre.innerText || pre.textContent || '').trim();
+            copyToClipboard(text);
+        }
+
         function copyCode(button, text) {
             // Decode HTML entities
             const textarea = document.createElement('textarea');
@@ -1113,7 +1307,7 @@
 
         // Show first endpoint by default on larger screens
         if (window.innerWidth > 768) {
-            const firstEndpoint = document.querySelector('.endpoint-item');
+            const firstEndpoint = document.querySelector('.endpoint-item[data-endpoint]');
             if (firstEndpoint) {
                 const id = firstEndpoint.getAttribute('data-endpoint');
                 showEndpoint(id);
