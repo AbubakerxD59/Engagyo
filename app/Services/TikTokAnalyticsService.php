@@ -13,7 +13,7 @@ class TikTokAnalyticsService
     private const VIDEO_LIST_FIELDS = 'id,create_time,cover_image_url,share_url,video_description,title,duration,like_count,comment_count,share_count,view_count';
 
     /** Safety cap when paginating public videos. */
-    private const MAX_VIDEOS_PER_SYNC = 200;
+    private const MAX_VIDEOS_PER_SYNC = 100;
 
     public function __construct(protected HttpService $http) {}
 
