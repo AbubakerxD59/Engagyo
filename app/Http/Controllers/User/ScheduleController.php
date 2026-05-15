@@ -22,6 +22,7 @@ use App\Models\Pinterest;
 use App\Models\Post;
 use App\Models\PinterestPin;
 use App\Models\Tiktok;
+use App\Models\TiktokPost;
 use App\Models\Thread;
 use App\Models\ThreadPost;
 use App\Models\Timeslot;
@@ -4739,7 +4740,7 @@ class ScheduleController extends Controller
     }
 
     /**
-     * TikTok Sent tab: published schedule posts for selected accounts (same card payload as Pinterest sent).
+     * TikTok Sent tab: synced `tiktok_posts` metrics merged with published schedule posts.
      */
     public function getTikTokSentPosts(Request $request)
     {
@@ -4759,28 +4760,81 @@ class ScheduleController extends Controller
         $tiktokIds = $accounts->pluck('id')->all();
         $accountsById = $accounts->keyBy('id');
 
+        $cardsByKey = [];
+        $tiktokPostsByAccount = TiktokPost::query()
+            ->whereIn('tiktok_id', $tiktokIds)
+            ->orderByDesc('post_created_date')
+            ->get()
+            ->groupBy('tiktok_id');
+
+        foreach ($accounts as $account) {
+            $rows = $tiktokPostsByAccount->get($account->id, collect());
+            foreach ($rows as $row) {
+                if (! $row instanceof TiktokPost) {
+                    continue;
+                }
+                $videoId = (string) $row->tiktok_video_id;
+                if ($videoId === '') {
+                    continue;
+                }
+                $cardsByKey['video:'.$videoId] = $this->sentTabPostFromTiktokVideo($row, $account);
+            }
+        }
+
         $dbPosts = Post::withoutGlobalScopes()
             ->whereIn('user_id', $postCreatorIds)
             ->where('social_type', 'like', '%tiktok%')
             ->whereIn('account_id', $tiktokIds)
             ->where('status', 1)
             ->whereNotNull('published_at')
-            // ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
             ->where('source', 'schedule')
             ->with('user', 'tiktok')
             ->orderByDesc('published_at')
             ->get();
 
-        $allPosts = [];
         foreach ($dbPosts as $dbPost) {
             $account = $accountsById->get($dbPost->account_id) ?? $dbPost->tiktok;
-            if (! $account) {
+            if (! $account instanceof Tiktok) {
                 continue;
             }
-            $allPosts[] = $this->sentTabPostFromTikTokRecord($dbPost, $account);
+
+            $accountVideos = $tiktokPostsByAccount->get($account->id, collect());
+            $matchedVideo = $this->findTiktokPostForSchedulePost($dbPost, $accountVideos);
+            $videoId = $matchedVideo ? (string) $matchedVideo->tiktok_video_id : '';
+            $cardKey = $videoId !== '' ? 'video:'.$videoId : 'db:'.$dbPost->id;
+
+            if ($videoId !== '' && isset($cardsByKey['video:'.$videoId])) {
+                $cardsByKey['video:'.$videoId] = $this->mergeScheduleMetaIntoTiktokSentCard(
+                    $cardsByKey['video:'.$videoId],
+                    $dbPost
+                );
+                continue;
+            }
+
+            if (! isset($cardsByKey[$cardKey])) {
+                $cardsByKey[$cardKey] = $this->sentTabPostFromTikTokRecord($dbPost, $account, $matchedVideo);
+            }
         }
 
-        return response()->json(['success' => true, 'posts' => $allPosts]);
+        $allPosts = array_values($cardsByKey);
+        usort($allPosts, function ($a, $b) {
+            $ta = $this->parseCreatedTime($a['created_time'] ?? null);
+            $tb = $this->parseCreatedTime($b['created_time'] ?? null);
+
+            return $tb - $ta;
+        });
+
+        $isFetching = empty($allPosts) && TiktokPost::whereIn('tiktok_id', $tiktokIds)->doesntExist();
+
+        return response()->json([
+            'success' => true,
+            'posts' => $allPosts,
+            'posts_fetching' => $isFetching,
+            'posts_fetching_message' => $isFetching
+                ? 'TikTok videos for this account are being fetched. Please check back shortly.'
+                : null,
+            'total' => count($allPosts),
+        ]);
     }
 
     /**
@@ -5201,10 +5255,53 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Minimal Sent-tab payload from a published TikTok Post row (same keys as Pinterest / Facebook sent cards).
+     * Sent-tab payload from a synced `tiktok_posts` row (TikTok API metrics).
      */
-    private function sentTabPostFromTikTokRecord(Post $dbPost, Tiktok $account): array
+    private function sentTabPostFromTiktokVideo(TiktokPost $video, Tiktok $account): array
     {
+        $post = $video->toAnalyticsPostArray();
+        $insights = $this->sentTabInsightsFromTiktokPost($video);
+
+        $rawCreated = $post['created_time'] ?? $video->post_created_date;
+        if ($rawCreated instanceof \DateTimeInterface) {
+            $createdTime = $rawCreated->format(\DateTimeInterface::ATOM);
+        } else {
+            $createdTime = is_string($rawCreated) ? $rawCreated : '';
+        }
+
+        $username = (string) ($account->username ?? '');
+
+        return [
+            'id' => (string) ($post['id'] ?? $video->tiktok_video_id),
+            'created_time' => $createdTime,
+            'message' => (string) ($post['message'] ?? $post['title'] ?? $video->title ?? ''),
+            'story' => '',
+            'type' => (string) ($post['type'] ?? 'video'),
+            'full_picture' => (string) ($post['full_picture'] ?? ''),
+            'permalink_url' => $post['permalink_url'] ?? $video->share_url,
+            'account_name' => $account->display_name ?: $username ?: 'TikTok',
+            'account_profile' => $account->profile_image ?? '',
+            'social_type' => 'tiktok',
+            'page_db_id' => $account->id,
+            'insights' => $insights,
+            'comments' => (int) ($insights['comment_count'] ?? 0),
+            'shares' => (int) ($insights['share_count'] ?? 0),
+            'video_url' => '',
+        ];
+    }
+
+    /**
+     * Minimal Sent-tab payload from a published TikTok Post row, optionally enriched from `tiktok_posts`.
+     */
+    private function sentTabPostFromTikTokRecord(Post $dbPost, Tiktok $account, ?TiktokPost $matchedVideo = null): array
+    {
+        if ($matchedVideo) {
+            $payload = $this->sentTabPostFromTiktokVideo($matchedVideo, $account);
+            $payload = $this->mergeScheduleMetaIntoTiktokSentCard($payload, $dbPost);
+
+            return $payload;
+        }
+
         $published = Carbon::parse($dbPost->published_at);
         $createdTime = $published->toIso8601String();
 
@@ -5229,13 +5326,13 @@ class ScheduleController extends Controller
         $username = (string) ($account->username ?? '');
         $usernameForUrl = ltrim($username, '@');
         $permalink = $usernameForUrl !== ''
-            ? 'https://www.tiktok.com/@' . rawurlencode($usernameForUrl)
+            ? 'https://www.tiktok.com/@'.rawurlencode($usernameForUrl)
             : null;
 
         $profileImage = $account->profile_image ?? '';
 
         $payload = [
-            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-' . $dbPost->id),
+            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-'.$dbPost->id),
             'created_time' => $createdTime,
             'message' => (string) ($dbPost->title ?? ''),
             'story' => '',
@@ -5247,15 +5344,13 @@ class ScheduleController extends Controller
             'social_type' => 'tiktok',
             'page_db_id' => $account->id,
             'db_post_id' => $dbPost->id,
-            'insights' => [
-                'post_reactions' => 0,
-                'post_impressions' => 0,
-                'post_clicks' => 0,
-            ],
+            'insights' => $this->sentTabInsightsFromTiktokPost(null),
             'comments' => 0,
             'shares' => 0,
             'from_local_db' => true,
             'video_url' => $videoUrl,
+            'status' => (int) $dbPost->status,
+            'response' => $dbPost->response,
         ];
 
         if ($dbPost->user) {
@@ -5264,6 +5359,142 @@ class ScheduleController extends Controller
         }
 
         return $payload;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function sentTabInsightsFromTiktokPost(?TiktokPost $video): array
+    {
+        if (! $video) {
+            return [
+                'view_count' => 0,
+                'like_count' => 0,
+                'comment_count' => 0,
+                'share_count' => 0,
+                'post_reactions' => 0,
+                'post_impressions' => 0,
+                'post_clicks' => 0,
+            ];
+        }
+
+        $insights = is_array($video->post_insights) ? $video->post_insights : [];
+        $views = (int) ($insights['view_count'] ?? $video->view_count ?? 0);
+        $likes = (int) ($insights['like_count'] ?? $video->like_count ?? 0);
+        $comments = (int) ($insights['comment_count'] ?? $video->comment_count ?? 0);
+        $shares = (int) ($insights['share_count'] ?? $video->share_count ?? 0);
+
+        return [
+            'view_count' => $views,
+            'like_count' => $likes,
+            'comment_count' => $comments,
+            'share_count' => $shares,
+            'post_reactions' => $likes,
+            'post_impressions' => $views,
+            'post_clicks' => 0,
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, TiktokPost>  $accountVideos
+     */
+    private function findTiktokPostForSchedulePost(Post $dbPost, $accountVideos): ?TiktokPost
+    {
+        if ($accountVideos->isEmpty()) {
+            return null;
+        }
+
+        $publishId = (string) ($dbPost->post_id ?? '');
+        if ($publishId !== '') {
+            $byPublishId = $accountVideos->firstWhere('tiktok_video_id', $publishId);
+            if ($byPublishId instanceof TiktokPost) {
+                return $byPublishId;
+            }
+        }
+
+        $scheduleTitle = $this->normalizeTiktokMatchText((string) ($dbPost->title ?? ''));
+        $publishedAt = $dbPost->published_at ? Carbon::parse($dbPost->published_at) : null;
+
+        $best = null;
+        $bestScore = PHP_INT_MAX;
+
+        foreach ($accountVideos as $video) {
+            if (! $video instanceof TiktokPost) {
+                continue;
+            }
+
+            $videoTitle = $this->normalizeTiktokMatchText((string) ($video->title ?? ''));
+            if ($scheduleTitle !== '' && $videoTitle !== '') {
+                if ($scheduleTitle !== $videoTitle
+                    && ! str_contains($videoTitle, $scheduleTitle)
+                    && ! str_contains($scheduleTitle, $videoTitle)) {
+                    continue;
+                }
+            }
+
+            $created = $video->resolvedCreatedAt();
+            if ($publishedAt && $created) {
+                $diffHours = abs($publishedAt->diffInHours($created));
+                if ($diffHours > 168) {
+                    continue;
+                }
+                if ($diffHours < $bestScore) {
+                    $bestScore = $diffHours;
+                    $best = $video;
+                }
+            } elseif ($best === null) {
+                $best = $video;
+            }
+        }
+
+        return $best;
+    }
+
+    private function normalizeTiktokMatchText(string $text): string
+    {
+        $text = mb_strtolower(trim($text));
+        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+
+        return $text;
+    }
+
+    /**
+     * @param  array<string, mixed>  $card
+     * @return array<string, mixed>
+     */
+    private function mergeScheduleMetaIntoTiktokSentCard(array $card, Post $dbPost): array
+    {
+        $card['db_post_id'] = $dbPost->id;
+        $card['from_local_db'] = true;
+        $card['status'] = (int) $dbPost->status;
+        $card['response'] = $dbPost->response;
+
+        $videoUrl = $this->postStoredVideoUrl($dbPost);
+        if ($videoUrl !== null && $videoUrl !== '') {
+            $card['video_url'] = $videoUrl;
+        }
+
+        if (empty($card['full_picture'])) {
+            $postType = strtolower((string) ($dbPost->getAttributes()['type'] ?? $dbPost->type ?? ''));
+            $rawImage = $dbPost->getAttributes()['image'] ?? null;
+            if (! empty($rawImage)) {
+                $img = (string) $rawImage;
+                if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                    $card['full_picture'] = $img;
+                } elseif ($postType === 'video') {
+                    $card['full_picture'] = fetchFromS3($img);
+                } else {
+                    $card['full_picture'] = url(getImage('', $img));
+                }
+            }
+        }
+
+        if ($dbPost->user) {
+            $card['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
+            $card['publisher_email'] = $dbPost->user->email ?? '';
+        }
+
+        return $card;
     }
 
     /**

@@ -5174,11 +5174,30 @@
             var deleteBtn = '<button type="button" class="sent-card-delete-btn" data-post-id="' + (post.id || '') + '" data-page-id="' + (post.page_db_id || '') + '" data-db-post-id="' + dbPostId + '" data-social-type="' + st + '" title="Delete post"><i class="fas fa-trash-alt"></i> Delete</button>';
 
             var ins = post.insights || {};
-            var reactions = ins.post_reactions ?? 0;
-            var comments = post.comments ?? 0;
-            var impressions = ins.post_impressions ?? '-';
-            var shares = post.shares ?? 0;
-            var clicks = ins.post_clicks ?? '-';
+            var reactions, comments, impressions, shares, clicks, statLikes, statComments, statViews, statShares, statClicks;
+            if (st === 'tiktok') {
+                reactions = ins.like_count ?? ins.post_reactions ?? 0;
+                comments = ins.comment_count ?? post.comments ?? 0;
+                impressions = ins.view_count ?? ins.post_impressions ?? 0;
+                shares = ins.share_count ?? post.shares ?? 0;
+                clicks = '-';
+                statLikes = 'Likes';
+                statComments = 'Comments';
+                statViews = 'Views';
+                statShares = 'Shares';
+                statClicks = null;
+            } else {
+                reactions = ins.post_reactions ?? 0;
+                comments = post.comments ?? 0;
+                impressions = ins.post_impressions ?? '-';
+                shares = post.shares ?? 0;
+                clicks = ins.post_clicks ?? '-';
+                statLikes = 'Likes';
+                statComments = 'Comments';
+                statViews = 'Impressions';
+                statShares = 'Shares';
+                statClicks = 'Clicks';
+            }
 
             var publishedViaHtml = '';
             if (post.publisher_username) {
@@ -5254,11 +5273,11 @@
                                 ${imageHtml}
                             </div>
                             ${canAccessAnalytics ? '<div class="sent-card-stats">' +
-                                '<div class="sent-card-stat"><i class="far fa-thumbs-up"></i> <span class="stat-label">Likes</span> <strong>' + reactions + '</strong></div>' +
-                                '<div class="sent-card-stat"><i class="far fa-comment"></i> <span class="stat-label">Comments</span> <strong>' + comments + '</strong></div>' +
-                                '<div class="sent-card-stat"><i class="far fa-eye"></i> <span class="stat-label">Impressions</span> <strong>' + impressions + '</strong></div>' +
-                                '<div class="sent-card-stat"><i class="fas fa-share-alt"></i> <span class="stat-label">Shares</span> <strong>' + shares + '</strong></div>' +
-                                '<div class="sent-card-stat"><i class="fas fa-mouse-pointer"></i> <span class="stat-label">Clicks</span> <strong>' + clicks + '</strong></div>' +
+                                '<div class="sent-card-stat"><i class="far fa-thumbs-up"></i> <span class="stat-label">' + statLikes + '</span> <strong>' + reactions + '</strong></div>' +
+                                '<div class="sent-card-stat"><i class="far fa-comment"></i> <span class="stat-label">' + statComments + '</span> <strong>' + comments + '</strong></div>' +
+                                '<div class="sent-card-stat"><i class="far fa-eye"></i> <span class="stat-label">' + statViews + '</span> <strong>' + impressions + '</strong></div>' +
+                                '<div class="sent-card-stat"><i class="fas fa-share-alt"></i> <span class="stat-label">' + statShares + '</span> <strong>' + shares + '</strong></div>' +
+                                (statClicks ? '<div class="sent-card-stat"><i class="fas fa-mouse-pointer"></i> <span class="stat-label">' + statClicks + '</span> <strong>' + clicks + '</strong></div>' : '') +
                             '</div>' : ''}
                             <div class="sent-card-footer">
                                 <div class="sent-card-published-via">${publishedViaHtml} ${sentStatusHtml}</div>
