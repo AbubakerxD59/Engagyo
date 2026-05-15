@@ -347,6 +347,10 @@
         .analytics-insight-cards {
             grid-template-columns: repeat(4, 1fr);
         }
+
+        .analytics-insight-cards--tiktok {
+            grid-template-columns: repeat(3, 1fr);
+        }
     }
 
     .page-insight-card {

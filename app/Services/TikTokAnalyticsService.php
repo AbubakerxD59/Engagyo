@@ -131,7 +131,7 @@ class TikTokAnalyticsService
     }
 
     /**
-     * @return array<string, int>
+     * @return array<string, mixed>
      */
     protected function fetchUserStats(string $accessToken): array
     {
@@ -144,14 +144,31 @@ class TikTokAnalyticsService
             'fields' => 'follower_count,following_count,likes_count,video_count',
         ], $header);
 
-        $user = $response['data']['user'] ?? [];
+        $user = is_array($response) ? ($response['data']['user'] ?? []) : [];
 
-        return [
+        $stats = [
             'follower_count' => (int) ($user['follower_count'] ?? 0),
             'following_count' => (int) ($user['following_count'] ?? 0),
             'likes_count' => (int) ($user['likes_count'] ?? 0),
             'video_count' => (int) ($user['video_count'] ?? 0),
+            'profile_view_count' => null,
+            'profile_views_available' => false,
         ];
+
+        $profileResponse = $this->http->get(self::BASE_URL.'user/info/', [
+            'fields' => 'profile_view_count',
+        ], $header);
+
+        if (is_array($profileResponse)) {
+            $profileUser = $profileResponse['data']['user'] ?? [];
+            $profileViews = $profileUser['profile_view_count'] ?? null;
+            if ($profileViews !== null && $profileViews !== '') {
+                $stats['profile_view_count'] = (int) $profileViews;
+                $stats['profile_views_available'] = true;
+            }
+        }
+
+        return $stats;
     }
 
     /**
@@ -362,6 +379,8 @@ class TikTokAnalyticsService
             'following_count' => 0,
             'likes_count' => 0,
             'video_count' => 0,
+            'profile_view_count' => null,
+            'profile_views_available' => false,
             'view_count' => 0,
             'like_count' => 0,
             'comment_count' => 0,

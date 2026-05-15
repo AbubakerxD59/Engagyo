@@ -288,7 +288,7 @@
                     return false;
                 }
                 if (platform === 'tiktok') {
-                    var tk = ['follower_count', 'view_count', 'like_count', 'comment_count', 'share_count', 'videos_published'];
+                    var tk = ['follower_count', 'view_count', 'profile_view_count', 'like_count', 'comment_count', 'share_count'];
                     for (var t = 0; t < tk.length; t++) {
                         var tv = insights[tk[t]];
                         if (tv != null && !isNaN(tv)) return true;
@@ -583,9 +583,11 @@
                         ['video_views', 'Video Views', false]
                     ] : (platform === 'tiktok' ? [
                         ['follower_count', 'Followers', false],
-                        ['view_count', 'Views', false],
+                        ['view_count', 'Video Views', false],
+                        ['profile_view_count', 'Profile Views', false],
                         ['like_count', 'Likes', false],
-                        ['videos_published', 'Videos Published', false]
+                        ['comment_count', 'Comments', false],
+                        ['share_count', 'Shares', false]
                     ] : [
                         ['followers', 'Followers', false],
                         ['reach', 'Reach', false],
@@ -597,9 +599,10 @@
                         (platform === 'pinterest' ?
                             '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Pinterest board metrics aggregate pin analytics (impressions, saves, clicks) for pins on this board. Pinterest limits analytics history (typically up to ~90 days).</p>' :
                             (platform === 'tiktok' ?
-                                '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>TikTok account stats come from user.info.stats. Views, likes, comments, and shares are summed from public videos in the selected period (video.list). Reconnect TikTok if metrics are missing.</p>' :
+                                '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Followers come from TikTok user.info.stats. Video views, likes, comments, and shares are totals for public videos published in the selected period (video.list). Profile views show N/A when TikTok’s API does not return that field—reconnect TikTok after scope updates if needed.</p>' :
                                 '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Threads insights are aggregated from available media metrics for the selected date range.</p>'));
-                    overviewContent += note + '<div class="analytics-insight-cards">';
+                    overviewContent += note + '<div class="analytics-insight-cards' +
+                        (platform === 'tiktok' ? ' analytics-insight-cards--tiktok' : '') + '">';
                     cards.forEach(function(c) {
                         overviewContent += renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]);
                     });
