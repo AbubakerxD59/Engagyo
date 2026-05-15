@@ -3,6 +3,11 @@
 namespace App\Services;
 
 use App\Jobs\DeleteFacebookPostJob;
+use App\Jobs\DeleteInstagramPostJob;
+use App\Jobs\DeleteLinkedInPostJob;
+use App\Jobs\DeletePinterestPostJob;
+use App\Jobs\DeleteThreadsPostJob;
+use App\Jobs\DeleteTikTokPostJob;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishLinkedInPost;
@@ -60,56 +65,39 @@ class PostService
             ->with('page', 'board.pinterest', 'tiktok', 'instagramAccount', 'thread', 'linkedin')
             ->where('id', $post_id)
             ->first();
-        if ($post) {
-            $status = $post->status;
-            $social_type = $post->social_type;
-            $socialType = strtolower((string) $social_type);
-            $facebookPostId = $post->post_id ?? null;
-            $pageId = $post->account_id;
-            $dbPostId = $post->id;
+        if (! $post) {
+            return true;
+        }
 
-            // Pinterest: delete from API synchronously (needs post object)
-            if ($status == 1 && $social_type == 'pinterest' && ! empty($post->post_id)) {
-                $service = new PinterestService;
-                $service->delete($post);
-            }
+        $status = (int) $post->status;
+        $socialType = strtolower((string) $post->social_type);
+        $externalPostId = trim((string) ($post->post_id ?? ''));
+        $accountId = (int) $post->account_id;
+        $dbPostId = (int) $post->id;
+        $postType = (string) ($post->type ?? 'video');
 
-            // LinkedIn: delete UGC post via API before deleting local row.
-            if ($status == 1 && $social_type == 'linkedin' && ! empty($post->post_id)) {
-                $linkedin = $post->linkedin;
-                if (! $linkedin) {
-                    throw new Exception('LinkedIn account not found for this post.');
-                }
-                $linkedInPublish = new LinkedInPublishService;
-                $liDelete = $linkedInPublish->deletePublishedUgcPost($linkedin, (string) $post->post_id);
-                if (! ($liDelete['success'] ?? false)) {
-                    $apiMessage = (string) ($liDelete['message'] ?? 'Failed to delete LinkedIn post.');
-                    Log::warning('LinkedIn delete failed', [
-                        'post_id' => $post->id,
-                        'linkedin_ugc_urn' => $post->post_id,
-                        'status' => $liDelete['status'] ?? null,
-                        'response' => $liDelete['response'] ?? null,
-                    ]);
-                    throw new Exception($apiMessage);
-                }
-            }
+        if ($status === 1) {
+            SentTabSnapshotService::purgeForPost($post);
+        }
 
-            // Threads: delete from Threads API before deleting local row.
-            if ($status == 1 && str_contains($socialType, 'thread') && ! empty($post->post_id)) {
-                $thread = $post->thread;
-                if (! $thread) {
-                    throw new Exception('Threads account not found for this post.');
-                }
-                self::deleteThreadsMediaFromApi($thread, (string) $post->post_id);
-            }
+        $post->delete();
 
-            // Delete from database instantly
-            $post->delete();
+        if ($status !== 1 || $externalPostId === '') {
+            return true;
+        }
 
-            // Facebook: delete via background job (user gets instant response)
-            if ($status == 1 && $social_type == 'facebook' && ! empty($facebookPostId)) {
-                DeleteFacebookPostJob::dispatch($facebookPostId, $pageId, $dbPostId);
-            }
+        if ($socialType === 'facebook') {
+            DeleteFacebookPostJob::dispatch($externalPostId, $accountId, $dbPostId);
+        } elseif ($socialType === 'pinterest') {
+            DeletePinterestPostJob::dispatch($externalPostId, $accountId);
+        } elseif (str_contains($socialType, 'tiktok')) {
+            DeleteTikTokPostJob::dispatch($externalPostId, $accountId, $postType);
+        } elseif (str_contains($socialType, 'thread')) {
+            DeleteThreadsPostJob::dispatch($externalPostId, $accountId);
+        } elseif ($socialType === 'linkedin') {
+            DeleteLinkedInPostJob::dispatch($externalPostId, $accountId);
+        } elseif (str_contains($socialType, 'instagram')) {
+            DeleteInstagramPostJob::dispatch($externalPostId, $accountId);
         }
 
         return true;

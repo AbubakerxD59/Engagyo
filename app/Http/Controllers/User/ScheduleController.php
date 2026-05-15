@@ -5,7 +5,7 @@ namespace App\Http\Controllers\User;
 use App\Enums\DraftEnum;
 use App\Http\Controllers\Controller;
 use App\Jobs\DeleteFacebookPostJob;
-use App\Jobs\DeleteSentPostJob;
+use App\Jobs\DeleteThreadsPostJob;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishLinkedInPost;
@@ -5855,44 +5855,40 @@ class ScheduleController extends Controller
                 return response()->json(['success' => false, 'message' => 'Account not found or access denied.'], 404);
             }
 
-            try {
-                if ($dbPostId > 0) {
-                    $dbPost = Post::withoutGlobalScopes()
-                        ->where('id', $dbPostId)
-                        ->where('account_id', $threadAccount->id)
-                        ->where(function ($q) {
-                            $q->where('social_type', 'like', '%threads%')
-                                ->orWhere('social_type', 'like', '%thread%');
-                        })
-                        ->first();
-                    if (! $dbPost) {
-                        return response()->json(['success' => false, 'message' => 'Post not found or access denied.'], 404);
-                    }
-
-                    $storedMediaId = (string) ($dbPost->post_id ?? '');
-                    if ($dbPost->status == 1 && str_contains(strtolower((string) $dbPost->social_type), 'thread')
-                        && $storedMediaId === '' && $threadsPostId !== '') {
-                        PostService::deleteThreadsMediaFromApi($threadAccount, $threadsPostId);
-                    }
-
-                    PostService::delete($dbPost->id);
-                    $externalPostId = $storedMediaId !== '' ? $storedMediaId : $threadsPostId;
-                } else {
-                    if (! $threadAccount->validToken()) {
-                        return response()->json(['success' => false, 'message' => 'Threads token is invalid or expired. Reconnect your account and try again.'], 422);
-                    }
-                    PostService::deleteThreadsMediaFromApi($threadAccount, $threadsPostId);
-                    $externalPostId = $threadsPostId;
+            if ($dbPostId > 0) {
+                $dbPost = Post::withoutGlobalScopes()
+                    ->where('id', $dbPostId)
+                    ->where('account_id', $threadAccount->id)
+                    ->where(function ($q) {
+                        $q->where('social_type', 'like', '%threads%')
+                            ->orWhere('social_type', 'like', '%thread%');
+                    })
+                    ->first();
+                if (! $dbPost) {
+                    return response()->json(['success' => false, 'message' => 'Post not found or access denied.'], 404);
                 }
 
-                if ($externalPostId !== '') {
-                    $this->purgeThreadsSentSnapshotPost($threadAccount, $externalPostId);
-                }
+                $storedMediaId = trim((string) ($dbPost->post_id ?? ''));
+                $externalPostId = $storedMediaId !== '' ? $storedMediaId : $threadsPostId;
 
-                return response()->json(['success' => true, 'message' => 'Threads post deleted successfully.']);
-            } catch (\Throwable $e) {
-                return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
+                $dbPost->photo()->delete();
+                $wasPublished = (int) $dbPost->status === 1;
+                PostService::delete($dbPost->id);
+
+                if ($wasPublished && $storedMediaId === '' && $threadsPostId !== '') {
+                    DeleteThreadsPostJob::dispatch($threadsPostId, (int) $threadAccount->id);
+                }
+            } else {
+                $externalPostId = $threadsPostId;
+                $this->purgeThreadsSentSnapshotPost($threadAccount, $externalPostId);
+                DeleteThreadsPostJob::dispatch($externalPostId, (int) $threadAccount->id);
             }
+
+            if ($dbPostId > 0 && $externalPostId !== '') {
+                $this->purgeThreadsSentSnapshotPost($threadAccount, $externalPostId);
+            }
+
+            return response()->json(['success' => true, 'message' => 'Threads post deleted successfully.']);
         }
 
         if (empty($postId) || empty($pageId)) {
@@ -5907,7 +5903,22 @@ class ScheduleController extends Controller
         }
 
         $this->purgeFacebookSentSnapshotPost($page, (string) $postId);
-        DeleteSentPostJob::dispatch($postId, (int) $pageId);
+
+        $ourPost = Post::withoutGlobalScopes()
+            ->where('post_id', (string) $postId)
+            ->where('account_id', $page->id)
+            ->where('social_type', 'facebook')
+            ->first();
+
+        if ($ourPost) {
+            if ($ourPost->source === 'schedule' && $this->verifyPostAccountBelongsToUser($ourPost, $user)) {
+                $user->decrementFeatureUsage('scheduled_posts_per_account', 1);
+            }
+            $ourPost->photo()->delete();
+            PostService::delete($ourPost->id);
+        } else {
+            DeleteFacebookPostJob::dispatch((string) $postId, (int) $page->id, null);
+        }
 
         return response()->json(['success' => true, 'message' => 'Post deleted successfully.']);
     }

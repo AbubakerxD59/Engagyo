@@ -848,6 +848,37 @@ class InstagramGraphService
         $this->errorNotification($post, $message);
     }
 
+    /**
+     * Delete published Instagram media via Graph API.
+     */
+    public function deleteMedia(InstagramAccount $ig, string $mediaId): bool
+    {
+        $mediaId = trim($mediaId);
+        if ($mediaId === '' || empty($ig->access_token)) {
+            return false;
+        }
+
+        $base = $this->graphBaseUrl($ig);
+        $response = Http::acceptJson()
+            ->timeout(30)
+            ->delete("{$base}/".rawurlencode($mediaId), [
+                'access_token' => $ig->access_token,
+            ]);
+
+        if ($response->successful() && $response->json('success') === true) {
+            return true;
+        }
+
+        Log::warning('Instagram media delete failed', [
+            'media_id' => $mediaId,
+            'instagram_account_id' => $ig->id,
+            'status' => $response->status(),
+            'response' => $response->body(),
+        ]);
+
+        return false;
+    }
+
     private function successNotification(Post $post): void
     {
         $post->loadMissing('instagramAccount');
