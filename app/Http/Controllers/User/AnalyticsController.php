@@ -12,6 +12,9 @@ use App\Models\PinterestPin;
 use App\Models\Thread;
 use App\Models\ThreadInsight;
 use App\Models\ThreadPost;
+use App\Models\Tiktok;
+use App\Models\TiktokInsight;
+use App\Models\TiktokPost;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
@@ -93,6 +96,7 @@ class AnalyticsController extends Controller
         $facebookPages = $accounts->where('type', 'facebook')->values();
         $threadsAccounts = $accounts->where('type', 'threads')->values();
         $pinterestBoards = $accounts->where('type', 'pinterest')->values();
+        $tiktokAccounts = $accounts->where('type', 'tiktok')->values();
         $analyticsAccounts = $facebookPages->map(function ($page) {
             return [
                 'ref' => 'facebook:'.$page->id,
@@ -126,6 +130,17 @@ class AnalyticsController extends Controller
                     'profile_image' => $p ? ($p->profile_image ?? social_logo('pinterest')) : social_logo('pinterest'),
                 ];
             })->values()
+        )->concat(
+            $tiktokAccounts->map(function ($tiktok) {
+                return [
+                    'ref' => 'tiktok:'.$tiktok->id,
+                    'platform' => 'tiktok',
+                    'id' => $tiktok->id,
+                    'name' => $tiktok->display_name ?? $tiktok->username,
+                    'username' => $tiktok->username ? '@'.$tiktok->username : 'TikTok',
+                    'profile_image' => $tiktok->profile_image ?? social_logo('tiktok'),
+                ];
+            })->values()
         )->values();
         $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
 
@@ -151,6 +166,7 @@ class AnalyticsController extends Controller
         $facebookPages = $accounts->where('type', 'facebook')->values();
         $threadsAccounts = $accounts->where('type', 'threads')->values();
         $pinterestBoards = $accounts->where('type', 'pinterest')->values();
+        $tiktokAccounts = $accounts->where('type', 'tiktok')->values();
 
         [$since, $until] = $this->resolveDateRange($request);
 
@@ -250,6 +266,34 @@ class AnalyticsController extends Controller
                     ];
                 }
             }
+        } elseif (str_starts_with($accountRef, 'tiktok:')) {
+            $platform = 'tiktok';
+            $id = (int) str_replace('tiktok:', '', $accountRef);
+            if ($tiktokAccounts->contains('id', $id)) {
+                $selected = Tiktok::find($id);
+                if ($selected) {
+                    $pageInsights = $this->fetchTiktokInsights($selected, $since, $until);
+                    $pagePosts = $this->fetchTiktokPosts($selected, $since, $until);
+                    if (is_array($pagePosts) && empty($pagePosts)) {
+                        $postsFetching = true;
+                        $postsFetchingMessage = 'TikTok videos for this account are being fetched. Please check back shortly.';
+                    }
+                    if (is_array($pagePosts)) {
+                        $pagePostsTotal = count($pagePosts);
+                        if ($postsLimit !== null) {
+                            $pagePosts = array_slice($pagePosts, $postsOffset, $postsLimit);
+                            $pagePostsNextOffset = $postsOffset + count($pagePosts);
+                            $pagePostsHasMore = $pagePostsNextOffset < $pagePostsTotal;
+                        } else {
+                            $pagePostsNextOffset = $pagePostsTotal;
+                        }
+                    }
+                    $selectedPage = [
+                        'id' => $selected->id,
+                        'name' => $selected->display_name ?? $selected->username,
+                    ];
+                }
+            }
         }
 
         return response()->json([
@@ -262,7 +306,7 @@ class AnalyticsController extends Controller
             'pagePostsHasMore' => $pagePostsHasMore,
             'pagePostsNextOffset' => $pagePostsNextOffset,
             'selectedPage' => $selectedPage,
-            'hasPages' => ($facebookPages->count() + $threadsAccounts->count() + $pinterestBoards->count()) > 0,
+            'hasPages' => ($facebookPages->count() + $threadsAccounts->count() + $pinterestBoards->count() + $tiktokAccounts->count()) > 0,
             'platform' => $platform,
             'accountRef' => $accountRef,
             'since' => $since,
@@ -384,6 +428,57 @@ class AnalyticsController extends Controller
         $stored = ThreadPost::forCreatedDateRange((int) $thread->id, $since, $until);
         if ($stored->isNotEmpty()) {
             $storedPosts = $stored->map(fn (ThreadPost $row) => $row->toAnalyticsPostArray())->values()->all();
+            Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+
+            return $storedPosts;
+        }
+
+        return [];
+    }
+
+    /**
+     * TikTok account insights (`tiktok_insights` only; sync runs on schedule/cron).
+     */
+    private function fetchTiktokInsights(?Tiktok $account, ?string $since = null, ?string $until = null): ?array
+    {
+        if (! $account || empty($account->access_token)) {
+            return null;
+        }
+
+        $stored = TiktokInsight::where('tiktok_id', $account->id)
+            ->where('since', $since)
+            ->where('until', $until)
+            ->first();
+
+        if ($stored && $stored->insights) {
+            return $stored->insights;
+        }
+
+        return null;
+    }
+
+    /**
+     * TikTok videos with metrics (`tiktok_posts` / cache only).
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function fetchTiktokPosts(?Tiktok $account, ?string $since = null, ?string $until = null): ?array
+    {
+        if (! $account || empty($account->access_token)) {
+            return null;
+        }
+
+        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
+        $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $account->id, $duration, $since, $until, 'tiktok');
+
+        $cachedPosts = Cache::get($cacheKey);
+        if ($cachedPosts !== null) {
+            return $cachedPosts;
+        }
+
+        $stored = TiktokPost::forCreatedDateRange((int) $account->id, $since, $until);
+        if ($stored->isNotEmpty()) {
+            $storedPosts = $stored->map(fn (TiktokPost $row) => $row->toAnalyticsPostArray())->values()->all();
             Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
 
             return $storedPosts;

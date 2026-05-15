@@ -48,6 +48,8 @@
                                                             <i class="fas fa-at"></i>
                                                         @elseif($account['platform'] === 'pinterest')
                                                             <i class="fab fa-pinterest-p"></i>
+                                                        @elseif($account['platform'] === 'tiktok')
+                                                            <i class="fab fa-tiktok"></i>
                                                         @else
                                                             <i class="fab fa-facebook-f"></i>
                                                         @endif
@@ -248,7 +250,7 @@
                                                 @if (($analyticsAccounts ?? collect())->count() > 0)
                                                     Select an account from the sidebar to view analytics insights.
                                                 @else
-                                                    Connect Facebook or Threads to see analytics here.
+                                                    Connect Facebook, Threads, Pinterest, or TikTok to see analytics here.
                                                 @endif
                                             </p>
                                         </div>

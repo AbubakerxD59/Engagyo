@@ -126,17 +126,42 @@
                 }
             ];
 
+            /** TikTok: period aggregates from video.list (TikTok API field names). */
+            var chartMetricOptionsTiktok = [{
+                    key: 'view_count',
+                    label: 'Views',
+                    byDayKey: 'view_count_by_day'
+                },
+                {
+                    key: 'like_count',
+                    label: 'Likes',
+                    byDayKey: 'like_count_by_day'
+                },
+                {
+                    key: 'comment_count',
+                    label: 'Comments',
+                    byDayKey: 'comment_count_by_day'
+                },
+                {
+                    key: 'share_count',
+                    label: 'Shares',
+                    byDayKey: 'share_count_by_day'
+                }
+            ];
+
             function chartMetricOptionsForPlatform(platform) {
-                return platform === 'pinterest' ? chartMetricOptionsPinterest : chartMetricOptions;
+                if (platform === 'pinterest') return chartMetricOptionsPinterest;
+                if (platform === 'tiktok') return chartMetricOptionsTiktok;
+                return chartMetricOptions;
             }
 
             function renderEngagementsChart(insights, comp, selectedMetricKey, platform) {
                 platform = platform || 'facebook';
                 var opts = chartMetricOptionsForPlatform(platform);
-                selectedMetricKey = selectedMetricKey || (platform === 'pinterest' ? 'reach' : 'engagements');
+                selectedMetricKey = selectedMetricKey || (platform === 'pinterest' ? 'reach' : (platform === 'tiktok' ? 'view_count' : 'engagements'));
                 var opt = opts.find(function(o) {
                     return o.key === selectedMetricKey;
-                }) || (platform === 'pinterest' ? opts[0] : chartMetricOptions[3]);
+                }) || (platform === 'pinterest' ? opts[0] : (platform === 'tiktok' ? chartMetricOptionsTiktok[0] : chartMetricOptions[3]));
                 var byDay = insights[opt.byDayKey] || {};
                 var dates = Object.keys(byDay).sort();
                 var total = 0;
@@ -174,10 +199,10 @@
             function initEngagementsChart(insights, metricKey, platform) {
                 platform = platform || 'facebook';
                 var opts = chartMetricOptionsForPlatform(platform);
-                metricKey = metricKey || (platform === 'pinterest' ? 'reach' : 'engagements');
+                metricKey = metricKey || (platform === 'pinterest' ? 'reach' : (platform === 'tiktok' ? 'view_count' : 'engagements'));
                 var opt = opts.find(function(o) {
                     return o.key === metricKey;
-                }) || (platform === 'pinterest' ? opts[0] : chartMetricOptions[3]);
+                }) || (platform === 'pinterest' ? opts[0] : (platform === 'tiktok' ? chartMetricOptionsTiktok[0] : chartMetricOptions[3]));
                 var byDay = insights[opt.byDayKey] || {};
                 var dates = Object.keys(byDay).sort();
                 if (dates.length === 0 || typeof Chart === 'undefined') return;
@@ -262,6 +287,15 @@
                     if (insights.video_views_by_day && Object.keys(insights.video_views_by_day).length > 0) return true;
                     return false;
                 }
+                if (platform === 'tiktok') {
+                    var tk = ['follower_count', 'view_count', 'like_count', 'comment_count', 'share_count', 'videos_published'];
+                    for (var t = 0; t < tk.length; t++) {
+                        var tv = insights[tk[t]];
+                        if (tv != null && !isNaN(tv)) return true;
+                    }
+                    if (insights.view_count_by_day && Object.keys(insights.view_count_by_day).length > 0) return true;
+                    return false;
+                }
                 var keys = ['followers', 'reach', 'video_views', 'engagements'];
                 for (var j = 0; j < keys.length; j++) {
                     var v = insights[keys[j]];
@@ -316,12 +350,18 @@
                 pin_clicks: 'Pin Clicks',
                 video_mrc_view: 'Video Views',
                 total_comments: 'Comments',
-                total_reactions: 'Pin Reactions'
+                total_reactions: 'Pin Reactions',
+                view_count: 'Views',
+                like_count: 'Likes',
+                comment_count: 'Comments',
+                share_count: 'Shares'
             };
 
             var postInsightDisplayOrder = ['post_clicks', 'post_reactions', 'post_impressions', 'post_reach', 'post_engagement_rate'];
 
             var postInsightDisplayOrderPinterest = ['post_impressions', 'pin_saves', 'outbound_clicks', 'pin_clicks', 'video_mrc_view', 'total_comments', 'total_reactions'];
+
+            var postInsightDisplayOrderTiktok = ['view_count', 'like_count', 'comment_count', 'share_count'];
 
             var postSortOptions = [
                 { key: 'post_impressions', label: 'Impressions' },
@@ -343,6 +383,14 @@
                 { key: 'created_time', label: 'Date' }
             ];
 
+            var postSortOptionsTiktok = [
+                { key: 'view_count', label: 'Views' },
+                { key: 'like_count', label: 'Likes' },
+                { key: 'comment_count', label: 'Comments' },
+                { key: 'share_count', label: 'Shares' },
+                { key: 'created_time', label: 'Date' }
+            ];
+
             function parseCreatedTime(ct) {
                 if (!ct) return null;
                 if (typeof ct === 'string') return new Date(ct);
@@ -356,8 +404,10 @@
                 sortBy = sortBy || 'created_time';
                 sortOrder = sortOrder || 'desc';
                 totalPosts = Number(totalPosts || 0);
-                var insightOrder = (platform === 'pinterest') ? postInsightDisplayOrderPinterest : postInsightDisplayOrder;
-                var sortOptionsList = (platform === 'pinterest') ? postSortOptionsPinterest : postSortOptions;
+                var insightOrder = platform === 'pinterest' ? postInsightDisplayOrderPinterest :
+                    (platform === 'tiktok' ? postInsightDisplayOrderTiktok : postInsightDisplayOrder);
+                var sortOptionsList = platform === 'pinterest' ? postSortOptionsPinterest :
+                    (platform === 'tiktok' ? postSortOptionsTiktok : postSortOptions);
                 if (posts === null) {
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
                         '<i class="fas fa-th-large fa-4x text-muted mb-3"></i>' +
@@ -379,7 +429,10 @@
                     filtered = posts.filter(function(p) {
                         var msg = (p.message || '').toLowerCase();
                         var story = (p.story || '').toLowerCase();
-                        return msg.indexOf(searchQuery) !== -1 || story.indexOf(searchQuery) !== -1;
+                        var desc = (p.video_description || '').toLowerCase();
+                        var title = (p.title || '').toLowerCase();
+                        return msg.indexOf(searchQuery) !== -1 || story.indexOf(searchQuery) !== -1 ||
+                            desc.indexOf(searchQuery) !== -1 || title.indexOf(searchQuery) !== -1;
                     });
                 }
                 filtered = filtered.slice();
@@ -468,7 +521,7 @@
                         }
                     }
                     for (var key in insights) {
-                        if (platform === 'pinterest') {
+                        if (platform === 'pinterest' || platform === 'tiktok') {
                             break;
                         }
                         if (insights.hasOwnProperty(key) && order.indexOf(key) === -1) {
@@ -484,7 +537,9 @@
                     var insightHtml = insightItems.length > 0 ?
                         '<div class="analytics-post-insights-grid">' + insightItems.join('') + '</div>' :
                         '<p class="text-muted small mb-0">No insights available</p>';
-                    var viewLabel = platform === 'threads' ? 'View on Threads' : (platform === 'pinterest' ? 'View on Pinterest' : 'View on Facebook');
+                    var viewLabel = platform === 'threads' ? 'View on Threads' :
+                        (platform === 'pinterest' ? 'View on Pinterest' :
+                            (platform === 'tiktok' ? 'View on TikTok' : 'View on Facebook'));
                     var link = post.permalink_url ? '<a href="' + escapeHtml(post.permalink_url) +
                         '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary analytics-post-view-btn"><i class="fas fa-external-link-alt mr-1"></i>' + viewLabel + '</a>' :
                         '';
@@ -526,23 +581,31 @@
                         ['followers', 'Followers', false],
                         ['reach', 'Impressions', false],
                         ['video_views', 'Video Views', false]
+                    ] : (platform === 'tiktok' ? [
+                        ['follower_count', 'Followers', false],
+                        ['view_count', 'Views', false],
+                        ['like_count', 'Likes', false],
+                        ['videos_published', 'Videos Published', false]
                     ] : [
                         ['followers', 'Followers', false],
                         ['reach', 'Reach', false],
                         ['video_views', 'Video Views', false],
                         ['engagements', 'Engagements', false]
-                    ];
+                    ]);
                     var note = platform === 'facebook' ?
                         '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>Page Insights data is only available on Pages with 100 or more likes.</p>' :
                         (platform === 'pinterest' ?
                             '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Pinterest board metrics aggregate pin analytics (impressions, saves, clicks) for pins on this board. Pinterest limits analytics history (typically up to ~90 days).</p>' :
-                            '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Threads insights are aggregated from available media metrics for the selected date range.</p>');
+                            (platform === 'tiktok' ?
+                                '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>TikTok account stats come from user.info.stats. Views, likes, comments, and shares are summed from public videos in the selected period (video.list). Reconnect TikTok if metrics are missing.</p>' :
+                                '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Threads insights are aggregated from available media metrics for the selected date range.</p>'));
                     overviewContent += note + '<div class="analytics-insight-cards">';
                     cards.forEach(function(c) {
                         overviewContent += renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]);
                     });
                     overviewContent += '</div>';
-                    overviewContent += renderEngagementsChart(insights, comp, platform === 'pinterest' ? 'reach' : undefined, platform);
+                    overviewContent += renderEngagementsChart(insights, comp,
+                        platform === 'pinterest' ? 'reach' : (platform === 'tiktok' ? 'view_count' : undefined), platform);
                     overviewContent += '</div>';
                 }
                 var postsContent = renderPostsList(pagePosts, since, until, currentPostsSearchQuery, currentPostsSortBy, currentPostsSortOrder, platform, currentPostsTotal);
@@ -564,7 +627,7 @@
             function renderEmptyState(hasPageSelected) {
                 var msg = hasPageSelected ? 'Unable to load account insights.' :
                     'Select an account from the sidebar to view analytics.';
-                if (!hasPages) msg = 'Connect Facebook or Threads to see analytics here.';
+                if (!hasPages) msg = 'Connect Facebook, Threads, Pinterest, or TikTok to see analytics here.';
                 var title = hasPages ? 'Select an Account' : 'No Accounts Connected';
                 return '<div class="empty-state text-center py-5">' +
                     '<div class="empty-state-icon mb-3"><i class="fas fa-chart-bar fa-4x text-muted"></i></div>' +
@@ -664,17 +727,18 @@
                         var plt = res.platform || currentPlatform || 'facebook';
                         var chartOpts = chartMetricOptionsForPlatform(plt);
                         var selectedMetric = $('.chart-metric-section').data('selected-metric') ||
-                            (plt === 'pinterest' ? 'reach' : 'engagements');
+                            (plt === 'pinterest' ? 'reach' : (plt === 'tiktok' ? 'view_count' : 'engagements'));
                         if (!chartOpts.find(function(o) {
                                 return o.key === selectedMetric;
                             })) {
-                            selectedMetric = plt === 'pinterest' ? 'reach' : 'engagements';
+                            selectedMetric = plt === 'pinterest' ? 'reach' : (plt === 'tiktok' ? 'view_count' : 'engagements');
                         }
                         if (res.selectedPage && res.pageInsights) {
                             var optRow = chartOpts.find(function(o) {
                                 return o.key === selectedMetric;
                             });
-                            var byDayKeyResolved = optRow ? optRow.byDayKey : (plt === 'pinterest' ? 'reach_by_day' : 'engagements_by_day');
+                            var byDayKeyResolved = optRow ? optRow.byDayKey :
+                                (plt === 'pinterest' ? 'reach_by_day' : (plt === 'tiktok' ? 'view_count_by_day' : 'engagements_by_day'));
                             var byDay = (res.pageInsights[byDayKeyResolved] || {});
                             if (Object.keys(byDay).length > 0) {
                                 initEngagementsChart(res.pageInsights, selectedMetric, plt);

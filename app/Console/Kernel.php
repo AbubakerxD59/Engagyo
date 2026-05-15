@@ -28,6 +28,8 @@ use App\Console\Commands\SyncPagePosts;
 use App\Console\Commands\SyncThreadInsights;
 use App\Console\Commands\SyncPinterestBoardInsights;
 use App\Console\Commands\SyncThreadPosts;
+use App\Console\Commands\SyncTiktokInsights;
+use App\Console\Commands\SyncTiktokPosts;
 use App\Console\Commands\SyncUserUsage;
 use App\Console\Commands\TikTokFetchPublishStatus;
 use App\Console\Commands\ThreadsPublishQueueCron;
@@ -70,6 +72,8 @@ class Kernel extends ConsoleKernel
         SyncThreadInsights::class, // insights:sync-threads
         SyncThreadPosts::class, // insights:sync-threads-posts
         SyncPinterestBoardInsights::class, // insights:sync-pinterest-boards
+        SyncTiktokInsights::class, // insights:sync-tiktok
+        SyncTiktokPosts::class, // insights:sync-tiktok-posts
         PurgeOldPosts::class, // posts:purge-old
         PublishPendingCommentsCron::class, // facebook:publish-pending-comments
         ScheduleShufflePosts::class, // schedule:shuffle
@@ -128,6 +132,9 @@ class Kernel extends ConsoleKernel
         $schedule->command('insights:sync-threads-posts')->everyThreeHours();
         // Pinterest per-board analytics (pins + aggregated board insights)
         $schedule->command('insights:sync-pinterest-boards')->dailyAt('01:45');
+        // TikTok account insights and public video metrics
+        $schedule->command('insights:sync-tiktok')->dailyAt('02:15');
+        $schedule->command('insights:sync-tiktok-posts')->everyThreeHours();
         // Command to purge posts older than 30 days in batches of 200 (runs every 3 hours)
         $schedule->command('posts:purge-old')->everyThreeHours();
         // Runs every minute; the command itself executes twice (at 0s and ~30s) for near-realtime retries

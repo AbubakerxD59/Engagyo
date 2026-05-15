@@ -47,6 +47,16 @@ class Tiktok extends Model
         return $this->hasMany(Timeslot::class, "account_id", "id")->where("account_type", "tiktok");
     }
 
+    public function tiktokInsights()
+    {
+        return $this->hasMany(TiktokInsight::class);
+    }
+
+    public function tiktokPosts()
+    {
+        return $this->hasMany(TiktokPost::class);
+    }
+
     public function scopeWhereScheduledActive($query)
     {
         $query->where("schedule_status", "active");
