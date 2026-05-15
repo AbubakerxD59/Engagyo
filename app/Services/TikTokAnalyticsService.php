@@ -302,6 +302,7 @@ class TikTokAnalyticsService
 
         return [
             'id' => (string) ($video['id'] ?? ''),
+            'create_time' => $video['create_time'] ?? null,
             'created_time' => $created ? $created->toIso8601String() : null,
             'message' => $message,
             'title' => $title,

@@ -274,7 +274,8 @@ class AnalyticsController extends Controller
                 if ($selected) {
                     $pageInsights = $this->fetchTiktokInsights($selected, $since, $until);
                     $pagePosts = $this->fetchTiktokPosts($selected, $since, $until);
-                    if (is_array($pagePosts) && empty($pagePosts)) {
+                    $hasStoredTiktokPosts = TiktokPost::where('tiktok_id', $selected->id)->exists();
+                    if (is_array($pagePosts) && empty($pagePosts) && ! $hasStoredTiktokPosts) {
                         $postsFetching = true;
                         $postsFetchingMessage = 'TikTok videos for this account are being fetched. Please check back shortly.';
                     }
@@ -468,23 +469,23 @@ class AnalyticsController extends Controller
             return null;
         }
 
+        $since = $since ?: Carbon::today()->subDays(28)->format('Y-m-d');
+        $until = $until ?: Carbon::today()->format('Y-m-d');
+
         $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
         $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $account->id, $duration, $since, $until, 'tiktok');
 
         $cachedPosts = Cache::get($cacheKey);
-        if ($cachedPosts !== null) {
+        if (is_array($cachedPosts) && count($cachedPosts) > 0) {
             return $cachedPosts;
         }
 
         $stored = TiktokPost::forCreatedDateRange((int) $account->id, $since, $until);
-        if ($stored->isNotEmpty()) {
-            $storedPosts = $stored->map(fn (TiktokPost $row) => $row->toAnalyticsPostArray())->values()->all();
-            Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+        $storedPosts = $stored->map(fn (TiktokPost $row) => $row->toAnalyticsPostArray())->values()->all();
 
-            return $storedPosts;
-        }
+        Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
 
-        return [];
+        return $storedPosts;
     }
 
     /**

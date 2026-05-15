@@ -58,6 +58,17 @@ class TiktokPost extends Model
                     $createdAt = null;
                 }
             }
+            if ($createdAt === null && ! empty($post['create_time'])) {
+                try {
+                    $seconds = (int) $post['create_time'];
+                    if ($seconds > 9999999999) {
+                        $seconds = (int) floor($seconds / 1000);
+                    }
+                    $createdAt = Carbon::createFromTimestampUTC($seconds);
+                } catch (\Throwable) {
+                    $createdAt = null;
+                }
+            }
 
             self::updateOrCreate(
                 [
@@ -81,15 +92,65 @@ class TiktokPost extends Model
     }
 
     /**
+     * All synced videos for an account (metrics reflect last sync; date filter applied in app layer).
+     *
+     * @return Collection<int, self>
+     */
+    public static function latestForAccount(int $tiktokId): Collection
+    {
+        return self::query()
+            ->where('tiktok_id', $tiktokId)
+            ->orderByDesc('post_created_date')
+            ->orderByDesc('id')
+            ->get();
+    }
+
+    /**
      * @return Collection<int, self>
      */
     public static function forCreatedDateRange(int $tiktokId, string $since, string $until): Collection
     {
-        return self::query()
-            ->where('tiktok_id', $tiktokId)
-            ->whereBetween('post_created_date', [$since.' 00:00:00', $until.' 23:59:59'])
-            ->orderByDesc('post_created_date')
-            ->get();
+        return self::filterCollectionForDateRange(
+            self::latestForAccount($tiktokId),
+            $since,
+            $until
+        );
+    }
+
+    /**
+     * Filter posts by created date using post_created_date or post_data.created_time.
+     *
+     * @param  Collection<int, self>  $posts
+     * @return Collection<int, self>
+     */
+    public static function filterCollectionForDateRange(Collection $posts, string $since, string $until): Collection
+    {
+        $sinceDt = Carbon::parse($since)->startOfDay();
+        $untilDt = Carbon::parse($until)->endOfDay();
+
+        return $posts->filter(function (self $post) use ($sinceDt, $untilDt) {
+            $created = $post->resolvedCreatedAt();
+
+            return $created && $created->between($sinceDt, $untilDt);
+        })->values();
+    }
+
+    public function resolvedCreatedAt(): ?Carbon
+    {
+        if ($this->post_created_date) {
+            return $this->post_created_date->copy();
+        }
+
+        $post = is_array($this->post_data) ? $this->post_data : [];
+        if (empty($post['created_time'])) {
+            return null;
+        }
+
+        try {
+            return Carbon::parse((string) $post['created_time']);
+        } catch (\Throwable) {
+            return null;
+        }
     }
 
     /**

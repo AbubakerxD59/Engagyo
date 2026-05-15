@@ -38,17 +38,13 @@ class TiktokPostsSyncService
         }
 
         TiktokPost::persistFromAnalyticsPosts((int) $account->id, $normalized);
-        $this->refreshPostsCaches($account, $normalized);
+        $this->clearPostsCaches((int) $account->id, (int) ($account->user_id ?? 0));
 
         return true;
     }
 
-    /**
-     * @param  array<int, array<string, mixed>>  $allPosts
-     */
-    protected function refreshPostsCaches(Tiktok $account, array $allPosts): void
+    protected function clearPostsCaches(int $tiktokId, int $userId): void
     {
-        $userId = (int) ($account->user_id ?? 0);
         if ($userId <= 0) {
             return;
         }
@@ -64,25 +60,7 @@ class TiktokPostsSyncService
         ];
 
         foreach ($ranges as $duration => [$since, $until]) {
-            $filtered = array_values(array_filter($allPosts, function ($post) use ($since, $until) {
-                if (empty($post['created_time'])) {
-                    return false;
-                }
-                try {
-                    $created = Carbon::parse((string) $post['created_time']);
-
-                    return $created->between(
-                        Carbon::parse($since)->startOfDay(),
-                        Carbon::parse($until)->endOfDay()
-                    );
-                } catch (\Throwable) {
-                    return false;
-                }
-            }));
-
-            $key = $this->analyticsPostsCacheKey($userId, (int) $account->id, $duration, $since, $until);
-            Cache::forget($key);
-            Cache::put($key, $filtered, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+            Cache::forget($this->analyticsPostsCacheKey($userId, $tiktokId, $duration, $since, $until));
         }
     }
 
