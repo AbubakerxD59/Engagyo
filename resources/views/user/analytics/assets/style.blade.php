@@ -349,7 +349,7 @@
         }
 
         .analytics-insight-cards--tiktok {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(3, minmax(140px, 1fr));
         }
     }
 

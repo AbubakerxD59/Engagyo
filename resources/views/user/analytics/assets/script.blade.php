@@ -288,12 +288,11 @@
                     return false;
                 }
                 if (platform === 'tiktok') {
-                    var tk = ['follower_count', 'view_count', 'profile_view_count', 'like_count', 'comment_count', 'share_count'];
+                    var tk = ['follower_count', 'likes_count', 'video_count'];
                     for (var t = 0; t < tk.length; t++) {
                         var tv = insights[tk[t]];
                         if (tv != null && !isNaN(tv)) return true;
                     }
-                    if (insights.view_count_by_day && Object.keys(insights.view_count_by_day).length > 0) return true;
                     return false;
                 }
                 var keys = ['followers', 'reach', 'video_views', 'engagements'];
@@ -583,11 +582,8 @@
                         ['video_views', 'Video Views', false]
                     ] : (platform === 'tiktok' ? [
                         ['follower_count', 'Followers', false],
-                        ['view_count', 'Video Views', false],
-                        ['profile_view_count', 'Profile Views', false],
-                        ['like_count', 'Likes', false],
-                        ['comment_count', 'Comments', false],
-                        ['share_count', 'Shares', false]
+                        ['likes_count', 'Likes', false],
+                        ['video_count', 'Videos', false]
                     ] : [
                         ['followers', 'Followers', false],
                         ['reach', 'Reach', false],
@@ -599,7 +595,7 @@
                         (platform === 'pinterest' ?
                             '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Pinterest board metrics aggregate pin analytics (impressions, saves, clicks) for pins on this board. Pinterest limits analytics history (typically up to ~90 days).</p>' :
                             (platform === 'tiktok' ?
-                                '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Followers come from TikTok user.info.stats. Video views, likes, comments, and shares are totals for public videos published in the selected period (video.list). Profile views show N/A when TikTok’s API does not return that field—reconnect TikTok after scope updates if needed.</p>' :
+                                '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Account metrics from TikTok user.info.stats (followers, total likes, and public video count).</p>' :
                                 '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Threads insights are aggregated from available media metrics for the selected date range.</p>'));
                     overviewContent += note + '<div class="analytics-insight-cards' +
                         (platform === 'tiktok' ? ' analytics-insight-cards--tiktok' : '') + '">';
@@ -607,8 +603,10 @@
                         overviewContent += renderInsightCard(insights[c[0]], c[1], comp[c[0]], c[2]);
                     });
                     overviewContent += '</div>';
-                    overviewContent += renderEngagementsChart(insights, comp,
-                        platform === 'pinterest' ? 'reach' : (platform === 'tiktok' ? 'view_count' : undefined), platform);
+                    if (platform !== 'tiktok') {
+                        overviewContent += renderEngagementsChart(insights, comp,
+                            platform === 'pinterest' ? 'reach' : undefined, platform);
+                    }
                     overviewContent += '</div>';
                 }
                 var postsContent = renderPostsList(pagePosts, since, until, currentPostsSearchQuery, currentPostsSortBy, currentPostsSortOrder, platform, currentPostsTotal);
