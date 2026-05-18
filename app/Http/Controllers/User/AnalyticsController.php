@@ -6,6 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Models\Board;
 use App\Models\BoardInsight;
 use App\Models\FacebookPost;
+use App\Models\InstagramAccount;
+use App\Models\InstagramInsight;
+use App\Models\InstagramPost;
 use App\Models\Page;
 use App\Models\PageInsight;
 use App\Models\PinterestPin;
@@ -97,6 +100,7 @@ class AnalyticsController extends Controller
         $threadsAccounts = $accounts->where('type', 'threads')->values();
         $pinterestBoards = $accounts->where('type', 'pinterest')->values();
         $tiktokAccounts = $accounts->where('type', 'tiktok')->values();
+        $instagramAccounts = $accounts->where('type', 'instagram')->values();
         $analyticsAccounts = $facebookPages->map(function ($page) {
             return [
                 'ref' => 'facebook:'.$page->id,
@@ -141,6 +145,17 @@ class AnalyticsController extends Controller
                     'profile_image' => $tiktok->profile_image ?? social_logo('tiktok'),
                 ];
             })->values()
+        )->concat(
+            $instagramAccounts->map(function ($ig) {
+                return [
+                    'ref' => 'instagram:'.$ig->id,
+                    'platform' => 'instagram',
+                    'id' => $ig->id,
+                    'name' => $ig->name ?? $ig->username,
+                    'username' => $ig->username ? '@'.$ig->username : 'Instagram',
+                    'profile_image' => $ig->profile_image ?? social_logo('instagram'),
+                ];
+            })->values()
         )->values();
         $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
 
@@ -167,6 +182,7 @@ class AnalyticsController extends Controller
         $threadsAccounts = $accounts->where('type', 'threads')->values();
         $pinterestBoards = $accounts->where('type', 'pinterest')->values();
         $tiktokAccounts = $accounts->where('type', 'tiktok')->values();
+        $instagramAccounts = $accounts->where('type', 'instagram')->values();
 
         [$since, $until] = $this->resolveDateRange($request);
 
@@ -295,6 +311,35 @@ class AnalyticsController extends Controller
                     ];
                 }
             }
+        } elseif (str_starts_with($accountRef, 'instagram:')) {
+            $platform = 'instagram';
+            $id = (int) str_replace('instagram:', '', $accountRef);
+            if ($instagramAccounts->contains('id', $id)) {
+                $selected = InstagramAccount::find($id);
+                if ($selected) {
+                    $pageInsights = $this->fetchInstagramInsights($selected, $since, $until);
+                    $pagePosts = $this->fetchInstagramPosts($selected, $since, $until);
+                    $hasStoredInstagramPosts = InstagramPost::where('instagram_account_id', $selected->id)->exists();
+                    if (is_array($pagePosts) && empty($pagePosts) && ! $hasStoredInstagramPosts) {
+                        $postsFetching = true;
+                        $postsFetchingMessage = 'Instagram posts for this account are being fetched. Please check back shortly.';
+                    }
+                    if (is_array($pagePosts)) {
+                        $pagePostsTotal = count($pagePosts);
+                        if ($postsLimit !== null) {
+                            $pagePosts = array_slice($pagePosts, $postsOffset, $postsLimit);
+                            $pagePostsNextOffset = $postsOffset + count($pagePosts);
+                            $pagePostsHasMore = $pagePostsNextOffset < $pagePostsTotal;
+                        } else {
+                            $pagePostsNextOffset = $pagePostsTotal;
+                        }
+                    }
+                    $selectedPage = [
+                        'id' => $selected->id,
+                        'name' => $selected->name ?? $selected->username,
+                    ];
+                }
+            }
         }
 
         return response()->json([
@@ -307,7 +352,7 @@ class AnalyticsController extends Controller
             'pagePostsHasMore' => $pagePostsHasMore,
             'pagePostsNextOffset' => $pagePostsNextOffset,
             'selectedPage' => $selectedPage,
-            'hasPages' => ($facebookPages->count() + $threadsAccounts->count() + $pinterestBoards->count() + $tiktokAccounts->count()) > 0,
+            'hasPages' => ($facebookPages->count() + $threadsAccounts->count() + $pinterestBoards->count() + $tiktokAccounts->count() + $instagramAccounts->count()) > 0,
             'platform' => $platform,
             'accountRef' => $accountRef,
             'since' => $since,
@@ -486,6 +531,57 @@ class AnalyticsController extends Controller
         Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
 
         return $storedPosts;
+    }
+
+    /**
+     * Instagram account insights (`instagram_insights` only; sync runs on schedule/cron).
+     */
+    private function fetchInstagramInsights(?InstagramAccount $account, ?string $since = null, ?string $until = null): ?array
+    {
+        if (! $account || empty($account->ig_user_id) || empty($account->access_token)) {
+            return null;
+        }
+
+        $stored = InstagramInsight::where('instagram_account_id', $account->id)
+            ->where('since', $since)
+            ->where('until', $until)
+            ->first();
+
+        if ($stored && $stored->insights) {
+            return $stored->insights;
+        }
+
+        return null;
+    }
+
+    /**
+     * Instagram media with insights (`instagram_posts` / cache only).
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function fetchInstagramPosts(?InstagramAccount $account, ?string $since = null, ?string $until = null): ?array
+    {
+        if (! $account || empty($account->ig_user_id) || empty($account->access_token)) {
+            return null;
+        }
+
+        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
+        $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $account->id, $duration, $since, $until, 'instagram');
+
+        $cachedPosts = Cache::get($cacheKey);
+        if ($cachedPosts !== null) {
+            return $cachedPosts;
+        }
+
+        $stored = InstagramPost::forCreatedDateRange((int) $account->id, $since ?? '', $until ?? '');
+        if ($stored->isNotEmpty()) {
+            $storedPosts = $stored->map(fn (InstagramPost $row) => $row->toAnalyticsPostArray())->values()->all();
+            Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+
+            return $storedPosts;
+        }
+
+        return [];
     }
 
     /**

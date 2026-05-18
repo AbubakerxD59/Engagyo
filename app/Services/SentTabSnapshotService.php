@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Models\Board;
 use App\Models\FacebookPost;
+use App\Models\InstagramAccount;
+use App\Models\InstagramPost;
 use App\Models\Page;
 use App\Models\PinterestPin;
 use App\Models\Post;
@@ -50,6 +52,12 @@ class SentTabSnapshotService
 
         if (str_contains($social, 'thread') && $post->thread) {
             self::purgeThreads($userId, $post->thread, $externalId);
+
+            return;
+        }
+
+        if (str_contains($social, 'instagram') && $post->instagramAccount) {
+            self::purgeInstagram($userId, $post->instagramAccount, $externalId);
         }
     }
 
@@ -109,6 +117,18 @@ class SentTabSnapshotService
             $since = now()->subYear()->format('Y-m-d');
             Cache::forget(self::sentPostsCacheKey($userId, (int) $tiktok->id, $duration, $since, $until));
         }
+    }
+
+    public static function purgeInstagram(int $userId, InstagramAccount $account, string $mediaId): void
+    {
+        if ($mediaId === '') {
+            return;
+        }
+
+        InstagramPost::query()
+            ->where('instagram_account_id', $account->id)
+            ->where('ig_media_id', $mediaId)
+            ->delete();
     }
 
     public static function purgeThreads(int $userId, Thread $thread, string $externalPostId): void

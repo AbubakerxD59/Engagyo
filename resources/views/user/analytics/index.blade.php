@@ -50,6 +50,8 @@
                                                             <i class="fab fa-pinterest-p"></i>
                                                         @elseif($account['platform'] === 'tiktok')
                                                             <i class="fab fa-tiktok"></i>
+                                                        @elseif($account['platform'] === 'instagram')
+                                                            <i class="fab fa-instagram"></i>
                                                         @else
                                                             <i class="fab fa-facebook-f"></i>
                                                         @endif

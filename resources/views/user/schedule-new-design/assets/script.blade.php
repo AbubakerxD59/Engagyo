@@ -922,6 +922,8 @@
                 success: function(response) {
                     var posts = (response.success && response.posts) ? response.posts : [];
                     cachedSentPagePosts = posts;
+                    sentPostsFetching = !!(response.posts_fetching);
+                    sentPostsFetchingMessage = response.posts_fetching_message || '';
                     $('#posts-status-tabs [data-count="sent"]').text(posts.length);
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
@@ -930,6 +932,8 @@
                 error: function(xhr, textStatus) {
                     if (textStatus === 'abort') return;
                     cachedSentPagePosts = [];
+                    sentPostsFetching = false;
+                    sentPostsFetchingMessage = '';
                     $('#posts-status-tabs [data-count="sent"]').text(0);
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
@@ -5139,7 +5143,8 @@
             var mediaType = (post.media_type || '').toString().toLowerCase();
             var isThreadVideo = st === 'threads' && (postType === 'video' || mediaType === 'video');
             var imageHtml = '';
-            if (!carouselGalleryHtml && (videoUrl || (isThreadVideo && post.full_picture)) && (postType === 'video' || postType === 'reel' || postType === 'story' || isThreadVideo)) {
+            var isIgVideo = st === 'instagram' && (postType === 'video' || postType === 'reel' || postType === 'story' || mediaType === 'video' || mediaType === 'reels' || mediaType === 'reel');
+            if (!carouselGalleryHtml && (videoUrl || (isThreadVideo && post.full_picture) || (isIgVideo && post.full_picture)) && (postType === 'video' || postType === 'reel' || postType === 'story' || isThreadVideo || isIgVideo)) {
                 // Threads API may return video media URL in full_picture; use it as video source when video_url is not set.
                 var videoSrcValue = videoUrl || (isThreadVideo ? String(post.full_picture || '') : '');
                 var vSrc = $('<span>').text(videoSrcValue).html();
@@ -5186,6 +5191,17 @@
                 statViews = 'Views';
                 statShares = 'Shares';
                 statClicks = null;
+            } else if (st === 'instagram') {
+                reactions = ins.post_reactions ?? 0;
+                comments = ins.post_comments ?? post.comments ?? 0;
+                impressions = ins.post_impressions ?? '-';
+                shares = ins.post_shares ?? post.shares ?? 0;
+                clicks = ins.post_saves ?? '-';
+                statLikes = 'Likes';
+                statComments = 'Comments';
+                statViews = 'Impressions';
+                statShares = 'Shares';
+                statClicks = 'Saves';
             } else {
                 reactions = ins.post_reactions ?? 0;
                 comments = post.comments ?? 0;

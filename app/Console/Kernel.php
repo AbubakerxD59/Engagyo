@@ -28,6 +28,8 @@ use App\Console\Commands\SyncPagePosts;
 use App\Console\Commands\SyncThreadInsights;
 use App\Console\Commands\SyncPinterestBoardInsights;
 use App\Console\Commands\SyncThreadPosts;
+use App\Console\Commands\SyncInstagramInsights;
+use App\Console\Commands\SyncInstagramPosts;
 use App\Console\Commands\SyncTiktokInsights;
 use App\Console\Commands\SyncTiktokPosts;
 use App\Console\Commands\SyncUserUsage;
@@ -72,6 +74,8 @@ class Kernel extends ConsoleKernel
         SyncThreadInsights::class, // insights:sync-threads
         SyncThreadPosts::class, // insights:sync-threads-posts
         SyncPinterestBoardInsights::class, // insights:sync-pinterest-boards
+        SyncInstagramInsights::class, // insights:sync-instagram
+        SyncInstagramPosts::class, // insights:sync-instagram-posts
         SyncTiktokInsights::class, // insights:sync-tiktok
         SyncTiktokPosts::class, // insights:sync-tiktok-posts
         PurgeOldPosts::class, // posts:purge-old
@@ -135,6 +139,9 @@ class Kernel extends ConsoleKernel
         // TikTok account insights and public video metrics
         $schedule->command('insights:sync-tiktok')->dailyAt('02:15');
         $schedule->command('insights:sync-tiktok-posts')->everyThreeHours();
+        // Instagram account + media insights (Meta Graph API)
+        $schedule->command('insights:sync-instagram')->dailyAt('02:45');
+        $schedule->command('insights:sync-instagram-posts')->everyThreeHours();
         // Command to purge posts older than 30 days in batches of 200 (runs every 3 hours)
         $schedule->command('posts:purge-old')->everyThreeHours();
         // Runs every minute; the command itself executes twice (at 0s and ~30s) for near-realtime retries

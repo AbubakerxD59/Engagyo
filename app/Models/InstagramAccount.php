@@ -164,4 +164,14 @@ class InstagramAccount extends Model
     {
         return $this->ig_user_id;
     }
+
+    public function instagramInsights(): HasMany
+    {
+        return $this->hasMany(InstagramInsight::class);
+    }
+
+    public function instagramPosts(): HasMany
+    {
+        return $this->hasMany(InstagramPost::class);
+    }
 }

@@ -16,6 +16,7 @@ use App\Models\Board;
 use App\Models\Facebook;
 use App\Models\FacebookPost;
 use App\Models\InstagramAccount;
+use App\Models\InstagramPost;
 use App\Models\Linkedin;
 use App\Models\Page;
 use App\Models\Pinterest;
@@ -4838,12 +4839,13 @@ class ScheduleController extends Controller
     }
 
     /**
-     * Instagram Sent tab: published schedule posts for selected accounts (same card payload as Facebook/Pinterest sent).
+     * Instagram Sent tab: synced `instagram_posts` (Meta media + insights) merged with published schedule posts.
      */
     public function getInstagramSentPosts(Request $request)
     {
+        $userId = (int) Auth::id();
         $viewer = Auth::guard('user')->user();
-        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::guard('user')->id()];
+        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [$userId];
         $accountIds = (array) $request->input('account_id', []);
         if (empty($accountIds)) {
             return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
@@ -4861,28 +4863,82 @@ class ScheduleController extends Controller
         $igIds = $accounts->pluck('id')->all();
         $accountsById = $accounts->keyBy('id');
 
+        $cardsByKey = [];
+        $instagramPostsByAccount = InstagramPost::query()
+            ->whereIn('instagram_account_id', $igIds)
+            ->orderByDesc('post_created_date')
+            ->get()
+            ->groupBy('instagram_account_id');
+
+        foreach ($accounts as $account) {
+            $rows = $instagramPostsByAccount->get($account->id, collect());
+            foreach ($rows as $row) {
+                if (! $row instanceof InstagramPost) {
+                    continue;
+                }
+                $mediaId = (string) $row->ig_media_id;
+                if ($mediaId === '') {
+                    continue;
+                }
+                $cardsByKey['media:'.$mediaId] = $this->sentTabPostFromInstagramMedia($row, $account);
+            }
+        }
+
         $dbPosts = Post::withoutGlobalScopes()
             ->whereIn('user_id', $postCreatorIds)
             ->where('social_type', 'like', '%instagram%')
             ->whereIn('account_id', $igIds)
             ->where('status', 1)
             ->whereNotNull('published_at')
-            // ->where('published_at', '>=', $this->sentPostsRecentCutoffUtc())
             ->where('source', 'schedule')
             ->with('user', 'instagramAccount')
             ->orderByDesc('published_at')
             ->get();
 
-        $allPosts = [];
         foreach ($dbPosts as $dbPost) {
             $account = $accountsById->get($dbPost->account_id) ?? $dbPost->instagramAccount;
             if (! $account instanceof InstagramAccount) {
                 continue;
             }
-            $allPosts[] = $this->sentTabPostFromInstagramRecord($dbPost, $account);
+
+            $accountMedia = $instagramPostsByAccount->get($account->id, collect());
+            $matchedMedia = $this->findInstagramPostForSchedulePost($dbPost, $accountMedia);
+            $mediaId = $matchedMedia ? (string) $matchedMedia->ig_media_id : '';
+            $cardKey = $mediaId !== '' ? 'media:'.$mediaId : 'db:'.$dbPost->id;
+
+            if ($mediaId !== '' && isset($cardsByKey['media:'.$mediaId])) {
+                $cardsByKey['media:'.$mediaId] = $this->mergeScheduleMetaIntoInstagramSentCard(
+                    $cardsByKey['media:'.$mediaId],
+                    $dbPost
+                );
+
+                continue;
+            }
+
+            if (! isset($cardsByKey[$cardKey])) {
+                $cardsByKey[$cardKey] = $this->sentTabPostFromInstagramRecord($dbPost, $account, $matchedMedia);
+            }
         }
 
-        return response()->json(['success' => true, 'posts' => $allPosts]);
+        $allPosts = array_values($cardsByKey);
+        usort($allPosts, function ($a, $b) {
+            $ta = $this->parseCreatedTime($a['created_time'] ?? null);
+            $tb = $this->parseCreatedTime($b['created_time'] ?? null);
+
+            return $tb - $ta;
+        });
+
+        $isFetching = empty($allPosts) && InstagramPost::whereIn('instagram_account_id', $igIds)->doesntExist();
+
+        return response()->json([
+            'success' => true,
+            'posts' => $allPosts,
+            'posts_fetching' => $isFetching,
+            'posts_fetching_message' => $isFetching
+                ? 'Instagram posts for this account are being fetched. Please check back shortly.'
+                : null,
+            'total' => count($allPosts),
+        ]);
     }
 
     /**
@@ -5076,10 +5132,67 @@ class ScheduleController extends Controller
     }
 
     /**
+     * Sent-tab payload from a synced `instagram_posts` row (Meta media insights).
+     */
+    private function sentTabPostFromInstagramMedia(InstagramPost $media, InstagramAccount $account): array
+    {
+        $post = $media->toAnalyticsPostArray();
+        $insights = $this->sentTabInsightsFromInstagramPost($media);
+
+        $rawCreated = $post['created_time'] ?? $media->post_created_date;
+        if ($rawCreated instanceof \DateTimeInterface) {
+            $createdTime = $rawCreated->format(\DateTimeInterface::ATOM);
+        } else {
+            $createdTime = is_string($rawCreated) ? $rawCreated : '';
+        }
+
+        $mediaType = strtolower((string) ($post['media_type'] ?? $media->media_type ?? ''));
+        $postType = match ($mediaType) {
+            'video', 'reels', 'reel' => 'video',
+            'carousel_album', 'carousel' => 'carousel',
+            'story', 'stories' => 'story',
+            default => 'photo',
+        };
+
+        $videoUrl = '';
+        if (in_array($mediaType, ['video', 'reels', 'reel'], true)) {
+            $videoUrl = (string) ($post['media_url'] ?? '');
+        }
+
+        $username = ltrim((string) ($account->username ?? ''), '@');
+
+        return [
+            'id' => (string) ($post['id'] ?? $media->ig_media_id),
+            'created_time' => $createdTime,
+            'message' => (string) ($post['message'] ?? $post['caption'] ?? ''),
+            'story' => '',
+            'type' => $postType,
+            'media_type' => $mediaType,
+            'full_picture' => (string) ($post['full_picture'] ?? $post['thumbnail_url'] ?? ''),
+            'carousel_items' => [],
+            'permalink_url' => $post['permalink_url'] ?? $media->permalink_url,
+            'account_name' => $account->name ?: ($username !== '' ? '@'.$username : 'Instagram'),
+            'account_profile' => (string) ($account->profile_image ?? ''),
+            'social_type' => 'instagram',
+            'page_db_id' => $account->id,
+            'insights' => $insights,
+            'comments' => (int) ($insights['post_comments'] ?? 0),
+            'shares' => (int) ($insights['post_shares'] ?? 0),
+            'video_url' => $videoUrl,
+        ];
+    }
+
+    /**
      * Minimal Sent-tab payload from a published Instagram Post row (same keys as Pinterest / Facebook sent cards).
      */
-    private function sentTabPostFromInstagramRecord(Post $dbPost, InstagramAccount $account): array
+    private function sentTabPostFromInstagramRecord(Post $dbPost, InstagramAccount $account, ?InstagramPost $matchedMedia = null): array
     {
+        if ($matchedMedia) {
+            $payload = $this->sentTabPostFromInstagramMedia($matchedMedia, $account);
+
+            return $this->mergeScheduleMetaIntoInstagramSentCard($payload, $dbPost);
+        }
+
         $published = Carbon::parse($dbPost->published_at);
         $createdTime = $published->toIso8601String();
 
@@ -5096,22 +5209,19 @@ class ScheduleController extends Controller
         if ($fullPicture === '' && strtolower((string) ($dbPost->getAttributes()['type'] ?? '')) === 'carousel') {
             $fullPicture = (string) ($this->instagramCarouselFirstStillPreviewUrl($dbPost) ?? '');
         }
-        if ($fullPicture === '' && strtolower((string) ($dbPost->getAttributes()['type'] ?? '')) === 'carousel') {
-            $fullPicture = (string) ($this->instagramCarouselFirstStillPreviewUrl($dbPost) ?? '');
-        }
 
         $videoUrl = $this->postStoredVideoUrl($dbPost);
 
         $usernameRaw = (string) ($account->username ?? '');
         $username = ltrim($usernameRaw, '@');
-        $permalink = $username !== ''
-            ? 'https://www.instagram.com/' . rawurlencode($username) . '/'
-            : null;
+        $permalink = $dbPost->post_id
+            ? ('https://www.instagram.com/p/'.rawurlencode((string) $dbPost->post_id).'/')
+            : ($username !== '' ? 'https://www.instagram.com/'.rawurlencode($username).'/' : null);
 
         $profileImage = (string) ($account->profile_image ?? '');
 
         $payload = [
-            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-' . $dbPost->id),
+            'id' => $dbPost->post_id ? (string) $dbPost->post_id : ('db-'.$dbPost->id),
             'created_time' => $createdTime,
             'message' => (string) ($dbPost->title ?? ''),
             'story' => '',
@@ -5119,16 +5229,12 @@ class ScheduleController extends Controller
             'full_picture' => $fullPicture,
             'carousel_items' => $this->instagramCarouselGalleryItemsFromPost($dbPost),
             'permalink_url' => $permalink,
-            'account_name' => $account->name ?: ($username !== '' ? '@' . $username : 'Instagram'),
+            'account_name' => $account->name ?: ($username !== '' ? '@'.$username : 'Instagram'),
             'account_profile' => $profileImage,
             'social_type' => 'instagram',
             'page_db_id' => $account->id,
             'db_post_id' => $dbPost->id,
-            'insights' => [
-                'post_reactions' => 0,
-                'post_impressions' => 0,
-                'post_clicks' => 0,
-            ],
+            'insights' => $this->sentTabInsightsFromInstagramPost(null),
             'comments' => 0,
             'shares' => 0,
             'from_local_db' => true,
@@ -5141,6 +5247,149 @@ class ScheduleController extends Controller
         }
 
         return $payload;
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function sentTabInsightsFromInstagramPost(?InstagramPost $media): array
+    {
+        if (! $media) {
+            return [
+                'post_reactions' => 0,
+                'post_impressions' => 0,
+                'post_reach' => 0,
+                'post_comments' => 0,
+                'post_saves' => 0,
+                'post_shares' => 0,
+                'post_clicks' => 0,
+            ];
+        }
+
+        $insights = is_array($media->post_insights) ? $media->post_insights : [];
+        $likes = (int) ($insights['post_reactions'] ?? $media->likes_count ?? 0);
+        $comments = (int) ($insights['post_comments'] ?? $media->comments_count ?? 0);
+        $impressions = (int) ($insights['post_impressions'] ?? $media->impressions_count ?? 0);
+        $reach = (int) ($insights['post_reach'] ?? $media->reach_count ?? 0);
+        $saves = (int) ($insights['post_saves'] ?? $media->saves_count ?? 0);
+        $shares = (int) ($insights['post_shares'] ?? $media->shares_count ?? 0);
+
+        return [
+            'post_reactions' => $likes,
+            'post_impressions' => $impressions,
+            'post_reach' => $reach,
+            'post_comments' => $comments,
+            'post_saves' => $saves,
+            'post_shares' => $shares,
+            'post_clicks' => $saves,
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, InstagramPost>  $accountMedia
+     */
+    private function findInstagramPostForSchedulePost(Post $dbPost, $accountMedia): ?InstagramPost
+    {
+        if ($accountMedia->isEmpty()) {
+            return null;
+        }
+
+        $publishId = trim((string) ($dbPost->post_id ?? ''));
+        if ($publishId !== '') {
+            $byMediaId = $accountMedia->firstWhere('ig_media_id', $publishId);
+            if ($byMediaId instanceof InstagramPost) {
+                return $byMediaId;
+            }
+        }
+
+        $scheduleCaption = $this->normalizeInstagramMatchText((string) ($dbPost->title ?? ''));
+        $publishedAt = $dbPost->published_at ? Carbon::parse($dbPost->published_at) : null;
+
+        $best = null;
+        $bestScore = PHP_INT_MAX;
+
+        foreach ($accountMedia as $media) {
+            if (! $media instanceof InstagramPost) {
+                continue;
+            }
+
+            $mediaCaption = $this->normalizeInstagramMatchText(
+                (string) (is_array($media->post_data) ? ($media->post_data['caption'] ?? $media->post_data['message'] ?? '') : '')
+            );
+
+            if ($scheduleCaption !== '' && $mediaCaption !== '') {
+                if ($scheduleCaption !== $mediaCaption
+                    && ! str_contains($mediaCaption, $scheduleCaption)
+                    && ! str_contains($scheduleCaption, $mediaCaption)) {
+                    continue;
+                }
+            }
+
+            $created = $media->post_created_date;
+            if ($publishedAt && $created) {
+                $diffHours = abs($publishedAt->diffInHours($created));
+                if ($diffHours > 168) {
+                    continue;
+                }
+                if ($diffHours < $bestScore) {
+                    $bestScore = $diffHours;
+                    $best = $media;
+                }
+            } elseif ($best === null) {
+                $best = $media;
+            }
+        }
+
+        return $best;
+    }
+
+    private function normalizeInstagramMatchText(string $text): string
+    {
+        $text = mb_strtolower(trim($text));
+        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+
+        return $text;
+    }
+
+    /**
+     * @param  array<string, mixed>  $card
+     * @return array<string, mixed>
+     */
+    private function mergeScheduleMetaIntoInstagramSentCard(array $card, Post $dbPost): array
+    {
+        $card['db_post_id'] = $dbPost->id;
+        $card['from_local_db'] = true;
+
+        $videoUrl = $this->postStoredVideoUrl($dbPost);
+        if ($videoUrl !== null && $videoUrl !== '') {
+            $card['video_url'] = $videoUrl;
+        }
+
+        if (empty($card['carousel_items'])) {
+            $card['carousel_items'] = $this->instagramCarouselGalleryItemsFromPost($dbPost);
+        }
+
+        if (empty($card['full_picture'])) {
+            $postType = strtolower((string) ($dbPost->getAttributes()['type'] ?? $dbPost->type ?? ''));
+            $rawImage = $dbPost->getAttributes()['image'] ?? null;
+            if (! empty($rawImage)) {
+                $img = (string) $rawImage;
+                if (str_starts_with($img, 'http://') || str_starts_with($img, 'https://')) {
+                    $card['full_picture'] = $img;
+                } else {
+                    $card['full_picture'] = url(getImage('', $img));
+                }
+            } elseif ($postType === 'carousel') {
+                $card['full_picture'] = (string) ($this->instagramCarouselFirstStillPreviewUrl($dbPost) ?? '');
+            }
+        }
+
+        if ($dbPost->user) {
+            $card['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
+            $card['publisher_email'] = $dbPost->user->email ?? '';
+        }
+
+        return $card;
     }
 
     /**

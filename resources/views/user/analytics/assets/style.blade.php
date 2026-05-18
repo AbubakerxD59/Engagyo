@@ -233,7 +233,8 @@
     .analytics-page-avatar .platform-badge.facebook,
     .analytics-page-avatar .platform-badge.threads,
     .analytics-page-avatar .platform-badge.pinterest,
-    .analytics-page-avatar .platform-badge.tiktok {
+    .analytics-page-avatar .platform-badge.tiktok,
+    .analytics-page-avatar .platform-badge.instagram {
         position: absolute;
         bottom: -2px;
         right: -2px;
@@ -259,6 +260,10 @@
 
     .analytics-page-avatar .platform-badge.tiktok {
         background: #000000;
+    }
+
+    .analytics-page-avatar .platform-badge.instagram {
+        background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
     }
 
     .analytics-page-details {

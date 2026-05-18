@@ -149,9 +149,13 @@
                 }
             ];
 
+            /** Instagram uses the same account metric keys as Facebook (Meta IG user insights). */
+            var chartMetricOptionsInstagram = chartMetricOptions;
+
             function chartMetricOptionsForPlatform(platform) {
                 if (platform === 'pinterest') return chartMetricOptionsPinterest;
                 if (platform === 'tiktok') return chartMetricOptionsTiktok;
+                if (platform === 'instagram') return chartMetricOptionsInstagram;
                 return chartMetricOptions;
             }
 
@@ -340,7 +344,10 @@
 
             var postInsightLabels = {
                 post_clicks: 'Post Clicks',
-                post_reactions: 'Reactions',
+                post_reactions: 'Likes',
+                post_comments: 'Comments',
+                post_saves: 'Saves',
+                post_shares: 'Shares',
                 post_impressions: 'Impressions',
                 post_reach: 'Reach',
                 post_engagement_rate: 'Engagement Rate',
@@ -361,6 +368,11 @@
             var postInsightDisplayOrderPinterest = ['post_impressions', 'pin_saves', 'outbound_clicks', 'pin_clicks', 'video_mrc_view', 'total_comments', 'total_reactions'];
 
             var postInsightDisplayOrderTiktok = ['view_count', 'like_count', 'comment_count', 'share_count'];
+
+            var postInsightDisplayOrderInstagram = [
+                'post_impressions', 'post_reach', 'post_reactions', 'post_comments',
+                'post_saves', 'post_shares', 'post_engagement_rate'
+            ];
 
             var postSortOptions = [
                 { key: 'post_impressions', label: 'Impressions' },
@@ -390,6 +402,17 @@
                 { key: 'created_time', label: 'Date' }
             ];
 
+            var postSortOptionsInstagram = [
+                { key: 'post_impressions', label: 'Impressions' },
+                { key: 'post_reach', label: 'Reach' },
+                { key: 'post_reactions', label: 'Likes' },
+                { key: 'post_comments', label: 'Comments' },
+                { key: 'post_saves', label: 'Saves' },
+                { key: 'post_shares', label: 'Shares' },
+                { key: 'post_engagement_rate', label: 'Eng. Rate' },
+                { key: 'created_time', label: 'Date' }
+            ];
+
             function parseCreatedTime(ct) {
                 if (!ct) return null;
                 if (typeof ct === 'string') return new Date(ct);
@@ -404,9 +427,11 @@
                 sortOrder = sortOrder || 'desc';
                 totalPosts = Number(totalPosts || 0);
                 var insightOrder = platform === 'pinterest' ? postInsightDisplayOrderPinterest :
-                    (platform === 'tiktok' ? postInsightDisplayOrderTiktok : postInsightDisplayOrder);
+                    (platform === 'tiktok' ? postInsightDisplayOrderTiktok :
+                        (platform === 'instagram' ? postInsightDisplayOrderInstagram : postInsightDisplayOrder));
                 var sortOptionsList = platform === 'pinterest' ? postSortOptionsPinterest :
-                    (platform === 'tiktok' ? postSortOptionsTiktok : postSortOptions);
+                    (platform === 'tiktok' ? postSortOptionsTiktok :
+                        (platform === 'instagram' ? postSortOptionsInstagram : postSortOptions));
                 if (posts === null) {
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
                         '<i class="fas fa-th-large fa-4x text-muted mb-3"></i>' +
@@ -430,8 +455,10 @@
                         var story = (p.story || '').toLowerCase();
                         var desc = (p.video_description || '').toLowerCase();
                         var title = (p.title || '').toLowerCase();
+                        var caption = (p.caption || '').toLowerCase();
                         return msg.indexOf(searchQuery) !== -1 || story.indexOf(searchQuery) !== -1 ||
-                            desc.indexOf(searchQuery) !== -1 || title.indexOf(searchQuery) !== -1;
+                            desc.indexOf(searchQuery) !== -1 || title.indexOf(searchQuery) !== -1 ||
+                            caption.indexOf(searchQuery) !== -1;
                     });
                 }
                 filtered = filtered.slice();
@@ -520,7 +547,7 @@
                         }
                     }
                     for (var key in insights) {
-                        if (platform === 'pinterest' || platform === 'tiktok') {
+                        if (platform === 'pinterest' || platform === 'tiktok' || platform === 'instagram') {
                             break;
                         }
                         if (insights.hasOwnProperty(key) && order.indexOf(key) === -1) {
@@ -538,7 +565,8 @@
                         '<p class="text-muted small mb-0">No insights available</p>';
                     var viewLabel = platform === 'threads' ? 'View on Threads' :
                         (platform === 'pinterest' ? 'View on Pinterest' :
-                            (platform === 'tiktok' ? 'View on TikTok' : 'View on Facebook'));
+                            (platform === 'tiktok' ? 'View on TikTok' :
+                                (platform === 'instagram' ? 'View on Instagram' : 'View on Facebook')));
                     var link = post.permalink_url ? '<a href="' + escapeHtml(post.permalink_url) +
                         '" target="_blank" rel="noopener" class="btn btn-sm btn-outline-primary analytics-post-view-btn"><i class="fas fa-external-link-alt mr-1"></i>' + viewLabel + '</a>' :
                         '';
@@ -584,19 +612,26 @@
                         ['follower_count', 'Followers', false],
                         ['likes_count', 'Likes', false],
                         ['video_count', 'Videos', false]
+                    ] : (platform === 'instagram' ? [
+                        ['followers', 'Followers', false],
+                        ['reach', 'Reach', false],
+                        ['video_views', 'Profile Views', false],
+                        ['engagements', 'Interactions', false]
                     ] : [
                         ['followers', 'Followers', false],
                         ['reach', 'Reach', false],
                         ['video_views', 'Video Views', false],
                         ['engagements', 'Engagements', false]
-                    ]);
+                    ])));
                     var note = platform === 'facebook' ?
                         '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>Page Insights data is only available on Pages with 100 or more likes.</p>' :
                         (platform === 'pinterest' ?
                             '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Pinterest board metrics aggregate pin analytics (impressions, saves, clicks) for pins on this board. Pinterest limits analytics history (typically up to ~90 days).</p>' :
                             (platform === 'tiktok' ?
                                 '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Account metrics from TikTok user.info.stats (followers, total likes, and public video count).</p>' :
-                                '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Threads insights are aggregated from available media metrics for the selected date range.</p>'));
+                                (platform === 'instagram' ?
+                                    '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Instagram account metrics from Meta user insights (reach, followers, profile views, interactions). Post metrics come from media insights.</p>' :
+                                    '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Threads insights are aggregated from available media metrics for the selected date range.</p>')));
                     overviewContent += note + '<div class="analytics-insight-cards' +
                         (platform === 'tiktok' ? ' analytics-insight-cards--tiktok' : '') + '">';
                     cards.forEach(function(c) {
@@ -628,7 +663,7 @@
             function renderEmptyState(hasPageSelected) {
                 var msg = hasPageSelected ? 'Unable to load account insights.' :
                     'Select an account from the sidebar to view analytics.';
-                if (!hasPages) msg = 'Connect Facebook, Threads, Pinterest, or TikTok to see analytics here.';
+                if (!hasPages) msg = 'Connect Facebook, Instagram, Threads, Pinterest, or TikTok to see analytics here.';
                 var title = hasPages ? 'Select an Account' : 'No Accounts Connected';
                 return '<div class="empty-state text-center py-5">' +
                     '<div class="empty-state-icon mb-3"><i class="fas fa-chart-bar fa-4x text-muted"></i></div>' +
