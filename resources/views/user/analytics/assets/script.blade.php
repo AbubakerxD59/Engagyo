@@ -622,7 +622,7 @@
                         ['reach', 'Reach', false],
                         ['video_views', 'Video Views', false],
                         ['engagements', 'Engagements', false]
-                    ])));
+                    ]));
                     var note = platform === 'facebook' ?
                         '<p class="small mb-3" style="color: #856404;"><i class="fas fa-info-circle mr-1"></i>Page Insights data is only available on Pages with 100 or more likes.</p>' :
                         (platform === 'pinterest' ?
@@ -631,7 +631,7 @@
                                 '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Account metrics from TikTok user.info.stats (followers, total likes, and public video count).</p>' :
                                 (platform === 'instagram' ?
                                     '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Instagram account metrics from Meta user insights (reach, followers, profile views, interactions). Post metrics come from media insights.</p>' :
-                                    '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Threads insights are aggregated from available media metrics for the selected date range.</p>')));
+                                    '<p class="small mb-3 text-muted"><i class="fas fa-info-circle mr-1"></i>Threads insights are aggregated from available media metrics for the selected date range.</p>'));
                     overviewContent += note + '<div class="analytics-insight-cards' +
                         (platform === 'tiktok' ? ' analytics-insight-cards--tiktok' : '') + '">';
                     cards.forEach(function(c) {
