@@ -269,6 +269,7 @@
 @endsection
 
 @push('styles')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/daterangepicker/daterangepicker.css">
     @include('user.analytics.assets.style')
 @endpush
 

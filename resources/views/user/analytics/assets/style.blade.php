@@ -820,6 +820,24 @@
         flex: 1;
     }
 
+    .analytics-custom-range-wrap {
+        min-width: 0;
+    }
+
+    .analytics-date-range-group {
+        min-width: 240px;
+        max-width: 100%;
+    }
+
+    .analytics-date-range-input {
+        cursor: pointer;
+        background-color: #fff;
+    }
+
+    .analytics-duration-controls .daterangepicker {
+        z-index: 1100;
+    }
+
     @media (max-width: 768px) {
         .analytics-layout {
             flex-direction: column;

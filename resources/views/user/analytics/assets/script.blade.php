@@ -39,6 +39,66 @@
                 return (val !== null && val !== undefined && !isNaN(val)) ? parseInt(val).toLocaleString() : 'N/A';
             }
 
+            function destroyAnalyticsDateRangePicker() {
+                var $input = $('#analyticsDateRange');
+                if ($input.length && $input.data('daterangepicker')) {
+                    $input.data('daterangepicker').remove();
+                }
+            }
+
+            function initAnalyticsDateRangePicker(since, until) {
+                if (typeof moment === 'undefined' || typeof $.fn.daterangepicker === 'undefined') {
+                    return;
+                }
+                destroyAnalyticsDateRangePicker();
+                var $input = $('#analyticsDateRange');
+                if (!$input.length) {
+                    return;
+                }
+
+                var end = until ? moment(until, 'YYYY-MM-DD', true) : moment();
+                var start = since ? moment(since, 'YYYY-MM-DD', true) : moment().subtract(28, 'days');
+                if (!start.isValid()) {
+                    start = moment().subtract(28, 'days');
+                }
+                if (!end.isValid()) {
+                    end = moment();
+                }
+                if (start.isAfter(end)) {
+                    start = end.clone();
+                }
+
+                $input.daterangepicker({
+                    startDate: start,
+                    endDate: end,
+                    maxDate: moment(),
+                    autoUpdateInput: true,
+                    linkedCalendars: false,
+                    showDropdowns: true,
+                    locale: {
+                        format: 'MMM D, YYYY',
+                        separator: ' – ',
+                        applyLabel: 'Apply',
+                        cancelLabel: 'Cancel'
+                    },
+                    opens: 'left'
+                });
+
+                $input.off('apply.daterangepicker.analytics cancel.daterangepicker.analytics');
+                $input.on('apply.daterangepicker.analytics', function(ev, picker) {
+                    currentSince = picker.startDate.format('YYYY-MM-DD');
+                    currentUntil = picker.endDate.format('YYYY-MM-DD');
+                    loadAnalytics(currentAccountRef, 'custom', currentSince, currentUntil, 0);
+                });
+                $input.on('cancel.daterangepicker.analytics', function() {
+                    var picker = $input.data('daterangepicker');
+                    if (picker) {
+                        $input.val(picker.startDate.format('MMM D, YYYY') + ' – ' + picker.endDate.format(
+                            'MMM D, YYYY'));
+                    }
+                });
+            }
+
             function renderDurationDropdown(duration, since, until) {
                 var customStyle = duration === 'custom' ? '' : ' style="display: none !important;"';
                 return '<div class="analytics-duration-controls d-flex align-items-center gap-2 flex-wrap">' +
@@ -56,13 +116,11 @@
                     '<option value="custom"' + (duration === 'custom' ? ' selected' : '') +
                     '>Custom Range</option>' +
                     '</select>' +
-                    '<div id="analyticsCustomRange" class="d-flex align-items-center gap-2"' + customStyle + '>' +
-                    '<input type="date" id="analyticsSince" class="form-control form-control-sm" value="' + (
-                        since || '') + '" style="width: auto;">' +
-                    '<span class="text-muted">to</span>' +
-                    '<input type="date" id="analyticsUntil" class="form-control form-control-sm" value="' + (
-                        until || '') + '" style="width: auto;">' +
-                    '<button type="button" id="analyticsApplyCustom" class="btn btn-sm btn-primary">Apply</button>' +
+                    '<div id="analyticsCustomRange" class="analytics-custom-range-wrap"' + customStyle + '>' +
+                    '<div class="input-group input-group-sm analytics-date-range-group">' +
+                    '<div class="input-group-prepend"><span class="input-group-text bg-white"><i class="far fa-calendar-alt text-muted"></i></span></div>' +
+                    '<input type="text" id="analyticsDateRange" class="form-control analytics-date-range-input" autocomplete="off" placeholder="Select date range" readonly>' +
+                    '</div>' +
                     '</div>' +
                     '</div>';
             }
@@ -1017,32 +1075,23 @@
 
             function bindDurationHandlers() {
                 $(document).off('change', '#analyticsDuration');
-                $(document).off('click', '#analyticsApplyCustom');
                 $(document).on('change', '#analyticsDuration', function() {
                     var val = $(this).val();
                     var $custom = $('#analyticsCustomRange');
                     if (val === 'custom') {
                         $custom.show();
-                        var today = new Date().toISOString().split('T')[0];
-                        $('#analyticsSince').val(currentSince || new Date(Date.now() - 28 * 24 * 60 *
-                            60 *
-                            1000).toISOString().split('T')[0]);
-                        $('#analyticsUntil').val(currentUntil || today);
+                        initAnalyticsDateRangePicker(currentSince, currentUntil);
                     } else {
                         $custom.hide();
+                        destroyAnalyticsDateRangePicker();
                         loadAnalytics(currentAccountRef, val);
                     }
                 });
-                $(document).on('click', '#analyticsApplyCustom', function() {
-                    var since = $('#analyticsSince').val();
-                    var until = $('#analyticsUntil').val() || new Date().toISOString().split('T')[0];
-                    if (!since) {
-                        if (typeof toastr !== 'undefined') toastr.warning(
-                            'Please select a start date.');
-                        return;
-                    }
-                    loadAnalytics(currentAccountRef, 'custom', since, until);
-                });
+
+                if ($('#analyticsDuration').val() === 'custom') {
+                    $('#analyticsCustomRange').show();
+                    initAnalyticsDateRangePicker(currentSince, currentUntil);
+                }
             }
 
             $('.analytics-page-card').on('click', function() {
