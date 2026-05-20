@@ -32,6 +32,11 @@
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
                             </div>
+                            <div class="signup__text__content" style="margin-bottom: 12px;">
+                                <p style="margin: 0;">
+                                    <a href="{{ route('frontend.password.request') }}">Forgot your password?</a>
+                                </p>
+                            </div>
                             <div class="checkarea">
                                 <input type="checkbox" name="remember_me" id="remember_me" class="w-auto agree-checkbox"
                                     {{ old('remember_me') == 'on' ? 'checked' : '' }}>

@@ -31,6 +31,28 @@ function site_company()
     return $company;
 }
 
+/**
+ * Absolute logo URL for HTML emails (email clients cannot resolve relative asset() URLs).
+ */
+function email_logo_url(): string
+{
+    if ($custom = config('mail_branding.logo_url')) {
+        return $custom;
+    }
+
+    return rtrim(config('app.url'), '/') . '/assets/frontend/images/logo.png';
+}
+
+function email_app_name(): string
+{
+    return (string) config('mail_branding.app_name', config('app.name', 'Engagyo'));
+}
+
+function email_brand_color(string $key = 'primary'): string
+{
+    return (string) config("mail_branding.colors.{$key}", '#4F46E5');
+}
+
 function no_image()
 {
     $image = asset("assets/img/noimage.png");

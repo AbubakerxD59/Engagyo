@@ -17,7 +17,7 @@ use App\Models\Feature;
 use App\Services\FacebookSocialiteService;
 use Illuminate\Support\Facades\Route;
 
-Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.timezone', 'redirect_if_admin', 'team.menu'])->group(function () {
+Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.verified', 'user.timezone', 'redirect_if_admin', 'team.menu'])->group(function () {
     // Schedule Routes
     Route::controller(ScheduleController::class)->middleware(['feature:'.Feature::$features_list[1]])->group(function () {
         Route::get('schedule', 'index')->name('schedule');

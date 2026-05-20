@@ -66,6 +66,14 @@ class AuthController extends Controller
             if ($role == 'User') {
                 $remember = $request->has("remember_me") && $request->remember_me == 'on' ? true : false;
                 if (Auth::guard('user')->attempt(['email' => $request->email, 'password' => $request->password], $remember)) {
+                    $user = Auth::guard('user')->user();
+                    if ($user && ! $user->requiresEmailVerification() && ! $user->hasVerifiedEmail()) {
+                        $user->forceFill(['email_verified_at' => now()])->save();
+                    }
+                    if ($user && $user->requiresEmailVerification() && ! $user->hasVerifiedEmail()) {
+                        return redirect()->route('frontend.verification.notice')
+                            ->with('warning', 'Please verify your email address before continuing.');
+                    }
                     $response = [
                         'success' => true,
                         'message' => 'Login successful!'
@@ -144,6 +152,10 @@ class AuthController extends Controller
                 // Assign the role using the role object to ensure proper guard matching
                 $user->assignRole($userRole);
 
+                if (! $user->requiresEmailVerification()) {
+                    $user->forceFill(['email_verified_at' => now()])->save();
+                }
+
                 // Handle team invitation if token is provided
                 if ($request->has('invitation_token') && $request->invitation_token) {
                     $invitationResult = $this->teamMemberService->acceptInvitation(
@@ -176,6 +188,11 @@ class AuthController extends Controller
             }
 
             if ($response['success']) {
+                if ($user->requiresEmailVerification() && ! $user->hasVerifiedEmail()) {
+                    return redirect()->route('frontend.verification.notice')
+                        ->with('success', $response['message'] . ' We sent a verification link to your email.');
+                }
+
                 // if a package is selected and not free
                 if ($package && $package->price > 0) {
                     return redirect()->route("payment.checkout", $package->id);

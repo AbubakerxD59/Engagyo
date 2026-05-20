@@ -34,6 +34,11 @@
             toastr.warning('{{ Session::get('warning') }}');
         </script>
     @endif
+    @if (Session::has('info'))
+        <script type="text/javascript">
+            toastr.info('{{ Session::get('info') }}');
+        </script>
+    @endif
     @if (Session::has('error'))
         <script type="text/javascript">
             toastr.error('{{ Session::get('error') }}');

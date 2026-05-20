@@ -93,7 +93,7 @@ class TeamMemberService
             // Send invitation email if user doesn't exist
             if (!$user) {
                 try {
-                    Mail::to($email)->send(new TeamMemberInvitation($teamMember, $invitationToken));
+                    Mail::to($email)->queue(new TeamMemberInvitation($teamMember, $invitationToken));
                 } catch (\Exception $mailException) {
                     // Log the error but don't fail the invitation
                     Log::error('Failed to send team member invitation email: ' . $mailException->getMessage());

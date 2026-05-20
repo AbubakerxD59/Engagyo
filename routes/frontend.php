@@ -1,18 +1,42 @@
 <?php
 
 use App\Http\Controllers\FrontEnd\AuthController;
+use App\Http\Controllers\FrontEnd\EmailVerificationController;
 use App\Http\Controllers\FrontEnd\FrontendController;
+use App\Http\Controllers\FrontEnd\PasswordResetController;
 use Illuminate\Support\Facades\Route;
 
 // Routes for frontend auth
-Route::name("frontend.")->controller(AuthController::class)->group(function () {
-    Route::middleware(["frontend_guest", "redirect_if_admin"])->group(function () {
-        Route::get("users/sign_in", "showLogin")->name("showLogin");
-        Route::get("users/sign_up", "showRegister")->name("showRegister");
-        Route::post("users/login", "login")->name("login");
-        Route::post("users/register", "register")->name("register");
+Route::name("frontend.")->group(function () {
+    Route::controller(AuthController::class)->group(function () {
+        Route::middleware(["frontend_guest", "redirect_if_admin"])->group(function () {
+            Route::get("users/sign_in", "showLogin")->name("showLogin");
+            Route::get("users/sign_up", "showRegister")->name("showRegister");
+            Route::post("users/login", "login")->name("login");
+            Route::post("users/register", "register")->name("register");
+        });
+        Route::get("users/logout", "logout")->name("logout");
     });
-    Route::get("users/logout", "logout")->name("logout");
+
+    Route::controller(PasswordResetController::class)->middleware(["frontend_guest", "redirect_if_admin"])->group(function () {
+        Route::get("users/forgot-password", "showForgotForm")->name("password.request");
+        Route::post("users/forgot-password", "sendResetLink")->name("password.email");
+        Route::get("users/reset-password/{token}", "showResetForm")->name("password.reset");
+        Route::post("users/reset-password", "reset")->name("password.update");
+    });
+
+    Route::controller(EmailVerificationController::class)->group(function () {
+        Route::get("users/email/verify/{id}/{hash}", "verify")
+            ->middleware(["signed", "throttle:6,1"])
+            ->name("verification.verify");
+
+        Route::middleware(["user_auth"])->group(function () {
+            Route::get("users/email/verify", "notice")->name("verification.notice");
+            Route::post("users/email/verification-notification", "send")
+                ->middleware("throttle:6,1")
+                ->name("verification.send");
+        });
+    });
 });
 // Routes for frontend
 Route::name("frontend.")->controller(FrontendController::class)->group(function () {

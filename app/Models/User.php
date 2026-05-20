@@ -5,15 +5,46 @@ namespace App\Models;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use App\Notifications\ResetPasswordNotification;
+use App\Notifications\VerifyEmailNotification;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Log;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+class User extends Authenticatable implements MustVerifyEmail
 {
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
+
+    /**
+     * Frontend customers (role User) must verify email; admin/staff roles are exempt.
+     */
+    public function requiresEmailVerification(): bool
+    {
+        $exemptRoles = config('mail_branding.verification_exempt_roles', []);
+
+        if (empty($exemptRoles)) {
+            return $this->getRole() === 'User';
+        }
+
+        return ! in_array($this->getRole(), $exemptRoles, true);
+    }
+
+    public function sendEmailVerificationNotification(): void
+    {
+        if (! $this->requiresEmailVerification()) {
+            return;
+        }
+
+        $this->notify(new VerifyEmailNotification);
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
+    }
 
     /**
      * The attributes that are mass assignable.
