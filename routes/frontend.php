@@ -6,6 +6,12 @@ use App\Http\Controllers\FrontEnd\FrontendController;
 use App\Http\Controllers\FrontEnd\PasswordResetController;
 use Illuminate\Support\Facades\Route;
 
+// Email verification link (explicit registration — required for queued mail + route:cache)
+Route::middleware(['signed', 'throttle:6,1'])
+    ->get('users/email/verify/{id}/{hash}', [EmailVerificationController::class, 'verify'])
+    ->where(['id' => '[0-9]+', 'hash' => '[a-f0-9]+'])
+    ->name('frontend.verification.verify');
+
 // Routes for frontend auth
 Route::name("frontend.")->group(function () {
     Route::controller(AuthController::class)->group(function () {
@@ -26,11 +32,6 @@ Route::name("frontend.")->group(function () {
     });
 
     Route::controller(EmailVerificationController::class)->group(function () {
-        Route::get("users/email/verify/{id}/{hash}", "verify")
-            ->middleware(["signed", "throttle:6,1"])
-            ->where(['id' => '[0-9]+', 'hash' => '[a-f0-9]+'])
-            ->name("verification.verify");
-
         Route::middleware(["user_auth"])->group(function () {
             Route::get("users/email/verify", "notice")->name("verification.notice");
             Route::post("users/email/verification-notification", "send")
