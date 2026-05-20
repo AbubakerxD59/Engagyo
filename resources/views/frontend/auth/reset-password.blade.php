@@ -14,11 +14,12 @@
                         <h1>Reset password</h1>
                         <form action="{{ route('frontend.password.update') }}" method="POST" class="signup__input__form">
                             @csrf
-                            <input type="hidden" name="token" value="{{ $token }}">
+                            <input type="hidden" name="token" value="{{ old('token', $token) }}">
                             <div class="field">
                                 <label for="email">Email</label>
                                 <input type="email" id="email" name="email" class="signup__input"
-                                    value="{{ old('email', $email) }}" required>
+                                    value="{{ old('email', $email) }}"
+                                    {{ ($emailLocked ?? false) ? 'readonly' : '' }} required>
                                 @error('email')
                                     <div class="invalid-feedback d-block">{{ $message }}</div>
                                 @enderror
@@ -35,6 +36,9 @@
                                 <label for="password_confirmation">Confirm password</label>
                                 <input type="password" id="password_confirmation" name="password_confirmation"
                                     class="signup__input" required>
+                                @error('password_confirmation')
+                                    <div class="invalid-feedback d-block">{{ $message }}</div>
+                                @enderror
                             </div>
                             <button type="submit" class="btn signup__btn">Reset password</button>
                         </form>

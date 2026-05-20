@@ -163,7 +163,7 @@ class User extends Authenticatable implements MustVerifyEmail
         $query->where('email', 'like', "%{$value}%");
     }
 
-    protected function Password(): Attribute
+    protected function password(): Attribute
     {
         return Attribute::make(
             set: fn ($value) => bcrypt($value),

@@ -3,12 +3,12 @@
 namespace App\Http\Controllers\FrontEnd;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\FrontEnd\ResetPasswordRequest;
 use App\Models\User;
 use Illuminate\Auth\Events\PasswordReset;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
-use Illuminate\Validation\Rules\Password as PasswordRule;
 
 class PasswordResetController extends Controller
 {
@@ -42,39 +42,58 @@ class PasswordResetController extends Controller
 
     public function showResetForm(Request $request, string $token)
     {
+        $email = $request->query('email', old('email'));
+
         return view('frontend.auth.reset-password', [
             'token' => $token,
-            'email' => $request->query('email', old('email')),
+            'email' => $email,
+            'emailLocked' => (bool) $request->query('email'),
         ]);
     }
 
-    public function reset(Request $request)
+    public function reset(ResetPasswordRequest $request)
     {
-        $request->validate([
-            'token' => 'required',
-            'email' => 'required|email',
-            'password' => ['required', 'confirmed', PasswordRule::min(8)],
-        ]);
+        $user = User::where('email', $request->input('email'))->first();
 
-        $status = Password::broker('users')->reset(
-            $request->only('email', 'password', 'password_confirmation', 'token'),
-            function (User $user, string $password) {
-                $user->forceFill([
-                    'password' => $password,
-                    'remember_token' => Str::random(60),
-                ])->save();
-
-                event(new PasswordReset($user));
-            }
-        );
-
-        if ($status === Password::PASSWORD_RESET) {
-            return redirect()->route('frontend.showLogin')
-                ->with('success', 'Your password has been reset. You can sign in now.');
+        if (! $user || $user->getRole() !== 'User') {
+            return $this->redirectToResetForm($request)
+                ->with('error', __('passwords.user'));
         }
 
-        return back()
-            ->withInput($request->only('email'))
-            ->with('error', __($status));
+        $broker = Password::broker('users');
+
+        if (! $broker->tokenExists($user, $request->input('token'))) {
+            return $this->redirectToResetForm($request)
+                ->with('error', __('passwords.token'));
+        }
+
+        $saved = $user->forceFill([
+            'password' => $request->input('password'),
+            'remember_token' => Str::random(60),
+        ])->save();
+
+        if (! $saved) {
+            return $this->redirectToResetForm($request)
+                ->with('error', 'Unable to save your new password. Please try again.');
+        }
+
+        event(new PasswordReset($user));
+        $broker->deleteToken($user);
+
+        return redirect()->route('frontend.showLogin')
+            ->with('success', 'Your password has been reset. You can sign in now.');
+    }
+
+    /**
+     * Always return to the GET reset form so the token stays in the URL and hidden field.
+     */
+    protected function redirectToResetForm(Request $request)
+    {
+        return redirect()
+            ->route('frontend.password.reset', [
+                'token' => $request->input('token'),
+                'email' => $request->input('email'),
+            ])
+            ->withInput($request->only(['email', 'token']));
     }
 }
