@@ -28,6 +28,7 @@ Route::name("frontend.")->group(function () {
     Route::controller(EmailVerificationController::class)->group(function () {
         Route::get("users/email/verify/{id}/{hash}", "verify")
             ->middleware(["signed", "throttle:6,1"])
+            ->where(['id' => '[0-9]+', 'hash' => '[a-f0-9]+'])
             ->name("verification.verify");
 
         Route::middleware(["user_auth"])->group(function () {
