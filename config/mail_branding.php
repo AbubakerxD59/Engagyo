@@ -36,6 +36,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Failed post emails
+    |--------------------------------------------------------------------------
+    | Max failed-post notification emails per user per calendar day (UTC).
+    */
+    'failed_post_email_daily_limit' => (int) env('MAIL_FAILED_POST_DAILY_LIMIT', 10),
+
+    /*
+    | Set true (or use APP_ENV=local) to enable GET panel/test/failed-post-email.
+    */
+    'failed_post_email_test_route' => filter_var(env('MAIL_FAILED_POST_TEST_ROUTE', false), FILTER_VALIDATE_BOOL),
+
+    /*
+    |--------------------------------------------------------------------------
     | Queue
     |--------------------------------------------------------------------------
     */
