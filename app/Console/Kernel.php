@@ -32,6 +32,7 @@ use App\Console\Commands\SyncInstagramInsights;
 use App\Console\Commands\SyncInstagramPosts;
 use App\Console\Commands\SyncTiktokInsights;
 use App\Console\Commands\SyncTiktokPosts;
+use App\Console\Commands\SendWeeklyAccountsReport;
 use App\Console\Commands\SyncUserUsage;
 use App\Console\Commands\TikTokFetchPublishStatus;
 use App\Console\Commands\ThreadsPublishQueueCron;
@@ -81,6 +82,7 @@ class Kernel extends ConsoleKernel
         PurgeOldPosts::class, // posts:purge-old
         PublishPendingCommentsCron::class, // facebook:publish-pending-comments
         ScheduleShufflePosts::class, // schedule:shuffle
+        SendWeeklyAccountsReport::class, // reports:weekly-accounts
     ];
 
     /**
@@ -146,6 +148,11 @@ class Kernel extends ConsoleKernel
         $schedule->command('posts:purge-old')->everyThreeHours();
         // Runs every minute; the command itself executes twice (at 0s and ~30s) for near-realtime retries
         $schedule->command('facebook:publish-pending-comments')->everyMinute()->runInBackground();
+        // Weekly connected-accounts report email (Sunday 15:00, app timezone)
+        $schedule->command('reports:weekly-accounts')
+            ->weeklyOn(0, '15:00')
+            ->withoutOverlapping()
+            ->runInBackground();
     }
 
     /**

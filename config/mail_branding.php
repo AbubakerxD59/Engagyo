@@ -49,6 +49,17 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Weekly connected accounts report
+    |--------------------------------------------------------------------------
+    | Sent to all verified panel users (role User) via reports:weekly-accounts.
+    | Schedule: Sunday 15:00 in app timezone (config/app.php).
+    */
+    'weekly_accounts_report_enabled' => filter_var(env('MAIL_WEEKLY_ACCOUNTS_REPORT_ENABLED', true), FILTER_VALIDATE_BOOL),
+
+    'weekly_accounts_report_test_route' => filter_var(env('MAIL_WEEKLY_ACCOUNTS_REPORT_TEST_ROUTE', false), FILTER_VALIDATE_BOOL),
+
+    /*
+    |--------------------------------------------------------------------------
     | Queue
     |--------------------------------------------------------------------------
     */
