@@ -32,6 +32,7 @@ use App\Console\Commands\SyncInstagramInsights;
 use App\Console\Commands\SyncInstagramPosts;
 use App\Console\Commands\SyncTiktokInsights;
 use App\Console\Commands\SyncTiktokPosts;
+use App\Console\Commands\SendPackageExpirationEmails;
 use App\Console\Commands\SendWeeklyAccountsReport;
 use App\Console\Commands\SyncUserUsage;
 use App\Console\Commands\TikTokFetchPublishStatus;
@@ -83,6 +84,7 @@ class Kernel extends ConsoleKernel
         PublishPendingCommentsCron::class, // facebook:publish-pending-comments
         ScheduleShufflePosts::class, // schedule:shuffle
         SendWeeklyAccountsReport::class, // reports:weekly-accounts
+        SendPackageExpirationEmails::class, // packages:expiration-emails
     ];
 
     /**
@@ -110,6 +112,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('download:photo')->everyFiveMinutes();
         // Command to reset monthly feature usage (runs on the 1st of each month at 00:00)
         $schedule->command('usage:reset-monthly')->monthlyOn(1, '00:00');
+        // Package expiration warning (3 days before) and expired notifications
+        $schedule->command('packages:expiration-emails')->dailyAt('09:00')->withoutOverlapping();
         // Command to check feature limits and send notifications (runs daily at 09:00)
         $schedule->command('features:check-limits')->dailyAt('09:00');
         // Command to sync user usage records (runs daily at 02:00)

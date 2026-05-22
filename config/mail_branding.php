@@ -60,6 +60,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Package expiration emails
+    |--------------------------------------------------------------------------
+    | Warning email: active package expires in N days (default 3). Expired email: once when expires_at passes.
+    | Run daily via packages:expiration-emails.
+    */
+    'package_expiration_emails_enabled' => filter_var(env('MAIL_PACKAGE_EXPIRATION_EMAILS_ENABLED', true), FILTER_VALIDATE_BOOL),
+
+    'package_expiration_warning_days' => (int) env('MAIL_PACKAGE_EXPIRATION_WARNING_DAYS', 3),
+
+    'package_expiration_test_route' => filter_var(env('MAIL_PACKAGE_EXPIRATION_TEST_ROUTE', false), FILTER_VALIDATE_BOOL),
+
+    /*
+    |--------------------------------------------------------------------------
     | Queue
     |--------------------------------------------------------------------------
     */

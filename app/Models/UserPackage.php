@@ -16,12 +16,16 @@ class UserPackage extends Model
         'assigned_by',
         'assigned_at',
         'expires_at',
+        'expiration_warning_sent_at',
+        'expiration_expired_sent_at',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
         'assigned_at' => 'datetime',
         'expires_at' => 'datetime',
+        'expiration_warning_sent_at' => 'datetime',
+        'expiration_expired_sent_at' => 'datetime',
     ];
 
     public function user()

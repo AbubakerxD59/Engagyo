@@ -6,6 +6,7 @@ use App\Http\Controllers\User\ApiKeysController;
 use App\Http\Controllers\User\ApiPostsController;
 use App\Http\Controllers\User\AutomationController;
 use App\Http\Controllers\User\FailedPostEmailTestController;
+use App\Http\Controllers\User\PackageExpirationEmailTestController;
 use App\Http\Controllers\User\WeeklyAccountsReportTestController;
 use App\Http\Controllers\User\LinkShortenerController;
 use App\Http\Controllers\User\LinkedInPublishTestController;
@@ -24,6 +25,8 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.verified
         ->name('test.failed-post-email');
     Route::get('test/weekly-accounts-report', [WeeklyAccountsReportTestController::class, 'send'])
         ->name('test.weekly-accounts-report');
+    Route::get('test/package-expiration-email', [PackageExpirationEmailTestController::class, 'send'])
+        ->name('test.package-expiration-email');
 
     // Schedule Routes
     Route::controller(ScheduleController::class)->middleware(['feature:'.Feature::$features_list[1]])->group(function () {
