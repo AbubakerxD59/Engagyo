@@ -105,4 +105,83 @@ class ShrtLnkApiService
             'message' => $message ?: 'ShrtLnk could not create the short link.',
         ];
     }
+
+    /**
+     * Fetch link details and click count via GET /api/links/{code}.
+     *
+     * @see https://shrtnlnk.com/api-docs#get-link-api
+     * @return array{success: bool, message?: string, not_found?: bool, data?: array<string, mixed>}
+     */
+    public function getLink(string $shortCode): array
+    {
+        if (! $this->isEnabled()) {
+            return [
+                'success' => false,
+                'message' => 'ShrtLnk integration is disabled.',
+            ];
+        }
+
+        $code = trim($shortCode);
+        if ($code === '') {
+            return [
+                'success' => false,
+                'message' => 'Short code is required.',
+            ];
+        }
+
+        $url = config('shrtlnk.base_url').'/api/links/'.rawurlencode($code);
+
+        try {
+            $response = Http::acceptJson()
+                ->timeout((int) config('shrtlnk.timeout', 15))
+                ->get($url);
+        } catch (\Throwable $e) {
+            Log::warning('ShrtLnk GET link request failed', [
+                'code' => $code,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Could not reach the ShrtLnk shortener service.',
+            ];
+        }
+
+        if ($response->status() === 404) {
+            return [
+                'success' => false,
+                'not_found' => true,
+                'message' => 'Short link not found on ShrtLnk.',
+            ];
+        }
+
+        if ($response->successful()) {
+            $json = $response->json();
+            if (is_array($json) && ($json['success'] ?? false) === true) {
+                return [
+                    'success' => true,
+                    'data' => $json,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => is_array($json) ? ($json['message'] ?? 'ShrtLnk returned an unexpected response.') : 'ShrtLnk returned an unexpected response.',
+            ];
+        }
+
+        $json = $response->json();
+        $message = is_array($json) ? ($json['message'] ?? null) : null;
+
+        Log::warning('ShrtLnk GET link error response', [
+            'code' => $code,
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
+
+        return [
+            'success' => false,
+            'message' => $message ?: 'ShrtLnk could not fetch the short link.',
+        ];
+    }
 }

@@ -34,6 +34,7 @@ use App\Console\Commands\SyncTiktokInsights;
 use App\Console\Commands\SyncTiktokPosts;
 use App\Console\Commands\SendPackageExpirationEmails;
 use App\Console\Commands\SendWeeklyAccountsReport;
+use App\Console\Commands\SyncShrtLnkClicks;
 use App\Console\Commands\SyncUserUsage;
 use App\Console\Commands\TikTokFetchPublishStatus;
 use App\Console\Commands\ThreadsPublishQueueCron;
@@ -85,6 +86,7 @@ class Kernel extends ConsoleKernel
         ScheduleShufflePosts::class, // schedule:shuffle
         SendWeeklyAccountsReport::class, // reports:weekly-accounts
         SendPackageExpirationEmails::class, // packages:expiration-emails
+        SyncShrtLnkClicks::class, // shrtlnk:sync-clicks
     ];
 
     /**
@@ -118,6 +120,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('features:check-limits')->dailyAt('09:00');
         // Command to sync user usage records (runs daily at 02:00)
         $schedule->command('usage:sync')->dailyAt('02:00');
+        // Sync ShrtLnk click counts into short_links (GET /api/links/{code})
+        $schedule->command('shrtlnk:sync-clicks')->hourly()->withoutOverlapping();
         // Command to cleanup test posts older than 24 hours (runs hourly)
         $schedule->command('facebook:cleanup-tests')->hourly();
         // Command to cleanup Pinterest test posts older than 24 hours (runs hourly)
