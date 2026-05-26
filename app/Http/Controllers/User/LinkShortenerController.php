@@ -16,15 +16,14 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
 use Illuminate\Support\Facades\Auth;
 use App\Services\FeatureUsageService;
+use App\Services\UrlShortenerService;
 
 class LinkShortenerController extends Controller
 {
-    protected $featureUsageService;
-
-    public function __construct(FeatureUsageService $featureUsageService)
-    {
-        $this->featureUsageService = $featureUsageService;
-    }
+    public function __construct(
+        protected FeatureUsageService $featureUsageService,
+        protected UrlShortenerService $urlShortenerService
+    ) {}
 
     /**
      * Display the link shortener dashboard.
@@ -259,15 +258,7 @@ class LinkShortenerController extends Controller
                 return response()->json([
                     'success' => true,
                     'message' => 'This URL was already shortened. Here is your existing short link.',
-                    'data' => [
-                        'id' => $existing->id,
-                        'short_code' => $existing->short_code,
-                        'original_url' => $existing->original_url,
-                        'short_url' => url('/s/' . $existing->short_code),
-                        'clicks' => $existing->clicks,
-                        'created_at' => $existing->created_at->toIso8601String(),
-                        'existing' => true,
-                    ],
+                    'data' => $this->shortLinkPayload($existing, true),
                 ]);
             }
 
@@ -283,28 +274,37 @@ class LinkShortenerController extends Controller
                 ], 403);
             }
 
-            $shortCode = ShortLink::generateUniqueCode(6);
+            $created = $this->urlShortenerService->createShortLink(
+                $user->id,
+                $request->original_url,
+                $request->userAgent(),
+                $request->ip()
+            );
 
-            $shortLink = ShortLink::create([
-                'user_id' => $user->id,
-                'short_code' => $shortCode,
-                'original_url' => $normalizedUrl,
-            ]);
+            if (! $created['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $created['message'] ?? 'Failed to create short link.',
+                ], 422);
+            }
 
-            $shortUrl = url('/s/' . $shortCode);
+            $shortLink = ShortLink::find($created['id'] ?? 0);
 
             return response()->json([
                 'success' => true,
-                'message' => 'Short link created successfully!',
-                'data' => [
-                    'id' => $shortLink->id,
-                    'short_code' => $shortLink->short_code,
-                    'original_url' => $shortLink->original_url,
-                    'short_url' => $shortUrl,
-                    'clicks' => 0,
-                    'created_at' => $shortLink->created_at->toIso8601String(),
-                    'existing' => false,
-                ],
+                'message' => ($created['existing'] ?? false)
+                    ? 'This URL was already shortened. Here is your existing short link.'
+                    : 'Short link created successfully!',
+                'data' => $shortLink
+                    ? $this->shortLinkPayload($shortLink, (bool) ($created['existing'] ?? false))
+                    : [
+                        'short_code' => $created['short_code'] ?? '',
+                        'original_url' => $created['original_url'] ?? $normalizedUrl,
+                        'short_url' => $created['short_url'] ?? '',
+                        'clicks' => $created['clicks'] ?? 0,
+                        'created_at' => $created['created_at'] ?? now()->toIso8601String(),
+                        'existing' => (bool) ($created['existing'] ?? false),
+                    ],
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -335,14 +335,7 @@ class LinkShortenerController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Short link updated successfully!',
-                'data' => [
-                    'id' => $shortLink->id,
-                    'short_code' => $shortLink->short_code,
-                    'original_url' => $shortLink->original_url,
-                    'short_url' => url('/s/' . $shortLink->short_code),
-                    'clicks' => $shortLink->clicks,
-                    'created_at' => $shortLink->created_at->toIso8601String(),
-                ],
+                'data' => $this->shortLinkPayload($shortLink->fresh(), false),
             ]);
         } catch (Exception $e) {
             return response()->json([
@@ -374,5 +367,21 @@ class LinkShortenerController extends Controller
                 'message' => $e->getMessage(),
             ], 422);
         }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    protected function shortLinkPayload(ShortLink $shortLink, bool $existing): array
+    {
+        return [
+            'id' => $shortLink->id,
+            'short_code' => $shortLink->short_code,
+            'original_url' => $shortLink->original_url,
+            'short_url' => $shortLink->publicShortUrl(),
+            'clicks' => $shortLink->clicks,
+            'created_at' => $shortLink->created_at->toIso8601String(),
+            'existing' => $existing,
+        ];
     }
 }

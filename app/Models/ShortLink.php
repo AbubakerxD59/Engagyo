@@ -12,6 +12,8 @@ class ShortLink extends Model
     protected $fillable = [
         'user_id',
         'short_code',
+        'shrtlnk_id',
+        'short_url',
         'original_url',
         'user_agent',
         'ip_address',
@@ -20,7 +22,24 @@ class ShortLink extends Model
 
     protected $casts = [
         'clicks' => 'integer',
+        'shrtlnk_id' => 'integer',
     ];
+
+    /**
+     * Public shareable URL (ShrtLnk when integrated, otherwise Engagyo /s/{code}).
+     */
+    public function publicShortUrl(): string
+    {
+        if (! empty($this->short_url)) {
+            return $this->short_url;
+        }
+
+        if ($this->shrtlnk_id) {
+            return rtrim((string) config('shrtlnk.base_url'), '/').'/s/'.$this->short_code;
+        }
+
+        return url('/s/'.$this->short_code);
+    }
 
     public function user()
     {

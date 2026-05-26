@@ -8,13 +8,17 @@ use App\Models\ShortLink;
 use App\Models\User;
 use App\Services\FeatureUsageService;
 use App\Services\HtmlParseService;
+use App\Services\UrlShortenerService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Session;
 
 class GeneralController extends Controller
 {
-    public function __construct(protected FeatureUsageService $featureUsageService) {}
+    public function __construct(
+        protected FeatureUsageService $featureUsageService,
+        protected UrlShortenerService $urlShortenerService
+    ) {}
     /**
      * Public URL shortening (no signup required).
      * Anonymous users are tracked by user_agent (and IP).
@@ -26,40 +30,30 @@ class GeneralController extends Controller
             'original_url' => 'required|url|max:2048',
         ]);
 
-        $normalizedUrl = ShortLink::normalizeUrl($request->original_url);
         $userId = Auth::guard('user')->id();
         $userAgent = $request->input('user_agent') ?: $request->userAgent();
         $userAgent = $userAgent ? substr($userAgent, 0, 65535) : null;
-        $ipAddress = $request->ip();
 
-        $existing = $this->findExistingShortLink($normalizedUrl, $userId, $userAgent);
+        $created = $this->urlShortenerService->createShortLink(
+            $userId,
+            $request->original_url,
+            $userAgent,
+            $request->ip()
+        );
 
-        if ($existing) {
+        if (! $created['success']) {
             return response()->json([
-                'success' => true,
-                'short_url' => url('/s/' . $existing->short_code),
-                'short_code' => $existing->short_code,
-                'original_url' => $existing->original_url,
-                'existing' => true,
-            ]);
+                'success' => false,
+                'message' => $created['message'] ?? 'Failed to create short link.',
+            ], 422);
         }
-
-        $shortCode = ShortLink::generateUniqueCode(6);
-
-        ShortLink::create([
-            'user_id' => $userId,
-            'short_code' => $shortCode,
-            'original_url' => $normalizedUrl,
-            'user_agent' => $userAgent,
-            'ip_address' => $ipAddress,
-        ]);
 
         return response()->json([
             'success' => true,
-            'short_url' => url('/s/' . $shortCode),
-            'short_code' => $shortCode,
-            'original_url' => $normalizedUrl,
-            'existing' => false,
+            'short_url' => $created['short_url'],
+            'short_code' => $created['short_code'] ?? '',
+            'original_url' => $created['original_url'],
+            'existing' => (bool) ($created['existing'] ?? false),
         ]);
     }
 

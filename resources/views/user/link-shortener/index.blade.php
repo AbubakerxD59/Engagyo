@@ -90,10 +90,10 @@
                                                 <td>
                                                     <div class="input-group input-group-sm">
                                                         <input type="text" class="form-control short-url-input"
-                                                            value="{{ url('/s/' . $link->short_code) }}" readonly>
+                                                            value="{{ $link->publicShortUrl() }}" readonly>
                                                         <div class="input-group-append">
                                                             <button type="button" class="btn btn-outline-primary copy-btn"
-                                                                data-url="{{ url('/s/' . $link->short_code) }}"
+                                                                data-url="{{ $link->publicShortUrl() }}"
                                                                 title="Copy short link">
                                                                 <i class="fas fa-copy"></i>
                                                             </button>
