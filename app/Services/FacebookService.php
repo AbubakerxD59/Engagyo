@@ -1427,13 +1427,9 @@ class FacebookService
         $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
         $storedPosts = $this->getStoredPagePostsWithInsights($pageId, $since, $until);
-        if (! empty($storedPosts)) {
-            return $storedPosts;
-        }
-
         $posts = $this->getPageFeed($pageId, $accessToken, $since, $until);
         if (empty($posts)) {
-            return [];
+            return $storedPosts;
         }
 
         $metrics = 'post_clicks,post_reactions_by_type_total,post_media_view,post_impressions_unique';
@@ -1549,7 +1545,7 @@ class FacebookService
         }
         unset($post);
 
-        $this->storeFetchedFacebookPosts($pageId, $posts);
+        $this->storeFetchedFacebookPosts($pageId, $posts, $since, $until);
 
         return $posts;
     }
@@ -1589,7 +1585,7 @@ class FacebookService
     /**
      * Persist fetched feed posts individually in facebook_posts table.
      */
-    private function storeFetchedFacebookPosts(string $pageId, array $posts): void
+    private function storeFetchedFacebookPosts(string $pageId, array $posts, ?string $since = null, ?string $until = null): void
     {
         if (empty($pageId) || empty($posts)) {
             return;
@@ -1636,7 +1632,39 @@ class FacebookService
             );
         }
 
+        // Keep previously stored rows in this range aligned to the current post_data shape.
+        $this->refreshStoredPostDataInRange($pageId, $since, $until);
+
         $this->updateFacebookPostsFileCache($pageId);
+    }
+
+    /**
+     * Rewrite post_data for all already-stored rows in the given date range.
+     * This keeps legacy rows in a consistent shape after sync logic changes.
+     */
+    private function refreshStoredPostDataInRange(string $pageId, ?string $since = null, ?string $until = null): void
+    {
+        if (empty($pageId) || empty($since) || empty($until)) {
+            return;
+        }
+
+        $from = $since.' 00:00:00';
+        $to = $until.' 23:59:59';
+
+        FacebookPost::query()
+            ->where('fb_page_id', $pageId)
+            ->whereBetween('post_created_date', [$from, $to])
+            ->orderBy('id')
+            ->chunkById(200, function ($rows): void {
+                foreach ($rows as $row) {
+                    if (! $row instanceof FacebookPost) {
+                        continue;
+                    }
+
+                    $normalized = $this->normalizeStoredFacebookPostRow($row);
+                    $row->forceFill(['post_data' => $normalized])->save();
+                }
+            });
     }
 
     private function normalizeStoredFacebookPostRow(FacebookPost $row): array
