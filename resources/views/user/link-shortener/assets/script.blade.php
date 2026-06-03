@@ -141,8 +141,7 @@
                 data: {
                     original_url: $('#editOriginalUrl').val().trim(),
                     url_cloak: linkCloakValue('#editUrlCloak'),
-                    _token: $('meta[name="csrf-token"]').attr('content'),
-                    _method: 'PUT'
+                    _token: $('meta[name="csrf-token"]').attr('content')
                 },
                 dataType: 'json',
                 success: function(response) {
