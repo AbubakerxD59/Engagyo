@@ -12,6 +12,7 @@ use Facebook\Exceptions\FacebookResponseException;
 use Facebook\Exceptions\FacebookSDKException;
 use Facebook\Facebook;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 
 class FacebookService
@@ -1334,80 +1335,102 @@ class FacebookService
         return $current;
     }
 
+    public const PAGE_FEED_MAX_POSTS = 100;
+
     /**
-     * Page /feed; first page only, limit capped at 100.
+     * Page /feed: paginate, keep posts in range, newest first, max 100.
      */
-    public function getPageFeed(string $pageId, string $accessToken, ?string $since = null, ?string $until = null, int $limit = 100): array
+    public function getPageFeed(string $pageId, string $accessToken, ?string $since = null, ?string $until = null, int $limit = self::PAGE_FEED_MAX_POSTS): array
     {
-        $posts = [];
         if (empty($pageId) || empty($accessToken)) {
-            return $posts;
+            return [];
         }
 
         $until = $until ?: date('Y-m-d');
         $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
-        $sinceIso = $since;
-        $untilIso = $until;
-        // $sinceIso = $since.'T00:00:00+0000';
-        // $untilIso = $until.'T23:59:59+0000';
+        $maxPosts = min(max((int) $limit, 1), self::PAGE_FEED_MAX_POSTS);
+        $fromTs = strtotime($since.' 00:00:00 UTC') ?: 0;
+        $toTs = strtotime($until.' 23:59:59 UTC') ?: PHP_INT_MAX;
+
+        $sinceIso = $since.'T00:00:00+0000';
+        $untilIso = $until.'T23:59:59+0000';
 
         $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story,comments.limit(0).summary(true)';
+        $pageSize = min(50, $maxPosts);
         $endpoint = '/'.$pageId.'/feed?fields='.urlencode($fields)
             .'&since='.urlencode($sinceIso)
             .'&until='.urlencode($untilIso)
-            .'&limit='.min($limit, 100);
+            .'&limit='.$pageSize;
 
         $maxAttempts = 3;
 
         for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
             try {
+                $collected = [];
                 $response = $this->facebook->get($endpoint, $accessToken);
                 $graphEdge = $response->getGraphEdge();
 
-                if ($graphEdge) {
-                    $attemptPosts = [];
-                    foreach ($graphEdge as $node) {
-                        $sharesRaw = $node->getField('shares');
-                        $shares = is_object($sharesRaw) && method_exists($sharesRaw, 'getField')
-                            ? (int) ($sharesRaw->getField('count') ?? 0)
-                            : (is_array($sharesRaw) ? (int) ($sharesRaw['count'] ?? 0) : (int) ($sharesRaw ?? 0));
+                while ($graphEdge) {
+                    $oldestOnPageTs = null;
 
-                        $commentsRaw = $node->getField('comments');
-                        $comments = 0;
-                        if ($commentsRaw) {
-                            if (is_object($commentsRaw) && method_exists($commentsRaw, 'getField')) {
-                                $summary = $commentsRaw->getField('summary');
-                                $comments = is_object($summary) ? (int) ($summary->getField('total_count') ?? 0) : (is_array($summary) ? (int) ($summary['total_count'] ?? 0) : 0);
-                            } elseif (is_array($commentsRaw) && isset($commentsRaw['summary']['total_count'])) {
-                                $comments = (int) $commentsRaw['summary']['total_count'];
-                            }
+                    foreach ($graphEdge as $node) {
+                        $post = $this->mapFeedNodeToPostArray($node);
+                        $createdTs = $this->resolvePostCreatedTimestamp($post['created_time'] ?? null);
+
+                        if ($createdTs === null) {
+                            continue;
                         }
 
-                        $postId = $node->getField('id');
-                        $attemptPosts[] = [
-                            'id' => $postId,
-                            'post_id' => $postId,
-                            'message' => $node->getField('message'),
-                            'created_time' => $node->getField('created_time'),
-                            'full_picture' => $node->getField('full_picture'),
-                            'icon' => $node->getField('icon'),
-                            'is_popular' => $node->getField('is_popular'),
-                            'permalink_url' => $node->getField('permalink_url'),
-                            'shares' => $shares,
-                            'comments' => $comments,
-                            'status_type' => $node->getField('status_type'),
-                            'story' => $node->getField('story'),
-                            'type' => $node->getField('type'),
-                            'insights' => [],
-                        ];
+                        if ($createdTs > $toTs) {
+                            continue;
+                        }
+
+                        if ($createdTs < $fromTs) {
+                            if ($oldestOnPageTs === null || $createdTs < $oldestOnPageTs) {
+                                $oldestOnPageTs = $createdTs;
+                            }
+
+                            continue;
+                        }
+
+                        $postId = (string) ($post['id'] ?? '');
+                        if ($postId !== '') {
+                            $collected[$postId] = $post;
+                        }
+
+                        if (count($collected) >= $maxPosts) {
+                            break 2;
+                        }
                     }
 
-                    if (! empty($attemptPosts)) {
-                        return $attemptPosts;
+                    if (count($collected) >= $maxPosts) {
+                        break;
                     }
+
+                    if ($oldestOnPageTs !== null && $oldestOnPageTs < $fromTs) {
+                        break;
+                    }
+
+                    $graphEdge = $this->facebook->next($graphEdge);
+                    if (! $graphEdge) {
+                        break;
+                    }
+
+                    $this->throttlePageFeedPagination();
+                }
+
+                if (! empty($collected)) {
+                    return $this->limitPostsNewestFirst(array_values($collected), $maxPosts);
                 }
             } catch (FacebookResponseException|FacebookSDKException $e) {
+                Log::warning('Facebook page feed fetch failed', [
+                    'page_id' => $pageId,
+                    'since' => $since,
+                    'until' => $until,
+                    'attempt' => $attempt,
+                    'error' => $e->getMessage(),
+                ]);
             }
 
             if ($attempt < $maxAttempts) {
@@ -1418,6 +1441,93 @@ class FacebookService
         return [];
     }
 
+    private function throttlePageFeedPagination(): void
+    {
+        $delayMs = (int) env('FACEBOOK_PAGE_FEED_PAGINATION_DELAY_MS', 200);
+        if ($delayMs > 0) {
+            usleep($delayMs * 1000);
+        }
+    }
+
+    /**
+     * @param  mixed  $node
+     */
+    private function mapFeedNodeToPostArray($node): array
+    {
+        $sharesRaw = $node->getField('shares');
+        $shares = is_object($sharesRaw) && method_exists($sharesRaw, 'getField')
+            ? (int) ($sharesRaw->getField('count') ?? 0)
+            : (is_array($sharesRaw) ? (int) ($sharesRaw['count'] ?? 0) : (int) ($sharesRaw ?? 0));
+
+        $commentsRaw = $node->getField('comments');
+        $comments = 0;
+        if ($commentsRaw) {
+            if (is_object($commentsRaw) && method_exists($commentsRaw, 'getField')) {
+                $summary = $commentsRaw->getField('summary');
+                $comments = is_object($summary) ? (int) ($summary->getField('total_count') ?? 0) : (is_array($summary) ? (int) ($summary['total_count'] ?? 0) : 0);
+            } elseif (is_array($commentsRaw) && isset($commentsRaw['summary']['total_count'])) {
+                $comments = (int) $commentsRaw['summary']['total_count'];
+            }
+        }
+
+        $postId = $node->getField('id');
+
+        return [
+            'id' => $postId,
+            'post_id' => $postId,
+            'message' => $node->getField('message'),
+            'created_time' => $node->getField('created_time'),
+            'full_picture' => $node->getField('full_picture'),
+            'icon' => $node->getField('icon'),
+            'is_popular' => $node->getField('is_popular'),
+            'permalink_url' => $node->getField('permalink_url'),
+            'shares' => $shares,
+            'comments' => $comments,
+            'status_type' => $node->getField('status_type'),
+            'story' => $node->getField('story'),
+            'type' => $node->getField('type'),
+            'insights' => [],
+        ];
+    }
+
+    /**
+     * @param  mixed  $createdTime
+     */
+    private function resolvePostCreatedTimestamp($createdTime): ?int
+    {
+        if ($createdTime === null || $createdTime === '') {
+            return null;
+        }
+
+        if (is_object($createdTime) && method_exists($createdTime, 'getTimestamp')) {
+            return (int) $createdTime->getTimestamp();
+        }
+
+        if (is_array($createdTime) && isset($createdTime['date'])) {
+            $createdTime = $createdTime['date'];
+        }
+
+        if (! is_string($createdTime)) {
+            return null;
+        }
+
+        $ts = strtotime($createdTime);
+
+        return $ts !== false ? $ts : null;
+    }
+
+    private function limitPostsNewestFirst(array $posts, int $limit): array
+    {
+        usort($posts, function (array $a, array $b): int {
+            $ta = $this->resolvePostCreatedTimestamp($a['created_time'] ?? null) ?? 0;
+            $tb = $this->resolvePostCreatedTimestamp($b['created_time'] ?? null) ?? 0;
+
+            return $tb <=> $ta;
+        });
+
+        return array_slice($posts, 0, $limit);
+    }
+
     /**
      * @param  string  $insightsPreset  default|sent_tab (same metrics; normalization below)
      */
@@ -1426,10 +1536,9 @@ class FacebookService
         $until = $until ?: date('Y-m-d');
         $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
-        $storedPosts = $this->getStoredPagePostsWithInsights($pageId, $since, $until);
         $posts = $this->getPageFeed($pageId, $accessToken, $since, $until);
         if (empty($posts)) {
-            return $storedPosts;
+            return [];
         }
 
         $metrics = 'post_clicks,post_reactions_by_type_total,post_media_view,post_impressions_unique';

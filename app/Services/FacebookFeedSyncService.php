@@ -21,7 +21,7 @@ class FacebookFeedSyncService
 
     protected array $cacheDurations = ['last_7', 'last_28', 'last_90', 'this_month', 'this_year', 'full_year'];
 
-    protected int $fullYearPostsLimit = 150;
+    protected int $postsLimit = 100;
 
     public function __construct(FacebookService $facebookService)
     {
@@ -126,11 +126,10 @@ class FacebookFeedSyncService
             }
         }
 
-        if (is_array($posts) && count($posts) > $this->fullYearPostsLimit) {
-            $posts = array_slice($posts, 0, $this->fullYearPostsLimit);
-        }
-
-        $posts = $this->normalizePostCreatedDate($posts);
+        $posts = $this->limitPostsNewestFirst(
+            $this->normalizePostCreatedDate(is_array($posts) ? $posts : []),
+            $this->postsLimit
+        );
 
         return [
             'success' => true,
@@ -276,14 +275,27 @@ class FacebookFeedSyncService
      */
     protected function fetchAllUniquePagesFromPagesTable()
     {
-        return Page::withoutGlobalScopes()
+        $rows = Page::withoutGlobalScopes()
             ->whereNotNull('page_id')
             ->whereNotNull('access_token')
             ->where('page_id', '!=', '')
             ->where('access_token', '!=', '')
             ->orderByDesc('id')
-            ->get()
-            ->unique('page_id')
+            ->get();
+
+        return $rows->groupBy('page_id')
+            ->map(function ($pages) {
+                foreach ($pages as $page) {
+                    $tokenCheck = FacebookService::validateToken($page);
+                    if ($tokenCheck['success']) {
+                        $page->access_token = $tokenCheck['access_token'] ?? $page->access_token;
+
+                        return $page;
+                    }
+                }
+
+                return $pages->first();
+            })
             ->values();
     }
 
@@ -296,7 +308,14 @@ class FacebookFeedSyncService
             return;
         }
 
-        $posts = $this->normalizePostCreatedDate($posts);
+        $posts = $this->limitPostsNewestFirst(
+            $this->filterPostsByDateRange(
+                $this->normalizePostCreatedDate($posts),
+                $since,
+                $until
+            ),
+            $this->postsLimit
+        );
 
         $cacheKey = $this->facebookDurationPostsCacheKey((string) $page->page_id, $duration, $since, $until);
         Cache::put($cacheKey, $posts, now()->addHours(24));
@@ -319,6 +338,73 @@ class FacebookFeedSyncService
     /**
      * Ensure each post has post_created_date for downstream usage.
      */
+    protected function filterPostsByDateRange(array $posts, string $since, string $until): array
+    {
+        $fromTs = strtotime($since.' 00:00:00 UTC') ?: 0;
+        $toTs = strtotime($until.' 23:59:59 UTC') ?: PHP_INT_MAX;
+
+        return array_values(array_filter($posts, function ($post) use ($fromTs, $toTs) {
+            if (! is_array($post)) {
+                return false;
+            }
+
+            $createdRaw = $post['post_created_date'] ?? $post['created_time'] ?? null;
+            if (is_array($createdRaw) && isset($createdRaw['date'])) {
+                $createdRaw = $createdRaw['date'];
+            }
+            if (is_object($createdRaw) && method_exists($createdRaw, 'getTimestamp')) {
+                $ts = (int) $createdRaw->getTimestamp();
+            } else {
+                $ts = is_string($createdRaw) ? strtotime($createdRaw) : false;
+                $ts = $ts !== false ? $ts : null;
+            }
+
+            if ($ts === null) {
+                return false;
+            }
+
+            return $ts >= $fromTs && $ts <= $toTs;
+        }));
+    }
+
+    protected function limitPostsNewestFirst(array $posts, int $limit): array
+    {
+        usort($posts, function ($a, $b) {
+            $ta = $this->postSortTimestamp($a);
+            $tb = $this->postSortTimestamp($b);
+
+            return $tb <=> $ta;
+        });
+
+        return array_slice($posts, 0, $limit);
+    }
+
+    /**
+     * @param  mixed  $post
+     */
+    protected function postSortTimestamp($post): int
+    {
+        if (! is_array($post)) {
+            return 0;
+        }
+
+        $createdRaw = $post['post_created_date'] ?? $post['created_time'] ?? null;
+        if (is_array($createdRaw) && isset($createdRaw['date'])) {
+            $createdRaw = $createdRaw['date'];
+        }
+        if (is_object($createdRaw) && method_exists($createdRaw, 'getTimestamp')) {
+            return (int) $createdRaw->getTimestamp();
+        }
+
+        if (! is_string($createdRaw)) {
+            return 0;
+        }
+
+        $ts = strtotime($createdRaw);
+
+        return $ts !== false ? $ts : 0;
+    }
+
     protected function normalizePostCreatedDate(array $posts): array
     {
         return array_map(function ($post) {
