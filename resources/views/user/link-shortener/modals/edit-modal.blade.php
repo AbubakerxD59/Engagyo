@@ -21,6 +21,10 @@
                             The short link will redirect to this URL. The short link itself cannot be changed.
                         </small>
                     </div>
+                    @include('user.link-shortener.partials.link-cloak-toggle', [
+                        'inputId' => 'editUrlCloak',
+                        'checked' => true,
+                    ])
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>

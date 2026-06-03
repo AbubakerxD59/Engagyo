@@ -15,6 +15,7 @@ class ShortLink extends Model
         'shrtlnk_id',
         'short_url',
         'original_url',
+        'url_cloak',
         'user_agent',
         'ip_address',
         'clicks',
@@ -23,6 +24,7 @@ class ShortLink extends Model
     protected $casts = [
         'clicks' => 'integer',
         'shrtlnk_id' => 'integer',
+        'url_cloak' => 'boolean',
     ];
 
     /**

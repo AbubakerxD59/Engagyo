@@ -23,6 +23,7 @@ class ShrtLnkApiService
      *     page_title?: string|null,
      *     thumbnail_url?: string|null,
      *     source?: string|null,
+     *     url_cloak?: int|bool|null,
      * }  $payload
      * @return array{success: bool, message?: string, data?: array<string, mixed>}
      */
@@ -54,6 +55,9 @@ class ShrtLnkApiService
         }
         if (! empty($payload['thumbnail_url'])) {
             $body['thumbnail_url'] = $payload['thumbnail_url'];
+        }
+        if (array_key_exists('url_cloak', $payload)) {
+            $body['url_cloak'] = filter_var($payload['url_cloak'], FILTER_VALIDATE_BOOL) ? 1 : 0;
         }
 
         $url = config('shrtlnk.base_url').'/api/links';
@@ -182,6 +186,106 @@ class ShrtLnkApiService
         return [
             'success' => false,
             'message' => $message ?: 'ShrtLnk could not fetch the short link.',
+        ];
+    }
+
+    /**
+     * Update an existing short link via PUT /api/links/{code}.
+     *
+     * @param  array{
+     *     original_url?: string,
+     *     url_cloak?: int|bool|null,
+     *     page_title?: string|null,
+     *     thumbnail_url?: string|null,
+     * }  $payload
+     * @return array{success: bool, message?: string, data?: array<string, mixed>}
+     */
+    public function updateLink(string $shortCode, array $payload): array
+    {
+        if (! $this->isEnabled()) {
+            return [
+                'success' => false,
+                'message' => 'ShrtLnk integration is disabled.',
+            ];
+        }
+
+        $code = trim($shortCode);
+        if ($code === '') {
+            return [
+                'success' => false,
+                'message' => 'Short code is required.',
+            ];
+        }
+
+        $body = [];
+        if (! empty($payload['original_url'])) {
+            $body['original_url'] = $payload['original_url'];
+        }
+        if (array_key_exists('url_cloak', $payload)) {
+            $body['url_cloak'] = filter_var($payload['url_cloak'], FILTER_VALIDATE_BOOL) ? 1 : 0;
+        }
+        if (! empty($payload['page_title'])) {
+            $body['page_title'] = substr((string) $payload['page_title'], 0, 500);
+        }
+        if (! empty($payload['thumbnail_url'])) {
+            $body['thumbnail_url'] = $payload['thumbnail_url'];
+        }
+
+        if ($body === []) {
+            return [
+                'success' => false,
+                'message' => 'No fields to update.',
+            ];
+        }
+
+        $url = config('shrtlnk.base_url').'/api/links/'.rawurlencode($code);
+
+        try {
+            $response = Http::acceptJson()
+                ->asJson()
+                ->timeout((int) config('shrtlnk.timeout', 15))
+                ->put($url, $body);
+        } catch (\Throwable $e) {
+            Log::warning('ShrtLnk API update request failed', [
+                'code' => $code,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Could not reach the ShrtLnk shortener service.',
+            ];
+        }
+
+        if ($response->successful()) {
+            $json = $response->json();
+            if (is_array($json) && ($json['success'] ?? false) === true) {
+                return [
+                    'success' => true,
+                    'data' => $json,
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => is_array($json) ? ($json['message'] ?? 'ShrtLnk returned an unexpected response.') : 'ShrtLnk returned an unexpected response.',
+            ];
+        }
+
+        $json = $response->json();
+        $message = is_array($json)
+            ? ($json['message'] ?? collect($json['errors'] ?? [])->flatten()->first())
+            : null;
+
+        Log::warning('ShrtLnk API update error response', [
+            'code' => $code,
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
+
+        return [
+            'success' => false,
+            'message' => $message ?: 'ShrtLnk could not update the short link.',
         ];
     }
 }

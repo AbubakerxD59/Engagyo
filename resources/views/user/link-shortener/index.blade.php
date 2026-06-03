@@ -109,6 +109,7 @@
                                                         <button type="button" class="btn btn-primary edit-link-btn"
                                                             data-id="{{ $link->id }}"
                                                             data-original-url="{{ $link->original_url }}"
+                                                            data-url-cloak="{{ $link->url_cloak ? '1' : '0' }}"
                                                             title="Edit destination URL">
                                                             <i class="fas fa-edit"></i> Edit
                                                         </button>

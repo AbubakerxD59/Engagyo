@@ -32,9 +32,14 @@
         const updateUrlBase = "{{ route('panel.link-shortener.update', ['id' => 0]) }}";
         const destroyUrlBase = "{{ route('panel.link-shortener.destroy', ['id' => 0]) }}";
 
+        function linkCloakValue(checkboxSelector) {
+            return $(checkboxSelector).is(':checked') ? 1 : 0;
+        }
+
         // Reset create form when modal is closed
         $('#createShortLinkModal').on('hidden.bs.modal', function() {
             $('#createShortLinkForm')[0].reset();
+            $('#createUrlCloak').prop('checked', true);
         });
 
         // Create short link
@@ -49,6 +54,7 @@
                 type: 'POST',
                 data: {
                     original_url: $('#createOriginalUrl').val().trim(),
+                    url_cloak: linkCloakValue('#createUrlCloak'),
                     _token: $('meta[name="csrf-token"]').attr('content')
                 },
                 dataType: 'json',
@@ -107,8 +113,10 @@
         $(document).on('click', '.edit-link-btn', function() {
             const id = $(this).data('id');
             const originalUrl = $(this).data('original-url');
+            const urlCloak = String($(this).data('url-cloak')) === '1';
             $('#editLinkId').val(id);
             $('#editOriginalUrl').val(originalUrl);
+            $('#editUrlCloak').prop('checked', urlCloak);
             $('#editShortLinkModal').modal('show');
         });
 
@@ -116,6 +124,7 @@
         $('#editShortLinkModal').on('hidden.bs.modal', function() {
             $('#editShortLinkForm')[0].reset();
             $('#editLinkId').val('');
+            $('#editUrlCloak').prop('checked', true);
         });
 
         // Update short link
@@ -131,6 +140,7 @@
                 type: 'POST',
                 data: {
                     original_url: $('#editOriginalUrl').val().trim(),
+                    url_cloak: linkCloakValue('#editUrlCloak'),
                     _token: $('meta[name="csrf-token"]').attr('content'),
                     _method: 'PUT'
                 },

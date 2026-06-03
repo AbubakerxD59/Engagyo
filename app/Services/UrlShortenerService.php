@@ -11,13 +11,14 @@ class UrlShortenerService
         protected ShrtLnkApiService $shrtLnkApi
     ) {}
 
-    public function shortenForUser(User $user, string $originalUrl): array
+    public function shortenForUser(User $user, string $originalUrl, bool $urlCloak = true): array
     {
         return $this->createShortLink(
             $user->id,
             $originalUrl,
             null,
-            null
+            null,
+            $urlCloak
         );
     }
 
@@ -39,7 +40,8 @@ class UrlShortenerService
         ?int $userId,
         string $originalUrl,
         ?string $userAgent = null,
-        ?string $ipAddress = null
+        ?string $ipAddress = null,
+        bool $urlCloak = true
     ): array {
         $normalizedUrl = ShortLink::normalizeUrl($originalUrl);
         if ($normalizedUrl === '') {
@@ -56,13 +58,13 @@ class UrlShortenerService
             ];
         }
 
-        $existing = $this->findExisting($normalizedUrl, $userId, $userAgent);
+        $existing = $this->findExisting($normalizedUrl, $userId, $userAgent, $urlCloak);
         if ($existing) {
             return $this->formatLinkResponse($existing, true);
         }
 
         if ($this->shrtLnkApi->isEnabled()) {
-            $apiResult = $this->createViaShrtLnk($normalizedUrl, $userId, $userAgent, $ipAddress);
+            $apiResult = $this->createViaShrtLnk($normalizedUrl, $userId, $userAgent, $ipAddress, $urlCloak);
             if ($apiResult['success']) {
                 return $apiResult;
             }
@@ -72,7 +74,48 @@ class UrlShortenerService
             }
         }
 
-        return $this->createLocalShortLink($normalizedUrl, $userId, $userAgent, $ipAddress);
+        return $this->createLocalShortLink($normalizedUrl, $userId, $userAgent, $ipAddress, $urlCloak);
+    }
+
+    /**
+     * @return array{success: bool, message?: string}
+     */
+    public function updateShortLink(ShortLink $shortLink, string $originalUrl, bool $urlCloak): array
+    {
+        $normalizedUrl = ShortLink::normalizeUrl($originalUrl);
+        if ($normalizedUrl === '') {
+            return ['success' => false, 'message' => 'Invalid URL'];
+        }
+
+        if ($this->shrtLnkApi->isEnabled() && $shortLink->short_code !== '') {
+            $api = $this->shrtLnkApi->updateLink($shortLink->short_code, [
+                'original_url' => $normalizedUrl,
+                'url_cloak' => $urlCloak ? 1 : 0,
+            ]);
+
+            if (! $api['success']) {
+                return [
+                    'success' => false,
+                    'message' => $api['message'] ?? 'Failed to update short link.',
+                ];
+            }
+
+            $data = $api['data'] ?? [];
+            $shortLink->update([
+                'original_url' => (string) ($data['original_url'] ?? $normalizedUrl),
+                'url_cloak' => (bool) ($data['url_cloak'] ?? $data['cloaked'] ?? $urlCloak),
+                'short_url' => ! empty($data['short_url']) ? (string) $data['short_url'] : $shortLink->short_url,
+            ]);
+
+            return ['success' => true];
+        }
+
+        $shortLink->update([
+            'original_url' => $normalizedUrl,
+            'url_cloak' => $urlCloak,
+        ]);
+
+        return ['success' => true];
     }
 
     public function shortenUrlsInText(User $user, string $text, bool $shouldShorten): string
@@ -91,11 +134,12 @@ class UrlShortenerService
         return $result ?? $text;
     }
 
-    protected function findExisting(string $normalizedUrl, ?int $userId, ?string $userAgent): ?ShortLink
+    protected function findExisting(string $normalizedUrl, ?int $userId, ?string $userAgent, bool $urlCloak): ?ShortLink
     {
         if ($userId !== null) {
             return ShortLink::where('user_id', $userId)
                 ->where('original_url', $normalizedUrl)
+                ->where('url_cloak', $urlCloak)
                 ->first();
         }
 
@@ -103,12 +147,14 @@ class UrlShortenerService
             return ShortLink::whereNull('user_id')
                 ->where('user_agent', $userAgent)
                 ->where('original_url', $normalizedUrl)
+                ->where('url_cloak', $urlCloak)
                 ->first();
         }
 
         return ShortLink::whereNull('user_id')
             ->whereNull('user_agent')
             ->where('original_url', $normalizedUrl)
+            ->where('url_cloak', $urlCloak)
             ->first();
     }
 
@@ -119,13 +165,15 @@ class UrlShortenerService
         string $normalizedUrl,
         ?int $userId,
         ?string $userAgent,
-        ?string $ipAddress
+        ?string $ipAddress,
+        bool $urlCloak
     ): array {
         $api = $this->shrtLnkApi->createLink([
             'original_url' => $normalizedUrl,
             'user_id' => $userId,
             'user_agent' => $userAgent,
             'ip_address' => $ipAddress,
+            'url_cloak' => $urlCloak ? 1 : 0,
         ]);
 
         if (! $api['success'] || empty($api['data'])) {
@@ -152,6 +200,7 @@ class UrlShortenerService
             'shrtlnk_id' => isset($data['id']) ? (int) $data['id'] : null,
             'short_url' => $shortUrl,
             'original_url' => (string) ($data['original_url'] ?? $normalizedUrl),
+            'url_cloak' => (bool) ($data['url_cloak'] ?? $data['cloaked'] ?? $urlCloak),
             'user_agent' => $userAgent,
             'ip_address' => $ipAddress,
             'clicks' => (int) ($data['clicks'] ?? 0),
@@ -167,7 +216,8 @@ class UrlShortenerService
         string $normalizedUrl,
         ?int $userId,
         ?string $userAgent,
-        ?string $ipAddress
+        ?string $ipAddress,
+        bool $urlCloak
     ): array {
         $shortCode = ShortLink::generateUniqueCode(6);
         $shortUrl = url('/s/'.$shortCode);
@@ -177,6 +227,7 @@ class UrlShortenerService
             'short_code' => $shortCode,
             'short_url' => $shortUrl,
             'original_url' => $normalizedUrl,
+            'url_cloak' => $urlCloak,
             'user_agent' => $userAgent,
             'ip_address' => $ipAddress,
         ]);
@@ -195,6 +246,7 @@ class UrlShortenerService
             'short_url' => $shortLink->publicShortUrl(),
             'short_code' => $shortLink->short_code,
             'original_url' => $shortLink->original_url,
+            'url_cloak' => (bool) $shortLink->url_cloak,
             'clicks' => $shortLink->clicks,
             'existing' => $existing,
             'created_at' => $shortLink->created_at?->toIso8601String(),

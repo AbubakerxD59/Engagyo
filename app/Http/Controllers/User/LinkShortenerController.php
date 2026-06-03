@@ -246,12 +246,15 @@ class LinkShortenerController extends Controller
 
             $request->validate([
                 'original_url' => 'required|url|max:2048',
+                'url_cloak' => 'nullable|boolean',
             ]);
 
+            $urlCloak = $request->boolean('url_cloak', true);
             $normalizedUrl = ShortLink::normalizeUrl($request->original_url);
 
             $existing = ShortLink::where('user_id', $user->id)
                 ->where('original_url', $normalizedUrl)
+                ->where('url_cloak', $urlCloak)
                 ->first();
 
             if ($existing) {
@@ -278,7 +281,8 @@ class LinkShortenerController extends Controller
                 $user->id,
                 $request->original_url,
                 $request->userAgent(),
-                $request->ip()
+                $request->ip(),
+                $urlCloak
             );
 
             if (! $created['success']) {
@@ -324,13 +328,24 @@ class LinkShortenerController extends Controller
 
             $request->validate([
                 'original_url' => 'required|url|max:2048',
+                'url_cloak' => 'nullable|boolean',
             ]);
 
             $shortLink = ShortLink::where('user_id', $user->id)->where('id', $id)->firstOrFail();
+            $urlCloak = $request->boolean('url_cloak', true);
 
-            $shortLink->update([
-                'original_url' => $request->original_url,
-            ]);
+            $updated = $this->urlShortenerService->updateShortLink(
+                $shortLink,
+                $request->original_url,
+                $urlCloak
+            );
+
+            if (! $updated['success']) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $updated['message'] ?? 'Failed to update short link.',
+                ], 422);
+            }
 
             return response()->json([
                 'success' => true,
@@ -379,6 +394,7 @@ class LinkShortenerController extends Controller
             'short_code' => $shortLink->short_code,
             'original_url' => $shortLink->original_url,
             'short_url' => $shortLink->publicShortUrl(),
+            'url_cloak' => (bool) $shortLink->url_cloak,
             'clicks' => $shortLink->clicks,
             'created_at' => $shortLink->created_at->toIso8601String(),
             'existing' => $existing,
