@@ -91,6 +91,8 @@ class UrlShortenerService
             $api = $this->shrtLnkApi->updateLink($shortLink->short_code, [
                 'original_url' => $normalizedUrl,
                 'url_cloak' => $urlCloak ? 1 : 0,
+                'source' => config('shrtlnk.source', 'engagyo'),
+                'user_id' => $shortLink->user_id,
             ]);
 
             if (! $api['success']) {

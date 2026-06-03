@@ -190,13 +190,17 @@ class ShrtLnkApiService
     }
 
     /**
-     * Update an existing short link via PUT /api/links/{code}.
+     * Partially update an existing short link via PATCH /api/links/{code}.
+     *
+     * @see https://shrtnlnk.com/api-docs#update-link-api
      *
      * @param  array{
      *     original_url?: string,
      *     url_cloak?: int|bool|null,
      *     page_title?: string|null,
      *     thumbnail_url?: string|null,
+     *     source?: string|null,
+     *     user_id?: int|null,
      * }  $payload
      * @return array{success: bool, message?: string, data?: array<string, mixed>}
      */
@@ -230,6 +234,12 @@ class ShrtLnkApiService
         if (! empty($payload['thumbnail_url'])) {
             $body['thumbnail_url'] = $payload['thumbnail_url'];
         }
+        if (! empty($payload['source'])) {
+            $body['source'] = $payload['source'];
+        }
+        if (! empty($payload['user_id'])) {
+            $body['user_id'] = (int) $payload['user_id'];
+        }
 
         if ($body === []) {
             return [
@@ -244,7 +254,7 @@ class ShrtLnkApiService
             $response = Http::acceptJson()
                 ->asJson()
                 ->timeout((int) config('shrtlnk.timeout', 15))
-                ->put($url, $body);
+                ->patch($url, $body);
         } catch (\Throwable $e) {
             Log::warning('ShrtLnk API update request failed', [
                 'code' => $code,
