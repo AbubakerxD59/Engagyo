@@ -6,6 +6,7 @@ use App\Http\Controllers\FrontEnd\LinkedInAuthController;
 use App\Http\Controllers\FrontEnd\PinterestController;
 use App\Http\Controllers\FrontEnd\ThreadsController;
 use App\Http\Controllers\FrontEnd\TikTokController;
+use App\Http\Controllers\FrontEnd\YouTubeAuthController;
 use Illuminate\Support\Facades\Route;
 
 // Pinterest
@@ -40,4 +41,9 @@ Route::name('threads.')->controller(ThreadsController::class)->group(function ()
 // LinkedIn
 Route::name('linkedin.')->controller(LinkedInAuthController::class)->group(function () {
     Route::get('linkedin-callback', 'linkedInCallback')->name('callback');
+});
+
+// YouTube
+Route::name('youtube.')->controller(YouTubeAuthController::class)->group(function () {
+    Route::get('youtube-callback', 'callback')->name('callback');
 });

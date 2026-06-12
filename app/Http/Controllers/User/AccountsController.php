@@ -16,6 +16,7 @@ use App\Models\Thread;
 use App\Models\Tiktok;
 use App\Models\Timeslot;
 use App\Models\User;
+use App\Models\Youtube;
 use App\Services\FacebookService;
 use App\Services\FeatureUsageService;
 use App\Services\InstagramLoginService;
@@ -24,6 +25,7 @@ use App\Services\PinterestService;
 use App\Services\SocialMediaLogService;
 use App\Services\ThreadsService;
 use App\Services\TikTokService;
+use App\Services\YouTubeService;
 use Exception;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -64,7 +66,11 @@ class AccountsController extends Controller
 
     private $linkedin;
 
-    public function __construct(Pinterest $pinterest, Facebook $facebook, Tiktok $tiktok, Board $board, Page $page, Post $post, Domain $domain, FeatureUsageService $featureUsageService, InstagramAccount $instagramAccount, Thread $thread, Linkedin $linkedin)
+    private $youtubeService;
+
+    private $youtube;
+
+    public function __construct(Pinterest $pinterest, Facebook $facebook, Tiktok $tiktok, Board $board, Page $page, Post $post, Domain $domain, FeatureUsageService $featureUsageService, InstagramAccount $instagramAccount, Thread $thread, Linkedin $linkedin, Youtube $youtube)
     {
         $this->pinterestService = new PinterestService;
         $this->facebookService = new FacebookService;
@@ -83,11 +89,13 @@ class AccountsController extends Controller
         $this->thread = $thread;
         $this->linkedinService = new LinkedInService;
         $this->linkedin = $linkedin;
+        $this->youtubeService = new YouTubeService;
+        $this->youtube = $youtube;
     }
 
     public function index(InstagramLoginService $instagramLoginService)
     {
-        $user = User::with('facebook', 'pinterest', 'tiktok', 'instagramAccounts', 'threads', 'linkedins')->findOrFail(Auth::guard('user')->id());
+        $user = User::with('facebook', 'pinterest', 'tiktok', 'instagramAccounts', 'threads', 'linkedins', 'youtubes')->findOrFail(Auth::guard('user')->id());
         $facebookUrl = route('panel.accounts.facebook.socialite');
         try {
             $instagramUrl = $instagramLoginService->authorizeUrl();
@@ -106,8 +114,13 @@ class AccountsController extends Controller
         } catch (\Throwable $e) {
             $linkedinUrl = route('panel.accounts.linkedin.socialite');
         }
+        try {
+            $youtubeUrl = $this->youtubeService->getLoginUrl();
+        } catch (\Throwable $e) {
+            $youtubeUrl = route('panel.accounts.youtube.socialite');
+        }
 
-        return view('user.accounts.index', compact('user', 'facebookUrl', 'instagramUrl', 'pinterestUrl', 'tiktokUrl', 'threadsUrl', 'linkedinUrl'));
+        return view('user.accounts.index', compact('user', 'facebookUrl', 'instagramUrl', 'pinterestUrl', 'tiktokUrl', 'threadsUrl', 'linkedinUrl', 'youtubeUrl'));
     }
 
     /**
@@ -630,6 +643,15 @@ class AccountsController extends Controller
         }
     }
 
+    public function youtubeSocialite()
+    {
+        try {
+            return redirect()->away($this->youtubeService->getLoginUrl());
+        } catch (\Throwable $e) {
+            return redirect()->route('panel.accounts')->with('error', $e->getMessage());
+        }
+    }
+
     public function threads($id = null)
     {
         if (! empty($id)) {
@@ -757,6 +779,61 @@ class AccountsController extends Controller
                 $this->logService->logAccountConnection('linkedin', $linkedinId, $linkedinUsername, 'disconnected');
 
                 return back()->with('success', 'LinkedIn account deleted successfully!');
+            } else {
+                return back()->with('error', 'Something went Wrong!');
+            }
+        } else {
+            return back()->with('error', 'Something went Wrong!');
+        }
+    }
+
+    public function youtube($id = null)
+    {
+        if (! empty($id)) {
+            $user = User::find(Auth::guard('user')->id());
+            try {
+                $youtubeUrl = $this->youtubeService->getLoginUrl();
+            } catch (\Throwable $e) {
+                $youtubeUrl = route('panel.accounts.youtube.socialite');
+            }
+            $youtube = $this->youtube->where('user_id', $user->id)->search($id)->first();
+            if ($youtube) {
+                return view('user.accounts.youtube', compact('youtubeUrl', 'youtube'));
+            } else {
+                return back()->with('error', 'Something went Wrong!');
+            }
+        } else {
+            return back()->with('error', 'Something went Wrong!');
+        }
+    }
+
+    public function youtubeDelete($id = null)
+    {
+        if (! empty($id)) {
+            $user = User::find(Auth::guard('user')->id());
+            $youtube = $this->youtube->where('user_id', $user->id)->search($id)->first();
+            if ($youtube) {
+                $scheduledPostsCount = Post::where('account_id', $youtube->id)
+                    ->where('social_type', 'youtube')
+                    ->count();
+
+                Post::where('account_id', $youtube->id)
+                    ->where('social_type', 'youtube')
+                    ->delete();
+
+                $youtubeId = $youtube->id;
+                $youtubeUsername = $youtube->username;
+                $youtube->delete();
+
+                if ($scheduledPostsCount > 0) {
+                    $user->decrementFeatureUsage(Feature::$features_list[1], $scheduledPostsCount);
+                }
+
+                $user->decrementFeatureUsage(Feature::$features_list[0], 1);
+
+                $this->logService->logAccountConnection('youtube', $youtubeId, $youtubeUsername, 'disconnected');
+
+                return back()->with('success', 'YouTube channel deleted successfully!');
             } else {
                 return back()->with('error', 'Something went Wrong!');
             }

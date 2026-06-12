@@ -386,6 +386,82 @@
                         </div>
                     </div>
                 </div>
+                {{-- YouTube --}}
+                <div class="card platform-card">
+                    <div class="card-header with-border clearfix">
+                        <div class="card-title">
+                            <img src="{{ social_logo('youtube') }}" loading="lazy">
+                            <span>YouTube</span>
+                        </div>
+                        <a href="{{ $youtubeUrl }}" class="btn btn-outline-primary btn-sm mx-2">+ Connect</a>
+                        <div class="card-tools">
+                            <button type="button" class="btn btn-tool" data-card-widget="collapse" title="Collapse">
+                                <i class="fas fa-minus"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div class="accounts-grid-wrapper">
+                            <div class="accounts-grid" data-platform="youtube">
+                                @forelse ($user->youtubes as $index => $youtube)
+                                    <article class="account-card youtube-card has-tooltip" @style(['display:none;' => $index >= 12])
+                                        data-tooltip="{{ $youtube->username }}" data-index="{{ $index }}">
+                                        <div class="account-card-accent"></div>
+                                        <a href="{{ route('panel.accounts.youtube', $youtube->channel_id) }}"
+                                            class="account-card-link">
+                                            <div class="account-card-content">
+                                                <div class="account-avatar-wrapper">
+                                                    <img src="{{ $youtube->profile_image }}" class="account-avatar"
+                                                        loading="lazy"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('youtube') }}';">
+                                                    <span class="platform-indicator youtube-indicator">
+                                                        <i class="fab fa-youtube"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-info">
+                                                    <div class="account-username">
+                                                        {{ Str::limit($youtube->username, 12) }}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </a>
+                                        <div class="account-card-actions">
+                                            <button class="btn-account-delete delete-btn" title="Delete Account">
+                                                <i class="fa fa-trash"></i>
+                                            </button>
+                                            <form action="{{ route('panel.accounts.youtube.delete', $youtube->channel_id) }}"
+                                                method="POST" class="delete_form">
+                                                @csrf
+                                                @method('DELETE')
+                                            </form>
+                                        </div>
+                                    </article>
+                                @empty
+                                    <div class="empty-state-wrapper">
+                                        <div class="empty-state">
+                                            <div class="empty-state-icon youtube-empty">
+                                                <i class="fab fa-youtube"></i>
+                                            </div>
+                                            <h4>No YouTube Channel Connected</h4>
+                                            <p>Connect your YouTube channel to enable account access and video publishing.</p>
+                                            <a href="{{ $youtubeUrl }}" class="btn btn-youtube">
+                                                <i class="fab fa-youtube mr-2"></i> Connect YouTube
+                                            </a>
+                                        </div>
+                                    </div>
+                                @endforelse
+                            </div>
+                            @if (count($user->youtubes) > 12)
+                                <div class="accounts-toggle-wrapper">
+                                    <button class="btn-accounts-toggle" data-platform="youtube" type="button">
+                                        <span class="toggle-text">Show All</span>
+                                        <i class="fas fa-chevron-down toggle-icon"></i>
+                                    </button>
+                                </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
                 {{-- Threads --}}
                 <div class="card platform-card">
                     <div class="card-header with-border clearfix">
@@ -856,6 +932,10 @@
             background: linear-gradient(180deg, #0A66C2, #004182);
         }
 
+        .youtube-card .account-card-accent {
+            background: linear-gradient(180deg, #FF0000, #CC0000);
+        }
+
         .tiktok-card:hover .account-avatar {
             border-color: #000000;
         }
@@ -868,6 +948,10 @@
             border-color: #0A66C2;
         }
 
+        .youtube-card:hover .account-avatar {
+            border-color: #FF0000;
+        }
+
         .tiktok-indicator {
             background: #000000;
         }
@@ -878,6 +962,10 @@
 
         .linkedin-indicator {
             background: #0A66C2;
+        }
+
+        .youtube-indicator {
+            background: #FF0000;
         }
 
         .empty-state-icon.tiktok-empty {
@@ -893,6 +981,11 @@
         .empty-state-icon.linkedin-empty {
             background: linear-gradient(135deg, #e6f2ff, #d0e7ff);
             color: #0A66C2;
+        }
+
+        .empty-state-icon.youtube-empty {
+            background: linear-gradient(135deg, #ffe6e6, #ffd0d0);
+            color: #FF0000;
         }
 
         .btn-threads {
@@ -929,6 +1022,24 @@
             color: #fff;
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(10, 102, 194, 0.35);
+        }
+
+        .btn-youtube {
+            background: #FF0000;
+            color: #fff;
+            border: none;
+            padding: 10px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            font-size: 14px;
+            transition: all 0.2s ease;
+        }
+
+        .btn-youtube:hover {
+            background: #CC0000;
+            color: #fff;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(255, 0, 0, 0.35);
         }
 
         /* Toggle Button Styling */

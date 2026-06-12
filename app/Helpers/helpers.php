@@ -560,6 +560,8 @@ function social_logo($type = null)
         $logo = asset("assets/img/icons/threads-circle.svg");
     } elseif ($type == 'linkedin') {
         $logo = asset("assets/img/icons/linkedin-circle.svg");
+    } elseif ($type == 'youtube') {
+        $logo = asset("assets/img/icons/youtube-circle.svg");
     } else {
         $logo = "";
     }
@@ -581,6 +583,8 @@ function social_icon($type = null)
         $logo = '<img src="'.asset("assets/img/icons/threads-circle.svg").'" alt="Threads" style="width:14px;height:14px;object-fit:contain;">';
     } elseif ($type == 'linkedin') {
         $logo = '<i class="fa-brands fa-linkedin"></i>';
+    } elseif ($type == 'youtube') {
+        $logo = '<i class="fa-brands fa-youtube"></i>';
     } else {
         $logo = "";
     }

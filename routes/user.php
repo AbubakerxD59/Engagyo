@@ -110,6 +110,10 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.verified
             Route::get('linkedin/{id?}', 'linkedin')->name('linkedin');
             Route::get('linkedin-socialite', 'linkedinSocialite')->name('linkedin.socialite');
             Route::delete('linkedin-delete/{id?}', 'linkedinDelete')->name('linkedin.delete');
+            // YouTube
+            Route::get('youtube/{id?}', 'youtube')->name('youtube');
+            Route::get('youtube-socialite', 'youtubeSocialite')->name('youtube.socialite');
+            Route::delete('youtube-delete/{id?}', 'youtubeDelete')->name('youtube.delete');
             // Toggle RSS Pause
             Route::post('toggle-rss-pause', 'toggleRssPause')->name('toggleRssPause');
         });

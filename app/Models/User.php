@@ -128,6 +128,11 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(Linkedin::class, 'user_id', 'id');
     }
 
+    public function youtubes()
+    {
+        return $this->hasMany(Youtube::class, 'user_id', 'id');
+    }
+
     public function instagramAccounts()
     {
         return $this->hasMany(InstagramAccount::class, 'user_id', 'id');
