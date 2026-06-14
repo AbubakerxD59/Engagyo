@@ -300,7 +300,7 @@ function saveVideo($folderName, $file)
     return $fileName;
 }
 
-function getImage($folderName = null, $fileName, $parentFolder = 'uploads')
+function getImage($fileName, $parentFolder = 'uploads', $folderName = null)
 {
     return asset($parentFolder . '/' . $folderName . '/' . $fileName);
 }
