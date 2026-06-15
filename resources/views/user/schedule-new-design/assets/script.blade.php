@@ -3040,7 +3040,7 @@
             $('#createPostChannelsDropdown').removeClass('is-open');
             $('#createPostModal').removeClass('create-post-active-channels-only');
             $('.channels-dropdown-item').removeClass('is-create-post-channel-hidden');
-            $('#createPostEditorTextarea').val('').css('height', 'auto');
+            $('#createPostEditorTextarea').val('').css({ height: 'auto', overflowY: '' });
             $('#createPostComment').val('');
             $('#createPostFirstComment').val('');
             $('#createPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
@@ -3063,7 +3063,7 @@
             createPostRevokeUrls();
             is_link = 0;
             $('#queueNewPostLinkPreview').empty();
-            $('#queueNewPostEditorTextarea').val('').css('height', 'auto');
+            $('#queueNewPostEditorTextarea').val('').css({ height: 'auto', overflowY: '' });
             $('#queueNewPostComment').val('');
             $('#queueNewPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
             $('#queueNewPostFormatIgPost').prop('checked', true);
@@ -3109,7 +3109,7 @@
             $qm.find('.create-post-segmented-btn[href="schedule"]').show();
             $qm.find('.create-post-segmented-btn[href="queue"]').show();
             $qm.find('.create-post-segmented-btn[href="publish"]').show();
-            $('#queueNewPostEditorTextarea').val('').css('height', 'auto');
+            $('#queueNewPostEditorTextarea').val('').css({ height: 'auto', overflowY: '' });
             $('#queueNewPostComment').val('');
             $('#queueNewPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
             $('#queueNewPostFormatIgPost').prop('checked', true);
@@ -3315,10 +3315,27 @@
         createPostSetupDropZone($('#queueNewPostEditorWrap'), $('#queueNewPostUploadZone'));
         createPostSetupDropZone($('#queueNewPostUploadZone'), $('#queueNewPostUploadZone'));
 
+        var CREATE_POST_TEXTAREA_MAX_HEIGHT = 360;
+        var createPostLinkFetchTimer = null;
+        var createPostLinkFetchXhr = null;
+
+        function getLinkFromPostContent(text) {
+            if (!text) return null;
+            var trimmed = text.trim();
+            if (!trimmed) return null;
+            if (/[\r\n]/.test(trimmed) || trimmed.length > 2048) {
+                return extractUrlFromContent(trimmed);
+            }
+            return checkLink(trimmed) ? trimmed : extractUrlFromContent(trimmed);
+        }
+
         function autoResizePostTextarea(el) {
             if (!el) return;
             el.style.height = 'auto';
-            el.style.height = Math.max(120, el.scrollHeight) + 'px';
+            var scrollHeight = el.scrollHeight;
+            var newHeight = Math.max(120, Math.min(CREATE_POST_TEXTAREA_MAX_HEIGHT, scrollHeight));
+            el.style.height = newHeight + 'px';
+            el.style.overflowY = scrollHeight > CREATE_POST_TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
         }
 
         function autoResizeCreatePostTextarea() {
@@ -3339,10 +3356,17 @@
                 return;
             }
             is_link = 0;
-            var linkToFetch = checkLink(value) ? value : extractUrlFromContent(value);
+            var linkToFetch = getLinkFromPostContent(value);
+            clearTimeout(createPostLinkFetchTimer);
             if (linkToFetch && createPostFiles.length === 0) {
-                createPostFetchFromLink(linkToFetch, $modal);
+                createPostLinkFetchTimer = setTimeout(function() {
+                    createPostFetchFromLink(linkToFetch, $modal);
+                }, 300);
             } else {
+                if (createPostLinkFetchXhr) {
+                    createPostLinkFetchXhr.abort();
+                    createPostLinkFetchXhr = null;
+                }
                 $linkPreview.empty();
             }
             updateCreatePostFacebookFormatRow();
@@ -3352,9 +3376,13 @@
         function createPostFetchFromLink(link, $modal) {
             if (!link) return;
             if (!$modal || !$modal.length) $modal = activeComposeModal$();
+            if (createPostLinkFetchXhr) {
+                createPostLinkFetchXhr.abort();
+                createPostLinkFetchXhr = null;
+            }
             var $container = $modal.find('.create-post-link-preview');
             $container.html('<div class="skeleton-wrapper"><div class="content-col"><div class="skeleton-bar bar-title"></div><div class="skeleton-bar bar-full"></div></div><div class="image-col"><div class="skeleton-bar image-placeholder"></div></div></div>');
-            $.ajax({
+            createPostLinkFetchXhr = $.ajax({
                 url: "{{ route('general.previewLink') }}",
                 type: "GET",
                 data: { link: link },
@@ -3383,10 +3411,14 @@
                         refreshCreatePostTikTokSettings();
                     }
                 },
-                error: function() {
+                error: function(_xhr, status) {
+                    if (status === 'abort') return;
                     $container.html('<div style="padding: 1rem; color: #DC2626;">Error loading preview.</div>');
                     updateCreatePostFacebookFormatRow();
                     refreshCreatePostTikTokSettings();
+                },
+                complete: function() {
+                    createPostLinkFetchXhr = null;
                 }
             });
         }
@@ -4279,10 +4311,16 @@
             if (createdForAccounts.length > 0) {
                 focusScheduleViewOnPostAccounts(createdForAccounts);
             }
-            pm$('EditorTextarea').val('').css('height', 'auto');
+            pm$('EditorTextarea').val('').css({ height: 'auto', overflowY: '' });
             pm$('Comment').val('').attr('rows', 1).css({ height: '', minHeight: '', maxHeight: '' });
             pm$('FirstComment').val('');
             pm$('LinkPreview').empty();
+            clearTimeout(createPostLinkFetchTimer);
+            createPostLinkFetchTimer = null;
+            if (createPostLinkFetchXhr) {
+                createPostLinkFetchXhr.abort();
+                createPostLinkFetchXhr = null;
+            }
             createPostFiles = [];
             createPostRevokeUrls();
             pm$('UploadPreviews').empty();

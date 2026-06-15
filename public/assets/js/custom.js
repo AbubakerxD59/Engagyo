@@ -21,11 +21,26 @@ function empty(value) {
 }
 // check link (includes URLs with query params e.g. ?fbid=123&set=a.456)
 function checkLink(value) {
-    const urlRegex = /^(https?:\/\/)?([\da-z\.-]+)\.([a-z\.]{2,6})([\/\w \.-]*)*\/?(\?[^\s]*)?$/i;
-    if (urlRegex.test(value)) {
-        return true;
+    if (!value || typeof value !== 'string') {
+        return false;
     }
-    return false;
+    var trimmed = value.trim();
+    if (!trimmed || trimmed.length > 2048) {
+        return false;
+    }
+    // Post copy often contains spaces/newlines; only single-line URL-like input counts as a link.
+    if (/\s/.test(trimmed)) {
+        return false;
+    }
+    if (/^https?:\/\//i.test(trimmed)) {
+        try {
+            new URL(trimmed);
+            return true;
+        } catch (e) {
+            return false;
+        }
+    }
+    return /^([\w-]+\.)+[a-z]{2,}(\/\S*)?$/i.test(trimmed);
 }
 
 // check for past date/time

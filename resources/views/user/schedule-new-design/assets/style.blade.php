@@ -4624,6 +4624,7 @@
         width: 100%;
         flex: 0 0 auto;
         min-height: 120px;
+        max-height: 360px;
         padding: 0;
         font-size: 16px;
         line-height: 1.5;
@@ -4632,6 +4633,7 @@
         border: none;
         outline: none;
         resize: none;
+        overflow-y: auto;
     }
 
     .create-post-editor-textarea::placeholder {
