@@ -3040,7 +3040,7 @@
             $('#createPostChannelsDropdown').removeClass('is-open');
             $('#createPostModal').removeClass('create-post-active-channels-only');
             $('.channels-dropdown-item').removeClass('is-create-post-channel-hidden');
-            $('#createPostEditorTextarea').val('').css({ height: 'auto', overflowY: '' });
+            $('#createPostEditorTextarea').val('');
             $('#createPostComment').val('');
             $('#createPostFirstComment').val('');
             $('#createPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
@@ -3063,7 +3063,7 @@
             createPostRevokeUrls();
             is_link = 0;
             $('#queueNewPostLinkPreview').empty();
-            $('#queueNewPostEditorTextarea').val('').css({ height: 'auto', overflowY: '' });
+            $('#queueNewPostEditorTextarea').val('');
             $('#queueNewPostComment').val('');
             $('#queueNewPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
             $('#queueNewPostFormatIgPost').prop('checked', true);
@@ -3109,7 +3109,7 @@
             $qm.find('.create-post-segmented-btn[href="schedule"]').show();
             $qm.find('.create-post-segmented-btn[href="queue"]').show();
             $qm.find('.create-post-segmented-btn[href="publish"]').show();
-            $('#queueNewPostEditorTextarea').val('').css({ height: 'auto', overflowY: '' });
+            $('#queueNewPostEditorTextarea').val('');
             $('#queueNewPostComment').val('');
             $('#queueNewPostModal').find('input[name="create_post_instagram_formats[]"]').prop('checked', false);
             $('#queueNewPostFormatIgPost').prop('checked', true);
@@ -3315,9 +3315,9 @@
         createPostSetupDropZone($('#queueNewPostEditorWrap'), $('#queueNewPostUploadZone'));
         createPostSetupDropZone($('#queueNewPostUploadZone'), $('#queueNewPostUploadZone'));
 
-        var CREATE_POST_TEXTAREA_MAX_HEIGHT = 360;
         var createPostLinkFetchTimer = null;
         var createPostLinkFetchXhr = null;
+        var createPostEditorInputTimer = null;
 
         function getLinkFromPostContent(text) {
             if (!text) return null;
@@ -3329,25 +3329,9 @@
             return checkLink(trimmed) ? trimmed : extractUrlFromContent(trimmed);
         }
 
-        function autoResizePostTextarea(el) {
-            if (!el) return;
-            el.style.height = 'auto';
-            var scrollHeight = el.scrollHeight;
-            var newHeight = Math.max(120, Math.min(CREATE_POST_TEXTAREA_MAX_HEIGHT, scrollHeight));
-            el.style.height = newHeight + 'px';
-            el.style.overflowY = scrollHeight > CREATE_POST_TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
-        }
-
-        function autoResizeCreatePostTextarea() {
-            var el = document.getElementById(isQueueNewPostModalVisible() ? 'queueNewPostEditorTextarea' : 'createPostEditorTextarea');
-            autoResizePostTextarea(el);
-        }
-
-        $(document).on('input', '#createPostEditorTextarea, #queueNewPostEditorTextarea', function() {
-            autoResizePostTextarea(this);
-            var $modal = $(this).closest('#createPostModal, #queueNewPostModal');
+        function handleCreatePostEditorInput(el, $modal) {
             var $linkPreview = $modal.find('.create-post-link-preview');
-            var value = $(this).val().trim();
+            var value = $(el).val().trim();
             if (!value) {
                 $linkPreview.empty();
                 is_link = 0;
@@ -3371,6 +3355,15 @@
             }
             updateCreatePostFacebookFormatRow();
             refreshCreatePostTikTokSettings();
+        }
+
+        $(document).on('input', '#createPostEditorTextarea, #queueNewPostEditorTextarea', function() {
+            var el = this;
+            var $modal = $(el).closest('#createPostModal, #queueNewPostModal');
+            clearTimeout(createPostEditorInputTimer);
+            createPostEditorInputTimer = setTimeout(function() {
+                handleCreatePostEditorInput(el, $modal);
+            }, 100);
         });
 
         function createPostFetchFromLink(link, $modal) {
@@ -3398,7 +3391,6 @@
                             if (response.title) {
                                 var $ta = $modal.find('.create-post-editor-textarea');
                                 $ta.val(response.title);
-                                setTimeout(function() { autoResizePostTextarea($ta[0]); }, 0);
                             }
                         } else {
                             $container.html('<div style="padding: 1rem; color: #DC2626;">Error loading preview.</div>');
@@ -4311,10 +4303,12 @@
             if (createdForAccounts.length > 0) {
                 focusScheduleViewOnPostAccounts(createdForAccounts);
             }
-            pm$('EditorTextarea').val('').css({ height: 'auto', overflowY: '' });
+            pm$('EditorTextarea').val('');
             pm$('Comment').val('').attr('rows', 1).css({ height: '', minHeight: '', maxHeight: '' });
             pm$('FirstComment').val('');
             pm$('LinkPreview').empty();
+            clearTimeout(createPostEditorInputTimer);
+            createPostEditorInputTimer = null;
             clearTimeout(createPostLinkFetchTimer);
             createPostLinkFetchTimer = null;
             if (createPostLinkFetchXhr) {
