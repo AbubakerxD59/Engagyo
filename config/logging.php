@@ -68,7 +68,7 @@ return [
             'path' => storage_path('logs/laravel.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 14,
-            'permission' => 0664,
+            'permission' => 0777,
         ],
 
         'slack' => [
@@ -125,7 +125,7 @@ return [
             'path' => storage_path('logs/social-media/facebook.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 30,
-            'permission' => 0664,
+            'permission' => 0777,
         ],
 
         'social_pinterest' => [
@@ -133,7 +133,7 @@ return [
             'path' => storage_path('logs/social-media/pinterest.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 30,
-            'permission' => 0664,
+            'permission' => 0777,
         ],
 
         'social_tiktok' => [
@@ -141,7 +141,7 @@ return [
             'path' => storage_path('logs/social-media/tiktok.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 30,
-            'permission' => 0664,
+            'permission' => 0777,
         ],
 
         'social_instagram' => [
@@ -149,7 +149,7 @@ return [
             'path' => storage_path('logs/social-media/instagram.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 30,
-            'permission' => 0664,
+            'permission' => 0777,
         ],
 
         'social_twitter' => [
@@ -157,7 +157,7 @@ return [
             'path' => storage_path('logs/social-media/twitter.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 30,
-            'permission' => 0664,
+            'permission' => 0777,
         ],
 
         'social_linkedin' => [
@@ -165,7 +165,7 @@ return [
             'path' => storage_path('logs/social-media/linkedin.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 30,
-            'permission' => 0664,
+            'permission' => 0777,
         ],
 
         'social_youtube' => [
@@ -173,7 +173,7 @@ return [
             'path' => storage_path('logs/social-media/youtube.log'),
             'level' => env('LOG_LEVEL', 'debug'),
             'days' => 30,
-            'permission' => 0664,
+            'permission' => 0777,
         ],
     ],
 
