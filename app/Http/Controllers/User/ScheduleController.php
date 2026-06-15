@@ -5345,6 +5345,53 @@ class ScheduleController extends Controller
     }
 
     /**
+     * YouTube Sent tab: published schedule posts for selected accounts.
+     */
+    public function getYouTubeSentPosts(Request $request)
+    {
+        $viewer = Auth::guard('user')->user();
+        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::guard('user')->id()];
+        $accountIds = (array) $request->input('account_id', []);
+        if (empty($accountIds)) {
+            return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
+        }
+
+        $ownerId = (int) ($viewer instanceof User ? ($viewer->getEffectiveUser()?->id ?? $viewer->id) : Auth::guard('user')->id());
+        $accounts = Youtube::query()
+            ->whereIn('id', $accountIds)
+            ->where('user_id', $ownerId)
+            ->get();
+        if ($accounts->isEmpty()) {
+            return response()->json(['success' => false, 'message' => 'No YouTube accounts found', 'posts' => []]);
+        }
+
+        $accountIds = $accounts->pluck('id')->all();
+        $accountsById = $accounts->keyBy('id');
+
+        $dbPosts = Post::withoutGlobalScopes()
+            ->whereIn('user_id', $postCreatorIds)
+            ->where('social_type', 'like', '%youtube%')
+            ->whereIn('account_id', $accountIds)
+            ->where('status', 1)
+            ->whereNotNull('published_at')
+            ->where('source', 'schedule')
+            ->with('user', 'youtube')
+            ->orderByDesc('published_at')
+            ->get();
+
+        $allPosts = [];
+        foreach ($dbPosts as $dbPost) {
+            $account = $accountsById->get($dbPost->account_id) ?? $dbPost->youtube;
+            if (! $account instanceof Youtube) {
+                continue;
+            }
+            $allPosts[] = $this->sentTabPostFromYouTubeRecord($dbPost, $account);
+        }
+
+        return response()->json(['success' => true, 'posts' => $allPosts]);
+    }
+
+    /**
      * Sent-tab payload from a synced `instagram_posts` row (Meta media insights).
      */
     private function sentTabPostFromInstagramMedia(InstagramPost $media, InstagramAccount $account): array
@@ -5695,6 +5742,71 @@ class ScheduleController extends Controller
             'account_name' => $username !== '' ? '@' . $username : 'LinkedIn',
             'account_profile' => (string) ($account->profile_image ?? ''),
             'social_type' => 'linkedin',
+            'page_db_id' => $account->id,
+            'db_post_id' => $dbPost->id,
+            'insights' => [
+                'post_reactions' => 0,
+                'post_impressions' => 0,
+                'post_clicks' => 0,
+            ],
+            'comments' => 0,
+            'shares' => 0,
+            'from_local_db' => true,
+            'video_url' => $videoUrl,
+        ];
+
+        if ($dbPost->user) {
+            $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
+            $payload['publisher_email'] = $dbPost->user->email ?? '';
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Minimal Sent-tab payload from a published YouTube Post row.
+     */
+    private function sentTabPostFromYouTubeRecord(Post $dbPost, Youtube $account): array
+    {
+        $published = Carbon::parse($dbPost->published_at);
+        $createdTime = $published->toIso8601String();
+
+        $videoId = trim((string) ($dbPost->post_id ?? ''));
+        $fullPicture = $videoId !== ''
+            ? 'https://img.youtube.com/vi/' . rawurlencode($videoId) . '/hqdefault.jpg'
+            : '';
+
+        $videoUrl = $this->postStoredVideoUrl($dbPost);
+        $channelName = trim((string) ($account->username ?? ''));
+        if ($channelName === '') {
+            $channelName = trim((string) ($account->custom_url ?? ''));
+        }
+        if ($channelName === '') {
+            $channelName = 'YouTube';
+        }
+
+        $message = trim((string) ($dbPost->title ?? ''));
+        $comment = trim((string) ($dbPost->comment ?? ''));
+        if ($comment !== '') {
+            $message = $message !== '' ? $message . "\n\n" . $comment : $comment;
+        }
+
+        $permalink = $videoId !== ''
+            ? 'https://www.youtube.com/watch?v=' . rawurlencode($videoId)
+            : null;
+
+        $payload = [
+            'id' => $videoId !== '' ? $videoId : ('db-' . $dbPost->id),
+            'created_time' => $createdTime,
+            'message' => $message,
+            'story' => '',
+            'type' => 'video',
+            'media_type' => 'video',
+            'full_picture' => $fullPicture,
+            'permalink_url' => $permalink,
+            'account_name' => $channelName,
+            'account_profile' => (string) ($account->profile_image ?? ''),
+            'social_type' => 'youtube',
             'page_db_id' => $account->id,
             'db_post_id' => $dbPost->id,
             'insights' => [

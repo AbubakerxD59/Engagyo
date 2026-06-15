@@ -1925,6 +1925,10 @@
         background: #0A66C2;
     }
 
+    .sent-card-platform-badge.youtube {
+        background: #FF0000;
+    }
+
     .sent-card-account-name {
         font-size: 14px;
         font-weight: 600;
@@ -2134,6 +2138,14 @@
 
     .sent-card-platform-icon.threads {
         background: #000;
+    }
+
+    .sent-card-platform-icon.linkedin {
+        background: #0A66C2;
+    }
+
+    .sent-card-platform-icon.youtube {
+        background: #FF0000;
     }
 
     .sent-card-footer-actions {

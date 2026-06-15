@@ -423,6 +423,16 @@
             return true;
         }
 
+        /** Selected accounts are all YouTube (sent tab: same timeline card layout as Facebook). */
+        function isYouTubeOnlySelection() {
+            var selected = getSelectedAccounts();
+            if (selected.accountIds.length === 0) return false;
+            for (var i = 0; i < selected.accountTypes.length; i++) {
+                if (selected.accountTypes[i] !== 'youtube') return false;
+            }
+            return true;
+        }
+
         function refreshSentTabView() {
             if (isAllChannelsActive()) {
                 showSentPosts();
@@ -440,6 +450,8 @@
                 showSentPosts();
             } else if (isLinkedInOnlySelection()) {
                 showSentPosts();
+            } else if (isYouTubeOnlySelection()) {
+                showSentPosts();
             } else {
                 loadPosts(1);
             }
@@ -456,6 +468,7 @@
         var instagramSentRequest = null;
         var threadsSentRequest = null;
         var linkedinSentRequest = null;
+        var youtubeSentRequest = null;
         var queueSectionRequest = null;
         var queueSectionMultiRequests = [];
         var queueTimelineIsAllChannelsQueue = false;
@@ -490,6 +503,7 @@
             if (instagramSentRequest && instagramSentRequest.readyState !== 4) instagramSentRequest.abort();
             if (threadsSentRequest && threadsSentRequest.readyState !== 4) threadsSentRequest.abort();
             if (linkedinSentRequest && linkedinSentRequest.readyState !== 4) linkedinSentRequest.abort();
+            if (youtubeSentRequest && youtubeSentRequest.readyState !== 4) youtubeSentRequest.abort();
 
             var pairs = selectedAccounts.pairs || [];
             var fbIds = [];
@@ -498,6 +512,7 @@
             var igIds = [];
             var thIds = [];
             var liIds = [];
+            var ytIds = [];
             pairs.forEach(function(p) {
                 var t = (p.type || '').toString().toLowerCase();
                 if (t === 'facebook') fbIds.push(p.id);
@@ -506,6 +521,7 @@
                 else if (t === 'instagram') igIds.push(p.id);
                 else if (t === 'threads') thIds.push(p.id);
                 else if (t === 'linkedin') liIds.push(p.id);
+                else if (t === 'youtube') ytIds.push(p.id);
             });
 
             cachedSentPagePosts = null;
@@ -674,6 +690,28 @@
                 });
                 mixedSentRequests.push(rli);
             }
+            if (ytIds.length) {
+                pending++;
+                var ytPostsResult = [];
+                var ryt = $.ajax({
+                    url: "{{ route('panel.schedule.posts.youtube.sent') }}",
+                    type: "GET",
+                    data: { account_id: ytIds },
+                    success: function(response) {
+                        if (gen !== allChannelsSentLoadGeneration) return;
+                        ytPostsResult = (response.success && response.posts) ? response.posts : [];
+                    },
+                    error: function(xhr, textStatus) {
+                        if (textStatus === 'abort' || gen !== allChannelsSentLoadGeneration) return;
+                        ytPostsResult = [];
+                    },
+                    complete: function() {
+                        if (gen === allChannelsSentLoadGeneration) chunks.push(ytPostsResult);
+                        onRequestDone();
+                    }
+                });
+                mixedSentRequests.push(ryt);
+            }
 
             if (pending === 0) {
                 cachedSentPagePosts = [];
@@ -731,7 +769,7 @@
                 success: function(data) {
                     $('#posts-status-tabs [data-count="queue"]').text(data.queue);
                     // Sent badge: all-channels merged sent load; FB/Pin/TT/IG/Threads/LinkedIn dedicated APIs; else DB counts.
-                    if (!isAllChannelsActive() && !shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection() && !isInstagramOnlySelection() && !isThreadsOnlySelection() && !isLinkedInOnlySelection()) {
+                    if (!isAllChannelsActive() && !shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection() && !isInstagramOnlySelection() && !isThreadsOnlySelection() && !isLinkedInOnlySelection() && !isYouTubeOnlySelection()) {
                         $('#posts-status-tabs [data-count="sent"]').text(data.sent);
                     }
                 },
@@ -753,6 +791,8 @@
                 loadThreadsSentPagePostsCached(selectedAccounts);
             } else if (isLinkedInOnlySelection()) {
                 loadLinkedInSentPagePostsCached(selectedAccounts);
+            } else if (isYouTubeOnlySelection()) {
+                loadYouTubeSentPagePostsCached(selectedAccounts);
             } else {
                 cachedSentPagePosts = null;
             }
@@ -1010,6 +1050,40 @@
                 },
                 complete: function() {
                     linkedinSentRequest = null;
+                }
+            });
+        }
+
+        function loadYouTubeSentPagePostsCached(selectedAccounts) {
+            if (!isYouTubeOnlySelection()) {
+                return;
+            }
+            cachedSentPagePosts = null;
+            if (youtubeSentRequest && youtubeSentRequest.readyState !== 4) {
+                youtubeSentRequest.abort();
+            }
+            youtubeSentRequest = $.ajax({
+                url: "{{ route('panel.schedule.posts.youtube.sent') }}",
+                type: "GET",
+                data: { account_id: selectedAccounts.accountIds },
+                success: function(response) {
+                    var posts = (response.success && response.posts) ? response.posts : [];
+                    cachedSentPagePosts = posts;
+                    $('#posts-status-tabs [data-count="sent"]').text(posts.length);
+                    if (currentPostStatusTab === 'sent') {
+                        showSentPosts();
+                    }
+                },
+                error: function(xhr, textStatus) {
+                    if (textStatus === 'abort') return;
+                    cachedSentPagePosts = [];
+                    $('#posts-status-tabs [data-count="sent"]').text(0);
+                    if (currentPostStatusTab === 'sent') {
+                        showSentPosts();
+                    }
+                },
+                complete: function() {
+                    youtubeSentRequest = null;
                 }
             });
         }
@@ -5106,6 +5180,11 @@
                 return;
             }
 
+            if (currentPostStatusTab === 'sent' && isYouTubeOnlySelection()) {
+                loadYouTubeSentPagePostsCached(getSelectedAccounts());
+                return;
+            }
+
             var requestStart = (page - 1) * perPage;
             var requestLength = perPage;
 
@@ -5227,6 +5306,7 @@
             else if (st.indexOf('instagram') !== -1) st = 'instagram';
             else if (st.indexOf('threads') !== -1) st = 'threads';
             else if (st.indexOf('linkedin') !== -1) st = 'linkedin';
+            else if (st.indexOf('youtube') !== -1) st = 'youtube';
             else st = 'facebook';
 
             // Reel/Story badge in the Sent UI (Facebook feed payload includes `type`).
@@ -5252,16 +5332,17 @@
 
             var profileImg = post.account_profile || '';
             var socialLogo = socialLogos[st] || socialLogos.facebook;
-            var accountName = post.account_name || (st === 'pinterest' ? 'Pinterest board' : (st === 'tiktok' ? 'TikTok' : (st === 'instagram' ? 'Instagram' : (st === 'linkedin' ? 'LinkedIn' : 'Facebook Page'))));
+            var accountName = post.account_name || (st === 'pinterest' ? 'Pinterest board' : (st === 'tiktok' ? 'TikTok' : (st === 'instagram' ? 'Instagram' : (st === 'linkedin' ? 'LinkedIn' : (st === 'youtube' ? 'YouTube' : 'Facebook Page')))));
 
             var videoUrl = (post.video_url || '').toString().trim();
             var mediaType = (post.media_type || '').toString().toLowerCase();
             var isThreadVideo = st === 'threads' && (postType === 'video' || mediaType === 'video');
+            var isYouTubeVideo = st === 'youtube';
             var imageHtml = '';
             var isIgVideo = st === 'instagram' && (postType === 'video' || postType === 'reel' || postType === 'story' || mediaType === 'video' || mediaType === 'reels' || mediaType === 'reel');
-            if (!carouselGalleryHtml && (videoUrl || (isThreadVideo && post.full_picture) || (isIgVideo && post.full_picture)) && (postType === 'video' || postType === 'reel' || postType === 'story' || isThreadVideo || isIgVideo)) {
+            if (!carouselGalleryHtml && (videoUrl || (isThreadVideo && post.full_picture) || (isIgVideo && post.full_picture)) && (postType === 'video' || postType === 'reel' || postType === 'story' || isThreadVideo || isIgVideo || (isYouTubeVideo && videoUrl))) {
                 // Threads API may return video media URL in full_picture; use it as video source when video_url is not set.
-                var videoSrcValue = videoUrl || (isThreadVideo ? String(post.full_picture || '') : '');
+                var videoSrcValue = videoUrl || (isThreadVideo ? String(post.full_picture || '') : (isIgVideo ? String(post.full_picture || '') : ''));
                 var vSrc = $('<span>').text(videoSrcValue).html();
                 var posterAttr = '';
                 if (post.full_picture) {
@@ -5269,6 +5350,9 @@
                 }
                 imageHtml = '<div class="sent-card-video-wrap"><video class="sent-card-video" preload="metadata" playsinline controls' +
                     posterAttr + '><source src="' + vSrc + '" type="video/mp4"></video></div>';
+            } else if (!carouselGalleryHtml && isYouTubeVideo && post.full_picture) {
+                var ytThumbSrc = $('<span>').text(post.full_picture).html();
+                imageHtml = '<div class="sent-card-image"><img src="' + ytThumbSrc + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>';
             } else if (!carouselGalleryHtml && post.full_picture) {
                 var picSrc = $('<span>').text(post.full_picture).html();
                 imageHtml = '<div class="sent-card-image"><img src="' + picSrc + '" alt="" loading="lazy" onerror="this.style.display=\'none\'"></div>';
@@ -5287,7 +5371,7 @@
             var viewPostBtn = '';
             if (post.permalink_url) {
                 var perm = $('<span>').text(post.permalink_url).html();
-                var viewLabel = st === 'pinterest' ? 'View Pin' : (st === 'tiktok' ? 'View on TikTok' : (st === 'instagram' ? 'View on Instagram' : (st === 'linkedin' ? 'View on LinkedIn' : 'View Post')));
+                var viewLabel = st === 'pinterest' ? 'View Pin' : (st === 'tiktok' ? 'View on TikTok' : (st === 'instagram' ? 'View on Instagram' : (st === 'linkedin' ? 'View on LinkedIn' : (st === 'youtube' ? 'View on YouTube' : 'View Post'))));
                 viewPostBtn = '<a href="' + perm + '" target="_blank" rel="noopener noreferrer" class="sent-card-view-btn"><i class="fas fa-external-link-alt"></i> ' + viewLabel + '</a>';
             }
             var dbPostId = post.db_post_id || '';
@@ -5346,6 +5430,8 @@
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon threads">' + threadsCircleIconHtml('threads-circle-icon') + '</span> Threads';
             } else if (st === 'linkedin') {
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon linkedin"><i class="fab fa-linkedin-in"></i></span> LinkedIn';
+            } else if (st === 'youtube') {
+                publishedViaHtml = 'Published via <span class="sent-card-platform-icon youtube"><i class="fab fa-youtube"></i></span> YouTube';
             } else {
                 publishedViaHtml = 'Published via <span class="sent-card-platform-icon facebook"><i class="fab fa-facebook-f"></i></span> Facebook';
             }
@@ -5375,7 +5461,7 @@
                 sentStatusHtml = '<span class="sent-card-status-badge ' + sentClass + '">' + sentLabel + '</span>';
             }
 
-            var badgeIcon = st === 'pinterest' ? 'fab fa-pinterest-p' : (st === 'tiktok' ? 'fab fa-tiktok' : (st === 'instagram' ? 'fab fa-instagram' : (st === 'threads' ? 'threads-circle-icon' : (st === 'linkedin' ? 'fab fa-linkedin-in' : 'fab fa-facebook-f'))));
+            var badgeIcon = st === 'pinterest' ? 'fab fa-pinterest-p' : (st === 'tiktok' ? 'fab fa-tiktok' : (st === 'instagram' ? 'fab fa-instagram' : (st === 'threads' ? 'threads-circle-icon' : (st === 'linkedin' ? 'fab fa-linkedin-in' : (st === 'youtube' ? 'fab fa-youtube' : 'fab fa-facebook-f')))));
             var badgeIconHtml = badgeIcon === 'threads-circle-icon'
                 ? threadsCircleIconHtml('threads-circle-icon')
                 : '<i class="' + badgeIcon + '"></i>';
@@ -5823,6 +5909,9 @@
                 } else if (isLinkedInOnlySelection()) {
                     cachedSentPagePosts = null;
                     loadLinkedInSentPagePostsCached(getSelectedAccounts());
+                } else if (isYouTubeOnlySelection()) {
+                    cachedSentPagePosts = null;
+                    loadYouTubeSentPagePostsCached(getSelectedAccounts());
                 } else {
                     loadPosts(1);
                 }
@@ -5857,7 +5946,7 @@
                             if (currentPostStatusTab === 'sent') {
                                 if (isAllChannelsActive()) {
                                     loadAllChannelsSentPostsAggregated(getSelectedAccounts());
-                                } else if (!shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection() && !isInstagramOnlySelection() && !isThreadsOnlySelection() && !isLinkedInOnlySelection()) {
+                                } else if (!shouldUseFacebookSentPageTimeline() && !isPinterestOnlySelection() && !isTikTokOnlySelection() && !isInstagramOnlySelection() && !isThreadsOnlySelection() && !isLinkedInOnlySelection() && !isYouTubeOnlySelection()) {
                                     loadPosts(1);
                                 }
                             }

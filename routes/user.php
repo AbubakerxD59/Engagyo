@@ -49,6 +49,7 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.verified
             Route::get('posts/instagram-sent', 'getInstagramSentPosts')->name('posts.instagram.sent');
             Route::get('posts/threads-sent', 'getThreadsSentPosts')->name('posts.threads.sent');
             Route::get('posts/linkedin-sent', 'getLinkedInSentPosts')->name('posts.linkedin.sent');
+            Route::get('posts/youtube-sent', 'getYouTubeSentPosts')->name('posts.youtube.sent');
             Route::post('delete-sent-post', 'deleteSentPost')->name('delete-sent-post');
             Route::get('queue-timeline', 'getQueueTimeline')->name('queue.timeline');
             Route::get('next-queue-slot', 'getNextQueueSlot')->name('next-queue-slot');
