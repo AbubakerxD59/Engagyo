@@ -7,17 +7,16 @@ use App\Services\ScheduledQueuePostPublisher;
 use Carbon\Carbon;
 use Illuminate\Console\Command;
 
-class YouTubePublishCron extends Command
+class YouTubePublishQueueCron extends Command
 {
-    protected $signature = 'youtube:publish';
+    protected $signature = 'youtube:publish-queue';
 
-    protected $description = 'Publish due YouTube video posts that are not calendar-queue items.';
+    protected $description = 'Publish due YouTube posts that are not calendar-queue items (same pattern as linkedin:publish-queue).';
 
     public function handle(ScheduledQueuePostPublisher $publisher): void
     {
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
-
-        $posts = Post::with('user', 'youtube')
+        $posts = Post::with('user.timezone', 'youtube')
             ->notPublished()
             ->past($now)
             ->youtube()
@@ -30,11 +29,13 @@ class YouTubePublishCron extends Command
             try {
                 $publisher->publishYouTube($post);
             } catch (\Exception $e) {
+                $errorMessage = $e->getMessage();
+                info("YouTube queue publish error for Post ID {$post->id}: ".$errorMessage);
                 $post->update([
                     'status' => -1,
-                    'response' => $e->getMessage(),
-                    'published_at' => date('Y-m-d H:i:s'),
+                    'response' => 'Error: '.$errorMessage,
                 ]);
+                $publisher->notifySchedulePublishException($post, $errorMessage);
             }
         }
     }

@@ -3,6 +3,8 @@
 namespace App\Jobs;
 
 use App\Models\Post;
+use App\Models\Youtube;
+use App\Services\PostService;
 use App\Services\YouTubeService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -17,29 +19,44 @@ class PublishYouTubePost implements ShouldQueue
 
     public $tries = 1;
 
-    private int $id;
+    public int $timeout = 900;
 
-    private array $data;
-
-    private string $accessToken;
-
-    public function __construct(int $id, array $data, string $accessToken)
-    {
-        $this->id = $id;
-        $this->data = $data;
-        $this->accessToken = $accessToken;
-    }
+    public function __construct(
+        public int $postId,
+    ) {}
 
     public function handle(): void
     {
-        $post = Post::with('youtube')->find($this->id);
-        if (! $post || $post->social_type !== 'youtube' || ! $post->youtube) {
-            Log::error("PublishYouTubePost: missing post or YouTube account for post id {$this->id}");
+        $post = Post::withoutGlobalScopes()
+            ->with(['youtube' => fn ($query) => $query->withoutGlobalScopes()])
+            ->find($this->postId);
+
+        if (! $post || ! str_contains(strtolower((string) $post->social_type), 'youtube')) {
+            Log::error("PublishYouTubePost: missing post or YouTube social type for post id {$this->postId}");
 
             return;
         }
 
-        $tokenResponse = YouTubeService::validateToken($post->youtube);
+        $youtube = $post->youtube;
+        if (! $youtube) {
+            $youtube = Youtube::withoutGlobalScopes()->find($post->account_id);
+        }
+
+        if (! $youtube) {
+            Log::error("PublishYouTubePost: YouTube account not found for post id {$this->postId}");
+            $post->update([
+                'status' => -1,
+                'published_at' => date('Y-m-d H:i:s'),
+                'response' => json_encode([
+                    'success' => false,
+                    'error' => 'YouTube account not found.',
+                ]),
+            ]);
+
+            return;
+        }
+
+        $tokenResponse = YouTubeService::validateToken($youtube);
         if (empty($tokenResponse['success'])) {
             $message = $tokenResponse['message'] ?? 'YouTube authentication failed.';
             Log::error("PublishYouTubePost: {$message}");
@@ -55,12 +72,29 @@ class PublishYouTubePost implements ShouldQueue
             return;
         }
 
-        $youtubeService = new YouTubeService();
-        $youtubeService->video($this->id, $this->data, $tokenResponse['access_token']);
+        $postData = PostService::postTypeBody($post);
+        (new YouTubeService())->video($this->postId, $postData, $tokenResponse['access_token']);
     }
 
     public function failed(\Throwable $exception): void
     {
-        Log::error('PublishYouTubePost job failed: '.$exception->getMessage());
+        Log::error('PublishYouTubePost job failed', [
+            'postId' => $this->postId,
+            'error' => $exception->getMessage(),
+        ]);
+
+        $post = Post::withoutGlobalScopes()->find($this->postId);
+        if (! $post || (int) $post->status === 1) {
+            return;
+        }
+
+        $post->update([
+            'status' => -1,
+            'published_at' => date('Y-m-d H:i:s'),
+            'response' => json_encode([
+                'success' => false,
+                'error' => $exception->getMessage(),
+            ]),
+        ]);
     }
 }

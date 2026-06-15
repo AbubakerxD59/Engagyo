@@ -222,8 +222,7 @@ class PostService
                         'message' => $tokenResponse['message'] ?? 'YouTube access token expired. Reconnect your YouTube account.',
                     ];
                 }
-                $postData = self::postTypeBody($post);
-                \App\Jobs\PublishYouTubePost::dispatch($post->id, $postData, $tokenResponse['access_token']);
+                \App\Jobs\PublishYouTubePost::dispatch($post->id)->delay(now()->addSeconds(5));
             }
             $response = [
                 'success' => true,

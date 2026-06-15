@@ -2214,7 +2214,7 @@
             renderLastUsed();
             updateCreatePostFacebookFormatRow();
             updateCreatePostTextareasVisibility();
-            refreshCreatePostTikTokSettings();
+            refreshCreatePostPlatformSettings();
             refreshCreatePostTimeslotSlotBar();
         }
 
@@ -2328,7 +2328,7 @@
             }
             updateCreatePostFacebookFormatRow();
             updateCreatePostTextareasVisibility();
-            refreshCreatePostTikTokSettings();
+            refreshCreatePostPlatformSettings();
             refreshQueueNewPostNextSlotDisplay();
         }
 
@@ -3181,7 +3181,7 @@
             }
             if (rejected > 0) toastr.error('Some files were not supported. Allowed: ' + createPostAllowedExtensions.join(', '));
             updateCreatePostFacebookFormatRow();
-            refreshCreatePostTikTokSettings();
+            refreshCreatePostPlatformSettings();
         }
 
         function renderCreatePostUploadPreviews() {
@@ -3296,7 +3296,7 @@
             createPostFiles.splice(idx, 1);
             renderCreatePostUploadPreviews();
             updateCreatePostFacebookFormatRow();
-            refreshCreatePostTikTokSettings();
+            refreshCreatePostPlatformSettings();
         });
 
         function createPostSetupDropZone($el, $uploadZone) {
@@ -3340,7 +3340,7 @@
                 if (is_link !== 0) {
                     is_link = 0;
                     updateCreatePostFacebookFormatRow();
-                    refreshCreatePostTikTokSettings();
+                    refreshCreatePostPlatformSettings();
                 }
                 return;
             }
@@ -3356,7 +3356,7 @@
                     is_link = 0;
                     $linkPreview.empty();
                     updateCreatePostFacebookFormatRow();
-                    refreshCreatePostTikTokSettings();
+                    refreshCreatePostPlatformSettings();
                 }
                 return;
             }
@@ -3411,18 +3411,18 @@
                             $container.html('<div style="padding: 1rem; color: #DC2626;">Error loading preview.</div>');
                         }
                         updateCreatePostFacebookFormatRow();
-                        refreshCreatePostTikTokSettings();
+                        refreshCreatePostPlatformSettings();
                     } else {
                         $container.html('<div style="padding: 1rem; color: #DC2626;">' + (response.message || 'Error') + '</div>');
                         updateCreatePostFacebookFormatRow();
-                        refreshCreatePostTikTokSettings();
+                        refreshCreatePostPlatformSettings();
                     }
                 },
                 error: function(_xhr, status) {
                     if (status === 'abort') return;
                     $container.html('<div style="padding: 1rem; color: #DC2626;">Error loading preview.</div>');
                     updateCreatePostFacebookFormatRow();
-                    refreshCreatePostTikTokSettings();
+                    refreshCreatePostPlatformSettings();
                 },
                 complete: function() {
                     createPostLinkFetchXhr = null;
@@ -3436,7 +3436,7 @@
             $modal.find('.create-post-editor-textarea').val('');
             is_link = 0;
             updateCreatePostFacebookFormatRow();
-            refreshCreatePostTikTokSettings();
+            refreshCreatePostPlatformSettings();
         });
 
         // publish/queue/schedule post
@@ -3619,6 +3619,70 @@
             fetchCreatePostTikTokCreatorInfo(tiktokAccounts[0].id);
             syncCreatePostTikTokInteractionVisibility();
             syncCreatePostTikTokPrivacyForDisclosure();
+        }
+
+        function getCreatePostSelectedYouTubeAccounts(selectedAccounts) {
+            var youtubeAccounts = [];
+            (selectedAccounts || []).forEach(function(acc) {
+                if ((acc.type || '') !== 'youtube') return;
+                var $item = $('.channels-dropdown-checkbox[data-id="' + acc.id + '"][data-type="youtube"]').closest('.channels-dropdown-item');
+                var name = $item.find('.channels-dropdown-item-name').text().trim();
+                if (!name && isQueueNewPostModalVisible()) {
+                    name = $('.account-card.active:not(.all-channels-card)').first().find('.account-name').text().trim();
+                }
+                if (!name) name = 'YouTube Channel';
+                youtubeAccounts.push({ id: acc.id, name: name });
+            });
+            return youtubeAccounts;
+        }
+
+        function refreshCreatePostYouTubeSettings() {
+            var selectedAccounts = getCreatePostSelectedAccounts();
+            var youtubeAccounts = getCreatePostSelectedYouTubeAccounts(selectedAccounts);
+            var hasVideo = !is_link && createPostHasAnyVideoFile();
+            var $wrap = pm$('YouTubeSettingsWrap');
+            if (youtubeAccounts.length === 0 || !hasVideo) {
+                $wrap.hide();
+                pm$('YouTubePrivacyStatus').val('');
+                return;
+            }
+            $wrap.show();
+        }
+
+        function refreshCreatePostPlatformSettings() {
+            refreshCreatePostTikTokSettings();
+            refreshCreatePostYouTubeSettings();
+        }
+
+        function appendCreatePostYouTubeFields(target, selectedAccounts, isVideo) {
+            var youtubeAccounts = getCreatePostSelectedYouTubeAccounts(selectedAccounts);
+            if (youtubeAccounts.length === 0 || !isVideo) return;
+            var privacy = pm$('YouTubePrivacyStatus').val() || '';
+            if (target instanceof FormData) {
+                target.append('youtube_privacy_status', privacy);
+                target.append('youtube_made_for_kids', '');
+            } else {
+                target.youtube_privacy_status = privacy;
+                target.youtube_made_for_kids = '';
+            }
+        }
+
+        function validateCreatePostYouTubeSettings() {
+            var selectedAccounts = getCreatePostSelectedAccounts();
+            var youtubeAccounts = getCreatePostSelectedYouTubeAccounts(selectedAccounts);
+            var hasVideo = !is_link && createPostHasAnyVideoFile();
+            if (youtubeAccounts.length === 0 || !hasVideo) return true;
+            if (!pm$('YouTubePrivacyStatus').val()) {
+                toastr.error('Please select who can view this YouTube video.');
+                return false;
+            }
+            return true;
+        }
+
+        function validateCreatePostPlatformSettings() {
+            if (!validateCreatePostTikTokSettings()) return false;
+            if (!validateCreatePostYouTubeSettings()) return false;
+            return true;
         }
 
         function createPostHasAnyVideoFile() {
@@ -3879,7 +3943,7 @@
                 return;
             }
             var selectedAccounts = getCreatePostSelectedAccounts();
-            if (!validateCreatePostTikTokSettings()) return;
+            if (!validateCreatePostPlatformSettings()) return;
             var postData = {
                 "_token": "{{ csrf_token() }}",
                 "content": content,
@@ -3909,6 +3973,7 @@
                     postData.tiktok_auto_add_music = 1;
                 }
             }
+            appendCreatePostYouTubeFields(postData, selectedAccounts, createPostHasAnyVideoFile());
             disableActionButton();
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",
@@ -3993,28 +4058,28 @@
                 }
             }
             if (createPostInstagramCarouselModeActive()) {
-                if (!validateCreatePostTikTokSettings()) return;
+                if (!validateCreatePostPlatformSettings()) return;
                 processCreatePostInstagramCarouselBatch();
                 return;
             }
             if (createPostThreadsCarouselModeActive()) {
-                if (!validateCreatePostTikTokSettings()) return;
+                if (!validateCreatePostPlatformSettings()) return;
                 processCreatePostInstagramCarouselBatch();
                 return;
             }
             if (createPostChainPostsMode && action_name === 'queue') {
-                if (!validateCreatePostTikTokSettings()) return;
+                if (!validateCreatePostPlatformSettings()) return;
                 processCreatePostChainQueue();
                 return;
             }
-            if (!validateCreatePostTikTokSettings()) return;
+            if (!validateCreatePostPlatformSettings()) return;
             disableActionButton();
             processCreatePostFilesQueue(filesToProcess, 0);
         }
 
         function processCreatePostChainQueue() {
             if (createPostFiles.length === 0) return;
-            if (!validateCreatePostTikTokSettings()) return;
+            if (!validateCreatePostPlatformSettings()) return;
             disableActionButton();
             var formData = new FormData();
             formData.append("_token", "{{ csrf_token() }}");
@@ -4056,6 +4121,7 @@
                     formData.append('tiktok_auto_add_music', 1);
                 }
             }
+            appendCreatePostYouTubeFields(formData, selectedAccounts, createPostHasAnyVideoFile());
             createPostFiles.forEach(function(file) {
                 var uid = file.__uploadId;
                 if (!uid) return;
@@ -4108,7 +4174,7 @@
         }
 
         function processCreatePostInstagramCarouselBatch() {
-            if (!validateCreatePostTikTokSettings()) return;
+            if (!validateCreatePostPlatformSettings()) return;
             var isThreadsCarousel = createPostThreadsCarouselModeActive();
             if (isThreadsCarousel) {
                 if (createPostFiles.length < 2 || createPostFiles.length > 20) {
@@ -4164,6 +4230,7 @@
                     formData.append('tiktok_auto_add_music', 1);
                 }
             }
+            appendCreatePostYouTubeFields(formData, selectedAccounts, createPostHasAnyVideoFile());
             $.ajax({
                 url: "{{ route('panel.schedule.process.post') }}",
                 type: "POST",
@@ -4263,6 +4330,7 @@
                     formData.append('tiktok_auto_add_music', 1);
                 }
             }
+            appendCreatePostYouTubeFields(formData, selectedAccounts, isVideo);
             if (uploadId) {
                 createPostUploadStates[uploadId] = { status: 'uploading', progress: 0 };
                 updateCreatePostVideoUploadUi(uploadId, 0, 'uploading');
@@ -4351,7 +4419,7 @@
             pm$('TikTokConsentConfirm').prop('checked', false);
             pm$('TikTokAddMusic').prop('checked', false);
             syncCreatePostTikTokCommercialOptions();
-            refreshCreatePostTikTokSettings();
+            refreshCreatePostPlatformSettings();
             if (isQueueNewPostModalVisible() && (queueNewPostPinnedSlotDate || queueNewPostPinnedSlotDisplay)) {
                 clearQueueNewPostPinnedSlot();
                 refreshQueueNewPostNextSlotDisplay();

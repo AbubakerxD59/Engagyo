@@ -700,7 +700,6 @@ class ScheduleController extends Controller
     {
         return [
             'privacy_status' => $request->input('youtube_privacy_status', 'public'),
-            'made_for_kids' => (bool) $request->input('youtube_made_for_kids', 0),
         ];
     }
 
@@ -2387,7 +2386,6 @@ class ScheduleController extends Controller
                             'message' => $tokenResponse['message'] ?? 'Failed to validate YouTube access token.',
                         ];
                     }
-                    $access_token = $tokenResponse['access_token'];
 
                     $data = [
                         'user_id' => $user->id,
@@ -2407,8 +2405,7 @@ class ScheduleController extends Controller
                         $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                     }
                     $this->logService->logPost('youtube', 'video', $post->id, ['action' => 'publish'], 'pending');
-                    $postData = PostService::postTypeBody($post);
-                    PublishYouTubePost::dispatch($post->id, $postData, $access_token);
+                    PublishYouTubePost::dispatch($post->id)->delay(now()->addSeconds(5));
                 }
             }
             $response = [

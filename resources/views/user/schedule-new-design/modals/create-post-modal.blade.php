@@ -559,6 +559,20 @@
                                     <small class="d-block mt-1" style="color:#4b5563;">Post status is automatically refreshed so you can track processing and final publish state.</small>
                                 </div>
                             </div>
+                            <div id="createPostYouTubeSettingsWrap" class="mt-3" style="display:none;">
+                                <div class="border rounded p-3" style="background:#f8fafc;color:#1f2937;border-color:#e5e7eb !important;">
+                                    <h6 class="mb-3" style="color:#111827;">YouTube Video Settings</h6>
+                                    <div class="form-group mb-0">
+                                        <label for="createPostYouTubePrivacyStatus" class="mb-1" style="color:#374151;">Who can view this?</label>
+                                        <select id="createPostYouTubePrivacyStatus" class="form-control w-50">
+                                            <option value="">Select visibility</option>
+                                            <option value="public">Public</option>
+                                            <option value="private">Private</option>
+                                            <option value="unlisted">Unlisted</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="create-post-editor-actions">
                                 <div id="createPostCommentWrap"
                                     class="create-post-comment-wrap create-post-comment-facebook"

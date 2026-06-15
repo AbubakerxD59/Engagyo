@@ -187,13 +187,11 @@ class YouTubeService
             $description = mb_substr($description, 0, 5000);
 
             $privacyStatus = $this->normalizePrivacyStatus($post['privacy_status'] ?? 'public');
-            $madeForKids = (bool) ($post['made_for_kids'] ?? false);
 
             $uploadResponse = $this->uploadVideo($accessToken, $localFilePath, [
                 'title' => $title,
                 'description' => $description,
                 'privacy_status' => $privacyStatus,
-                'made_for_kids' => $madeForKids,
                 'tags' => $post['tags'] ?? [],
             ]);
 
@@ -266,9 +264,12 @@ class YouTubeService
             ],
             'status' => [
                 'privacyStatus' => $this->normalizePrivacyStatus($metadata['privacy_status'] ?? 'public'),
-                'selfDeclaredMadeForKids' => (bool) ($metadata['made_for_kids'] ?? false),
             ],
         ];
+
+        if (array_key_exists('made_for_kids', $metadata) && $metadata['made_for_kids'] !== '' && $metadata['made_for_kids'] !== null) {
+            $videoMetadata['status']['selfDeclaredMadeForKids'] = (bool) $metadata['made_for_kids'];
+        }
 
         if ($tags !== []) {
             $videoMetadata['snippet']['tags'] = array_slice($tags, 0, 30);

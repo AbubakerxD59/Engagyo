@@ -178,8 +178,7 @@ class ScheduledQueuePostPublisher
         }
 
         try {
-            $postData = PostService::postTypeBody($post);
-            PublishYouTubePost::dispatch($post->id, $postData, $tokenResponse['access_token']);
+            PublishYouTubePost::dispatch($post->id);
         } catch (\Exception $e) {
             $errorMessage = 'Error preparing post: '.$e->getMessage();
             $post->update([

@@ -932,6 +932,7 @@ class PostController extends BaseController
             'link' => 'nullable|url',
             'publish_now' => 'nullable|in:0,1',
             'scheduled_at' => 'nullable|date|after:now',
+            'youtube_privacy_status' => 'nullable|in:public,private,unlisted',
         ]);
 
         if ($validator->fails()) {
@@ -1407,7 +1408,6 @@ class PostController extends BaseController
 
         $youtubeMetadata = [
             'privacy_status' => $request->input('youtube_privacy_status', 'public'),
-            'made_for_kids' => (bool) $request->input('youtube_made_for_kids', 0),
         ];
 
         $post = PostService::create([
@@ -1432,12 +1432,7 @@ class PostController extends BaseController
         $post->update($metaUpdate);
 
         if ($publishNow) {
-            $postData = PostService::postTypeBody($post->fresh());
-            $decoded = is_string($post->metadata) ? json_decode($post->metadata, true) : $post->metadata;
-            if (is_array($decoded)) {
-                $postData = array_merge($postData, $decoded);
-            }
-            PublishYouTubePost::dispatch($post->id, $postData, $accessToken);
+            PublishYouTubePost::dispatch($post->id)->delay(now()->addSeconds(5));
 
             return $this->successResponse([
                 'post' => [
