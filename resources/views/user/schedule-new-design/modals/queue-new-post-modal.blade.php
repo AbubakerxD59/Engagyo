@@ -180,7 +180,7 @@
                                 </div>
                             </div>
                             <div class="create-post-editor-textarea-scroll">
-                            <textarea class="create-post-editor-textarea" id="queueNewPostEditorTextarea"
+                            <textarea class="create-post-editor-textarea no-textarea-auto-grow" id="queueNewPostEditorTextarea"
                                 placeholder="Paste your link or write something..." rows="6"></textarea>
                             </div>
                         </div>

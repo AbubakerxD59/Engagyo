@@ -142,11 +142,19 @@
                     $('#signout_form').submit();
                 }
             });
-            $('textarea').on('input', function() {
-                const textarea = $(this)[0];
-                // While the scroll height is greater than the client height, increase the number of rows
-                while (textarea.scrollHeight > textarea.clientHeight) {
-                    $(this).attr('rows', parseInt($(this).attr('rows')) + 1);
+            $('textarea').not('.create-post-editor-textarea, .no-textarea-auto-grow').on('input', function() {
+                const textarea = this;
+                let rows = parseInt(textarea.getAttribute('rows'), 10) || 1;
+                let prevClientHeight = textarea.clientHeight;
+                let guard = 0;
+                while (textarea.scrollHeight > textarea.clientHeight && guard < 50) {
+                    rows += 1;
+                    textarea.setAttribute('rows', rows);
+                    guard += 1;
+                    if (textarea.clientHeight === prevClientHeight) {
+                        break;
+                    }
+                    prevClientHeight = textarea.clientHeight;
                 }
             });
         });
