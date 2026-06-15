@@ -39,6 +39,7 @@ use App\Console\Commands\SyncUserUsage;
 use App\Console\Commands\TikTokFetchPublishStatus;
 use App\Console\Commands\ThreadsPublishQueueCron;
 use App\Console\Commands\TikTokPublishCron;
+use App\Console\Commands\YouTubePublishCron;
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
 
@@ -58,6 +59,7 @@ class Kernel extends ConsoleKernel
         PinterestPublishCron::class, // pinterest:publish
         FacebookPublishCron::class, // facebook:publish
         TikTokPublishCron::class, // tiktok:publish
+        YouTubePublishCron::class, // youtube:publish
         InstagramPublishQueueCron::class, // instagram:publish-queue
         ThreadsPublishQueueCron::class, // threads:publish-queue
         LinkedInPublishQueueCron::class, // linkedin:publish-queue
@@ -104,6 +106,8 @@ class Kernel extends ConsoleKernel
         $schedule->command('facebook:publish')->everyFiveMinutes();
         // Command to publish TikTok posts
         $schedule->command('tiktok:publish')->everyFiveMinutes();
+        // Command to publish YouTube posts
+        $schedule->command('youtube:publish')->everyFiveMinutes();
         // Command to publish Scheduled posts
         $schedule->command('schedule:publish')->everyMinute();
         // Instagram / Threads / LinkedIn due posts with notSchedule (same idea as facebook:publish)

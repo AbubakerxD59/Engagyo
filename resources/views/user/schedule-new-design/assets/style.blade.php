@@ -432,6 +432,10 @@
         background: #0A66C2;
     }
 
+    .platform-badge.youtube {
+        background: #FF0000;
+    }
+
     .account-details {
         display: flex;
         flex-direction: column;
@@ -685,6 +689,10 @@
 
     .selected-account-platform-badge.linkedin {
         background: #0A66C2;
+    }
+
+    .selected-account-platform-badge.youtube {
+        background: #FF0000;
     }
 
     .selected-account-text {
@@ -4445,6 +4453,10 @@
 
     .channels-dropdown-item-badge.linkedin {
         background: #0A66C2;
+    }
+
+    .channels-dropdown-item-badge.youtube {
+        background: #FF0000;
     }
 
     .channels-dropdown-item-name {

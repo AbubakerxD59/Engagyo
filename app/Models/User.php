@@ -300,8 +300,9 @@ class User extends Authenticatable implements MustVerifyEmail
         $instagram = $this->instagramAccountsForSchedule(false);
         $threads = Thread::with('timeslots')->where('user_id', $this->id)->orderBy('username')->get();
         $linkedins = Linkedin::with('timeslots')->where('user_id', $this->id)->orderBy('username')->get();
+        $youtubes = Youtube::with('timeslots')->where('user_id', $this->id)->orderBy('username')->get();
 
-        return $pages->concat($boards)->concat($tiktoks)->concat($instagram)->concat($threads)->concat($linkedins);
+        return $pages->concat($boards)->concat($tiktoks)->concat($instagram)->concat($threads)->concat($linkedins)->concat($youtubes);
     }
 
     /**
@@ -406,8 +407,9 @@ class User extends Authenticatable implements MustVerifyEmail
         $instagram = $this->instagramAccountsForSchedule(true);
         $threads = Thread::with('timeslots')->whereScheduledActive()->get();
         $linkedins = Linkedin::with('timeslots')->whereScheduledActive()->get();
+        $youtubes = Youtube::with('timeslots')->whereScheduledActive()->get();
 
-        return $boards->concat($pages)->concat($tiktoks)->concat($instagram)->concat($threads)->concat($linkedins);
+        return $boards->concat($pages)->concat($tiktoks)->concat($instagram)->concat($threads)->concat($linkedins)->concat($youtubes);
     }
 
     /**
@@ -471,6 +473,16 @@ class User extends Authenticatable implements MustVerifyEmail
                         ->first();
                     if ($linkedin) {
                         $accounts->push($linkedin);
+                    }
+                } elseif ($type === 'youtube') {
+                    $ownerId = (int) ($this->getEffectiveUser()?->id ?? $this->id);
+                    $youtube = Youtube::query()
+                        ->with('timeslots')
+                        ->where('id', $id)
+                        ->where('user_id', $ownerId)
+                        ->first();
+                    if ($youtube) {
+                        $accounts->push($youtube);
                     }
                 }
             }

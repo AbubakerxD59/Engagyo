@@ -10,6 +10,7 @@ use App\Models\InstagramAccount;
 use App\Models\Linkedin;
 use App\Models\Thread;
 use App\Models\Tiktok;
+use App\Models\Youtube;
 use App\Http\Controllers\BaseController;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishInstagramPost;
@@ -17,9 +18,11 @@ use App\Jobs\PublishLinkedInPost;
 use App\Jobs\PublishPinterestPost;
 use App\Jobs\PublishThreadsPost;
 use App\Jobs\PublishTikTokPost;
+use App\Jobs\PublishYouTubePost;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
 use App\Services\TikTokService;
+use App\Services\YouTubeService;
 use App\Services\PostService;
 use App\Services\TimezoneService;
 use App\Services\VideoUrlDownloadService;
@@ -895,6 +898,17 @@ class PostController extends BaseController
         ];
     }
 
+    private function formatYouTubeAccount(Youtube $youtube): array
+    {
+        return [
+            'type' => 'youtube',
+            'channel_id' => $youtube->channel_id,
+            'username' => $youtube->username,
+            'custom_url' => $youtube->custom_url,
+            'profile_image' => $youtube->profile_image,
+        ];
+    }
+
     /**
      * Create and publish a video to Facebook, Pinterest, Instagram, or TikTok.
      *
@@ -938,6 +952,7 @@ class PostController extends BaseController
             Platform::PINTEREST => $this->publishVideoToPinterest($request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link),
             Platform::INSTAGRAM => $this->publishVideoToInstagram($request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link),
             Platform::TIKTOK => $this->publishVideoToTikTok($request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link),
+            Platform::YOUTUBE => $this->publishVideoToYouTube($request, $user, $apiKeyId, $accountId, $videoUrl, $title, $description, $link),
             default => $this->errorResponse('Platform not supported for video posting', 400),
         };
     }
@@ -1349,6 +1364,105 @@ class PostController extends BaseController
                 'created_at' => $post->created_at->toIso8601String(),
             ],
             'account' => $this->formatTikTokAccount($tiktok),
+        ], 'Video scheduled successfully for '.$scheduledDate);
+    }
+
+    private function publishVideoToYouTube(Request $request, $user, $apiKeyId, string $accountId, string $videoUrl, string $title, string $description, mixed $link = null): \Illuminate\Http\JsonResponse
+    {
+        $youtube = Youtube::withoutGlobalScopes()
+            ->where('user_id', $user->id)
+            ->where(function ($q) use ($accountId) {
+                $q->where('channel_id', (string) $accountId);
+                if (ctype_digit((string) $accountId)) {
+                    $q->orWhere('id', (int) $accountId);
+                }
+            })
+            ->first();
+
+        if (! $youtube) {
+            return $this->errorResponse('YouTube account not found or not connected to your account', 404);
+        }
+
+        $tokenResponse = YouTubeService::validateToken($youtube);
+        if (empty($tokenResponse['success'])) {
+            return $this->errorResponse($tokenResponse['message'] ?? 'YouTube access token has expired. Please reconnect your YouTube account.', 401);
+        }
+        $accessToken = $tokenResponse['access_token'];
+
+        $youtube->loadMissing('timeslots');
+        $timing = $this->resolveApiPublishTiming($request, $user, $youtube, 'youtube');
+        $publishNow = $timing['publish_now'];
+
+        try {
+            $videoKey = $this->downloadAndUploadVideoToS3($videoUrl);
+            if (! $videoKey) {
+                return $this->errorResponse('Failed to download video from URL. Please ensure the URL is accessible and points to a valid video file.', 400);
+            }
+        } catch (\Exception $e) {
+            return $this->errorResponse('Error processing video: '.$e->getMessage(), 500);
+        }
+
+        $publishDate = $publishNow ? now() : $timing['publish_date'];
+        $isScheduled = ! $publishNow;
+
+        $youtubeMetadata = [
+            'privacy_status' => $request->input('youtube_privacy_status', 'public'),
+            'made_for_kids' => (bool) $request->input('youtube_made_for_kids', 0),
+        ];
+
+        $post = PostService::create([
+            'user_id' => $user->id,
+            'account_id' => $youtube->id,
+            'social_type' => 'youtube',
+            'type' => 'video',
+            'source' => 'api',
+            'title' => $title,
+            'description' => $description,
+            'comment' => $description,
+            'url' => $link,
+            'video' => $videoKey,
+            'publish_date' => $publishDate,
+            'scheduled' => $isScheduled ? 1 : 0,
+        ]);
+
+        $metaUpdate = ['metadata' => json_encode($youtubeMetadata)];
+        if ($apiKeyId) {
+            $metaUpdate['api_key_id'] = $apiKeyId;
+        }
+        $post->update($metaUpdate);
+
+        if ($publishNow) {
+            $postData = PostService::postTypeBody($post->fresh());
+            $decoded = is_string($post->metadata) ? json_decode($post->metadata, true) : $post->metadata;
+            if (is_array($decoded)) {
+                $postData = array_merge($postData, $decoded);
+            }
+            PublishYouTubePost::dispatch($post->id, $postData, $accessToken);
+
+            return $this->successResponse([
+                'post' => [
+                    'id' => $post->id,
+                    'platform' => 'youtube',
+                    'status' => 'publishing',
+                    'type' => 'video',
+                    'created_at' => $post->created_at->toIso8601String(),
+                ],
+                'account' => $this->formatYouTubeAccount($youtube),
+            ], 'Video is being published to YouTube');
+        }
+
+        $scheduledDate = date('M d, Y \a\t h:i A', strtotime($timing['publish_date']));
+
+        return $this->successResponse([
+            'post' => [
+                'id' => $post->id,
+                'platform' => 'youtube',
+                'status' => 'scheduled',
+                'type' => 'video',
+                'scheduled_at' => $post->publish_datetime,
+                'created_at' => $post->created_at->toIso8601String(),
+            ],
+            'account' => $this->formatYouTubeAccount($youtube),
         ], 'Video scheduled successfully for '.$scheduledDate);
     }
 

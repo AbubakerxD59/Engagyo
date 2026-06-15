@@ -314,10 +314,11 @@
                 } else {
                     $parentName.hide();
                 }
-                var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok instagram threads linkedin').addClass(type);
+                var $badge = $('#selected-account-header-badge').removeClass('facebook pinterest tiktok youtube instagram threads linkedin').addClass(type);
                 var headerIconClass = 'fab fa-facebook-f';
                 if (type === 'pinterest') headerIconClass = 'fab fa-pinterest-p';
                 else if (type === 'tiktok') headerIconClass = 'fab fa-tiktok';
+                else if (type === 'youtube') headerIconClass = 'fab fa-youtube';
                 else if (type === 'instagram') headerIconClass = 'fab fa-instagram';
                 else if (type === 'linkedin') headerIconClass = 'fab fa-linkedin-in';
                 if (type === 'threads') {
@@ -1129,6 +1130,7 @@
             facebook: "{{ social_logo('facebook') }}",
             pinterest: "{{ social_logo('pinterest') }}",
             tiktok: "{{ social_logo('tiktok') }}",
+            youtube: "{{ social_logo('youtube') }}",
             instagram: "{{ social_logo('instagram') }}",
             threads: "{{ social_logo('threads') }}",
             linkedin: "{{ social_logo('linkedin') }}"
@@ -1144,6 +1146,7 @@
             var t = (socialType || '').toLowerCase();
             if (t.indexOf('pinterest') !== -1) return 'fab fa-pinterest';
             if (t.indexOf('tiktok') !== -1) return 'fab fa-tiktok';
+            if (t.indexOf('youtube') !== -1) return 'fab fa-youtube';
             if (t.indexOf('instagram') !== -1) return 'fab fa-instagram';
             if (t.indexOf('threads') !== -1) return 'threads-circle-icon';
             if (t.indexOf('linkedin') !== -1) return 'fab fa-linkedin-in';
@@ -2244,8 +2247,8 @@
                 var un = $card.find('.account-username').text().trim();
                 tooltip = (nm + (un ? ' - ' + un : '')).trim();
             }
-            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}", linkedin: "{{ social_logo('linkedin') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon', linkedin: 'fab fa-linkedin-in' };
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", youtube: "{{ social_logo('youtube') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}", linkedin: "{{ social_logo('linkedin') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', youtube: 'fab fa-youtube', instagram: 'fab fa-instagram', threads: 'threads-circle-icon', linkedin: 'fab fa-linkedin-in' };
             var type = p.type || 'facebook';
             var logo = socialLogos[type] || socialLogos.facebook;
             var icon = iconMap[type] || iconMap.facebook;
@@ -2736,8 +2739,8 @@
             if (!$item.length) return;
             var type = $item.data('type') || accType;
             var src = acc.profile_image || $item.find('.channels-dropdown-item-avatar img').attr('src') || '';
-            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}", linkedin: "{{ social_logo('linkedin') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon', linkedin: 'fab fa-linkedin-in' };
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", youtube: "{{ social_logo('youtube') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}", linkedin: "{{ social_logo('linkedin') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', youtube: 'fab fa-youtube', instagram: 'fab fa-instagram', threads: 'threads-circle-icon', linkedin: 'fab fa-linkedin-in' };
             var logo = socialLogos[type] || socialLogos.facebook;
             var icon = iconMap[type] || iconMap.facebook;
             var badgeIconHtml = icon === 'threads-circle-icon'
@@ -2851,8 +2854,8 @@
         function renderSelectedChannels() {
             var $container = $('#createPostSelectedChannels');
             $container.empty();
-            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}", linkedin: "{{ social_logo('linkedin') }}" };
-            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', instagram: 'fab fa-instagram', threads: 'threads-circle-icon', linkedin: 'fab fa-linkedin-in' };
+            var socialLogos = { facebook: "{{ social_logo('facebook') }}", pinterest: "{{ social_logo('pinterest') }}", tiktok: "{{ social_logo('tiktok') }}", youtube: "{{ social_logo('youtube') }}", instagram: "{{ social_logo('instagram') }}", threads: "{{ social_logo('threads') }}", linkedin: "{{ social_logo('linkedin') }}" };
+            var iconMap = { facebook: 'fab fa-facebook-f', pinterest: 'fab fa-pinterest-p', tiktok: 'fab fa-tiktok', youtube: 'fab fa-youtube', instagram: 'fab fa-instagram', threads: 'threads-circle-icon', linkedin: 'fab fa-linkedin-in' };
             var chipHtmls = [];
             $('.channels-dropdown-checkbox:checked').each(function() {
                 var $item = $(this).closest('.channels-dropdown-item');

@@ -77,11 +77,11 @@ class PublishSchedulePostCron extends Command
     public function handle(ScheduledQueuePostPublisher $queuePublisher)
     {
         $now = Carbon::now('UTC')->format('Y-m-d H:i');
-        $posts = Post::with('user.timezone', 'page.facebook', 'board.pinterest', 'instagramAccount', 'thread', 'linkedin')
+        $posts = Post::with('user.timezone', 'page.facebook', 'board.pinterest', 'instagramAccount', 'thread', 'linkedin', 'youtube')
             ->past($now)
             ->notPublished()
             ->schedule()
-            ->whereIn('social_type', ['facebook', 'pinterest', 'instagram', 'threads', 'linkedin'])
+            ->whereIn('social_type', ['facebook', 'pinterest', 'instagram', 'threads', 'linkedin', 'youtube'])
             ->orderBy('publish_date')
             ->get();
         foreach ($posts as $key => $post) {
@@ -103,6 +103,9 @@ class PublishSchedulePostCron extends Command
                         break;
                     case 'linkedin':
                         $queuePublisher->publishLinkedIn($post);
+                        break;
+                    case 'youtube':
+                        $queuePublisher->publishYouTube($post);
                         break;
                 }
             } catch (\Exception $e) {

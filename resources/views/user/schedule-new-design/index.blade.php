@@ -198,6 +198,29 @@
                                                 </div>
                                             </div>
                                         </div>
+                                    @elseif ($account->type == 'youtube')
+                                        @php
+                                            $ytProfile = $account->profile_image ?? '';
+                                            $ytName = $account->username ?? 'YouTube';
+                                            $ytUsernameLine = $account->custom_url ? '@'.$account->custom_url : '';
+                                        @endphp
+                                        <div class="account-card {{ ($hasSelectedAccount && $selectedAccountId == (string) $account->id && ($saved['type'] ?? '') === 'youtube') ? 'active' : (!$hasSelectedAccount ? 'active' : '') }}" data-type="youtube"
+                                            data-id="{{ $account->id }}">
+                                            <div class="account-card-inner">
+                                                <div class="account-avatar">
+                                                    <img src="{{ $ytProfile }}"
+                                                        onerror="this.onerror=null; this.src='{{ social_logo('youtube') }}';"
+                                                        loading="lazy" alt="">
+                                                    <span class="platform-badge youtube">
+                                                        <i class="fab fa-youtube"></i>
+                                                    </span>
+                                                </div>
+                                                <div class="account-details">
+                                                    <span class="account-name">{{ Str::limit($ytName, 18) }}</span>
+                                                    <span class="account-username">{{ Str::limit($ytUsernameLine, 15) }}</span>
+                                                </div>
+                                            </div>
+                                        </div>
                                     @endif
                                 @endforeach
                             </div>

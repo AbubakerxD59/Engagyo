@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishThreadsPost;
+use App\Jobs\PublishYouTubePost;
 use App\Models\Notification;
 use App\Models\Post;
 
@@ -144,6 +145,48 @@ class ScheduledQueuePostPublisher
                 'response' => $errorMessage,
             ]);
             $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled LinkedIn post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+        }
+    }
+
+    public function publishYouTube(Post $post): void
+    {
+        $social_type = $post->social_type;
+        $account_image = $post->account_profile;
+        $youtube = $post->youtube;
+
+        if (! $youtube) {
+            $errorMessage = 'Error: YouTube account not found.';
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled YouTube post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+
+            return;
+        }
+
+        $tokenResponse = YouTubeService::validateToken($youtube);
+        if (empty($tokenResponse['success'])) {
+            $errorMessage = 'Error: '.($tokenResponse['message'] ?? 'YouTube access token expired. Please reconnect YouTube.');
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled YouTube post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
+
+            return;
+        }
+
+        try {
+            $postData = PostService::postTypeBody($post);
+            PublishYouTubePost::dispatch($post->id, $postData, $tokenResponse['access_token']);
+        } catch (\Exception $e) {
+            $errorMessage = 'Error preparing post: '.$e->getMessage();
+            $post->update([
+                'status' => -1,
+                'response' => $errorMessage,
+            ]);
+            $this->errorNotification($post->user_id, 'Scheduled Post Publishing Failed', 'Failed to publish scheduled YouTube post. '.$errorMessage, $social_type, $account_image, $post->account_name, $post->account_username);
         }
     }
 

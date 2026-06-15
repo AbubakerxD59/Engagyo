@@ -79,6 +79,11 @@ class Post extends Model
         return $this->belongsTo(Linkedin::class, 'account_id', 'id');
     }
 
+    public function youtube()
+    {
+        return $this->belongsTo(Youtube::class, 'account_id', 'id');
+    }
+
     public function domain()
     {
         return $this->belongsTo(Domain::class, 'domain_id', 'id');
@@ -133,7 +138,7 @@ class Post extends Model
 
     public function scopeAccountExist($query)
     {
-        $query->has('page')->orHas('board')->orHas('tiktok')->orHas('instagramAccount')->orHas('thread')->orHas('linkedin');
+        $query->has('page')->orHas('board')->orHas('tiktok')->orHas('instagramAccount')->orHas('thread')->orHas('linkedin')->orHas('youtube');
     }
 
     public function scopePageExist($query)
@@ -202,6 +207,11 @@ class Post extends Model
     public function scopeLinkedin($query)
     {
         $query->where('social_type', 'like', '%linkedin%');
+    }
+
+    public function scopeYoutube($query)
+    {
+        $query->where('social_type', 'like', '%youtube%');
     }
 
     public function scopePast($query, $date_time)
@@ -872,6 +882,9 @@ class Post extends Model
         if ($social_type == 'linkedin') {
             $account_name = $this->linkedin?->username;
         }
+        if ($social_type == 'youtube') {
+            $account_name = $this->youtube?->username;
+        }
 
         return $account_name;
     }
@@ -899,6 +912,9 @@ class Post extends Model
         }
         if ($social_type === 'linkedin') {
             return $this->linkedin?->username ?? '';
+        }
+        if ($social_type === 'youtube') {
+            return $this->youtube?->custom_url ?? $this->youtube?->username ?? '';
         }
 
         return '';
@@ -930,6 +946,9 @@ class Post extends Model
         }
         if ($social_type == 'linkedin') {
             $profile_image = $this->linkedin?->profile_image ?? null;
+        }
+        if ($social_type == 'youtube') {
+            $profile_image = $this->youtube?->profile_image ?? null;
         }
 
         return $profile_image;

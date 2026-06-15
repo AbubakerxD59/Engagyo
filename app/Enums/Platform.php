@@ -90,7 +90,7 @@ enum Platform: string
     public function isSupported(): bool
     {
         return match ($this) {
-            self::FACEBOOK, self::PINTEREST, self::TIKTOK, self::LINKEDIN, self::INSTAGRAM, self::THREADS => true,
+            self::FACEBOOK, self::PINTEREST, self::TIKTOK, self::LINKEDIN, self::INSTAGRAM, self::THREADS, self::YOUTUBE => true,
             default => false,
        
         };

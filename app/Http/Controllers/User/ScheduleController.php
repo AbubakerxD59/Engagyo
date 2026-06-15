@@ -12,6 +12,7 @@ use App\Jobs\PublishLinkedInPost;
 use App\Jobs\PublishPinterestPost;
 use App\Jobs\PublishThreadsPost;
 use App\Jobs\PublishTikTokPost;
+use App\Jobs\PublishYouTubePost;
 use App\Models\Board;
 use App\Models\Facebook;
 use App\Models\FacebookPost;
@@ -28,12 +29,14 @@ use App\Models\Thread;
 use App\Models\ThreadPost;
 use App\Models\Timeslot;
 use App\Models\User;
+use App\Models\Youtube;
 use App\Services\FacebookService;
 use App\Services\FeatureUsageService;
 use App\Services\PinterestService;
 use App\Services\PostService;
 use App\Services\SocialMediaLogService;
 use App\Services\TikTokService;
+use App\Services\YouTubeService;
 use App\Services\TimezoneService;
 use Carbon\Carbon;
 use Exception;
@@ -123,6 +126,13 @@ class ScheduleController extends Controller
                 $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
 
                 return Linkedin::where('id', $post->account_id)
+                    ->where('user_id', $ownerId)
+                    ->exists();
+
+            case 'youtube':
+                $ownerId = (int) ($user->getEffectiveUser()?->id ?? $user->id);
+
+                return Youtube::where('id', $post->account_id)
                     ->where('user_id', $ownerId)
                     ->exists();
 
@@ -686,6 +696,14 @@ class ScheduleController extends Controller
         return ['success' => true] + $plan;
     }
 
+    private function youtubeMetadataFromRequest(Request $request): array
+    {
+        return [
+            'privacy_status' => $request->input('youtube_privacy_status', 'public'),
+            'made_for_kids' => (bool) $request->input('youtube_made_for_kids', 0),
+        ];
+    }
+
     /**
      * Check if user can create scheduled posts
      *
@@ -760,7 +778,7 @@ class ScheduleController extends Controller
     // new design code
     public function index()
     {
-        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'instagramAccounts', 'threads', 'timezone')->find(Auth::guard('user')->id());
+        $user = User::with('boards.pinterest', 'pages.facebook', 'tiktok', 'instagramAccounts', 'threads', 'linkedins', 'youtubes', 'timezone')->find(Auth::guard('user')->id());
         $accounts = $user->getAccounts();
         $accounts = $this->sortAccountsByRecentUsage($accounts, $user->id);
         $userTimezoneName = $user->timezone && ! empty($user->timezone->name) ? $user->timezone->name : 'UTC';
@@ -815,8 +833,9 @@ class ScheduleController extends Controller
         $instagram = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'instagram'));
         $threads = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'threads'));
         $linkedin = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'linkedin'));
+        $youtube = $sortSegment($accounts->filter(fn($a) => ($a->type ?? '') === 'youtube'));
 
-        return $facebook->concat($pinterest)->concat($tiktok)->concat($instagram)->concat($threads)->concat($linkedin);
+        return $facebook->concat($pinterest)->concat($tiktok)->concat($instagram)->concat($threads)->concat($linkedin)->concat($youtube);
     }
 
     /**
@@ -894,6 +913,16 @@ class ScheduleController extends Controller
                         'profile_image' => $linkedinRow->profile_image ?? '',
                     ];
                 }
+            } elseif (str_contains($st, 'youtube')) {
+                $youtubeRow = Youtube::find($post->account_id);
+                if ($youtubeRow) {
+                    $account = [
+                        'id' => $youtubeRow->id,
+                        'type' => 'youtube',
+                        'name' => $youtubeRow->username ?: 'YouTube',
+                        'profile_image' => $youtubeRow->profile_image ?? '',
+                    ];
+                }
             }
         }
 
@@ -939,6 +968,13 @@ class ScheduleController extends Controller
                     'id' => $linkedinRow->id,
                     'type' => 'linkedin',
                     'schedule_status' => $linkedinRow->schedule_status ?? 'inactive',
+                ]);
+            });
+            $user->youtubes()->get(['id', 'schedule_status'])->each(function ($youtubeRow) use ($accountsStatus) {
+                $accountsStatus->push([
+                    'id' => $youtubeRow->id,
+                    'type' => 'youtube',
+                    'schedule_status' => $youtubeRow->schedule_status ?? 'inactive',
                 ]);
             });
         }
@@ -999,6 +1035,13 @@ class ScheduleController extends Controller
                 'id' => $linkedinRow->id,
                 'type' => 'linkedin',
                 'schedule_status' => $linkedinRow->schedule_status ?? 'inactive',
+            ]);
+        });
+        $user->youtubes()->get(['id', 'schedule_status'])->each(function ($youtubeRow) use ($accountsStatus) {
+            $accountsStatus->push([
+                'id' => $youtubeRow->id,
+                'type' => 'youtube',
+                'schedule_status' => $youtubeRow->schedule_status ?? 'inactive',
             ]);
         });
 
@@ -1066,6 +1109,16 @@ class ScheduleController extends Controller
                         'type' => 'linkedin',
                         'name' => $linkedinRow->username ? '@' . $linkedinRow->username : 'LinkedIn',
                         'profile_image' => $linkedinRow->profile_image ?? '',
+                    ];
+                }
+            } elseif (str_contains($st, 'youtube')) {
+                $youtubeRow = Youtube::find($post->account_id);
+                if ($youtubeRow) {
+                    $account = [
+                        'id' => $youtubeRow->id,
+                        'type' => 'youtube',
+                        'name' => $youtubeRow->username ?: 'YouTube',
+                        'profile_image' => $youtubeRow->profile_image ?? '',
                     ];
                 }
             }
@@ -1171,7 +1224,7 @@ class ScheduleController extends Controller
     public function saveSelectedAccount(Request $request)
     {
         $request->validate([
-            'type' => 'required|string|in:all,facebook,pinterest,tiktok,instagram,threads,linkedin',
+            'type' => 'required|string|in:all,facebook,pinterest,tiktok,instagram,threads,linkedin,youtube',
             'id' => 'nullable|string',
         ]);
         $user = User::find(Auth::guard('user')->id());
@@ -1277,6 +1330,21 @@ class ScheduleController extends Controller
             if ($linkedin) {
                 $linkedin->schedule_status = $status == 1 ? 'active' : 'inactive';
                 $linkedin->save();
+                $response = [
+                    'success' => true,
+                    'message' => 'Status changed Successfully!',
+                ];
+            } else {
+                $response = [
+                    'success' => false,
+                    'message' => 'Something went Wrong!',
+                ];
+            }
+        } elseif ($type == 'youtube') {
+            $youtube = Youtube::find($id);
+            if ($youtube) {
+                $youtube->schedule_status = $status == 1 ? 'active' : 'inactive';
+                $youtube->save();
                 $response = [
                     'success' => true,
                     'message' => 'Status changed Successfully!',
@@ -1437,7 +1505,7 @@ class ScheduleController extends Controller
 
             return count($this->instagramContentFormatsFromRequest($request, $stub));
         }
-        if ($account->type === 'facebook' || $account->type === 'pinterest' || $account->type === 'tiktok' || $account->type === 'linkedin') {
+        if ($account->type === 'facebook' || $account->type === 'pinterest' || $account->type === 'tiktok' || $account->type === 'linkedin' || $account->type === 'youtube') {
             return 1;
         }
 
@@ -1639,6 +1707,39 @@ class ScheduleController extends Controller
                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
             }
             $this->logService->logQueuedPost('linkedin', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
+
+            return;
+        }
+
+        if ($account->type === 'youtube') {
+            if (empty($video)) {
+                throw new Exception('YouTube publishing requires a video file.');
+            }
+
+            Youtube::where('id', $account->id)->firstOrFail();
+            $nextTime = (new Post)->nextScheduleTime(
+                ['account_id' => $account->id, 'social_type' => 'youtube', 'source' => 'schedule'],
+                $account->timeslots,
+                $user
+            );
+            $data = [
+                'user_id' => $user->id,
+                'account_id' => $account->id,
+                'social_type' => 'youtube',
+                'type' => 'video',
+                'source' => $this->source,
+                'title' => $content,
+                'comment' => $comment,
+                'video' => $video,
+                'status' => 0,
+                'publish_date' => $nextTime,
+                'metadata' => json_encode($this->youtubeMetadataFromRequest($request)),
+            ];
+            $post = PostService::create($data);
+            if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+            }
+            $this->logService->logQueuedPost('youtube', $post->id, ['type' => 'video', 'publish_date' => $nextTime]);
 
             return;
         }
@@ -1967,6 +2068,8 @@ class ScheduleController extends Controller
                     $totalPostsToCreate += count($this->instagramContentFormatsFromRequest($request, $upload));
                 } elseif ($account->type === 'linkedin') {
                     $totalPostsToCreate++;
+                } elseif ($account->type === 'youtube' && ! empty($video)) {
+                    $totalPostsToCreate++;
                 }
             }
 
@@ -2268,6 +2371,44 @@ class ScheduleController extends Controller
                     }
                     $this->logService->logPost('linkedin', $type, $post->id, ['action' => 'publish'], 'pending');
                     PublishLinkedInPost::dispatch($post->id)->delay(now()->addSeconds(5));
+                }
+                if ($account->type === 'youtube') {
+                    if (empty($video)) {
+                        return [
+                            'success' => false,
+                            'message' => 'YouTube publishing requires a video file.',
+                        ];
+                    }
+
+                    $tokenResponse = YouTubeService::validateToken($account);
+                    if (! $tokenResponse['success']) {
+                        return [
+                            'success' => false,
+                            'message' => $tokenResponse['message'] ?? 'Failed to validate YouTube access token.',
+                        ];
+                    }
+                    $access_token = $tokenResponse['access_token'];
+
+                    $data = [
+                        'user_id' => $user->id,
+                        'account_id' => $account->id,
+                        'social_type' => 'youtube',
+                        'type' => 'video',
+                        'source' => $this->source,
+                        'title' => $content,
+                        'comment' => $comment,
+                        'video' => $video,
+                        'status' => 0,
+                        'publish_date' => $publishDateNow,
+                        'metadata' => json_encode($this->youtubeMetadataFromRequest($request)),
+                    ];
+                    $post = PostService::create($data);
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
+                    $this->logService->logPost('youtube', 'video', $post->id, ['action' => 'publish'], 'pending');
+                    $postData = PostService::postTypeBody($post);
+                    PublishYouTubePost::dispatch($post->id, $postData, $access_token);
                 }
             }
             $response = [
@@ -2575,6 +2716,8 @@ class ScheduleController extends Controller
                         $postsToCreate += count($this->instagramContentFormatsFromRequest($request, $upload));
                     } elseif ($account->type === 'linkedin') {
                         $postsToCreate++;
+                    } elseif ($account->type === 'youtube' && ! empty($video)) {
+                        $postsToCreate++;
                     }
                 }
             }
@@ -2752,6 +2895,39 @@ class ScheduleController extends Controller
                         }
                         $this->logService->logQueuedPost('linkedin', $post->id, ['type' => $type, 'publish_date' => $nextTime]);
                     }
+                    if ($account->type === 'youtube') {
+                        if (empty($video)) {
+                            return [
+                                'success' => false,
+                                'message' => 'YouTube scheduling requires a video file.',
+                            ];
+                        }
+                        Youtube::where('id', $account->id)->firstOrFail();
+                        $nextTime = (new Post)->nextScheduleTime(
+                            ['account_id' => $account->id, 'social_type' => 'youtube', 'source' => 'schedule'],
+                            $account->timeslots,
+                            $user
+                        );
+                        $data = [
+                            'user_id' => $user->id,
+                            'account_id' => $account->id,
+                            'social_type' => 'youtube',
+                            'type' => 'video',
+                            'source' => $this->source,
+                            'title' => $content,
+                            'comment' => $comment,
+                            'video' => $video,
+                            'status' => 0,
+                            'publish_date' => $nextTime,
+                            'scheduled' => 1,
+                            'metadata' => json_encode($this->youtubeMetadataFromRequest($request)),
+                        ];
+                        $post = PostService::create($data);
+                        if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                            $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                        }
+                        $this->logService->logQueuedPost('youtube', $post->id, ['type' => 'video', 'publish_date' => $nextTime]);
+                    }
                     $response = [
                         'success' => true,
                         'message' => 'Your posts are queued for Later!',
@@ -2803,6 +2979,8 @@ class ScheduleController extends Controller
                 } elseif ($account->type === 'instagram' && $file) {
                     $postsToCreate += count($this->instagramContentFormatsFromRequest($request, $upload));
                 } elseif ($account->type === 'linkedin') {
+                    $postsToCreate++;
+                } elseif ($account->type === 'youtube' && ! empty($video)) {
                     $postsToCreate++;
                 }
             }
@@ -2962,6 +3140,34 @@ class ScheduleController extends Controller
                         $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
                     }
                     $this->logService->logScheduledPost('linkedin', $post->id, $scheduleDateTime, ['type' => $type]);
+                }
+                if ($account->type === 'youtube') {
+                    if (empty($video)) {
+                        return [
+                            'success' => false,
+                            'message' => 'YouTube scheduling requires a video file.',
+                        ];
+                    }
+                    Youtube::where('id', $account->id)->firstOrFail();
+                    $data = [
+                        'user_id' => $user->id,
+                        'account_id' => $account->id,
+                        'social_type' => 'youtube',
+                        'type' => 'video',
+                        'source' => $this->source,
+                        'title' => $content,
+                        'comment' => $comment,
+                        'video' => $video,
+                        'status' => 0,
+                        'publish_date' => $scheduleDateTime,
+                        'scheduled' => 1,
+                        'metadata' => json_encode($this->youtubeMetadataFromRequest($request)),
+                    ];
+                    $post = PostService::create($data);
+                    if ($this->verifyPostAccountBelongsToUser($post, $user)) {
+                        $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
+                    }
+                    $this->logService->logScheduledPost('youtube', $post->id, $scheduleDateTime, ['type' => 'video']);
                 }
                 $response = [
                     'success' => true,
@@ -3537,6 +3743,9 @@ class ScheduleController extends Controller
             } elseif ($type == 'linkedin') {
                 $account = Linkedin::with('timeslots')->where('id', $id)->where('user_id', $user->id)->firstOrFail();
                 $account_id = $account->id;
+            } elseif ($type == 'youtube') {
+                $account = Youtube::with('timeslots')->where('id', $id)->where('user_id', $user->id)->firstOrFail();
+                $account_id = $account->id;
             }
             if ($account) {
                 // remove previous
@@ -3678,6 +3887,11 @@ class ScheduleController extends Controller
                     }
                 } elseif ($type == 'linkedin') {
                     $account = Linkedin::with('timeslots')->where('id', $id)->where('user_id', $user->id)->first();
+                    if ($account) {
+                        $accountId = $account->id;
+                    }
+                } elseif ($type == 'youtube') {
+                    $account = Youtube::with('timeslots')->where('id', $id)->where('user_id', $user->id)->first();
                     if ($account) {
                         $accountId = $account->id;
                     }
@@ -4206,6 +4420,7 @@ class ScheduleController extends Controller
             'instagram' => 'instagram',
             'threads' => 'threads',
             'linkedin' => 'linkedin',
+            'youtube' => 'youtube',
             default => 'facebook',
         };
 
@@ -4215,7 +4430,7 @@ class ScheduleController extends Controller
         $postCreatorIds = $user->schedulePostCreatorUserIds();
 
         $postsQuery = Post::withoutGlobalScopes()
-            ->with('page.facebook', 'board.pinterest', 'tiktok', 'instagramAccount', 'thread', 'linkedin', 'user')
+            ->with('page.facebook', 'board.pinterest', 'tiktok', 'instagramAccount', 'thread', 'linkedin', 'youtube', 'user')
             ->whereIn('user_id', $postCreatorIds)
             ->where('account_id', $accountId)
             ->where('social_type', 'like', "%{$socialType}%")
@@ -4374,6 +4589,7 @@ class ScheduleController extends Controller
             'instagram' => 'instagram',
             'threads' => 'threads',
             'linkedin' => 'linkedin',
+            'youtube' => 'youtube',
             default => 'facebook',
         };
         $nextLocal = (new Post)->nextScheduleTime(

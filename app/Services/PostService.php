@@ -144,7 +144,7 @@ class PostService
     {
         try {
             $user = Auth::user();
-            $post = Post::with('page.facebook', 'board.pinterest', 'instagramAccount', 'thread', 'linkedin')->where('status', '!=', 1)->where('id', $id)->firstOrFail();
+            $post = Post::with('page.facebook', 'board.pinterest', 'instagramAccount', 'thread', 'linkedin', 'youtube')->where('status', '!=', 1)->where('id', $id)->firstOrFail();
             if ($post->social_type == 'facebook') {
                 $page = $post->page;
                 $response = FacebookService::validateToken($page);
@@ -206,6 +206,24 @@ class PostService
                     ];
                 }
                 PublishLinkedInPost::dispatch($post->id);
+            }
+            if (str_contains(strtolower((string) $post->social_type), 'youtube')) {
+                $youtube = $post->youtube;
+                if (! $youtube) {
+                    return [
+                        'success' => false,
+                        'message' => 'YouTube account not found for this post.',
+                    ];
+                }
+                $tokenResponse = \App\Services\YouTubeService::validateToken($youtube);
+                if (empty($tokenResponse['success'])) {
+                    return [
+                        'success' => false,
+                        'message' => $tokenResponse['message'] ?? 'YouTube access token expired. Reconnect your YouTube account.',
+                    ];
+                }
+                $postData = self::postTypeBody($post);
+                \App\Jobs\PublishYouTubePost::dispatch($post->id, $postData, $tokenResponse['access_token']);
             }
             $response = [
                 'success' => true,
@@ -296,6 +314,7 @@ class PostService
             str_contains($st, 'tiktok') => self::tiktokPostTypeBody($post),
             str_contains($st, 'facebook') => self::facebookPostTypeBody($post),
             str_contains($st, 'threads') => self::threadsPostTypeBody($post),
+            str_contains($st, 'youtube') => self::youtubePostTypeBody($post),
             default => [],
         };
     }
@@ -673,6 +692,25 @@ class PostService
                 'file_url' => $post->video_key ?: $post->video,
             ];
         }
+        $rawMetadata = $post->metadata ?? $post->response;
+        if (! empty($rawMetadata)) {
+            $metadata = is_array($rawMetadata) ? $rawMetadata : json_decode($rawMetadata, true);
+            if (is_array($metadata)) {
+                $postData = array_merge($postData, $metadata);
+            }
+        }
+
+        return $postData;
+    }
+
+    public static function youtubePostTypeBody($post): array
+    {
+        $postData = [
+            'title' => $post->title,
+            'description' => $post->comment ?: $post->description,
+            'file_url' => $post->video_key ?: $post->video,
+        ];
+
         $rawMetadata = $post->metadata ?? $post->response;
         if (! empty($rawMetadata)) {
             $metadata = is_array($rawMetadata) ? $rawMetadata : json_decode($rawMetadata, true);
