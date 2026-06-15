@@ -4588,11 +4588,13 @@
         align-items: stretch;
         justify-content: flex-start;
         padding: 20px;
+        overflow: hidden;
     }
 
     .create-post-main-content.has-editor .create-post-editor-wrap {
-        flex: 1;
-        min-height: stretch;
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: 100%;
     }
 
     .create-post-empty-state {
@@ -4611,21 +4613,51 @@
 
     .create-post-editor-wrap {
         width: 100%;
-        height: 100%;
+        flex: 1 1 auto;
+        min-height: 0;
+        max-height: 100%;
         display: flex;
         justify-content: space-between;
         flex-direction: column;
         gap: 20px;
-        min-height: 0;
+        overflow-x: hidden;
         overflow-y: auto;
     }
 
-    .create-post-editor-textarea {
+    .create-post-editor-textarea-scroll {
+        flex: 0 0 160px;
         width: 100%;
-        flex: 0 0 auto;
-        height: 120px;
-        min-height: 120px;
-        max-height: 360px;
+        height: 160px;
+        min-height: 160px;
+        max-height: 160px;
+        overflow: hidden;
+        contain: size layout style;
+    }
+
+    .create-post-modal .create-post-editor-textarea {
+        scrollbar-width: thin;
+        scrollbar-color: #d1d5db transparent;
+    }
+
+    .create-post-modal .create-post-editor-textarea::-webkit-scrollbar {
+        width: 5px;
+    }
+
+    .create-post-modal .create-post-editor-textarea::-webkit-scrollbar-track {
+        background: transparent;
+    }
+
+    .create-post-modal .create-post-editor-textarea::-webkit-scrollbar-thumb {
+        background: #d1d5db;
+        border-radius: 10px;
+    }
+
+    .create-post-editor-textarea {
+        display: block;
+        width: 100%;
+        height: 100%;
+        min-height: 0;
+        max-height: 100%;
         padding: 0;
         font-size: 16px;
         line-height: 1.5;
@@ -4635,7 +4667,9 @@
         outline: none;
         resize: none;
         overflow-y: auto;
+        overflow-x: hidden;
         box-sizing: border-box;
+        field-sizing: fixed;
     }
 
     .create-post-editor-textarea::placeholder {

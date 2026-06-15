@@ -397,8 +397,10 @@
                                     </div>
                                 </div>
                             </div>
+                            <div class="create-post-editor-textarea-scroll">
                             <textarea class="create-post-editor-textarea" id="createPostEditorTextarea"
-                                placeholder="Paste your link or write something..."></textarea>
+                                placeholder="Paste your link or write something..." rows="6"></textarea>
+                            </div>
                         </div>
                         <div class="create-post-editor-bottom">
                             <div id="createPostLinkPreview" class="create-post-link-preview"></div>

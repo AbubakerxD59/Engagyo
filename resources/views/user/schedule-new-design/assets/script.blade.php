@@ -3331,30 +3331,42 @@
 
         function handleCreatePostEditorInput(el, $modal) {
             var $linkPreview = $modal.find('.create-post-link-preview');
-            var value = $(el).val().trim();
+            var value = (el.value || '').trim();
             if (!value) {
                 $linkPreview.empty();
-                is_link = 0;
-                updateCreatePostFacebookFormatRow();
-                refreshCreatePostTikTokSettings();
+                if (is_link !== 0) {
+                    is_link = 0;
+                    updateCreatePostFacebookFormatRow();
+                    refreshCreatePostTikTokSettings();
+                }
                 return;
             }
-            is_link = 0;
+
             var linkToFetch = getLinkFromPostContent(value);
-            clearTimeout(createPostLinkFetchTimer);
-            if (linkToFetch && createPostFiles.length === 0) {
-                createPostLinkFetchTimer = setTimeout(function() {
-                    createPostFetchFromLink(linkToFetch, $modal);
-                }, 300);
-            } else {
+            if (!linkToFetch) {
+                clearTimeout(createPostLinkFetchTimer);
                 if (createPostLinkFetchXhr) {
                     createPostLinkFetchXhr.abort();
                     createPostLinkFetchXhr = null;
                 }
-                $linkPreview.empty();
+                if (is_link !== 0 || $linkPreview.children().length) {
+                    is_link = 0;
+                    $linkPreview.empty();
+                    updateCreatePostFacebookFormatRow();
+                    refreshCreatePostTikTokSettings();
+                }
+                return;
             }
-            updateCreatePostFacebookFormatRow();
-            refreshCreatePostTikTokSettings();
+
+            if (createPostFiles.length > 0) {
+                return;
+            }
+
+            is_link = 0;
+            clearTimeout(createPostLinkFetchTimer);
+            createPostLinkFetchTimer = setTimeout(function() {
+                createPostFetchFromLink(linkToFetch, $modal);
+            }, 300);
         }
 
         $(document).on('input', '#createPostEditorTextarea, #queueNewPostEditorTextarea', function() {
@@ -3363,7 +3375,7 @@
             clearTimeout(createPostEditorInputTimer);
             createPostEditorInputTimer = setTimeout(function() {
                 handleCreatePostEditorInput(el, $modal);
-            }, 100);
+            }, 200);
         });
 
         function createPostFetchFromLink(link, $modal) {
