@@ -781,10 +781,11 @@ class ScheduleController extends Controller
         $accounts = $user->getAccounts();
         $accounts = $this->sortAccountsByRecentUsage($accounts, $user->id);
         $userTimezoneName = $user->timezone && ! empty($user->timezone->name) ? $user->timezone->name : 'UTC';
+        $userTodayDate = Carbon::now($userTimezoneName)->format('Y-m-d');
         $canAccessAnalytics = $user->canAccessMenu(8) && $user->hasMenuAccess('analytics');
         $scheduleSelectedAccount = $user->schedule_selected_account;
 
-        return view('user.schedule-new-design.index', compact('accounts', 'userTimezoneName', 'canAccessAnalytics', 'scheduleSelectedAccount'));
+        return view('user.schedule-new-design.index', compact('accounts', 'userTimezoneName', 'userTodayDate', 'canAccessAnalytics', 'scheduleSelectedAccount'));
     }
 
     /**
@@ -4244,8 +4245,11 @@ class ScheduleController extends Controller
     public function postEdit(Request $request)
     {
         try {
-            $post = Post::with('page.facebook', 'board.pinterest')->findOrFail($request->id);
-            $view = view('user.schedule.ajax.edit-post', compact('post'));
+            $post = Post::with('page.facebook', 'board.pinterest', 'user.timezone')->findOrFail($request->id);
+            $user = Auth::guard('user')->user();
+            $userTimezoneName = TimezoneService::getUserTimezone($user);
+            $userTodayDate = Carbon::now($userTimezoneName)->format('Y-m-d');
+            $view = view('user.schedule.ajax.edit-post', compact('post', 'userTodayDate'));
             $response = [
                 'success' => true,
                 'data' => $view->render(),

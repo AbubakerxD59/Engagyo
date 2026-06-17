@@ -19,12 +19,12 @@
     <div class="col-md-6 mt-2">
         <label for="edit_post_publish_date">Publish Date</label>
         <input type="date" name="edit_post_publish_date" id="edit_post_publish_date" class="form-control"
-            value="{{ date('Y-m-d', strtotime($post->publish_datetime)) }}">
+            value="{{ $post->date }}" min="{{ $userTodayDate ?? $post->date }}">
     </div>
     <div class="col-md-6 mt-2">
         <label for="edit_post_publish_time">Publish Time</label>
         <input type="time" name="edit_post_publish_time" id="edit_post_publish_time" class="form-control"
-            value="{{ date('H:i', strtotime($post->publish_datetime)) }}">
+            value="{{ $post->modal_time }}">
     </div>
     @if (empty($post->video))
         <div class="col-md-6 mt-2">

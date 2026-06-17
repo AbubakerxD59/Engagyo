@@ -608,8 +608,8 @@
                                 <div class="create-post-schedule-field">
                                     <label for="createPostScheduleDate">Date</label>
                                     <input type="date" id="createPostScheduleDate"
-                                        class="create-post-schedule-input" min="{{ date('Y-m-d') }}"
-                                        value="{{ date('Y-m-d') }}">
+                                        class="create-post-schedule-input" min="{{ $userTodayDate ?? date('Y-m-d') }}"
+                                        value="{{ $userTodayDate ?? date('Y-m-d') }}">
                                 </div>
                                 <div class="create-post-schedule-field">
                                     <label for="createPostScheduleTime">Time</label>

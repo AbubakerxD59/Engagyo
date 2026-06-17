@@ -14,8 +14,9 @@
                     <div class="col-md-4">
                         <label for="schedule_date">Date</label>
                         <div>
-                            <input type="date" name="schedule_date" id="schedule_date" value="{{ date('Y-m-d') }}"
-                                min="{{ date('Y-m-d') }}" class="form-control">
+                            <input type="date" name="schedule_date" id="schedule_date"
+                                value="{{ $userTodayDate ?? date('Y-m-d') }}"
+                                min="{{ $userTodayDate ?? date('Y-m-d') }}" class="form-control">
                         </div>
                     </div>
                     <div class="col-md-4">

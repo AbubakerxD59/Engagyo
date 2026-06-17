@@ -1,6 +1,20 @@
 <script>
     $(document).ready(function() {
         var userTimezone = "{{ $userTimezoneName ?? 'UTC' }}";
+        var userTodayDate = "{{ $userTodayDate ?? '' }}";
+        window.userTimezone = userTimezone;
+
+        if (typeof initScheduleDateInputs === 'function') {
+            initScheduleDateInputs(userTodayDate, userTimezone);
+        }
+
+        $('.schedule-modal').on('show.bs.modal', function() {
+            if (typeof initScheduleDateInputs === 'function') {
+                initScheduleDateInputs(userTodayDate, userTimezone);
+                $('#schedule_date').val(userTodayDate || getTodayInTimezone(userTimezone));
+            }
+        });
+
         var canAccessAnalytics = {{ isset($canAccessAnalytics) && $canAccessAnalytics ? 'true' : 'false' }};
 
         function formatInUserTimezone(date, options) {
@@ -6003,6 +6017,9 @@
                     if (response.success) {
                         modal.find("#update-post-form").attr("action", response.action);
                         modal.find(".modal-body").html(response.data);
+                        if (typeof initScheduleDateInputs === 'function') {
+                            initScheduleDateInputs(userTodayDate, userTimezone);
+                        }
                     } else {
                         toastr.error(response.message);
                     }
