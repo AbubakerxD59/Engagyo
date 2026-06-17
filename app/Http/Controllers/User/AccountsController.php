@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SyncFacebookPagePostsJob;
 use App\Models\Board;
 use App\Models\Domain;
 use App\Models\Facebook;
@@ -449,6 +450,8 @@ class AccountsController extends Controller
 
                 $pageModel = $facebook->pages()->updateOrCreate(['user_id' => $user->id, 'page_id' => $page['id']], $pageData);
                 $this->ensureDefaultScheduleTimeslot($user->id, $pageModel->id, 'facebook');
+
+                SyncFacebookPagePostsJob::dispatch($pageModel->id);
 
                 // Log page connection
                 $this->logService->log('facebook', 'page_connected', "Page '{$page['name']}' connected", [

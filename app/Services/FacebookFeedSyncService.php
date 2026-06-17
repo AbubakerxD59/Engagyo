@@ -71,6 +71,26 @@ class FacebookFeedSyncService
     }
 
     /**
+     * Fetch the latest 100 posts for a newly connected page (newest first from today).
+     */
+    public function syncLatestPostsForPage(Page $page): bool
+    {
+        $result = $this->fetchSinglePageFeedWithInsights($page, 'full_year');
+        if (! $result['success']) {
+            return false;
+        }
+
+        $posts = is_array($result['posts']) ? $result['posts'] : [];
+
+        foreach ($this->cacheDurations as $cacheDuration) {
+            [$since, $until] = $this->resolveDateRange($cacheDuration);
+            $this->storeDurationPostsCaches($page, $cacheDuration, $since, $until, $posts);
+        }
+
+        return true;
+    }
+
+    /**
      * Fetch feed posts and post-level insights for a single page.
      *
      * @return array{
