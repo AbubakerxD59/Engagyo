@@ -82,7 +82,8 @@ class FacebookFeedSyncService
      */
     protected function fetchSinglePageFeedWithInsights(Page $page, string $duration): array
     {
-        [$since, $until] = $this->resolveDateRange($duration);
+        $until = Carbon::today()->format('Y-m-d');
+        $since = null;
 
         if (empty($page->page_id) || empty($page->access_token)) {
             return [
@@ -112,7 +113,7 @@ class FacebookFeedSyncService
             $posts = $this->facebookService->getPagePostsWithInsights(
                 (string) $page->page_id,
                 (string) $accessToken,
-                $since,
+                null,
                 $until,
                 $insightsPreset
             );

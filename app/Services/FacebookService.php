@@ -1338,7 +1338,8 @@ class FacebookService
     public const PAGE_FEED_MAX_POSTS = 100;
 
     /**
-     * Page /feed: paginate, keep posts in range, newest first, max 100.
+     * Page /feed: paginate newest-first until $limit posts (max 100).
+     * When $since is null, walks back in time from $until with no lower date bound.
      */
     public function getPageFeed(string $pageId, string $accessToken, ?string $since = null, ?string $until = null, int $limit = self::PAGE_FEED_MAX_POSTS): array
     {
@@ -1347,21 +1348,23 @@ class FacebookService
         }
 
         $until = $until ?: date('Y-m-d');
-        $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
         $maxPosts = min(max((int) $limit, 1), self::PAGE_FEED_MAX_POSTS);
-        $fromTs = strtotime($since.' 00:00:00 UTC') ?: 0;
+        $fromTs = $since !== null ? (strtotime($since.' 00:00:00 UTC') ?: 0) : null;
         $toTs = strtotime($until.' 23:59:59 UTC') ?: PHP_INT_MAX;
 
-        $sinceIso = $since.'T00:00:00+0000';
         $untilIso = $until.'T23:59:59+0000';
 
         $fields = 'id,message,created_time,full_picture,icon,is_popular,permalink_url,shares,status_type,story,comments.limit(0).summary(true)';
         $pageSize = min(50, $maxPosts);
         $endpoint = '/'.$pageId.'/feed?fields='.urlencode($fields)
-            .'&since='.urlencode($sinceIso)
             .'&until='.urlencode($untilIso)
             .'&limit='.$pageSize;
+
+        if ($since !== null) {
+            $sinceIso = $since.'T00:00:00+0000';
+            $endpoint .= '&since='.urlencode($sinceIso);
+        }
 
         $maxAttempts = 3;
 
@@ -1386,7 +1389,7 @@ class FacebookService
                             continue;
                         }
 
-                        if ($createdTs < $fromTs) {
+                        if ($fromTs !== null && $createdTs < $fromTs) {
                             if ($oldestOnPageTs === null || $createdTs < $oldestOnPageTs) {
                                 $oldestOnPageTs = $createdTs;
                             }
@@ -1408,7 +1411,7 @@ class FacebookService
                         break;
                     }
 
-                    if ($oldestOnPageTs !== null && $oldestOnPageTs < $fromTs) {
+                    if ($fromTs !== null && $oldestOnPageTs !== null && $oldestOnPageTs < $fromTs) {
                         break;
                     }
 
@@ -1534,7 +1537,6 @@ class FacebookService
     public function getPagePostsWithInsights(string $pageId, string $accessToken, ?string $since = null, ?string $until = null, string $insightsPreset = 'default'): array
     {
         $until = $until ?: date('Y-m-d');
-        $since = $since ?: date('Y-m-d', strtotime('-28 days', strtotime($until)));
 
         $posts = $this->getPageFeed($pageId, $accessToken, $since, $until);
         if (empty($posts)) {
@@ -1700,11 +1702,15 @@ class FacebookService
             return;
         }
 
+        $fetchedPostIds = [];
+
         foreach ($posts as $post) {
             $fbPostId = (string) ($post['post_id'] ?? $post['id'] ?? '');
             if ($fbPostId === '') {
                 continue;
             }
+
+            $fetchedPostIds[] = $fbPostId;
 
             $createdAt = null;
             if (! empty($post['created_time'])) {
@@ -1739,6 +1745,13 @@ class FacebookService
                     'fetched_at' => now(),
                 ]
             );
+        }
+
+        if (! empty($fetchedPostIds)) {
+            FacebookPost::query()
+                ->where('fb_page_id', $pageId)
+                ->whereNotIn('fb_post_id', $fetchedPostIds)
+                ->delete();
         }
 
         // Keep previously stored rows in this range aligned to the current post_data shape.
