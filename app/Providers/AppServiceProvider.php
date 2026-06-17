@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Models\Post;
 use App\Models\User;
 use App\Observers\PostObserver;
+use App\Routing\VersionedUrlGenerator;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Log;
@@ -27,6 +28,10 @@ class AppServiceProvider extends ServiceProvider
         Post::observe(PostObserver::class);
 
         $this->ensureFrameworkStoragePathsExist();
+
+        $this->app->extend('url', function ($url, $app) {
+            return new VersionedUrlGenerator($url);
+        });
 
         if ($this->app->runningInConsole()) {
             config(['cache.stores.file.permission' => 0777]);

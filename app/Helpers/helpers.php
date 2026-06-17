@@ -1254,3 +1254,43 @@ function getFeatureUsage($featureKey)
 
     return $user->getFeatureUsage($featureKey);
 }
+
+/**
+ * Cache-busting token for a public asset path.
+ */
+function asset_version_for_path(string $path): string
+{
+    static $versions = [];
+
+    if (isset($versions[$path])) {
+        return $versions[$path];
+    }
+
+    $configured = trim((string) config('app.asset_version', ''));
+    $normalized = ltrim(str_replace('\\', '/', $path), '/');
+    $fullPath = public_path($normalized);
+
+    if (is_file($fullPath)) {
+        $versions[$path] = (string) filemtime($fullPath);
+
+        return $versions[$path];
+    }
+
+    $versions[$path] = $configured !== '' ? $configured : '1';
+
+    return $versions[$path];
+}
+
+/**
+ * Append a version query string to an asset URL.
+ */
+function append_asset_version(string $url, string $path): string
+{
+    $version = asset_version_for_path($path);
+
+    if ($version === '') {
+        return $url;
+    }
+
+    return $url.(str_contains($url, '?') ? '&' : '?').'v='.rawurlencode($version);
+}

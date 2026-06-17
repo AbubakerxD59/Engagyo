@@ -19,6 +19,18 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Asset cache busting
+    |--------------------------------------------------------------------------
+    |
+    | Optional deploy-wide version (e.g. git commit). When empty, each public
+    | asset URL uses the file's last-modified time automatically.
+    |
+    */
+
+    'asset_version' => env('APP_ASSET_VERSION'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |
