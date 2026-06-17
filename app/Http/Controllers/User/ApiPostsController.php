@@ -120,8 +120,7 @@ class ApiPostsController extends Controller
                 "publish_date" => date("Y-m-d", strtotime($request->edit_post_publish_date)) . " " . date("H:i", strtotime($request->edit_post_publish_time)),
             ];
             if ($request->has("edit_post_publish_image") && $request->File("edit_post_publish_image")) {
-                $image = saveImage($request->file("edit_post_publish_image"));
-                $data['image'] = $image;
+                $data = applyPostImageFields($data, savePostImageToS3($request->file("edit_post_publish_image")));
             }
             $post->update($data);
             $response = array(

@@ -175,7 +175,7 @@ class AutomationController extends Controller
                     "publish_date" => TimezoneService::toUtc($publishDateTimeLocal, $post->user ?? $user),
                 ];
                 if ($request->has("post_image")) {
-                    $data['image'] = saveImage($request->File('post_image'));
+                    $data = applyPostImageFields($data, savePostImageToS3($request->File('post_image')));
                 }
                 $post->update($data);
                 $response = array(

@@ -152,6 +152,7 @@ class ScheduleController extends Controller
             'error' => null,
             'has_files' => false,
             'image' => null,
+            'aws_link' => null,
             'images' => [],
             'video' => null,
             'document' => null,
@@ -199,6 +200,7 @@ class ScheduleController extends Controller
                     ],
                     'has_files' => false,
                     'image' => null,
+                    'aws_link' => null,
                     'images' => [],
                     'video' => null,
                     'document' => null,
@@ -215,6 +217,7 @@ class ScheduleController extends Controller
                     ],
                     'has_files' => false,
                     'image' => null,
+                    'aws_link' => null,
                     'images' => [],
                     'video' => null,
                     'document' => null,
@@ -244,7 +247,7 @@ class ScheduleController extends Controller
                 if ($isVideo) {
                     $items[] = ['type' => 'video', 'path' => saveToS3($file)];
                 } else {
-                    $items[] = ['type' => 'image', 'path' => saveImage($file)];
+                    $items[] = ['type' => 'image', 'path' => savePostImageToS3($file)];
                 }
             }
 
@@ -252,6 +255,7 @@ class ScheduleController extends Controller
                 'error' => null,
                 'has_files' => true,
                 'image' => null,
+                'aws_link' => null,
                 'images' => [],
                 'video' => null,
                 'document' => null,
@@ -271,6 +275,7 @@ class ScheduleController extends Controller
                     'error' => ['success' => false, 'message' => 'LinkedIn document post requires a PDF, DOC, DOCX, PPT, or PPTX file.'],
                     'has_files' => false,
                     'image' => null,
+                    'aws_link' => null,
                     'images' => [],
                     'video' => null,
                     'document' => null,
@@ -307,13 +312,14 @@ class ScheduleController extends Controller
                 'instagram_carousel_items' => [],
             ];
         }
-        $img = saveImage($file);
+        $awsLink = savePostImageToS3($file);
 
         return [
             'error' => null,
             'has_files' => true,
-            'image' => $img,
-            'images' => [$img],
+            'image' => null,
+            'aws_link' => $awsLink,
+            'images' => [],
             'video' => null,
             'document' => null,
             'document_name' => null,
@@ -361,7 +367,7 @@ class ScheduleController extends Controller
             return ['success' => false, 'message' => 'Instagram carousel requires at least 2 media files.'];
         }
         $hasVideo = ! empty($upload['video']);
-        $hasImage = ! empty($upload['image']);
+        $hasImage = postUploadHasImage($upload);
 
         if ($format === 'story') {
             if (! $hasVideo && ! $hasImage) {
@@ -371,7 +377,8 @@ class ScheduleController extends Controller
             return [
                 'success' => true,
                 'type' => 'story',
-                'image' => $upload['image'],
+                'image' => postUploadImagePath($upload),
+                'aws_link' => null,
                 'video' => $upload['video'],
                 'metadata' => null,
             ];
@@ -391,7 +398,8 @@ class ScheduleController extends Controller
             return [
                 'success' => true,
                 'type' => 'photo',
-                'image' => $upload['image'],
+                'image' => postUploadImagePath($upload),
+                'aws_link' => null,
                 'video' => null,
                 'metadata' => null,
             ];
@@ -425,7 +433,7 @@ class ScheduleController extends Controller
 
         $selected = array_values(array_unique(array_map('strval', $selected)));
         $hasVideo = ! empty($upload['video']);
-        $hasImage = ! empty($upload['image']);
+        $hasImage = postUploadHasImage($upload);
         $out = [];
 
         foreach ($selected as $f) {
@@ -493,7 +501,7 @@ class ScheduleController extends Controller
             return ['error' => 'Instagram access token expired. Reconnect your Instagram account.', 'post' => null, 'plan' => null];
         }
 
-        $data = [
+        $data = applyPostImageFields([
             'user_id' => $user->id,
             'account_id' => $account->id,
             'social_type' => 'instagram',
@@ -501,12 +509,11 @@ class ScheduleController extends Controller
             'source' => $this->source,
             'title' => $request->get('content'),
             'comment' => $request->get('comment'),
-            'image' => $plan['image'] ?? null,
             'video' => $plan['video'] ?? null,
             'status' => 0,
             'publish_date' => $publishDateTime,
             'scheduled' => $scheduled,
-        ];
+        ], postUploadImagePath(['aws_link' => $plan['aws_link'] ?? null, 'image' => $plan['image'] ?? null]));
 
         if (! empty($plan['metadata'])) {
             $data['metadata'] = $plan['metadata'];
@@ -595,9 +602,9 @@ class ScheduleController extends Controller
             if (! empty($upload['video'])) {
                 $plan['type'] = 'video';
                 $plan['video'] = $upload['video'];
-            } elseif (! empty($upload['image'])) {
+            } elseif (postUploadHasImage($upload)) {
                 $plan['type'] = 'photo';
-                $plan['image'] = $upload['image'];
+                $plan['image'] = postUploadImagePath($upload);
             } elseif (($upload['instagram_carousel_items'] ?? []) !== []) {
                 $first = $upload['instagram_carousel_items'][0] ?? null;
                 if (is_array($first) && (($first['type'] ?? '') === 'video') && ! empty($first['path'])) {
@@ -610,7 +617,7 @@ class ScheduleController extends Controller
             }
         }
 
-        $data = [
+        $data = applyPostImageFields([
             'user_id' => $user->id,
             'account_id' => $account->id,
             'social_type' => 'threads',
@@ -618,13 +625,12 @@ class ScheduleController extends Controller
             'source' => $this->source,
             'title' => $request->get('content'),
             'comment' => $request->get('comment'),
-            'image' => $plan['image'],
             'video' => $plan['video'],
             'status' => 0,
             'publish_date' => $publishDateTime,
             'scheduled' => $scheduled,
             'metadata' => $plan['metadata'],
-        ];
+        ], postUploadImagePath(['aws_link' => $plan['aws_link'] ?? null, 'image' => $plan['image'] ?? null]));
 
         $post = PostService::create($data);
         if ($this->verifyPostAccountBelongsToUser($post, $user)) {
@@ -686,9 +692,9 @@ class ScheduleController extends Controller
         if (! empty($upload['video'])) {
             $plan['type'] = 'video';
             $plan['video'] = $upload['video'];
-        } elseif (! empty($upload['image'])) {
+        } elseif (postUploadHasImage($upload)) {
             $plan['type'] = 'photo';
-            $plan['image'] = $upload['image'];
+            $plan['image'] = postUploadImagePath($upload);
         } elseif (! empty($upload['document'])) {
             return ['success' => false, 'message' => 'Select LinkedIn Document post type for document uploads.'];
         }
@@ -1518,6 +1524,7 @@ class ScheduleController extends Controller
         $isVideo = in_array($ext, ['mp4', 'mkv', 'mov', 'mpeg', 'webm'], true);
         $isDocument = in_array($ext, ['pdf', 'doc', 'docx', 'ppt', 'pptx'], true);
         $image = null;
+        $awsLink = null;
         $video = null;
         $document = null;
         $documentName = null;
@@ -1527,7 +1534,7 @@ class ScheduleController extends Controller
             $document = saveToS3($file);
             $documentName = (string) ($file->getClientOriginalName() ?: 'document.' . $ext);
         } else {
-            $image = saveImage($file);
+            $awsLink = savePostImageToS3($file);
         }
 
         $content = $request->get('content');
@@ -1548,8 +1555,8 @@ class ScheduleController extends Controller
                 $account->timeslots,
                 $user
             );
-            $type = ! empty($image) ? 'photo' : 'video';
-            $data = [
+            $type = ! empty($awsLink) ? 'photo' : 'video';
+            $data = applyPostImageFields([
                 'user_id' => $user->id,
                 'account_id' => $account->id,
                 'social_type' => 'facebook',
@@ -1557,11 +1564,10 @@ class ScheduleController extends Controller
                 'source' => $this->source,
                 'title' => $content,
                 'comment' => $comment,
-                'image' => $image,
                 'video' => $video,
                 'status' => 0,
                 'publish_date' => $nextTime,
-            ];
+            ], $awsLink);
             $post = PostService::create($data);
             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
@@ -1578,8 +1584,8 @@ class ScheduleController extends Controller
                 $account->timeslots,
                 $user
             );
-            $type = ! empty($image) ? 'photo' : 'video';
-            $data = [
+            $type = ! empty($awsLink) ? 'photo' : 'video';
+            $data = applyPostImageFields([
                 'user_id' => $user->id,
                 'account_id' => $account->id,
                 'social_type' => 'pinterest',
@@ -1587,11 +1593,10 @@ class ScheduleController extends Controller
                 'source' => $this->source,
                 'title' => $content,
                 'comment' => $comment,
-                'image' => $image,
                 'video' => $video,
                 'status' => 0,
                 'publish_date' => $nextTime,
-            ];
+            ], $awsLink);
             $post = PostService::create($data);
             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
@@ -1608,8 +1613,8 @@ class ScheduleController extends Controller
                 $account->timeslots,
                 $user
             );
-            $type = ! empty($image) ? 'photo' : 'video';
-            $data = [
+            $type = ! empty($awsLink) ? 'photo' : 'video';
+            $data = applyPostImageFields([
                 'user_id' => $user->id,
                 'account_id' => $account->id,
                 'social_type' => 'tiktok',
@@ -1617,11 +1622,10 @@ class ScheduleController extends Controller
                 'source' => $this->source,
                 'title' => $content,
                 'comment' => $comment,
-                'image' => $image,
                 'video' => $video,
                 'status' => 0,
                 'publish_date' => $nextTime,
-            ];
+            ], $awsLink);
             $post = PostService::create($data);
             if ($this->verifyPostAccountBelongsToUser($post, $user)) {
                 $user->incrementFeatureUsage('scheduled_posts_per_account', 1);
@@ -1640,8 +1644,9 @@ class ScheduleController extends Controller
             $uploadPayload = [
                 'error' => null,
                 'has_files' => true,
-                'image' => $image,
-                'images' => $image ? [$image] : [],
+                'image' => null,
+                'aws_link' => $awsLink,
+                'images' => [],
                 'video' => $video,
                 'instagram_carousel_items' => [],
             ];
@@ -1808,6 +1813,11 @@ class ScheduleController extends Controller
      */
     private function queueTimelinePostImageUrl(Post $post): ?string
     {
+        $rawAwsLink = $post->getAttributes()['aws_link'] ?? null;
+        if ($rawAwsLink !== null && $rawAwsLink !== '') {
+            return fetchFromS3((string) $rawAwsLink);
+        }
+
         $rawImage = $post->getAttributes()['image'] ?? null;
         if ($rawImage !== null && $rawImage !== '') {
             $rawImage = (string) $rawImage;
@@ -1818,6 +1828,10 @@ class ScheduleController extends Controller
             $type = strtolower((string) ($post->getAttributes()['type'] ?? ''));
             $social = strtolower((string) ($post->getAttributes()['social_type'] ?? ''));
             if (str_contains($social, 'tiktok') && $type === 'video') {
+                return fetchFromS3($rawImage);
+            }
+
+            if (isS3StoragePath($rawImage)) {
                 return fetchFromS3($rawImage);
             }
 
@@ -1861,7 +1875,7 @@ class ScheduleController extends Controller
                 return $img;
             }
 
-            return url(getImage('', $img));
+            return resolveStoredPostImageUrl(null, $img);
         }
 
         return null;
@@ -1879,7 +1893,7 @@ class ScheduleController extends Controller
             return fetchFromS3($path);
         }
 
-        return url(getImage('', $path));
+        return resolveStoredPostImageUrl(null, $path);
     }
 
     /**
@@ -2048,7 +2062,7 @@ class ScheduleController extends Controller
                 return $upload['error'];
             }
             $file = $upload['has_files'];
-            $image = $upload['image'];
+            $image = postUploadImagePath($upload);
             $video = $upload['video'];
             // Count total posts to be created (one per selected format per Facebook account)
             $totalPostsToCreate = 0;
@@ -2458,7 +2472,7 @@ class ScheduleController extends Controller
                 if ($is_video) {
                     $video = saveToS3($request->file('files'));
                 } else {
-                    $image = saveImage($request->file('files'));
+                    $image = savePostImageToS3($request->file('files'));
                 }
             }
 
@@ -2585,7 +2599,7 @@ class ScheduleController extends Controller
             $image = null;
 
             if ($file) {
-                $image = saveImage($request->file('files'));
+                $image = savePostImageToS3($request->file('files'));
             }
 
             // Count total posts to be created
@@ -2693,7 +2707,7 @@ class ScheduleController extends Controller
                 return $upload['error'];
             }
             $file = $upload['has_files'];
-            $image = $upload['image'];
+            $image = postUploadImagePath($upload);
             $video = $upload['video'];
 
             $postsToCreate = 0;
@@ -2957,7 +2971,7 @@ class ScheduleController extends Controller
                 return $upload['error'];
             }
             $file = $upload['has_files'];
-            $image = $upload['image'];
+            $image = postUploadImagePath($upload);
             $video = $upload['video'];
 
             // Count how many posts will be created (one per selected format per Facebook account)
@@ -3283,7 +3297,7 @@ class ScheduleController extends Controller
                         PublishPinterestPost::dispatch($post->id, $postData, $access_token, 'link');
                     }
                     if ($account->type == 'tiktok' && ! empty($image)) {
-                        $localImage = saveImageFromUrl($image, 'uploads');
+                        $localImage = savePostImageFromUrlToS3($image);
                         if (empty($content) || empty($localImage)) {
                             return [
                                 'success' => false,
@@ -3457,7 +3471,7 @@ class ScheduleController extends Controller
                         if ($account->type == 'tiktok' && ! empty($image)) {
                             $tiktok = Tiktok::where('id', $account->id)->firstOrFail();
                             if ($tiktok) {
-                                $localImage = saveImageFromUrl($image, 'uploads');
+                                $localImage = savePostImageFromUrlToS3($image);
                                 if (empty($content) || empty($localImage)) {
                                     return [
                                         'success' => false,
@@ -3619,7 +3633,7 @@ class ScheduleController extends Controller
                     if ($account->type == 'tiktok' && ! empty($image)) {
                         $tiktok = Tiktok::where('id', $account->id)->firstOrFail();
                         if ($tiktok) {
-                            $localImage = saveImageFromUrl($image, 'uploads');
+                            $localImage = savePostImageFromUrlToS3($image);
                             if (empty($content) || empty($localImage)) {
                                 return [
                                     'success' => false,
@@ -4277,8 +4291,7 @@ class ScheduleController extends Controller
                 'publish_date' => TimezoneService::toUtc($publishDateTimeLocal, $post->user),
             ];
             if ($request->has('edit_post_publish_image') && $request->File('edit_post_publish_image')) {
-                $image = saveImage($request->file('edit_post_publish_image'));
-                $data['image'] = $image;
+                $data = applyPostImageFields($data, savePostImageToS3($request->file('edit_post_publish_image')));
             }
             $post->update($data);
             $response = [

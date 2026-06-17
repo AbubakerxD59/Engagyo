@@ -36,6 +36,13 @@ class PostService
         $user = User::find($data['user_id']);
         $data['publish_date'] = TimezoneService::toUtc($data['publish_date'], $user);
 
+        $image = isset($data['image']) ? $data['image'] : null;
+        $awsLink = isset($data['aws_link']) ? $data['aws_link'] : null;
+        if (empty($awsLink) && ! empty($image) && isS3StoragePath((string) $image)) {
+            $awsLink = (string) $image;
+            $image = null;
+        }
+
         // publish_date is stored as provided (no timezone conversion)
         $post = Post::create([
             'user_id' => $data['user_id'],
@@ -48,7 +55,8 @@ class PostService
             'comment' => isset($data['comment']) ? $data['comment'] : null,
             'domain_id' => isset($data['domain_id']) ? $data['domain_id'] : null,
             'url' => isset($data['url']) ? $data['url'] : null,
-            'image' => isset($data['image']) ? $data['image'] : null,
+            'image' => $image,
+            'aws_link' => $awsLink,
             'publish_date' => $data['publish_date'],
             'scheduled' => isset($data['scheduled']) ? $data['scheduled'] : 0,
             'status' => 0,
@@ -476,17 +484,18 @@ class PostService
 
         $rawImage = $attrs['image'] ?? null;
         $rawVideo = $attrs['video'] ?? null;
+        $awsLink = $attrs['aws_link'] ?? null;
 
-        $resolveImage = function ($raw): ?string {
-            if ($raw === null || $raw === '') {
+        $resolveImage = function ($raw) use ($awsLink): ?string {
+            if (($raw === null || $raw === '') && empty($awsLink)) {
                 return null;
             }
-            $raw = (string) $raw;
-            if (str_starts_with($raw, 'http://') || str_starts_with($raw, 'https://')) {
-                return $raw;
+
+            if ($raw === null || $raw === '') {
+                return resolveStoredPostImageUrl($awsLink, null);
             }
 
-            return url(getImage('', $raw));
+            return resolveStoredPostImageUrl(null, (string) $raw);
         };
 
         $resolveVideo = function ($raw): ?string {

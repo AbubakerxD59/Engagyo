@@ -28,6 +28,7 @@ class Post extends Model
         'domain_id',
         'url',
         'image',
+        'aws_link',
         'video',
         'publish_date',
         'status',
@@ -557,14 +558,8 @@ class Post extends Model
     protected function image(): Attribute
     {
         return Attribute::make(
-            get: function ($value) {
-                if (! empty($value) && str_contains($value, 'http')) {
-                    return $value;
-                } else {
-                    $image = ! empty($value) ? url(getImage('', $value)) : automation_placeholder_image();
-
-                    return $image;
-                }
+            get: function ($value, array $attributes) {
+                return resolveStoredPostImageUrl($attributes['aws_link'] ?? null, $value);
             }
         );
     }

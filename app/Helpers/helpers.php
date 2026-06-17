@@ -128,6 +128,154 @@ function saveImage($file)
     return $fileName;
 }
 
+/**
+ * Store an uploaded post image on S3 and return the object key.
+ */
+function savePostImageToS3($file): ?string
+{
+    if ($file === null) {
+        return null;
+    }
+
+    return Storage::disk('s3')->putFile('images', $file) ?: null;
+}
+
+/**
+ * Download a remote image and store it on S3 for a post.
+ */
+function savePostImageFromUrlToS3(string $url): ?string
+{
+    if ($url === '' || ! filter_var($url, FILTER_VALIDATE_URL)) {
+        return null;
+    }
+
+    $body = null;
+    try {
+        $response = Http::timeout(45)
+            ->withOptions(['allow_redirects' => true])
+            ->withHeaders([
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept' => 'image/avif,image/webp,image/apng,image/*,*/*;q=0.8',
+            ])
+            ->get($url);
+        if ($response->successful()) {
+            $body = $response->body();
+        }
+    } catch (\Throwable $e) {
+        $body = null;
+    }
+
+    if ($body === null || $body === '') {
+        $ctx = stream_context_create([
+            'http' => [
+                'timeout' => 45,
+                'header' => "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36\r\n",
+            ],
+            'ssl' => [
+                'verify_peer' => true,
+                'verify_peer_name' => true,
+            ],
+        ]);
+        $body = @file_get_contents($url, false, $ctx);
+    }
+
+    if ($body === false || $body === '') {
+        return null;
+    }
+
+    $urlPath = parse_url($url, PHP_URL_PATH) ?: '';
+    $ext = strtolower((string) pathinfo($urlPath, PATHINFO_EXTENSION));
+    $ext = preg_replace('/[^a-z0-9]/', '', $ext);
+    if ($ext === 'jpeg') {
+        $ext = 'jpg';
+    }
+    if (! in_array($ext, ['jpg', 'png', 'gif', 'webp'], true)) {
+        $ext = 'jpg';
+    }
+
+    $key = 'images/'.strtotime(date('Y-m-d H:i:s')).random_int(1000, 999999).'.'.$ext;
+
+    return Storage::disk('s3')->put($key, $body) ? $key : null;
+}
+
+function isS3StoragePath(string $path): bool
+{
+    return str_contains($path, '/')
+        && ! str_starts_with($path, 'http://')
+        && ! str_starts_with($path, 'https://');
+}
+
+/**
+ * Resolve a post image URL from aws_link and/or legacy image column values.
+ */
+function resolveStoredPostImageUrl(?string $awsLink, ?string $image): string
+{
+    if (! empty($awsLink)) {
+        return fetchFromS3($awsLink);
+    }
+
+    if ($image === null || $image === '') {
+        return automation_placeholder_image();
+    }
+
+    $image = (string) $image;
+
+    if (str_contains($image, 'http')) {
+        return $image;
+    }
+
+    if (isS3StoragePath($image)) {
+        return fetchFromS3($image);
+    }
+
+    return url(getImage('', $image));
+}
+
+/**
+ * Apply uploaded/stored image values to post create/update payloads.
+ */
+function applyPostImageFields(array $data, ?string $storedPath): array
+{
+    if ($storedPath === null || $storedPath === '') {
+        return $data;
+    }
+
+    if (str_starts_with($storedPath, 'http://') || str_starts_with($storedPath, 'https://')) {
+        $data['image'] = $storedPath;
+
+        return $data;
+    }
+
+    if (isS3StoragePath($storedPath)) {
+        $data['aws_link'] = $storedPath;
+        $data['image'] = null;
+
+        return $data;
+    }
+
+    $data['image'] = $storedPath;
+
+    return $data;
+}
+
+function postUploadHasImage(array $upload): bool
+{
+    return ! empty($upload['aws_link']) || ! empty($upload['image']);
+}
+
+function postUploadImagePath(array $upload): ?string
+{
+    if (! empty($upload['aws_link'])) {
+        return (string) $upload['aws_link'];
+    }
+
+    if (! empty($upload['image'])) {
+        return (string) $upload['image'];
+    }
+
+    return null;
+}
+
 function saveToS3($file)
 {
     $path = Storage::disk('s3')->putFile('videos', $file);
