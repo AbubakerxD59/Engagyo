@@ -398,6 +398,70 @@ class YouTubeService
         }
     }
 
+    /**
+     * Delete a published video from YouTube.
+     *
+     * @throws Exception
+     */
+    public function deletePublishedVideo(YoutubeModel $youtube, string $videoId): void
+    {
+        $videoId = trim($videoId);
+        if ($videoId === '') {
+            throw new Exception('YouTube video id is required.');
+        }
+
+        $tokenResponse = self::validateToken($youtube);
+        if (! ($tokenResponse['success'] ?? false)) {
+            throw new Exception($tokenResponse['message'] ?? 'Failed to validate YouTube token.');
+        }
+
+        $this->deleteVideo((string) $tokenResponse['access_token'], $videoId);
+    }
+
+    /**
+     * @throws Exception
+     */
+    public function deleteVideo(string $accessToken, string $videoId): void
+    {
+        $videoId = trim($videoId);
+        if ($videoId === '') {
+            throw new Exception('YouTube video id is required.');
+        }
+
+        try {
+            $response = $this->client->getClient()->delete('https://www.googleapis.com/youtube/v3/videos', [
+                'query' => ['id' => $videoId],
+                'headers' => [
+                    'Authorization' => 'Bearer '.$accessToken,
+                ],
+                'http_errors' => false,
+            ]);
+
+            $status = $response->getStatusCode();
+            if ($status === 204 || ($status >= 200 && $status < 300)) {
+                $this->logService->logPost('youtube', 'video', 0, [
+                    'video_id' => $videoId,
+                    'action' => 'delete',
+                ], 'success');
+
+                return;
+            }
+
+            $body = $response->getBody()->getContents();
+            $decoded = json_decode($body, true);
+            $errorMessage = is_array($decoded)
+                ? (string) ($decoded['error']['message'] ?? 'Failed to delete YouTube video.')
+                : 'Failed to delete YouTube video.';
+
+            $this->logService->logApiError('youtube', '/youtube/v3/videos', $errorMessage, ['video_id' => $videoId]);
+            throw new Exception($errorMessage);
+        } catch (RequestException $e) {
+            $errorMessage = $this->extractApiErrorMessage($e);
+            $this->logService->logApiError('youtube', '/youtube/v3/videos', $errorMessage, ['video_id' => $videoId]);
+            throw new Exception($errorMessage);
+        }
+    }
+
     private function deleteLocalFile(?string $filePath): void
     {
         if ($filePath && file_exists($filePath)) {

@@ -8,6 +8,7 @@ use App\Jobs\DeleteLinkedInPostJob;
 use App\Jobs\DeletePinterestPostJob;
 use App\Jobs\DeleteThreadsPostJob;
 use App\Jobs\DeleteTikTokPostJob;
+use App\Jobs\DeleteYouTubePostJob;
 use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishInstagramPost;
 use App\Jobs\PublishLinkedInPost;
@@ -70,7 +71,7 @@ class PostService
     public static function delete($post_id)
     {
         $post = Post::withoutGlobalScopes()
-            ->with('page', 'board.pinterest', 'tiktok', 'instagramAccount', 'thread', 'linkedin')
+            ->with('page', 'board.pinterest', 'tiktok', 'instagramAccount', 'thread', 'linkedin', 'youtube')
             ->where('id', $post_id)
             ->first();
         if (! $post) {
@@ -106,6 +107,8 @@ class PostService
             DeleteLinkedInPostJob::dispatch($externalPostId, $accountId);
         } elseif (str_contains($socialType, 'instagram')) {
             DeleteInstagramPostJob::dispatch($externalPostId, $accountId);
+        } elseif (str_contains($socialType, 'youtube')) {
+            DeleteYouTubePostJob::dispatch($externalPostId, $accountId);
         }
 
         return true;

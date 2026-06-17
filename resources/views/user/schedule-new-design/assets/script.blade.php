@@ -5724,7 +5724,7 @@
             var postId = $btn.data('post-id');
             var pageId = $btn.data('page-id');
 
-            if (social === 'pinterest' || social === 'tiktok' || social === 'instagram' || social === 'linkedin') {
+            if (social === 'pinterest' || social === 'tiktok' || social === 'instagram' || social === 'linkedin' || social === 'youtube') {
                 if (!dbPostId) {
                     toastr.error('Cannot delete: missing post info.');
                     return;
@@ -5735,7 +5735,9 @@
                         ? 'Delete this post from Instagram and from the app? This cannot be undone.'
                         : (social === 'linkedin'
                             ? 'Delete this post from the app? This cannot be undone.'
-                            : 'Delete this Pin from Pinterest and from the app? This cannot be undone.'));
+                            : (social === 'youtube'
+                                ? 'Delete this video from YouTube and from the app? This cannot be undone.'
+                                : 'Delete this Pin from Pinterest and from the app? This cannot be undone.')));
                 if (!confirm(deleteConfirmMsg)) return;
                 $btn.prop('disabled', true).addClass('is-deleting');
                 $.ajax({
