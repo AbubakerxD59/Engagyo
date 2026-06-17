@@ -1680,7 +1680,8 @@ class ScheduleController extends Controller
                 $user
             );
             $liUpload = [
-                'image' => $image,
+                'image' => null,
+                'aws_link' => $awsLink,
                 'video' => $video,
                 'document' => $document,
                 'document_name' => $documentName,
@@ -1691,7 +1692,7 @@ class ScheduleController extends Controller
                 throw new Exception((string) ($plan['message'] ?? 'Invalid LinkedIn post format.'));
             }
             $type = (string) $plan['type'];
-            $data = [
+            $data = applyPostImageFields([
                 'user_id' => $user->id,
                 'account_id' => $account->id,
                 'social_type' => 'linkedin',
@@ -1699,11 +1700,10 @@ class ScheduleController extends Controller
                 'source' => $this->source,
                 'title' => $content,
                 'comment' => $comment,
-                'image' => $plan['image'],
                 'video' => $plan['video'],
                 'status' => 0,
                 'publish_date' => $nextTime,
-            ];
+            ], postUploadImagePath(['aws_link' => $plan['aws_link'] ?? null, 'image' => $plan['image'] ?? null]));
             if (! empty($plan['metadata'])) {
                 $data['metadata'] = $plan['metadata'];
             }

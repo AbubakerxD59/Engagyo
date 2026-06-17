@@ -1,0 +1,26 @@
+[
+    {
+        "endpoint_id": "user-pages",
+        "platform": "Facebook",
+        "resource": "Pages",
+        "method": "GET",
+        "path": "/user/pages",
+        "hint": "Page ids for publishing"
+    },
+    {
+        "endpoint_id": "user-boards",
+        "platform": "Pinterest",
+        "resource": "Boards",
+        "method": "GET",
+        "path": "/user/boards",
+        "hint": "Board ids for pins"
+    },
+    {
+        "endpoint_id": "user-accounts",
+        "platform": "Other networks",
+        "resource": "Linked accounts",
+        "method": "GET",
+        "path": "/user/accounts",
+        "hint": "Instagram, Threads, TikTok, LinkedIn ids in response"
+    }
+]

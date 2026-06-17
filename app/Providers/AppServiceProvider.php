@@ -30,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
         $this->ensureFrameworkStoragePathsExist();
 
         $this->app->extend('url', function ($url, $app) {
-            return new VersionedUrlGenerator($url);
+            return VersionedUrlGenerator::fromGenerator($url);
         });
 
         if ($this->app->runningInConsole()) {

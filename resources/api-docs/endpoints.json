@@ -1,0 +1,719 @@
+[
+    {
+        "id": "auth-test",
+        "method": "GET",
+        "endpoint": "/auth/test",
+        "description": "Test authentication",
+        "category": "Authentication",
+        "parameters": [],
+        "request": {
+            "headers": {
+                "Authorization": "Bearer your_api_key_here"
+            }
+        },
+        "response": {
+            "success": true,
+            "message": "Authentication successful",
+            "data": {
+                "authenticated": true,
+                "user": {
+                    "id": 1,
+                    "email": "user@example.com",
+                    "name": "John Doe"
+                },
+                "api_key": {
+                    "id": 1,
+                    "last_used_at": "2025-12-02T12:00:00+00:00"
+                }
+            }
+        }
+    },
+    {
+        "id": "user-profile",
+        "method": "GET",
+        "endpoint": "/user/profile",
+        "description": "Get user profile",
+        "category": "User",
+        "parameters": [],
+        "request": {
+            "headers": {
+                "Authorization": "Bearer your_api_key_here"
+            }
+        },
+        "response": {
+            "success": true,
+            "data": {
+                "user": {
+                    "id": 1,
+                    "first_name": "John",
+                    "last_name": "Doe",
+                    "full_name": "John Doe",
+                    "email": "user@example.com",
+                    "phone_number": "+1234567890",
+                    "city": "New York",
+                    "country": "USA",
+                    "address": "123 Main St",
+                    "timezone_id": 1,
+                    "created_at": "2025-01-01T00:00:00+00:00"
+                }
+            }
+        }
+    },
+    {
+        "id": "user-profile-update",
+        "method": "PUT",
+        "endpoint": "/user/profile",
+        "description": "Update user profile",
+        "category": "User",
+        "parameters": [
+            {
+                "name": "first_name",
+                "type": "string",
+                "required": false,
+                "description": "User's first name"
+            },
+            {
+                "name": "last_name",
+                "type": "string",
+                "required": false,
+                "description": "User's last name"
+            },
+            {
+                "name": "phone_number",
+                "type": "string",
+                "required": false,
+                "description": "Phone number"
+            },
+            {
+                "name": "city",
+                "type": "string",
+                "required": false,
+                "description": "City"
+            },
+            {
+                "name": "country",
+                "type": "string",
+                "required": false,
+                "description": "Country"
+            },
+            {
+                "name": "address",
+                "type": "string",
+                "required": false,
+                "description": "Address"
+            }
+        ],
+        "request": {
+            "headers": {
+                "Authorization": "Bearer your_api_key_here",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "first_name": "John",
+                "last_name": "Smith",
+                "city": "Los Angeles"
+            }
+        },
+        "response": {
+            "success": true,
+            "message": "Profile updated successfully",
+            "data": {
+                "user": {
+                    "id": 1,
+                    "first_name": "John",
+                    "last_name": "Smith",
+                    "full_name": "John Smith",
+                    "email": "user@example.com",
+                    "city": "Los Angeles"
+                }
+            }
+        }
+    },
+    {
+        "id": "user-stats",
+        "method": "GET",
+        "endpoint": "/user/stats",
+        "description": "Get user statistics",
+        "category": "User",
+        "parameters": [],
+        "request": {
+            "headers": {
+                "Authorization": "Bearer your_api_key_here"
+            }
+        },
+        "response": {
+            "success": true,
+            "data": {
+                "stats": {
+                    "pinterest_accounts": 2,
+                    "facebook_accounts": 1,
+                    "boards": 5,
+                    "pages": 3,
+                    "domains": 10,
+                    "api_keys": 2
+                }
+            }
+        }
+    },
+    {
+        "id": "user-accounts",
+        "method": "GET",
+        "endpoint": "/user/accounts",
+        "description": "Get user connected accounts",
+        "category": "User",
+        "parameters": [],
+        "request": {
+            "headers": {
+                "Authorization": "Bearer your_api_key_here"
+            }
+        },
+        "response": {
+            "success": true,
+            "data": {
+                "accounts": {
+                    "pinterest": [
+                        {
+                            "_id": "pin_123456",
+                            "username": "johndoe",
+                            "type": "pinterest",
+                            "profile_image": "https://example.com/image.jpg",
+                            "created_at": "2025-01-01T00:00:00+00:00"
+                        }
+                    ],
+                    "facebook": [
+                        {
+                            "_id": "fb_789012",
+                            "name": "John Doe",
+                            "type": "facebook",
+                            "profile_image": "https://example.com/fb-image.jpg",
+                            "created_at": "2025-01-01T00:00:00+00:00"
+                        }
+                    ],
+                    "linkedin": [
+                        {
+                            "_id": "urn:li:person:AbCdEf",
+                            "name": "jane.doe",
+                            "type": "linkedin",
+                            "profile_image": "https://example.com/li.jpg",
+                            "created_at": "2025-01-01T00:00:00+00:00"
+                        }
+                    ],
+                    "instagram": [
+                        {
+                            "_id": "17841400000000000",
+                            "username": "mybrand",
+                            "name": "My Brand",
+                            "type": "instagram",
+                            "profile_image": "https://example.com/ig.jpg",
+                            "created_at": "2025-01-01T00:00:00+00:00"
+                        }
+                    ],
+                    "threads": [
+                        {
+                            "_id": "1234567890",
+                            "username": "my_threads",
+                            "type": "threads",
+                            "profile_image": "https://example.com/th.jpg",
+                            "created_at": "2025-01-01T00:00:00+00:00"
+                        }
+                    ],
+                    "tiktok": [
+                        {
+                            "_id": "open.tiktok.com/mount/…",
+                            "username": "creator_handle",
+                            "display_name": "Creator",
+                            "type": "tiktok",
+                            "profile_image": "https://example.com/tt.jpg",
+                            "created_at": "2025-01-01T00:00:00+00:00"
+                        }
+                    ]
+                },
+                "total": 6
+            }
+        }
+    },
+    {
+        "id": "user-boards",
+        "method": "GET",
+        "endpoint": "/user/boards",
+        "description": "Get user Pinterest boards",
+        "category": "User",
+        "parameters": [],
+        "request": {
+            "headers": {
+                "Authorization": "Bearer your_api_key_here"
+            }
+        },
+        "response": {
+            "success": true,
+            "data": {
+                "boards": [
+                    {
+                        "_id": "board_123456",
+                        "name": "My Board",
+                        "type": "pinterest",
+                        "pinterest_account": {
+                            "_id": "pin_123456",
+                            "name": "johndoe",
+                            "profile_image": "https://example.com/image.jpg"
+                        },
+                        "created_at": "2025-01-01T00:00:00+00:00"
+                    }
+                ],
+                "total": 1
+            }
+        }
+    },
+    {
+        "id": "user-pages",
+        "method": "GET",
+        "endpoint": "/user/pages",
+        "description": "Get user Facebook pages",
+        "category": "User",
+        "parameters": [],
+        "request": {
+            "headers": {
+                "Authorization": "Bearer your_api_key_here"
+            }
+        },
+        "response": {
+            "success": true,
+            "data": {
+                "pages": [
+                    {
+                        "_id": "page_123456",
+                        "name": "My Business Page",
+                        "type": "facebook",
+                        "facebook_account": {
+                            "_id": "fb_789012",
+                            "name": "John Doe",
+                            "profile_image": "https://example.com/fb-image.jpg"
+                        },
+                        "created_at": "2025-01-01T00:00:00+00:00"
+                    }
+                ],
+                "total": 1
+            }
+        }
+    },
+    {
+        "id": "user-domains",
+        "method": "GET",
+        "endpoint": "/user/domains",
+        "description": "Get user domains",
+        "category": "User",
+        "parameters": [],
+        "request": {
+            "headers": {
+                "Authorization": "Bearer your_api_key_here"
+            }
+        },
+        "response": {
+            "success": true,
+            "data": {
+                "domains": [
+                    {
+                        "_id": 1,
+                        "name": "example.com",
+                        "type": "rss",
+                        "category": "blog",
+                        "created_at": "2025-01-01T00:00:00+00:00"
+                    }
+                ],
+                "total": 1
+            }
+        }
+    },
+    {
+        "id": "posts-create",
+        "method": "POST",
+        "endpoint": "/posts",
+        "description": "Create and queue or publish a post to a connected account. Supports Facebook, Pinterest, Instagram, Threads, TikTok (same JSON shape for image posts), and LinkedIn (different body — see Publishing by platform → LinkedIn in the API docs sidebar). Scheduling: publish_now=1 → immediate; else optional scheduled_at; else next queue timeslot for that account; else default 14:00 in the user timezone (today or next day).",
+        "category": "Posts",
+        "supported_media": [
+            {
+                "type": "Facebook",
+                "supported": "Yes",
+                "details": "Photo: image_url + title (link optional for link post with preview). Use page_id as account_id. Not via this API: Stories/Reels compose (use POST /posts/video for feed video)."
+            },
+            {
+                "type": "Pinterest",
+                "supported": "Yes",
+                "details": "Pin image: image_url + title; optional link for destination URL. Use board_id (Pinterest board id) as account_id."
+            },
+            {
+                "type": "Instagram",
+                "supported": "Yes",
+                "details": "Single feed photo only: image_url + title/description. Use ig_user_id (or numeric instagram_accounts.id) as account_id. Not via this API: carousel, stories, reels (reels/video use POST /posts/video)."
+            },
+            {
+                "type": "Threads",
+                "supported": "Yes",
+                "details": "Text-only: title and/or description (image_url optional). Image post: image_url + text. Use threads_id (or numeric threads.id) as account_id. Not via this API: carousel, video."
+            },
+            {
+                "type": "TikTok",
+                "supported": "Yes",
+                "details": "Photo post: image_url required + title. Optional tiktok_privacy_level, tiktok_allow_comment, tiktok_allow_duet, tiktok_allow_stitch, tiktok_commercial_toggle, tiktok_your_brand, tiktok_branded_content, tiktok_auto_add_music. Use tiktok_id as account_id. Video: POST /posts/video."
+            },
+            {
+                "type": "LinkedIn",
+                "supported": "Yes",
+                "details": "Same URL POST /posts with platform=linkedin: text-only and/or exactly one of image_url, video_url, document_url (see LinkedIn guide). Carousel/multi-image not supported via API."
+            }
+        ],
+        "parameters": [
+            {
+                "name": "platform",
+                "type": "string",
+                "required": true,
+                "description": "facebook | pinterest | instagram | threads | tiktok | linkedin"
+            },
+            {
+                "name": "account_id",
+                "type": "string",
+                "required": true,
+                "description": "Facebook: page_id. Pinterest: board_id. Instagram: ig_user_id or DB id. Threads: threads_id or DB id. TikTok: tiktok_id or DB id. LinkedIn: linkedin_id."
+            },
+            {
+                "name": "image_url",
+                "type": "string (URL)",
+                "required": false,
+                "description": "Required for Facebook, Pinterest, Instagram, and TikTok photo posts. Optional for Threads if posting text only; required for Threads image posts."
+            },
+            {
+                "name": "title",
+                "type": "string",
+                "required": true,
+                "description": "Primary caption / headline."
+            },
+            {
+                "name": "description",
+                "type": "string",
+                "required": false,
+                "description": "Extra body text (Threads maps to comment; TikTok as comment)."
+            },
+            {
+                "name": "link",
+                "type": "string (URL)",
+                "required": false,
+                "description": "Facebook/Pinterest destination link when publishing a link-style post."
+            },
+            {
+                "name": "publish_now",
+                "type": "0|1",
+                "required": false,
+                "description": "1 = publish immediately; omit or 0 to schedule using scheduled_at, queue slots, or default 14:00."
+            },
+            {
+                "name": "scheduled_at",
+                "type": "datetime",
+                "required": false,
+                "description": "When publish_now is not 1: schedule at this local datetime (must be after now)."
+            },
+            {
+                "name": "api_key_id",
+                "type": "integer",
+                "required": false,
+                "description": "Optional: associate the created post with an API key row."
+            },
+            {
+                "name": "tiktok_privacy_level",
+                "type": "string",
+                "required": false,
+                "description": "TikTok only: privacy level for Direct Post (e.g. PUBLIC_TO_EVERYONE — must match TikTok app settings)."
+            },
+            {
+                "name": "tiktok_allow_comment",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok: allow comments (default 0 = disabled per app convention)."
+            },
+            {
+                "name": "tiktok_allow_duet",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok: allow duet."
+            },
+            {
+                "name": "tiktok_allow_stitch",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok: allow stitch."
+            },
+            {
+                "name": "tiktok_commercial_toggle",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok commercial content toggle."
+            },
+            {
+                "name": "tiktok_your_brand",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok branded content flag."
+            },
+            {
+                "name": "tiktok_branded_content",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok branded content flag."
+            },
+            {
+                "name": "tiktok_auto_add_music",
+                "type": "boolean",
+                "required": false,
+                "description": "TikTok photo: when true, request auto-add music where supported."
+            }
+        ],
+        "request": {
+            "headers": {
+                "Authorization": "Bearer your_api_key_here",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "platform": "instagram",
+                "account_id": "17841400000000000",
+                "image_url": "https://example.com/images/my-photo.jpg",
+                "title": "New product drop",
+                "description": "Optional longer caption.",
+                "publish_now": 1
+            },
+            "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"threads\",\"account_id\":\"1234567890\",\"title\":\"Hello from API\",\"description\":\"\",\"publish_now\":1}'"
+        },
+        "response": {
+            "success": true,
+            "message": "Post is being published to Instagram",
+            "data": {
+                "post": {
+                    "id": 123,
+                    "platform": "instagram",
+                    "status": "publishing",
+                    "type": "photo",
+                    "created_at": "2025-12-04T10:30:00+00:00"
+                },
+                "account": {
+                    "type": "instagram",
+                    "ig_user_id": "17841400000000000",
+                    "username": "mybrand",
+                    "name": "My Brand",
+                    "profile_image": "https://example.com/ig.jpg"
+                }
+            }
+        },
+        "notes": "LinkedIn: send platform=linkedin with the LinkedIn-specific fields (see Publishing by platform → LinkedIn in the API docs sidebar); image_url is not required when posting text or document/video URLs. For TikTok photo metadata, expand TikTok in that same menu. Use GET /user/accounts to list _id values for account_id."
+    },
+    {
+        "id": "posts-status",
+        "method": "GET",
+        "endpoint": "/posts/status/{id}",
+        "description": "Get post status by ID",
+        "category": "Posts",
+        "parameters": [
+            {
+                "name": "id",
+                "type": "integer",
+                "required": true,
+                "description": "Post ID (returned from create endpoint)"
+            }
+        ],
+        "request": {
+            "headers": {
+                "Authorization": "Bearer your_api_key_here"
+            },
+            "curl": "curl -X GET \"{base_url}/posts/status/123\" \\\\n  -H \"Authorization: Bearer your_api_key_here\""
+        },
+        "response": {
+            "success": true,
+            "data": {
+                "post": {
+                    "id": 123,
+                    "platform": "facebook",
+                    "status": "published",
+                    "status_code": 1,
+                    "is_scheduled": false,
+                    "title": "Check out this amazing post!",
+                    "image": "https://example.com/images/my-photo.jpg",
+                    "post_id": "fb_987654321",
+                    "scheduled_at": null,
+                    "published_at": "2025-12-04 10:30:05",
+                    "created_at": "2025-12-04T10:30:00+00:00"
+                },
+                "account": {
+                    "type": "facebook_page",
+                    "page_id": "123456789012345",
+                    "name": "My Business Page",
+                    "profile_image": "https://example.com/fb-profile.jpg"
+                }
+            }
+        },
+        "notes": "Status values: 'pending' (waiting to publish), 'scheduled' (scheduled for future), 'publishing' (being processed), 'published' (successfully posted), 'failed' (error occurred). If status is 'failed', an 'error' field will be included with the error message."
+    },
+    {
+        "id": "videos-create",
+        "method": "POST",
+        "endpoint": "/posts/video",
+        "description": "Create a video post: downloads video_url to storage, then publishes or schedules like POST /posts. Supported platforms: facebook, pinterest, instagram, tiktok. Same scheduling rules as POST /posts.",
+        "category": "Videos",
+        "supported_media": [
+            {
+                "type": "Facebook",
+                "supported": "Yes",
+                "details": "Feed video. video_url must be publicly fetchable (mp4, mov, avi, mkv, webm by MIME)."
+            },
+            {
+                "type": "Pinterest",
+                "supported": "Yes",
+                "details": "Video pin; optional link for destination URL."
+            },
+            {
+                "type": "Instagram",
+                "supported": "Yes",
+                "details": "Feed video / reel pipeline (Instagram Content Publishing). Stored as S3 key then published via PublishInstagramPost."
+            },
+            {
+                "type": "TikTok",
+                "supported": "Yes",
+                "details": "Direct Post video. Same optional tiktok_* metadata fields as TikTok photo on POST /posts."
+            },
+            {
+                "type": "Threads",
+                "supported": "No",
+                "details": "Not implemented on this endpoint; use web app for Threads video."
+            },
+            {
+                "type": "LinkedIn",
+                "supported": "No",
+                "details": "Use POST /posts with platform=linkedin and video_url instead."
+            }
+        ],
+        "parameters": [
+            {
+                "name": "platform",
+                "type": "string",
+                "required": true,
+                "description": "facebook | pinterest | instagram | tiktok"
+            },
+            {
+                "name": "account_id",
+                "type": "string",
+                "required": true,
+                "description": "Same identifiers as POST /posts for the chosen platform."
+            },
+            {
+                "name": "video_url",
+                "type": "string (URL)",
+                "required": true,
+                "description": "Public URL to the video file (server downloads and uploads to S3)."
+            },
+            {
+                "name": "title",
+                "type": "string",
+                "required": true,
+                "description": "Video title / caption."
+            },
+            {
+                "name": "description",
+                "type": "string",
+                "required": false,
+                "description": "Additional description."
+            },
+            {
+                "name": "link",
+                "type": "string (URL)",
+                "required": false,
+                "description": "Optional destination URL (Facebook/Pinterest)."
+            },
+            {
+                "name": "publish_now",
+                "type": "0|1",
+                "required": false,
+                "description": "1 = publish immediately."
+            },
+            {
+                "name": "scheduled_at",
+                "type": "datetime",
+                "required": false,
+                "description": "Schedule when publish_now is not 1."
+            },
+            {
+                "name": "tiktok_privacy_level",
+                "type": "string",
+                "required": false,
+                "description": "TikTok video: privacy level."
+            },
+            {
+                "name": "tiktok_allow_comment",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok video options (same as POST /posts)."
+            },
+            {
+                "name": "tiktok_allow_duet",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok."
+            },
+            {
+                "name": "tiktok_allow_stitch",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok."
+            },
+            {
+                "name": "tiktok_commercial_toggle",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok."
+            },
+            {
+                "name": "tiktok_your_brand",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok."
+            },
+            {
+                "name": "tiktok_branded_content",
+                "type": "0|1",
+                "required": false,
+                "description": "TikTok."
+            }
+        ],
+        "request": {
+            "headers": {
+                "Authorization": "Bearer your_api_key_here",
+                "Content-Type": "application/json"
+            },
+            "body": {
+                "platform": "instagram",
+                "account_id": "17841400000000000",
+                "video_url": "https://example.com/videos/my-video.mp4",
+                "title": "Behind the scenes",
+                "description": "Optional",
+                "publish_now": 1
+            },
+            "curl": "curl -X POST \"{base_url}/posts/video\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"facebook\",\"account_id\":\"123456789\",\"video_url\":\"https://example.com/video.mp4\",\"title\":\"My Video\",\"publish_now\":1}'"
+        },
+        "response": {
+            "success": true,
+            "message": "Video is being published to Instagram",
+            "data": {
+                "post": {
+                    "id": 125,
+                    "platform": "instagram",
+                    "status": "publishing",
+                    "type": "video",
+                    "created_at": "2025-12-04T10:30:00+00:00"
+                },
+                "account": {
+                    "type": "instagram",
+                    "ig_user_id": "17841400000000000",
+                    "username": "mybrand",
+                    "name": "My Brand",
+                    "profile_image": "https://example.com/ig.jpg"
+                }
+            }
+        },
+        "notes": "Video is downloaded server-side, validated by Content-Type, stored on S3, then published. Supported file types include mp4, mov, avi, mkv, webm (by MIME). For TikTok, optional metadata is stored on the post the same way as photo posts."
+    }
+]

@@ -398,10 +398,18 @@ class PostService
 
         $rawImage = $attrs['image'] ?? null;
         $rawVideo = $attrs['video'] ?? null;
+        $awsLink = $attrs['aws_link'] ?? null;
         if (! empty($rawVideo)) {
             $body['type'] = 'video';
             $body['media_type'] = 'VIDEO';
             $body['video_url'] = $resolveVideo($rawVideo);
+
+            return $body;
+        }
+        if (! empty($awsLink)) {
+            $body['type'] = 'image';
+            $body['media_type'] = 'IMAGE';
+            $body['image_url'] = resolveStoredPostImageUrl((string) $awsLink, null);
 
             return $body;
         }
@@ -438,9 +446,12 @@ class PostService
             return url($raw);
         }
 
+        if (str_starts_with($raw, 'images/') || isS3StoragePath($raw)) {
+            return fetchFromS3($raw);
+        }
+
         if (
             str_starts_with($raw, 'uploads/') ||
-            str_starts_with($raw, 'images/') ||
             str_starts_with($raw, 'storage/')
         ) {
             return asset($raw);

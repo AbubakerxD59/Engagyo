@@ -1,0 +1,699 @@
+[
+    {
+        "id": "facebook",
+        "name": "Facebook",
+        "media": [
+            {
+                "id": "text-link",
+                "label": "Text / link post",
+                "supported": true,
+                "description": "Link-style Page post via POST /posts. The API expects image_url (preview image) plus title/description for the message; set link to the destination URL.",
+                "http_method": "POST",
+                "http_path": "/posts",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "facebook",
+                        "account_id": "123456789012345",
+                        "image_url": "https://example.com/images/link-preview.jpg",
+                        "title": "Read our latest update",
+                        "description": "Optional longer copy for the post body.",
+                        "link": "https://example.com/blog/post",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"facebook\",\"account_id\":\"123456789012345\",\"image_url\":\"https://example.com/images/link-preview.jpg\",\"title\":\"Read our latest\",\"link\":\"https://example.com/blog/post\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Post is being published",
+                    "data": {
+                        "post": {
+                            "id": 123,
+                            "platform": "facebook",
+                            "status": "publishing",
+                            "type": "photo",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "facebook_page",
+                            "page_id": "123456789012345",
+                            "name": "My Business Page",
+                            "profile_image": "https://example.com/fb-profile.jpg"
+                        }
+                    }
+                },
+                "notes": "account_id is the Facebook Page id (GET /user/pages)."
+            },
+            {
+                "id": "photo",
+                "label": "Photo post",
+                "supported": true,
+                "description": "Single-image Page post: image_url plus title (and optional description).",
+                "http_method": "POST",
+                "http_path": "/posts",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "facebook",
+                        "account_id": "123456789012345",
+                        "image_url": "https://example.com/images/promo.jpg",
+                        "title": "Summer sale",
+                        "description": "Optional caption.",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"facebook\",\"account_id\":\"123456789012345\",\"image_url\":\"https://example.com/images/promo.jpg\",\"title\":\"Summer sale\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Post is being published",
+                    "data": {
+                        "post": {
+                            "id": 123,
+                            "platform": "facebook",
+                            "status": "publishing",
+                            "type": "photo",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "facebook_page",
+                            "page_id": "123456789012345",
+                            "name": "My Business Page",
+                            "profile_image": "https://example.com/fb-profile.jpg"
+                        }
+                    }
+                },
+                "notes": null
+            },
+            {
+                "id": "video-feed",
+                "label": "Video (feed)",
+                "supported": true,
+                "description": "Feed video: server downloads video_url, validates MIME, stores on S3, then publishes.",
+                "http_method": "POST",
+                "http_path": "/posts/video",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "facebook",
+                        "account_id": "123456789012345",
+                        "video_url": "https://example.com/videos/promo.mp4",
+                        "title": "Product demo",
+                        "description": "Optional",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts/video\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"facebook\",\"account_id\":\"123456789012345\",\"video_url\":\"https://example.com/videos/promo.mp4\",\"title\":\"Product demo\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Video is being published",
+                    "data": {
+                        "post": {
+                            "id": 125,
+                            "platform": "instagram",
+                            "status": "publishing",
+                            "type": "video",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "instagram",
+                            "ig_user_id": "17841400000000000",
+                            "username": "mybrand",
+                            "name": "My Brand",
+                            "profile_image": "https://example.com/ig.jpg"
+                        }
+                    }
+                },
+                "notes": "Supported types include mp4, mov, avi, mkv, webm (by MIME)."
+            }
+        ]
+    },
+    {
+        "id": "pinterest",
+        "name": "Pinterest",
+        "media": [
+            {
+                "id": "image-pin",
+                "label": "Image pin",
+                "supported": true,
+                "description": "Standard image pin: image_url, title, optional description and link (destination URL).",
+                "http_method": "POST",
+                "http_path": "/posts",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "pinterest",
+                        "account_id": "board_123456",
+                        "image_url": "https://example.com/pin-art.jpg",
+                        "title": "Mood board idea",
+                        "description": "Optional",
+                        "link": "https://example.com/landing",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"pinterest\",\"account_id\":\"board_123456\",\"image_url\":\"https://example.com/pin-art.jpg\",\"title\":\"Mood board\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Post is being published",
+                    "data": {
+                        "post": {
+                            "id": 123,
+                            "platform": "facebook",
+                            "status": "publishing",
+                            "type": "photo",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "facebook_page",
+                            "page_id": "123456789012345",
+                            "name": "My Business Page",
+                            "profile_image": "https://example.com/fb-profile.jpg"
+                        }
+                    }
+                },
+                "notes": "account_id is the Pinterest board id (GET /user/boards)."
+            },
+            {
+                "id": "video-pin",
+                "label": "Video pin",
+                "supported": true,
+                "description": "Video pin via POST /posts/video with platform=pinterest.",
+                "http_method": "POST",
+                "http_path": "/posts/video",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "pinterest",
+                        "account_id": "board_123456",
+                        "video_url": "https://example.com/pin-video.mp4",
+                        "title": "DIY clip",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts/video\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"pinterest\",\"account_id\":\"board_123456\",\"video_url\":\"https://example.com/pin-video.mp4\",\"title\":\"DIY clip\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Video is being published",
+                    "data": {
+                        "post": {
+                            "id": 125,
+                            "platform": "instagram",
+                            "status": "publishing",
+                            "type": "video",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "instagram",
+                            "ig_user_id": "17841400000000000",
+                            "username": "mybrand",
+                            "name": "My Brand",
+                            "profile_image": "https://example.com/ig.jpg"
+                        }
+                    }
+                },
+                "notes": null
+            }
+        ]
+    },
+    {
+        "id": "instagram",
+        "name": "Instagram",
+        "media": [
+            {
+                "id": "feed-photo",
+                "label": "Feed photo",
+                "supported": true,
+                "description": "Single feed photo via Instagram Content Publishing: HTTPS image_url, title/description, ig_user_id as account_id.",
+                "http_method": "POST",
+                "http_path": "/posts",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "instagram",
+                        "account_id": "17841400000000000",
+                        "image_url": "https://example.com/images/my-photo.jpg",
+                        "title": "New drop",
+                        "description": "Caption text",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"instagram\",\"account_id\":\"17841400000000000\",\"image_url\":\"https://example.com/images/my-photo.jpg\",\"title\":\"New drop\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Post is being published to Instagram",
+                    "data": {
+                        "post": {
+                            "id": 123,
+                            "platform": "instagram",
+                            "status": "publishing",
+                            "type": "photo",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "instagram",
+                            "ig_user_id": "17841400000000000",
+                            "username": "mybrand",
+                            "name": "My Brand",
+                            "profile_image": "https://example.com/ig.jpg"
+                        }
+                    }
+                },
+                "notes": "account_id from GET /user/accounts → data.accounts.instagram (each item's _id)."
+            },
+            {
+                "id": "feed-video",
+                "label": "Feed video / Reel",
+                "supported": true,
+                "description": "Video is downloaded to S3 then published through the Instagram video/reel pipeline used in-app.",
+                "http_method": "POST",
+                "http_path": "/posts/video",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "instagram",
+                        "account_id": "17841400000000000",
+                        "video_url": "https://example.com/videos/my-video.mp4",
+                        "title": "Behind the scenes",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts/video\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"instagram\",\"account_id\":\"17841400000000000\",\"video_url\":\"https://example.com/videos/my-video.mp4\",\"title\":\"Behind the scenes\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Video is being published",
+                    "data": {
+                        "post": {
+                            "id": 125,
+                            "platform": "instagram",
+                            "status": "publishing",
+                            "type": "video",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "instagram",
+                            "ig_user_id": "17841400000000000",
+                            "username": "mybrand",
+                            "name": "My Brand",
+                            "profile_image": "https://example.com/ig.jpg"
+                        }
+                    }
+                },
+                "notes": null
+            }
+        ]
+    },
+    {
+        "id": "threads",
+        "name": "Threads",
+        "media": [
+            {
+                "id": "text",
+                "label": "Text post",
+                "supported": true,
+                "description": "Text-only thread: omit image_url; title and/or description carry the thread text.",
+                "http_method": "POST",
+                "http_path": "/posts",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "threads",
+                        "account_id": "1234567890",
+                        "title": "Hello from the API",
+                        "description": "",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"threads\",\"account_id\":\"1234567890\",\"title\":\"Hello from the API\",\"description\":\"\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Post is being published",
+                    "data": {
+                        "post": {
+                            "id": 123,
+                            "platform": "facebook",
+                            "status": "publishing",
+                            "type": "photo",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "facebook_page",
+                            "page_id": "123456789012345",
+                            "name": "My Business Page",
+                            "profile_image": "https://example.com/fb-profile.jpg"
+                        }
+                    }
+                },
+                "notes": "account_id from GET /user/accounts → data.accounts.threads."
+            },
+            {
+                "id": "image",
+                "label": "Image post",
+                "supported": true,
+                "description": "Single-image post: HTTPS image_url plus optional caption from title/description.",
+                "http_method": "POST",
+                "http_path": "/posts",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "threads",
+                        "account_id": "1234567890",
+                        "image_url": "https://example.com/thread-image.jpg",
+                        "title": "Photo drop",
+                        "description": "Optional",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"threads\",\"account_id\":\"1234567890\",\"image_url\":\"https://example.com/thread-image.jpg\",\"title\":\"Photo drop\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Post is being published",
+                    "data": {
+                        "post": {
+                            "id": 123,
+                            "platform": "facebook",
+                            "status": "publishing",
+                            "type": "photo",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "facebook_page",
+                            "page_id": "123456789012345",
+                            "name": "My Business Page",
+                            "profile_image": "https://example.com/fb-profile.jpg"
+                        }
+                    }
+                },
+                "notes": null
+            }
+        ]
+    },
+    {
+        "id": "tiktok",
+        "name": "TikTok",
+        "media": [
+            {
+                "id": "photo",
+                "label": "Photo post",
+                "supported": true,
+                "description": "TikTok Direct Post (photo): image_url and title; optional tiktok_* privacy and interaction flags.",
+                "http_method": "POST",
+                "http_path": "/posts",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "tiktok",
+                        "account_id": "tiktok_account_1",
+                        "image_url": "https://example.com/tt-photo.jpg",
+                        "title": "Drop caption",
+                        "tiktok_privacy_level": "PUBLIC_TO_EVERYONE",
+                        "tiktok_allow_comment": 1,
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"tiktok\",\"account_id\":\"tiktok_account_1\",\"image_url\":\"https://example.com/tt-photo.jpg\",\"title\":\"Drop\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Post is being published",
+                    "data": {
+                        "post": {
+                            "id": 123,
+                            "platform": "facebook",
+                            "status": "publishing",
+                            "type": "photo",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "facebook_page",
+                            "page_id": "123456789012345",
+                            "name": "My Business Page",
+                            "profile_image": "https://example.com/fb-profile.jpg"
+                        }
+                    }
+                },
+                "notes": "account_id from GET /user/accounts → data.accounts.tiktok."
+            },
+            {
+                "id": "video",
+                "label": "Video post",
+                "supported": true,
+                "description": "TikTok Direct Post (video) via POST /posts/video; same optional tiktok_* fields as photo posts.",
+                "http_method": "POST",
+                "http_path": "/posts/video",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "tiktok",
+                        "account_id": "tiktok_account_1",
+                        "video_url": "https://example.com/tt-video.mp4",
+                        "title": "Short clip",
+                        "tiktok_privacy_level": "PUBLIC_TO_EVERYONE",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts/video\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"tiktok\",\"account_id\":\"tiktok_account_1\",\"video_url\":\"https://example.com/tt-video.mp4\",\"title\":\"Short clip\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Video is being published",
+                    "data": {
+                        "post": {
+                            "id": 125,
+                            "platform": "instagram",
+                            "status": "publishing",
+                            "type": "video",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "instagram",
+                            "ig_user_id": "17841400000000000",
+                            "username": "mybrand",
+                            "name": "My Brand",
+                            "profile_image": "https://example.com/ig.jpg"
+                        }
+                    }
+                },
+                "notes": null
+            }
+        ]
+    },
+    {
+        "id": "linkedin",
+        "name": "LinkedIn",
+        "media": [
+            {
+                "id": "text",
+                "label": "Text / article snippet",
+                "supported": true,
+                "description": "Text-only share: platform=linkedin with title and/or description; omit image_url, video_url, and document_url.",
+                "http_method": "POST",
+                "http_path": "/posts",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "linkedin",
+                        "account_id": "urn:li:person:AbCdEf",
+                        "title": "Headline for the post",
+                        "description": "Optional body text.",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"linkedin\",\"account_id\":\"urn:li:person:AbCdEf\",\"title\":\"Headline\",\"description\":\"Body\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Post is being published",
+                    "data": {
+                        "post": {
+                            "id": 123,
+                            "platform": "facebook",
+                            "status": "publishing",
+                            "type": "photo",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "facebook_page",
+                            "page_id": "123456789012345",
+                            "name": "My Business Page",
+                            "profile_image": "https://example.com/fb-profile.jpg"
+                        }
+                    }
+                },
+                "notes": "account_id is linkedin_id from GET /user/accounts."
+            },
+            {
+                "id": "image",
+                "label": "Single image",
+                "supported": true,
+                "description": "Single-image post: send image_url only (do not send video_url or document_url at the same time).",
+                "http_method": "POST",
+                "http_path": "/posts",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "linkedin",
+                        "account_id": "urn:li:person:AbCdEf",
+                        "title": "Photo share",
+                        "image_url": "https://example.com/li-photo.jpg",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"linkedin\",\"account_id\":\"urn:li:person:AbCdEf\",\"title\":\"Photo\",\"image_url\":\"https://example.com/li-photo.jpg\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Post is being published",
+                    "data": {
+                        "post": {
+                            "id": 123,
+                            "platform": "facebook",
+                            "status": "publishing",
+                            "type": "photo",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "facebook_page",
+                            "page_id": "123456789012345",
+                            "name": "My Business Page",
+                            "profile_image": "https://example.com/fb-profile.jpg"
+                        }
+                    }
+                },
+                "notes": null
+            },
+            {
+                "id": "video",
+                "label": "Video",
+                "supported": true,
+                "description": "LinkedIn native video uses POST /posts with video_url (not POST /posts/video).",
+                "http_method": "POST",
+                "http_path": "/posts",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "linkedin",
+                        "account_id": "urn:li:person:AbCdEf",
+                        "title": "Video share",
+                        "video_url": "https://example.com/li-video.mp4",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"linkedin\",\"account_id\":\"urn:li:person:AbCdEf\",\"title\":\"Video\",\"video_url\":\"https://example.com/li-video.mp4\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Post is being published",
+                    "data": {
+                        "post": {
+                            "id": 123,
+                            "platform": "facebook",
+                            "status": "publishing",
+                            "type": "photo",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "facebook_page",
+                            "page_id": "123456789012345",
+                            "name": "My Business Page",
+                            "profile_image": "https://example.com/fb-profile.jpg"
+                        }
+                    }
+                },
+                "notes": "Use POST /posts, not /posts/video, for LinkedIn video."
+            },
+            {
+                "id": "document",
+                "label": "Document",
+                "supported": true,
+                "description": "Document post: document_url to PDF, PPT, PPTX, DOC, or DOCX (validated by extension).",
+                "http_method": "POST",
+                "http_path": "/posts",
+                "hide_copy_url": false,
+                "request": {
+                    "headers": {
+                        "Authorization": "Bearer your_api_key_here",
+                        "Content-Type": "application/json"
+                    },
+                    "body": {
+                        "platform": "linkedin",
+                        "account_id": "urn:li:person:AbCdEf",
+                        "title": "Deck",
+                        "document_url": "https://example.com/deck.pdf",
+                        "publish_now": 1
+                    },
+                    "curl": "curl -X POST \"{base_url}/posts\" \\\\n  -H \"Authorization: Bearer your_api_key_here\" \\\\n  -H \"Content-Type: application/json\" \\\\n  -d '{\"platform\":\"linkedin\",\"account_id\":\"urn:li:person:AbCdEf\",\"title\":\"Deck\",\"document_url\":\"https://example.com/deck.pdf\",\"publish_now\":1}'"
+                },
+                "response": {
+                    "success": true,
+                    "message": "Post is being published",
+                    "data": {
+                        "post": {
+                            "id": 123,
+                            "platform": "facebook",
+                            "status": "publishing",
+                            "type": "photo",
+                            "created_at": "2025-12-04T10:30:00+00:00"
+                        },
+                        "account": {
+                            "type": "facebook_page",
+                            "page_id": "123456789012345",
+                            "name": "My Business Page",
+                            "profile_image": "https://example.com/fb-profile.jpg"
+                        }
+                    }
+                },
+                "notes": null
+            }
+        ]
+    }
+]
