@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\FrontEnd;
 
 use App\Http\Controllers\Controller;
+use App\Jobs\SyncYouTubeChannelVideosJob;
 use App\Models\Feature;
 use App\Models\User;
 use App\Services\FeatureUsageService;
@@ -138,6 +139,7 @@ class YouTubeAuthController extends Controller
                 );
 
                 $this->logService->logAccountConnection('youtube', $youtubeAccount->id, $youtubeAccount->username, 'connected');
+                SyncYouTubeChannelVideosJob::dispatch((int) $youtubeAccount->id);
                 $connectedCount++;
             } catch (\Throwable $e) {
                 if ($didIncrement) {

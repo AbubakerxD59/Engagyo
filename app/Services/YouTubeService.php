@@ -33,6 +33,7 @@ class YouTubeService
             'https://www.googleapis.com/auth/youtube.readonly',
             'https://www.googleapis.com/auth/youtube.upload',
             'https://www.googleapis.com/auth/youtube.force-ssl',
+            'https://www.googleapis.com/auth/yt-analytics.readonly',
         ];
         $this->client = new HttpService();
         $this->logService = new SocialMediaLogService();

@@ -1083,6 +1083,8 @@
                 success: function(response) {
                     var posts = (response.success && response.posts) ? response.posts : [];
                     cachedSentPagePosts = posts;
+                    sentPostsFetching = !!(response.posts_fetching);
+                    sentPostsFetchingMessage = response.posts_fetching_message || '';
                     $('#posts-status-tabs [data-count="sent"]').text(posts.length);
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
@@ -1091,6 +1093,8 @@
                 error: function(xhr, textStatus) {
                     if (textStatus === 'abort') return;
                     cachedSentPagePosts = [];
+                    sentPostsFetching = false;
+                    sentPostsFetchingMessage = '';
                     $('#posts-status-tabs [data-count="sent"]').text(0);
                     if (currentPostStatusTab === 'sent') {
                         showSentPosts();
@@ -5415,6 +5419,17 @@
                 statViews = 'Impressions';
                 statShares = 'Shares';
                 statClicks = 'Saves';
+            } else if (st === 'youtube') {
+                reactions = ins.like_count ?? ins.post_reactions ?? 0;
+                comments = ins.comment_count ?? post.comments ?? 0;
+                impressions = ins.view_count ?? ins.post_impressions ?? 0;
+                shares = ins.share_count ?? post.shares ?? 0;
+                clicks = '-';
+                statLikes = 'Likes';
+                statComments = 'Comments';
+                statViews = 'Views';
+                statShares = 'Shares';
+                statClicks = null;
             } else {
                 reactions = ins.post_reactions ?? 0;
                 comments = post.comments ?? 0;

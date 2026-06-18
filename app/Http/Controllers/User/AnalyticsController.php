@@ -19,6 +19,9 @@ use App\Models\Tiktok;
 use App\Models\TiktokInsight;
 use App\Models\TiktokPost;
 use App\Models\User;
+use App\Models\Youtube;
+use App\Models\YoutubeInsight;
+use App\Models\YoutubePost;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Cache;
@@ -101,6 +104,7 @@ class AnalyticsController extends Controller
         $pinterestBoards = $accounts->where('type', 'pinterest')->values();
         $tiktokAccounts = $accounts->where('type', 'tiktok')->values();
         $instagramAccounts = $accounts->where('type', 'instagram')->values();
+        $youtubeAccounts = $accounts->where('type', 'youtube')->values();
         $analyticsAccounts = $facebookPages->map(function ($page) {
             return [
                 'ref' => 'facebook:'.$page->id,
@@ -156,6 +160,22 @@ class AnalyticsController extends Controller
                     'profile_image' => $ig->profile_image ?? social_logo('instagram'),
                 ];
             })->values()
+        )->concat(
+            $youtubeAccounts->map(function ($youtube) {
+                $label = trim((string) ($youtube->username ?? ''));
+                if ($label === '') {
+                    $label = trim((string) ($youtube->custom_url ?? ''));
+                }
+
+                return [
+                    'ref' => 'youtube:'.$youtube->id,
+                    'platform' => 'youtube',
+                    'id' => $youtube->id,
+                    'name' => $label !== '' ? $label : 'YouTube',
+                    'username' => $youtube->custom_url ?: ($label !== '' ? $label : 'YouTube'),
+                    'profile_image' => $youtube->profile_image ?? social_logo('youtube'),
+                ];
+            })->values()
         )->values();
         $userTimezoneName = $user->timezone && !empty($user->timezone->name) ? $user->timezone->name : 'UTC';
 
@@ -183,6 +203,7 @@ class AnalyticsController extends Controller
         $pinterestBoards = $accounts->where('type', 'pinterest')->values();
         $tiktokAccounts = $accounts->where('type', 'tiktok')->values();
         $instagramAccounts = $accounts->where('type', 'instagram')->values();
+        $youtubeAccounts = $accounts->where('type', 'youtube')->values();
 
         [$since, $until] = $this->resolveDateRange($request);
 
@@ -340,6 +361,39 @@ class AnalyticsController extends Controller
                     ];
                 }
             }
+        } elseif (str_starts_with($accountRef, 'youtube:')) {
+            $platform = 'youtube';
+            $id = (int) str_replace('youtube:', '', $accountRef);
+            if ($youtubeAccounts->contains('id', $id)) {
+                $selected = Youtube::find($id);
+                if ($selected) {
+                    $pageInsights = $this->fetchYoutubeInsights($selected, $since, $until);
+                    $pagePosts = $this->fetchYoutubePosts($selected, $since, $until);
+                    $hasStoredYoutubePosts = YoutubePost::where('youtube_id', $selected->id)->exists();
+                    if (is_array($pagePosts) && empty($pagePosts) && ! $hasStoredYoutubePosts) {
+                        $postsFetching = true;
+                        $postsFetchingMessage = 'YouTube videos for this channel are being fetched. Please check back shortly.';
+                    }
+                    if (is_array($pagePosts)) {
+                        $pagePostsTotal = count($pagePosts);
+                        if ($postsLimit !== null) {
+                            $pagePosts = array_slice($pagePosts, $postsOffset, $postsLimit);
+                            $pagePostsNextOffset = $postsOffset + count($pagePosts);
+                            $pagePostsHasMore = $pagePostsNextOffset < $pagePostsTotal;
+                        } else {
+                            $pagePostsNextOffset = $pagePostsTotal;
+                        }
+                    }
+                    $label = trim((string) ($selected->username ?? ''));
+                    if ($label === '') {
+                        $label = trim((string) ($selected->custom_url ?? ''));
+                    }
+                    $selectedPage = [
+                        'id' => $selected->id,
+                        'name' => $label !== '' ? $label : 'YouTube',
+                    ];
+                }
+            }
         }
 
         return response()->json([
@@ -352,7 +406,7 @@ class AnalyticsController extends Controller
             'pagePostsHasMore' => $pagePostsHasMore,
             'pagePostsNextOffset' => $pagePostsNextOffset,
             'selectedPage' => $selectedPage,
-            'hasPages' => ($facebookPages->count() + $threadsAccounts->count() + $pinterestBoards->count() + $tiktokAccounts->count() + $instagramAccounts->count()) > 0,
+            'hasPages' => ($facebookPages->count() + $threadsAccounts->count() + $pinterestBoards->count() + $tiktokAccounts->count() + $instagramAccounts->count() + $youtubeAccounts->count()) > 0,
             'platform' => $platform,
             'accountRef' => $accountRef,
             'since' => $since,
@@ -527,6 +581,57 @@ class AnalyticsController extends Controller
 
         $stored = TiktokPost::forCreatedDateRange((int) $account->id, $since, $until);
         $storedPosts = $stored->map(fn (TiktokPost $row) => $row->toAnalyticsPostArray())->values()->all();
+
+        Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
+
+        return $storedPosts;
+    }
+
+    /**
+     * YouTube channel insights (`youtube_insights` only; sync runs on schedule/cron).
+     */
+    private function fetchYoutubeInsights(?Youtube $account, ?string $since = null, ?string $until = null): ?array
+    {
+        if (! $account || empty($account->access_token)) {
+            return null;
+        }
+
+        $stored = YoutubeInsight::where('youtube_id', $account->id)
+            ->where('since', $since)
+            ->where('until', $until)
+            ->first();
+
+        if ($stored && $stored->insights) {
+            return $stored->insights;
+        }
+
+        return null;
+    }
+
+    /**
+     * YouTube videos with metrics (`youtube_posts` / cache only).
+     *
+     * @return array<int, array<string, mixed>>|null
+     */
+    private function fetchYoutubePosts(?Youtube $account, ?string $since = null, ?string $until = null): ?array
+    {
+        if (! $account || empty($account->access_token)) {
+            return null;
+        }
+
+        $since = $since ?: Carbon::today()->subDays(28)->format('Y-m-d');
+        $until = $until ?: Carbon::today()->format('Y-m-d');
+
+        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
+        $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $account->id, $duration, $since, $until, 'youtube');
+
+        $cachedPosts = Cache::get($cacheKey);
+        if (is_array($cachedPosts) && count($cachedPosts) > 0) {
+            return $cachedPosts;
+        }
+
+        $stored = YoutubePost::forCreatedDateRange((int) $account->id, $since, $until);
+        $storedPosts = $stored->map(fn (YoutubePost $row) => $row->toAnalyticsPostArray())->values()->all();
 
         Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
 

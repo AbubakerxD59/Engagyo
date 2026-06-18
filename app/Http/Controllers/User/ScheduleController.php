@@ -30,6 +30,7 @@ use App\Models\ThreadPost;
 use App\Models\Timeslot;
 use App\Models\User;
 use App\Models\Youtube;
+use App\Models\YoutubePost;
 use App\Services\FacebookService;
 use App\Services\FeatureUsageService;
 use App\Services\PinterestService;
@@ -5362,12 +5363,13 @@ class ScheduleController extends Controller
     }
 
     /**
-     * YouTube Sent tab: published schedule posts for selected accounts.
+     * YouTube Sent tab: synced `youtube_posts` metrics merged with published schedule posts.
      */
     public function getYouTubeSentPosts(Request $request)
     {
+        $userId = (int) Auth::id();
         $viewer = Auth::guard('user')->user();
-        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [(int) Auth::guard('user')->id()];
+        $postCreatorIds = $viewer instanceof User ? $viewer->schedulePostCreatorUserIds() : [$userId];
         $accountIds = (array) $request->input('account_id', []);
         if (empty($accountIds)) {
             return response()->json(['success' => false, 'message' => 'No account selected', 'posts' => []]);
@@ -5382,13 +5384,34 @@ class ScheduleController extends Controller
             return response()->json(['success' => false, 'message' => 'No YouTube accounts found', 'posts' => []]);
         }
 
-        $accountIds = $accounts->pluck('id')->all();
+        $youtubeIds = $accounts->pluck('id')->all();
         $accountsById = $accounts->keyBy('id');
+
+        $cardsByKey = [];
+        $youtubePostsByAccount = YoutubePost::query()
+            ->whereIn('youtube_id', $youtubeIds)
+            ->orderByDesc('post_created_date')
+            ->get()
+            ->groupBy('youtube_id');
+
+        foreach ($accounts as $account) {
+            $rows = $youtubePostsByAccount->get($account->id, collect());
+            foreach ($rows as $row) {
+                if (! $row instanceof YoutubePost) {
+                    continue;
+                }
+                $videoId = (string) $row->youtube_video_id;
+                if ($videoId === '') {
+                    continue;
+                }
+                $cardsByKey['video:'.$videoId] = $this->sentTabPostFromYoutubeVideo($row, $account);
+            }
+        }
 
         $dbPosts = Post::withoutGlobalScopes()
             ->whereIn('user_id', $postCreatorIds)
             ->where('social_type', 'like', '%youtube%')
-            ->whereIn('account_id', $accountIds)
+            ->whereIn('account_id', $youtubeIds)
             ->where('status', 1)
             ->whereNotNull('published_at')
             ->where('source', 'schedule')
@@ -5396,16 +5419,49 @@ class ScheduleController extends Controller
             ->orderByDesc('published_at')
             ->get();
 
-        $allPosts = [];
         foreach ($dbPosts as $dbPost) {
             $account = $accountsById->get($dbPost->account_id) ?? $dbPost->youtube;
             if (! $account instanceof Youtube) {
                 continue;
             }
-            $allPosts[] = $this->sentTabPostFromYouTubeRecord($dbPost, $account);
+
+            $accountVideos = $youtubePostsByAccount->get($account->id, collect());
+            $matchedVideo = $this->findYoutubePostForSchedulePost($dbPost, $accountVideos);
+            $videoId = $matchedVideo ? (string) $matchedVideo->youtube_video_id : '';
+            $cardKey = $videoId !== '' ? 'video:'.$videoId : 'db:'.$dbPost->id;
+
+            if ($videoId !== '' && isset($cardsByKey['video:'.$videoId])) {
+                $cardsByKey['video:'.$videoId] = $this->mergeScheduleMetaIntoYoutubeSentCard(
+                    $cardsByKey['video:'.$videoId],
+                    $dbPost
+                );
+                continue;
+            }
+
+            if (! isset($cardsByKey[$cardKey])) {
+                $cardsByKey[$cardKey] = $this->sentTabPostFromYouTubeRecord($dbPost, $account, $matchedVideo);
+            }
         }
 
-        return response()->json(['success' => true, 'posts' => $allPosts]);
+        $allPosts = array_values($cardsByKey);
+        usort($allPosts, function ($a, $b) {
+            $ta = $this->parseCreatedTime($a['created_time'] ?? null);
+            $tb = $this->parseCreatedTime($b['created_time'] ?? null);
+
+            return $tb - $ta;
+        });
+
+        $isFetching = empty($allPosts) && YoutubePost::whereIn('youtube_id', $youtubeIds)->doesntExist();
+
+        return response()->json([
+            'success' => true,
+            'posts' => $allPosts,
+            'posts_fetching' => $isFetching,
+            'posts_fetching_message' => $isFetching
+                ? 'YouTube videos for this channel are being fetched. Please check back shortly.'
+                : null,
+            'total' => count($allPosts),
+        ]);
     }
 
     /**
@@ -5783,14 +5839,21 @@ class ScheduleController extends Controller
     /**
      * Minimal Sent-tab payload from a published YouTube Post row.
      */
-    private function sentTabPostFromYouTubeRecord(Post $dbPost, Youtube $account): array
+    private function sentTabPostFromYouTubeRecord(Post $dbPost, Youtube $account, ?YoutubePost $matchedVideo = null): array
     {
+        if ($matchedVideo) {
+            $payload = $this->sentTabPostFromYoutubeVideo($matchedVideo, $account);
+            $payload = $this->mergeScheduleMetaIntoYoutubeSentCard($payload, $dbPost);
+
+            return $payload;
+        }
+
         $published = Carbon::parse($dbPost->published_at);
         $createdTime = $published->toIso8601String();
 
         $videoId = trim((string) ($dbPost->post_id ?? ''));
         $fullPicture = $videoId !== ''
-            ? 'https://img.youtube.com/vi/' . rawurlencode($videoId) . '/hqdefault.jpg'
+            ? 'https://img.youtube.com/vi/'.rawurlencode($videoId).'/hqdefault.jpg'
             : '';
 
         $videoUrl = $this->postStoredVideoUrl($dbPost);
@@ -5805,15 +5868,15 @@ class ScheduleController extends Controller
         $message = trim((string) ($dbPost->title ?? ''));
         $comment = trim((string) ($dbPost->comment ?? ''));
         if ($comment !== '') {
-            $message = $message !== '' ? $message . "\n\n" . $comment : $comment;
+            $message = $message !== '' ? $message."\n\n".$comment : $comment;
         }
 
         $permalink = $videoId !== ''
-            ? 'https://www.youtube.com/watch?v=' . rawurlencode($videoId)
+            ? 'https://www.youtube.com/watch?v='.rawurlencode($videoId)
             : null;
 
         $payload = [
-            'id' => $videoId !== '' ? $videoId : ('db-' . $dbPost->id),
+            'id' => $videoId !== '' ? $videoId : ('db-'.$dbPost->id),
             'created_time' => $createdTime,
             'message' => $message,
             'story' => '',
@@ -5826,11 +5889,7 @@ class ScheduleController extends Controller
             'social_type' => 'youtube',
             'page_db_id' => $account->id,
             'db_post_id' => $dbPost->id,
-            'insights' => [
-                'post_reactions' => 0,
-                'post_impressions' => 0,
-                'post_clicks' => 0,
-            ],
+            'insights' => $this->sentTabInsightsFromYoutubePost(null),
             'comments' => 0,
             'shares' => 0,
             'from_local_db' => true,
@@ -5840,6 +5899,127 @@ class ScheduleController extends Controller
         if ($dbPost->user) {
             $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
             $payload['publisher_email'] = $dbPost->user->email ?? '';
+        }
+
+        return $payload;
+    }
+
+    /**
+     * Sent-tab payload from a synced `youtube_posts` row.
+     */
+    private function sentTabPostFromYoutubeVideo(YoutubePost $video, Youtube $account): array
+    {
+        $post = $video->toAnalyticsPostArray();
+        $insights = $this->sentTabInsightsFromYoutubePost($video);
+
+        $rawCreated = $post['created_time'] ?? $video->post_created_date;
+        if ($rawCreated instanceof \DateTimeInterface) {
+            $createdTime = $rawCreated->format(\DateTimeInterface::ATOM);
+        } else {
+            $createdTime = is_string($rawCreated) ? $rawCreated : '';
+        }
+
+        $channelName = trim((string) ($account->username ?? ''));
+        if ($channelName === '') {
+            $channelName = trim((string) ($account->custom_url ?? ''));
+        }
+        if ($channelName === '') {
+            $channelName = 'YouTube';
+        }
+
+        return [
+            'id' => (string) ($post['id'] ?? $video->youtube_video_id),
+            'created_time' => $createdTime,
+            'message' => (string) ($post['message'] ?? $post['title'] ?? $video->title ?? ''),
+            'story' => '',
+            'type' => 'video',
+            'media_type' => 'video',
+            'full_picture' => (string) ($post['full_picture'] ?? ''),
+            'permalink_url' => $post['permalink_url'] ?? $video->permalink_url,
+            'account_name' => $channelName,
+            'account_profile' => (string) ($account->profile_image ?? ''),
+            'social_type' => 'youtube',
+            'page_db_id' => $account->id,
+            'insights' => $insights,
+            'comments' => (int) ($insights['comment_count'] ?? 0),
+            'shares' => (int) ($insights['share_count'] ?? 0),
+            'video_url' => '',
+        ];
+    }
+
+    /**
+     * @return array<string, int>
+     */
+    private function sentTabInsightsFromYoutubePost(?YoutubePost $video): array
+    {
+        if (! $video) {
+            return [
+                'view_count' => 0,
+                'like_count' => 0,
+                'comment_count' => 0,
+                'share_count' => 0,
+                'estimated_minutes_watched' => 0,
+                'post_reactions' => 0,
+                'post_impressions' => 0,
+                'post_clicks' => 0,
+            ];
+        }
+
+        $insights = is_array($video->post_insights) ? $video->post_insights : [];
+        $views = (int) ($insights['view_count'] ?? $video->view_count ?? 0);
+        $likes = (int) ($insights['like_count'] ?? $video->like_count ?? 0);
+        $comments = (int) ($insights['comment_count'] ?? $video->comment_count ?? 0);
+        $shares = (int) ($insights['share_count'] ?? $video->share_count ?? 0);
+
+        return [
+            'view_count' => $views,
+            'like_count' => $likes,
+            'comment_count' => $comments,
+            'share_count' => $shares,
+            'estimated_minutes_watched' => (int) ($insights['estimated_minutes_watched'] ?? $video->estimated_minutes_watched ?? 0),
+            'post_reactions' => $likes,
+            'post_impressions' => $views,
+            'post_clicks' => 0,
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, YoutubePost>  $accountVideos
+     */
+    private function findYoutubePostForSchedulePost(Post $dbPost, $accountVideos): ?YoutubePost
+    {
+        if ($accountVideos->isEmpty()) {
+            return null;
+        }
+
+        $videoId = trim((string) ($dbPost->post_id ?? ''));
+        if ($videoId !== '') {
+            $byVideoId = $accountVideos->firstWhere('youtube_video_id', $videoId);
+            if ($byVideoId instanceof YoutubePost) {
+                return $byVideoId;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     * @return array<string, mixed>
+     */
+    private function mergeScheduleMetaIntoYoutubeSentCard(array $payload, Post $dbPost): array
+    {
+        $payload['db_post_id'] = $dbPost->id;
+        $payload['from_local_db'] = true;
+
+        if ($dbPost->user) {
+            $payload['publisher_username'] = $dbPost->user->username ?? $dbPost->user->full_name ?? $dbPost->user->email ?? '';
+            $payload['publisher_email'] = $dbPost->user->email ?? '';
+        }
+
+        $videoUrl = $this->postStoredVideoUrl($dbPost);
+        if ($videoUrl !== '') {
+            $payload['video_url'] = $videoUrl;
         }
 
         return $payload;

@@ -32,6 +32,8 @@ use App\Console\Commands\SyncInstagramInsights;
 use App\Console\Commands\SyncInstagramPosts;
 use App\Console\Commands\SyncTiktokInsights;
 use App\Console\Commands\SyncTiktokPosts;
+use App\Console\Commands\SyncYouTubeInsights;
+use App\Console\Commands\SyncYouTubePosts;
 use App\Console\Commands\SendPackageExpirationEmails;
 use App\Console\Commands\SendWeeklyAccountsReport;
 use App\Console\Commands\SyncShrtLnkClicks;
@@ -85,6 +87,8 @@ class Kernel extends ConsoleKernel
         SyncInstagramPosts::class, // insights:sync-instagram-posts
         SyncTiktokInsights::class, // insights:sync-tiktok
         SyncTiktokPosts::class, // insights:sync-tiktok-posts
+        SyncYouTubeInsights::class, // insights:sync-youtube
+        SyncYouTubePosts::class, // insights:sync-youtube-posts
         PurgeOldPosts::class, // posts:purge-old
         PublishPendingCommentsCron::class, // facebook:publish-pending-comments
         ScheduleShufflePosts::class, // schedule:shuffle
@@ -155,6 +159,9 @@ class Kernel extends ConsoleKernel
         // TikTok account insights and public video metrics
         $schedule->command('insights:sync-tiktok')->dailyAt('02:15');
         $schedule->command('insights:sync-tiktok-posts')->everyThreeHours();
+        // YouTube channel analytics and public video metrics
+        $schedule->command('insights:sync-youtube')->dailyAt('03:15');
+        $schedule->command('insights:sync-youtube-posts')->everyThreeHours();
         // Instagram account + media insights (Meta Graph API)
         $schedule->command('insights:sync-instagram')->dailyAt('02:45');
         $schedule->command('insights:sync-instagram-posts')->everyThreeHours();

@@ -234,6 +234,7 @@
     .analytics-page-avatar .platform-badge.threads,
     .analytics-page-avatar .platform-badge.pinterest,
     .analytics-page-avatar .platform-badge.tiktok,
+    .analytics-page-avatar .platform-badge.youtube,
     .analytics-page-avatar .platform-badge.instagram {
         position: absolute;
         bottom: -2px;
@@ -260,6 +261,10 @@
 
     .analytics-page-avatar .platform-badge.tiktok {
         background: #000000;
+    }
+
+    .analytics-page-avatar .platform-badge.youtube {
+        background: #FF0000;
     }
 
     .analytics-page-avatar .platform-badge.instagram {

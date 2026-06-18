@@ -57,6 +57,16 @@ class Youtube extends Model
         return $this->hasMany(Timeslot::class, 'account_id', 'id')->where('account_type', 'youtube');
     }
 
+    public function youtubePosts()
+    {
+        return $this->hasMany(YoutubePost::class, 'youtube_id', 'id');
+    }
+
+    public function youtubeInsights()
+    {
+        return $this->hasMany(YoutubeInsight::class, 'youtube_id', 'id');
+    }
+
     protected function profileImage(): Attribute
     {
         return Attribute::make(
