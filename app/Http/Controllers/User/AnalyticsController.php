@@ -166,13 +166,16 @@ class AnalyticsController extends Controller
                 if ($label === '') {
                     $label = trim((string) ($youtube->custom_url ?? ''));
                 }
+                if ($label === '') {
+                    $label = trim((string) ($youtube->channel_id ?? ''));
+                }
 
                 return [
                     'ref' => 'youtube:'.$youtube->id,
                     'platform' => 'youtube',
                     'id' => $youtube->id,
-                    'name' => $label !== '' ? $label : 'YouTube',
-                    'username' => $youtube->custom_url ?: ($label !== '' ? $label : 'YouTube'),
+                    'name' => $label !== '' ? $label : 'YouTube Channel',
+                    'username' => $youtube->custom_url ?: ($label !== '' ? $label : 'YouTube Channel'),
                     'profile_image' => $youtube->profile_image ?? social_logo('youtube'),
                 ];
             })->values()
@@ -185,7 +188,61 @@ class AnalyticsController extends Controller
         $duration = 'last_28';
 
         $selectedPage = null;
-        return view('user.analytics.index', compact('facebookPages', 'threadsAccounts', 'pinterestBoards', 'analyticsAccounts', 'selectedPage', 'since', 'until', 'duration', 'userTimezoneName'));
+        $initialAccountRef = $this->resolveInitialAnalyticsAccountRef(
+            is_array($user->schedule_selected_account) ? $user->schedule_selected_account : null,
+            $analyticsAccounts
+        );
+
+        return view('user.analytics.index', compact(
+            'facebookPages',
+            'threadsAccounts',
+            'pinterestBoards',
+            'analyticsAccounts',
+            'selectedPage',
+            'since',
+            'until',
+            'duration',
+            'userTimezoneName',
+            'initialAccountRef'
+        ));
+    }
+
+    /**
+     * Map the schedule sidebar selection to an analytics account ref when possible.
+     */
+    private function resolveInitialAnalyticsAccountRef(?array $scheduleSelected, $analyticsAccounts): ?string
+    {
+        if (! is_array($scheduleSelected) || empty($scheduleSelected['type'])) {
+            return null;
+        }
+
+        $type = (string) $scheduleSelected['type'];
+        if ($type === 'all') {
+            return 'facebook:all';
+        }
+
+        $id = $scheduleSelected['id'] ?? null;
+        if ($id === null || $id === '') {
+            return null;
+        }
+
+        $refPrefixes = [
+            'facebook' => 'facebook:',
+            'threads' => 'threads:',
+            'pinterest' => 'pinterest-board:',
+            'tiktok' => 'tiktok:',
+            'instagram' => 'instagram:',
+            'youtube' => 'youtube:',
+        ];
+
+        if (! isset($refPrefixes[$type])) {
+            return null;
+        }
+
+        $ref = $refPrefixes[$type].$id;
+        $exists = $analyticsAccounts->contains(fn (array $account) => ($account['ref'] ?? '') === $ref);
+
+        return $exists ? $ref : null;
     }
 
     /**
@@ -364,35 +421,36 @@ class AnalyticsController extends Controller
         } elseif (str_starts_with($accountRef, 'youtube:')) {
             $platform = 'youtube';
             $id = (int) str_replace('youtube:', '', $accountRef);
-            if ($youtubeAccounts->contains('id', $id)) {
-                $selected = Youtube::find($id);
-                if ($selected) {
-                    $pageInsights = $this->fetchYoutubeInsights($selected, $since, $until);
-                    $pagePosts = $this->fetchYoutubePosts($selected, $since, $until);
-                    $hasStoredYoutubePosts = YoutubePost::where('youtube_id', $selected->id)->exists();
-                    if (is_array($pagePosts) && empty($pagePosts) && ! $hasStoredYoutubePosts) {
-                        $postsFetching = true;
-                        $postsFetchingMessage = 'YouTube videos for this channel are being fetched. Please check back shortly.';
-                    }
-                    if (is_array($pagePosts)) {
-                        $pagePostsTotal = count($pagePosts);
-                        if ($postsLimit !== null) {
-                            $pagePosts = array_slice($pagePosts, $postsOffset, $postsLimit);
-                            $pagePostsNextOffset = $postsOffset + count($pagePosts);
-                            $pagePostsHasMore = $pagePostsNextOffset < $pagePostsTotal;
-                        } else {
-                            $pagePostsNextOffset = $pagePostsTotal;
-                        }
-                    }
-                    $label = trim((string) ($selected->username ?? ''));
-                    if ($label === '') {
-                        $label = trim((string) ($selected->custom_url ?? ''));
-                    }
-                    $selectedPage = [
-                        'id' => $selected->id,
-                        'name' => $label !== '' ? $label : 'YouTube',
-                    ];
+            $selected = $youtubeAccounts->firstWhere('id', $id);
+            if ($selected instanceof Youtube) {
+                $pageInsights = $this->fetchYoutubeInsights($selected, $since, $until);
+                $pagePosts = $this->fetchYoutubePosts($selected, $since, $until);
+                $hasStoredYoutubePosts = YoutubePost::where('youtube_id', $selected->id)->exists();
+                if (is_array($pagePosts) && empty($pagePosts) && ! $hasStoredYoutubePosts) {
+                    $postsFetching = true;
+                    $postsFetchingMessage = 'YouTube videos for this channel are being fetched. Please check back shortly.';
                 }
+                if (is_array($pagePosts)) {
+                    $pagePostsTotal = count($pagePosts);
+                    if ($postsLimit !== null) {
+                        $pagePosts = array_slice($pagePosts, $postsOffset, $postsLimit);
+                        $pagePostsNextOffset = $postsOffset + count($pagePosts);
+                        $pagePostsHasMore = $pagePostsNextOffset < $pagePostsTotal;
+                    } else {
+                        $pagePostsNextOffset = $pagePostsTotal;
+                    }
+                }
+                $label = trim((string) ($selected->username ?? ''));
+                if ($label === '') {
+                    $label = trim((string) ($selected->custom_url ?? ''));
+                }
+                if ($label === '') {
+                    $label = trim((string) ($selected->channel_id ?? ''));
+                }
+                $selectedPage = [
+                    'id' => $selected->id,
+                    'name' => $label !== '' ? $label : 'YouTube Channel',
+                ];
             }
         }
 

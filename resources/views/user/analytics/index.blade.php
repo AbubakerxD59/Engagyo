@@ -22,7 +22,7 @@
                                     </div>
                                 </div>
                                 <div class="analytics-sidebar-cards">
-                                    <div class="analytics-page-card analytics-page-card-all active" data-account-ref="facebook:all"
+                                    <div class="analytics-page-card analytics-page-card-all {{ empty($initialAccountRef) || $initialAccountRef === 'facebook:all' ? 'active' : '' }}" data-account-ref="facebook:all"
                                         data-platform="facebook" data-search="all facebook pages" role="button" tabindex="0">
                                         <div class="analytics-page-card-inner">
                                             <div class="analytics-page-avatar analytics-page-avatar-all">
@@ -35,7 +35,7 @@
                                         </div>
                                     </div>
                                     @foreach ($analyticsAccounts as $account)
-                                        <div class="analytics-page-card" data-account-ref="{{ $account['ref'] }}"
+                                        <div class="analytics-page-card {{ ($initialAccountRef ?? '') === $account['ref'] ? 'active' : '' }}" data-account-ref="{{ $account['ref'] }}"
                                             data-platform="{{ $account['platform'] }}"
                                             data-search="{{ strtolower(($account['name'] ?? '') . ' ' . ($account['username'] ?? '') . ' ' . ($account['platform'] ?? '')) }}"
                                             role="button" tabindex="0">

@@ -4,8 +4,17 @@
             var $content = $('#analyticsContent');
             var analyticsUrl = $content.data('analytics-url');
             var hasPages = {{ ($analyticsAccounts ?? collect())->count() > 0 ? 'true' : 'false' }};
-            var currentAccountRef = $('.analytics-page-card.active').data('account-ref') || 'facebook:all';
-            var currentPlatform = ($('.analytics-page-card.active').data('platform') || 'facebook').toString();
+            var initialAccountRef = @json($initialAccountRef ?? null);
+            var $initialActiveCard = initialAccountRef
+                ? $('.analytics-page-card[data-account-ref="' + initialAccountRef + '"]')
+                : $();
+            var currentAccountRef = initialAccountRef
+                || $('.analytics-page-card.active').attr('data-account-ref')
+                || 'facebook:all';
+            var currentPlatform = ($initialActiveCard.length
+                ? $initialActiveCard.attr('data-platform')
+                : $('.analytics-page-card.active').attr('data-platform')) || 'facebook';
+            currentPlatform = currentPlatform.toString();
             var currentDuration = '{{ $duration ?? 'last_28' }}';
             var currentSince = '{{ $since ?? '' }}';
             var currentUntil = '{{ $until ?? '' }}';
@@ -818,13 +827,19 @@
                 duration = duration || 'last_28';
                 since = since || '';
                 until = until || '';
+                pageName = (pageName || 'Account').toString();
                 var overviewContent = '<div class="analytics-page-insights mb-4">';
+                overviewContent += '<div class="d-flex flex-wrap align-items-center justify-content-between mb-3">' +
+                    '<h6 class="text-muted mb-0"><i class="fas fa-chart-pie mr-1"></i>Account Insights' +
+                    '<span class="font-weight-normal text-dark"> — ' + escapeHtml(pageName) + '</span></h6>' +
+                    '</div>';
+
                 if (!hasMeaningfulInsights(insights, platform)) {
                     overviewContent += '<div class="alert alert-info mb-0" role="alert">' +
                         '<strong><i class="fas fa-clock mr-2"></i>Insights will appear shortly</strong>' +
                         '<p class="mb-2 mt-2 mb-0">Account metrics are synced on a schedule. Check back in a few minutes—data usually shows up soon after you connect an account or after the next sync run.</p>' +
                         '<p class="small mb-0 mt-2">If nothing appears after a longer wait, open <a href="{{ route('panel.accounts') }}" class="alert-link font-weight-bold">Accounts</a> to confirm permissions or reconnect.</p>' +
-                        '</div></div>';
+                        '</div>';
                 } else {
                     var comp = insights.comparison || {};
                     var cards;
@@ -893,25 +908,25 @@
                         overviewContent += renderEngagementsChart(insights, comp,
                             platform === 'pinterest' ? 'reach' : undefined, platform);
                     }
-                    overviewContent += '</div>';
-
-                    var postsContent = renderPostsList(pagePosts, since, until, currentPostsSearchQuery,
-                        currentPostsSortBy, currentPostsSortOrder, platform, currentPostsTotal);
-                    var durationDropdown = renderDurationDropdown(duration, since, until);
-                    return '<div class="analytics-tabs-row d-flex flex-wrap align-items-center justify-content-between mb-3">' +
-                        '<ul class="nav nav-tabs analytics-insight-tabs mb-0" role="tablist">' +
-                        '<li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#analyticsOverviewTab" role="tab">Overview</a></li>' +
-                        '<li class="nav-item"><a class="nav-link" data-toggle="tab" href="#analyticsPostsTab" role="tab">Posts</a></li>' +
-                        '</ul>' +
-                        '<div class="analytics-tabs-duration">' + durationDropdown + '</div>' +
-                        '</div>' +
-                        '<div class="tab-content">' +
-                        '<div class="tab-pane fade show active" id="analyticsOverviewTab" role="tabpanel">' +
-                        overviewContent + '</div>' +
-                        '<div class="tab-pane fade" id="analyticsPostsTab" role="tabpanel">' + postsContent +
-                        '</div>' +
-                        '</div>';
                 }
+                overviewContent += '</div>';
+
+                var postsContent = renderPostsList(pagePosts, since, until, currentPostsSearchQuery,
+                    currentPostsSortBy, currentPostsSortOrder, platform, currentPostsTotal);
+                var durationDropdown = renderDurationDropdown(duration, since, until);
+                return '<div class="analytics-tabs-row d-flex flex-wrap align-items-center justify-content-between mb-3">' +
+                    '<ul class="nav nav-tabs analytics-insight-tabs mb-0" role="tablist">' +
+                    '<li class="nav-item"><a class="nav-link active" data-toggle="tab" href="#analyticsOverviewTab" role="tab">Overview</a></li>' +
+                    '<li class="nav-item"><a class="nav-link" data-toggle="tab" href="#analyticsPostsTab" role="tab">Posts</a></li>' +
+                    '</ul>' +
+                    '<div class="analytics-tabs-duration">' + durationDropdown + '</div>' +
+                    '</div>' +
+                    '<div class="tab-content">' +
+                    '<div class="tab-pane fade show active" id="analyticsOverviewTab" role="tabpanel">' +
+                    overviewContent + '</div>' +
+                    '<div class="tab-pane fade" id="analyticsPostsTab" role="tabpanel">' + postsContent +
+                    '</div>' +
+                    '</div>';
             }
 
 
@@ -984,6 +999,8 @@
                             mergedPosts = incomingPosts;
                         }
                         window.currentPagePosts = mergedPosts;
+                        currentPostsFetching = !!res.posts_fetching;
+                        currentPostsFetchingMessage = res.posts_fetching_message || '';
                         var html = '';
                         if (res.selectedPage) {
                             if (res.since) currentSince = res.since;
@@ -1007,8 +1024,6 @@
                             refreshPostsTab();
                         }
                         window.currentAnalyticsInsights = res.pageInsights || null;
-                        currentPostsFetching = !!res.posts_fetching;
-                        currentPostsFetchingMessage = res.posts_fetching_message || '';
                         analyticsPostsOffset = Number(res.pagePostsNextOffset || (Array.isArray(
                             mergedPosts) ? mergedPosts.length : 0));
                         analyticsPostsHasMore = !!res.pagePostsHasMore;
@@ -1168,11 +1183,11 @@
             }
 
             $('.analytics-page-card').on('click', function() {
-                var accountRef = $(this).data('account-ref');
+                var accountRef = $(this).attr('data-account-ref');
                 if (String(accountRef) === String(currentAccountRef)) return;
                 $('.analytics-page-card').removeClass('active');
                 $(this).addClass('active');
-                currentPlatform = ($(this).data('platform') || 'facebook').toString();
+                currentPlatform = ($(this).attr('data-platform') || 'facebook').toString();
                 loadAnalytics(accountRef || 'facebook:all', currentDuration, currentSince, currentUntil,
                     0);
             }).on('keydown', function(e) {
