@@ -179,9 +179,10 @@ class YouTubeAnalyticsService
         $snippet = is_array($video['snippet'] ?? null) ? $video['snippet'] : [];
         $statistics = is_array($video['statistics'] ?? null) ? $video['statistics'] : [];
 
-        $views = (int) ($analytics['view_count'] ?? $statistics['viewCount'] ?? 0);
-        $likes = (int) ($analytics['like_count'] ?? $statistics['likeCount'] ?? 0);
-        $comments = (int) ($analytics['comment_count'] ?? $statistics['commentCount'] ?? 0);
+        // Data API statistics are lifetime totals; Analytics API reports are period-scoped.
+        $views = (int) ($statistics['viewCount'] ?? 0);
+        $likes = (int) ($statistics['likeCount'] ?? 0);
+        $comments = (int) ($statistics['commentCount'] ?? 0);
         $shares = (int) ($analytics['share_count'] ?? 0);
         $minutesWatched = (int) ($analytics['estimated_minutes_watched'] ?? 0);
 
