@@ -662,7 +662,8 @@
                     }
                     return '<div class="analytics-posts-placeholder text-center py-5">' +
                         '<i class="fas fa-newspaper fa-4x text-muted mb-3"></i>' +
-                        '<p class="text-muted mb-0">No posts in this period.</p></div>';
+                        '<p class="text-muted mb-0">' + (platform === 'youtube' ?
+                            'No synced YouTube videos yet.' : 'No posts in this period.') + '</p></div>';
                 }
                 var filtered = posts;
                 if (searchQuery) {

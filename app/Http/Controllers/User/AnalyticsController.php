@@ -673,23 +673,32 @@ class AnalyticsController extends Controller
      */
     private function fetchYoutubePosts(?Youtube $account, ?string $since = null, ?string $until = null): ?array
     {
-        if (! $account || empty($account->access_token)) {
+        if (! $account) {
             return null;
         }
 
-        $since = $since ?: Carbon::today()->subDays(28)->format('Y-m-d');
-        $until = $until ?: Carbon::today()->format('Y-m-d');
-
-        $duration = $this->normalizeDuration(request()->query('duration', 'last_28'));
-        $cacheKey = $this->analyticsPostsCacheKey((int) auth()->id(), (int) $account->id, $duration, $since, $until, 'youtube');
+        $cacheKey = implode(':', [
+            'analytics_posts',
+            'v3',
+            'user',
+            (int) auth()->id(),
+            'platform',
+            'youtube',
+            'account',
+            (int) $account->id,
+            'scope',
+            'all_synced',
+        ]);
 
         $cachedPosts = Cache::get($cacheKey);
-        if (is_array($cachedPosts) && count($cachedPosts) > 0) {
+        if (is_array($cachedPosts)) {
             return $cachedPosts;
         }
 
-        $stored = YoutubePost::forCreatedDateRange((int) $account->id, $since, $until);
-        $storedPosts = $stored->map(fn (YoutubePost $row) => $row->toAnalyticsPostArray())->values()->all();
+        $storedPosts = YoutubePost::latestForAccount((int) $account->id)
+            ->map(fn (YoutubePost $row) => $row->toAnalyticsPostArray())
+            ->values()
+            ->all();
 
         Cache::put($cacheKey, $storedPosts, now()->addHours(self::POSTS_CACHE_TTL_HOURS));
 

@@ -83,6 +83,8 @@ class YoutubePost extends Model
     }
 
     /**
+     * All synced videos for a channel (metrics reflect last sync; not limited by analytics date range).
+     *
      * @return Collection<int, self>
      */
     public static function latestForAccount(int $youtubeId): Collection
@@ -153,7 +155,11 @@ class YoutubePost extends Model
         }
 
         $post['id'] = $post['id'] ?? $this->youtube_video_id;
-        $post['created_time'] = $post['created_time'] ?? $this->post_created_date;
+        $created = $post['created_time'] ?? $this->post_created_date;
+        if ($created instanceof \DateTimeInterface) {
+            $created = $created->format(\DateTimeInterface::ATOM);
+        }
+        $post['created_time'] = $created;
         $post['permalink_url'] = $post['permalink_url'] ?? $this->permalink_url;
         $post['message'] = $post['message'] ?? $this->title;
         $post['type'] = $post['type'] ?? 'video';

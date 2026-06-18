@@ -174,7 +174,24 @@ class SentTabSnapshotService
             $until = now()->format('Y-m-d');
             $since = now()->subYear()->format('Y-m-d');
             Cache::forget(self::analyticsPostsCacheKey($userId, (int) $youtube->id, $duration, $since, $until));
+            Cache::forget(self::analyticsAllPostsCacheKey($userId, (int) $youtube->id));
         }
+    }
+
+    private static function analyticsAllPostsCacheKey(int $userId, int $youtubeId): string
+    {
+        return implode(':', [
+            'analytics_posts',
+            'v3',
+            'user',
+            $userId,
+            'platform',
+            'youtube',
+            'account',
+            $youtubeId,
+            'scope',
+            'all_synced',
+        ]);
     }
 
     private static function analyticsPostsCacheKey(int $userId, int $youtubeId, string $duration, string $since, string $until): string

@@ -45,6 +45,8 @@ class YouTubePostsSyncService
             return;
         }
 
+        Cache::forget($this->analyticsAllPostsCacheKey($userId, $youtubeId));
+
         $today = Carbon::today();
         $ranges = [
             'last_7' => [$today->copy()->subDays(7)->format('Y-m-d'), $today->format('Y-m-d')],
@@ -58,6 +60,22 @@ class YouTubePostsSyncService
         foreach ($ranges as $duration => [$since, $until]) {
             Cache::forget($this->analyticsPostsCacheKey($userId, $youtubeId, $duration, $since, $until));
         }
+    }
+
+    private function analyticsAllPostsCacheKey(int $userId, int $youtubeId): string
+    {
+        return implode(':', [
+            'analytics_posts',
+            'v3',
+            'user',
+            $userId,
+            'platform',
+            'youtube',
+            'account',
+            $youtubeId,
+            'scope',
+            'all_synced',
+        ]);
     }
 
     private function analyticsPostsCacheKey(int $userId, int $youtubeId, string $duration, ?string $since, ?string $until): string
