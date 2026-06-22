@@ -54,6 +54,38 @@
                     information necessary to receive or render payment.
                 </p>
                 <h2>
+                    Google API Services and User Data
+                </h2>
+                <p>
+                    {{ env('APP_NAME', 'Engagyo') }}'s use of information received from Google APIs adheres to the
+                    <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank"
+                        rel="noopener noreferrer">Google API Services User Data Policy</a>,
+                    including the Limited Use requirements.
+                </p>
+                <p>
+                    When you connect your YouTube channel, {{ env('APP_NAME', 'Engagyo') }} may access the following
+                    Google user data:
+                </p>
+                <ul>
+                    <li>
+                        <b>YouTube channel information</b> — to identify and display your connected channel within the
+                        app.
+                    </li>
+                    <li>
+                        <b>YouTube videos and uploads</b> — to publish scheduled video content and manage your channel
+                        posts.
+                    </li>
+                    <li>
+                        <b>YouTube analytics data</b> — to display performance metrics and insights in your dashboard.
+                    </li>
+                </ul>
+                <p>
+                    We use this data solely to provide and improve the features you request within
+                    {{ env('APP_NAME', 'Engagyo') }}. We do not use Google user data for advertising, sell it to third
+                    parties, or use it for purposes unrelated to the app's core functionality. You may disconnect your
+                    YouTube account at any time from your {{ env('APP_NAME', 'Engagyo') }} account settings.
+                </p>
+                <h2>
                     Information Provided from the Use of Our Service
                 </h2>
                 <p>

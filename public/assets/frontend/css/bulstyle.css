@@ -3009,3 +3009,112 @@
         margin: 20px 0;
     }
 }
+
+/* Google Data Usage Section */
+.google-data-section {
+    background: linear-gradient(180deg, #f4f9fd 0%, #fff 100%);
+    border-top: 1px solid rgba(17, 59, 85, 0.08);
+    border-bottom: 1px solid rgba(17, 59, 85, 0.08);
+}
+
+.google-data-section .text-wrapper.center {
+    max-width: 760px;
+    margin-bottom: 2.5rem;
+}
+
+.google-data-section .text-wrapper.center p {
+    margin-bottom: 0;
+}
+
+.google-data-card {
+    height: 100%;
+    padding: 2rem 1.75rem;
+    background: #fff;
+    border: 1px solid rgba(17, 59, 85, 0.1);
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(17, 59, 85, 0.06);
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.google-data-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 14px 32px rgba(17, 59, 85, 0.1);
+}
+
+.google-data-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    margin-bottom: 1.25rem;
+    border-radius: 14px;
+    font-size: 26px;
+    color: #fff;
+}
+
+.google-data-card__icon--publish {
+    background: linear-gradient(135deg, #e53935, #ff6f60);
+}
+
+.google-data-card__icon--manage {
+    background: linear-gradient(135deg, #2083cf, #4aa3e0);
+}
+
+.google-data-card__icon--analytics {
+    background: linear-gradient(135deg, #1b8a5a, #34c759);
+}
+
+.google-data-card h3 {
+    color: var(--header-color);
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 0.75rem;
+}
+
+.google-data-card p {
+    color: var(--text-description-color);
+    font-size: var(--text-description-font-size);
+    line-height: 1.65;
+    margin: 0;
+}
+
+.google-data-footer {
+    max-width: 720px;
+    margin: 2.5rem auto 0;
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+    background: rgba(32, 131, 207, 0.08);
+    border: 1px solid rgba(32, 131, 207, 0.15);
+    border-radius: 12px;
+}
+
+.google-data-footer p {
+    margin: 0;
+    color: var(--description-color);
+    font-size: 15px;
+    line-height: 1.6;
+}
+
+.google-data-footer a {
+    color: var(--primary-button-background);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.google-data-footer a:hover {
+    color: var(--primary-button-hover-background);
+    text-decoration: underline;
+}
+
+@media (max-width: 767px) {
+    .google-data-card {
+        padding: 1.5rem 1.25rem;
+    }
+
+    .google-data-footer {
+        margin-top: 2rem;
+        padding: 1rem 1.25rem;
+    }
+}

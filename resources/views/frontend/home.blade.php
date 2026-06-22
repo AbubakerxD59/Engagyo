@@ -1,4 +1,9 @@
 @extends('frontend.layout.main')
+@section('blog_seo')
+    <title>{{ env('APP_NAME', 'Engagyo') }} — Social Media Management Platform</title>
+    <meta name="description"
+        content="{{ env('APP_NAME', 'Engagyo') }} is a social media management platform that helps businesses and marketers schedule, publish, and analyze content across YouTube, Facebook, Instagram, LinkedIn, and more.">
+@endsection
 @section('body')
     <!-- Banner -->
     <div class="banner py-24">
@@ -7,14 +12,17 @@
                 <div class="col-12 col-lg-6 my-5">
                     <div class="title-description">
                         <div class="text-wrapper">
-                            <h2>
-                                A Social Media Management Tool That Puts Customers First
-                            </h2>
+                            <h1>
+                                {{ env('APP_NAME', 'Engagyo') }} — Social Media Management Platform
+                            </h1>
                             <p>
-                                {{ env('APP_NAME', 'Engagyo') }} is designed with you in mind, offering intuitive features
-                                that scale to your
-                                unique needs. With personalized support and powerful tools, we're here to help you succeed
-                                effortlessly.
+                                Schedule, publish, and analyze your social media content across YouTube, Facebook,
+                                Instagram, LinkedIn, Pinterest, TikTok, and more — all in one place.
+                            </p>
+                            <p class="mb-3">
+                                <a href="{{ route('frontend.privacy') }}">Privacy Policy</a>
+                                &nbsp;|&nbsp;
+                                <a href="{{ route('frontend.terms') }}">Terms of Service</a>
                             </p>
                             <a href="{{ route('frontend.showRegister') }}">
                                 <button class="btn banner-btn btn-colored">
@@ -339,6 +347,64 @@
         <div class="col-12">
             <div class="container img-container-center">
                 <img src="{{ asset('assets/frontend/images/illustration1.svg') }}" class="h-100 w-100">
+            </div>
+        </div>
+    </div>
+
+    <!-- Google OAuth disclosure (required for Google Cloud verification) -->
+    <div id="google-data-usage" class="google-data-section py-24">
+        <div class="container">
+            <div class="text-wrapper center">
+                <span>Privacy &amp; Transparency</span>
+                <h2>How {{ env('APP_NAME', 'Engagyo') }} Uses Your Google Account Data</h2>
+                <p>
+                    When you connect your YouTube channel to {{ env('APP_NAME', 'Engagyo') }}, we request access to your
+                    Google account solely to power the features below.
+                </p>
+            </div>
+            <div class="row g-4 justify-content-center">
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="google-data-card">
+                        <div class="google-data-card__icon google-data-card__icon--publish">
+                            <i class='bx bxs-video'></i>
+                        </div>
+                        <h3>Publish Videos</h3>
+                        <p>
+                            Upload and schedule video posts to your YouTube channel on your behalf, directly from your
+                            {{ env('APP_NAME', 'Engagyo') }} dashboard.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="google-data-card">
+                        <div class="google-data-card__icon google-data-card__icon--manage">
+                            <i class='bx bxs-collection'></i>
+                        </div>
+                        <h3>Manage Channel Content</h3>
+                        <p>
+                            View and manage your existing YouTube videos and channel information in one centralized
+                            workspace.
+                        </p>
+                    </div>
+                </div>
+                <div class="col-12 col-md-6 col-lg-4">
+                    <div class="google-data-card">
+                        <div class="google-data-card__icon google-data-card__icon--analytics">
+                            <i class='bx bxs-bar-chart-alt-2'></i>
+                        </div>
+                        <h3>Analytics</h3>
+                        <p>
+                            Display YouTube performance metrics and channel insights so you can track what resonates with
+                            your audience.
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="google-data-footer">
+                <p>
+                    We only access the Google user data needed to provide these features. We do not sell your data.
+                    Read our full <a href="{{ route('frontend.privacy') }}">Privacy Policy</a> for more details.
+                </p>
             </div>
         </div>
     </div>

@@ -123,6 +123,9 @@
                 <li class="nav-item">
                     <a class="nav-link" href="{{ route('frontend.blogs') }}">Blog</a>
                 </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{{ route('frontend.privacy') }}">Privacy</a>
+                </li>
             </ul>
 
             <div class="d-block d-lg-flex">

@@ -8,10 +8,13 @@
     <!-- Tell the browser to be responsive to screen width -->
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="google-site-verification" content="IDiRooS27YqsymcxNBE2wDm398kjRwzjIQ1iXvzMOPQ"  />
-    @yield('blog_seo')
+    @hasSection('blog_seo')
+        @yield('blog_seo')
+    @else
+        <title>{{ env('APP_NAME', 'Engagyo') }}</title>
+    @endif
     <meta name="author" content="admin">
     <!-- SEO META TAGS -->
-    <title>{{ env('APP_NAME', 'Engagyo') }}</title>
     <link rel="icon" type="image/x-icon" href="{{ site_logo() }}">
     <meta name="facebook-domain-verification" content="6mnak5vj94u9re6sam9banbb85hu64" />
     <meta name="tiktok-developers-site-verification" content="p1EA7Z2Ju0dgJ4c3KYB1xes9XqIP0I60" />
