@@ -417,7 +417,7 @@
                     <h2>
                         Latest Updates
                     </h2>
-                    <button class="btn btn-blob"><a href="blog.html">Click to view all updates</a></button>
+                    <button class="btn btn-blob"><a href="{{ route('frontend.blogs') }}">Click to view all updates</a></button>
                 </div>
             </div>
             <div class="row">
