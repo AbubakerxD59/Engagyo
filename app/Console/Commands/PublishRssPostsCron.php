@@ -8,6 +8,7 @@ use App\Models\Notification;
 use App\Services\PostService;
 use Illuminate\Console\Command;
 use App\Jobs\PublishFacebookPost;
+use App\Services\FacebookPagePostingGuard;
 use App\Services\FacebookService;
 use App\Jobs\PublishPinterestPost;
 use App\Services\PinterestService;
@@ -176,6 +177,13 @@ class PublishRssPostsCron extends Command
         }
 
         $access_token = $tokenResponse['access_token'];
+
+        $postingGuard = new FacebookPagePostingGuard;
+        if (! $postingGuard->canPublish($page)) {
+            info("RSS Publish: Post ID {$post->id} skipped - {$postingGuard->blockReason($page)}");
+
+            return;
+        }
 
         // Prepare post data
         try {

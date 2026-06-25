@@ -24,6 +24,8 @@ class Page extends Model
         "schedule_shuffle",
         "url_shortener_enabled",
         "rss_paused",
+        "facebook_posting_status",
+        "facebook_posting_paused_until",
         "access_token",
         "expires_in",
     ];
@@ -31,6 +33,7 @@ class Page extends Model
     protected $casts = [
         'rss_paused' => 'boolean',
         'last_fetch' => 'datetime',
+        'facebook_posting_paused_until' => 'datetime',
     ];
 
     protected $appends = ["type"];

@@ -18,6 +18,7 @@ use App\Models\Tiktok;
 use App\Models\Timeslot;
 use App\Models\User;
 use App\Models\Youtube;
+use App\Services\FacebookPagePostingGuard;
 use App\Services\FacebookService;
 use App\Services\FeatureUsageService;
 use App\Services\InstagramLoginService;
@@ -569,6 +570,24 @@ class AccountsController extends Controller
                 'success' => false,
                 'message' => $e->getMessage(),
             ]);
+        }
+    }
+
+    /**
+     * Resume Facebook posting after a policy-violation stop.
+     */
+    public function resumeFacebookPosting(Request $request)
+    {
+        try {
+            $page = $this->page->findOrFail($request->id);
+            $result = (new FacebookPagePostingGuard)->resumeByUser($page);
+
+            return response()->json($result, $result['success'] ? 200 : 422);
+        } catch (Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 

@@ -4,6 +4,7 @@ namespace App\Jobs;
 
 use App\Models\Post;
 use Illuminate\Bus\Queueable;
+use App\Services\FacebookPagePostingGuard;
 use App\Services\FacebookService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Queue\SerializesModels;
@@ -39,6 +40,24 @@ class PublishFacebookPost implements ShouldQueue
      */
     public function handle(): void
     {
+        $post = Post::withoutGlobalScopes()->with('page')->find($this->id);
+        if (! $post || ! $post->page) {
+            Log::warning('PublishFacebookPost skipped: post or page not found', ['post_id' => $this->id]);
+
+            return;
+        }
+
+        $postingGuard = new FacebookPagePostingGuard;
+        if (! $postingGuard->canPublish($post->page)) {
+            Log::info('PublishFacebookPost skipped: Facebook posting is blocked for page', [
+                'post_id' => $this->id,
+                'page_id' => $post->page->id,
+                'status' => $post->page->facebook_posting_status,
+            ]);
+
+            return;
+        }
+
         $facebookService = new facebookService();
         $publish_response = ['success' => false, 'message' => 'Unknown or unsupported Facebook post type.'];
         if ($this->type == "link") {

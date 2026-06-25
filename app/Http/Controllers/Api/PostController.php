@@ -19,6 +19,7 @@ use App\Jobs\PublishPinterestPost;
 use App\Jobs\PublishThreadsPost;
 use App\Jobs\PublishTikTokPost;
 use App\Jobs\PublishYouTubePost;
+use App\Services\FacebookPagePostingGuard;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
 use App\Services\TikTokService;
@@ -133,6 +134,12 @@ class PostController extends BaseController
         $page->loadMissing('timeslots');
         $timing = $this->resolveApiPublishTiming($request, $user, $page, 'facebook');
         $publishNow = $timing['publish_now'];
+
+        $postingGuard = new FacebookPagePostingGuard;
+        if ($publishNow && ! $postingGuard->canPublish($page)) {
+            return $this->errorResponse($postingGuard->blockReason($page) ?? 'Facebook posting is currently blocked for this page.', 403);
+        }
+
         $publishDate = $publishNow ? now() : $timing['publish_date'];
         $isScheduled = !$publishNow;
 
@@ -992,6 +999,11 @@ class PostController extends BaseController
         $page->loadMissing('timeslots');
         $timing = $this->resolveApiPublishTiming($request, $user, $page, 'facebook');
         $publishNow = $timing['publish_now'];
+
+        $postingGuard = new FacebookPagePostingGuard;
+        if ($publishNow && ! $postingGuard->canPublish($page)) {
+            return $this->errorResponse($postingGuard->blockReason($page) ?? 'Facebook posting is currently blocked for this page.', 403);
+        }
 
         try {
             $videoKey = $this->downloadAndUploadVideoToS3($videoUrl);

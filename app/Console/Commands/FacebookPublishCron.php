@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Jobs\PublishFacebookPost;
 use App\Models\Post;
+use App\Services\FacebookPagePostingGuard;
 use App\Services\FacebookService;
 use App\Services\PostService;
 use Carbon\Carbon;
@@ -76,6 +77,13 @@ class FacebookPublishCron extends Command
                 }
 
                 $access_token = $tokenResponse['access_token'];
+
+                $postingGuard = new FacebookPagePostingGuard;
+                if (! $postingGuard->canPublish($page)) {
+                    info("Facebook Publish Cron: Post ID {$post->id} skipped - {$postingGuard->blockReason($page)}");
+                    continue;
+                }
+
                 $postData = PostService::postTypeBody($post);
                 PublishFacebookPost::dispatch($post->id, $postData, $access_token, $post->type, $post->comment);
 

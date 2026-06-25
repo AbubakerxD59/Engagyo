@@ -158,6 +158,21 @@ class PostService
             $post = Post::with('page.facebook', 'board.pinterest', 'instagramAccount', 'thread', 'linkedin', 'youtube')->where('status', '!=', 1)->where('id', $id)->firstOrFail();
             if ($post->social_type == 'facebook') {
                 $page = $post->page;
+                if (! $page) {
+                    return [
+                        'success' => false,
+                        'message' => 'Facebook page not found for this post.',
+                    ];
+                }
+
+                $postingGuard = new FacebookPagePostingGuard;
+                if (! $postingGuard->canPublish($page)) {
+                    return [
+                        'success' => false,
+                        'message' => $postingGuard->blockReason($page),
+                    ];
+                }
+
                 $response = FacebookService::validateToken($page);
                 if ($response['success']) {
                     $postData = self::postTypeBody($post);

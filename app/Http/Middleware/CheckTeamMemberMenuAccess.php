@@ -171,6 +171,7 @@ class CheckTeamMemberMenuAccess
                     'panel.accounts.tiktok',
                     'panel.accounts.tiktok.delete',
                     'panel.accounts.toggleRssPause',
+                    'panel.accounts.resumeFacebookPosting',
                 ],
             ],
             [

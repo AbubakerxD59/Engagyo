@@ -6,6 +6,7 @@ use App\Jobs\PublishFacebookPost;
 use App\Jobs\PublishPinterestPost;
 use App\Models\Notification;
 use App\Models\Post;
+use App\Services\FacebookPagePostingGuard;
 use App\Services\FacebookService;
 use App\Services\PinterestService;
 use App\Services\PostService;
@@ -173,6 +174,13 @@ class PublishSchedulePostCron extends Command
         }
 
         $access_token = $tokenResponse['access_token'];
+
+        $postingGuard = new FacebookPagePostingGuard;
+        if (! $postingGuard->canPublish($page)) {
+            info("Schedule Publish: Post ID {$post->id} skipped - {$postingGuard->blockReason($page)}");
+
+            return;
+        }
 
         try {
             $postData = PostService::postTypeBody($post);

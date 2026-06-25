@@ -32,6 +32,10 @@
                                             <option value="{{ $account->id }}" data-type="{{ $account->type }}"
                                                 data-shuffle="{{ $account->shuffle }}"
                                                 data-rss-paused="{{ $account->rss_paused ? 1 : 0 }}"
+                                                @if ($account->type === 'facebook')
+                                                data-facebook-posting-status="{{ $account->facebook_posting_status ?? 'active' }}"
+                                                data-facebook-posting-paused-until="{{ $account->facebook_posting_paused_until?->toIso8601String() }}"
+                                                @endif
                                                 @php $selected = false;
                                                     if(@$user->rss_filters['selected_account'] == $account->id && @$user->rss_filters['selected_type'] == $account->type){
                                                         $selected = true;
@@ -163,6 +167,15 @@
                                         <div class="toggle-switch">
                                             <input class="toggle-input rss_automation" id="rss_toggle" type="checkbox">
                                             <label class="toggle-label rss-label" for="rss_toggle"></label>
+                                        </div>
+                                    </div>
+                                    <div class="toggle-control-item facebook_posting_resume col-md-12 mt-2"
+                                        style="display: none;">
+                                        <div class="alert alert-warning mb-0 d-flex justify-content-between align-items-center">
+                                            <span class="facebook_posting_status_text"></span>
+                                            <button type="button" class="btn btn-sm btn-warning resume_facebook_posting">
+                                                Resume Facebook Posting
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -1472,6 +1485,8 @@
                 var selected_type = $(this).find(":selected").data("type");
                 var shuffle = $(this).find(":selected").data('shuffle');
                 var rss_paused = $(this).find(":selected").data('rss-paused');
+                var facebook_posting_status = $(this).find(":selected").data('facebook-posting-status');
+                var facebook_posting_paused_until = $(this).find(":selected").data('facebook-posting-paused-until');
 
                 // Reset tracking variables
                 deletedPostIds = [];
@@ -1497,6 +1512,7 @@
                 toggleShuffle(account_id);
                 // hide/show rss button
                 toggleRssToggle(account_id);
+                toggleFacebookPostingResume(selected_type, facebook_posting_status, facebook_posting_paused_until);
                 // hide/show delete all button
                 toggleDelete(account_id);
                 if (account_id != '') {
@@ -1838,6 +1854,26 @@
                     $(".rss_toggle").hide();
                 }
             }
+            var toggleFacebookPostingResume = function(type, status, pausedUntil) {
+                var panel = $(".facebook_posting_resume");
+                if (type !== 'facebook' || !status || status === 'active' || status === 'testing') {
+                    panel.hide();
+                    return;
+                }
+
+                var message = '';
+                if (status === 'stopped') {
+                    message = 'Facebook posting is stopped for this page due to repeated policy violations. Fix the issue in Facebook, then resume posting.';
+                    panel.find('.resume_facebook_posting').show();
+                } else if (status === 'paused') {
+                    var untilText = pausedUntil ? new Date(pausedUntil).toLocaleString() : 'soon';
+                    message = 'Facebook posting is paused for this page until ' + untilText + ' due to a policy violation.';
+                    panel.find('.resume_facebook_posting').hide();
+                }
+
+                panel.find('.facebook_posting_status_text').text(message);
+                panel.show();
+            }
             var toggleDelete = function(id) {
                 if (id != '') {
                     $("#deleteAll").show();
@@ -1909,6 +1945,37 @@
                         toastr.error('Something went wrong!');
                         // Revert the checkbox state
                         toggle.prop('checked', !isChecked);
+                    }
+                });
+            })
+            $(document).on('click', '.resume_facebook_posting', function() {
+                var selected_account = $("#account").find(":selected").val();
+                var token = $('meta[name="csrf-token"]').attr('content');
+                $.ajax({
+                    url: "{{ route('panel.accounts.resumeFacebookPosting') }}",
+                    method: "POST",
+                    data: {
+                        "id": selected_account,
+                        "_token": token
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            toastr.success(response.message);
+                            $("#account").find(":selected")
+                                .data('facebook-posting-status', 'active')
+                                .attr('data-facebook-posting-status', 'active')
+                                .data('facebook-posting-paused-until', '')
+                                .attr('data-facebook-posting-paused-until', '');
+                            toggleFacebookPostingResume('facebook', 'active', '');
+                        } else {
+                            toastr.error(response.message);
+                        }
+                    },
+                    error: function(xhr) {
+                        var message = xhr.responseJSON && xhr.responseJSON.message ?
+                            xhr.responseJSON.message :
+                            'Something went wrong!';
+                        toastr.error(message);
                     }
                 });
             })

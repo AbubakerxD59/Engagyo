@@ -117,6 +117,7 @@ Route::name('panel.')->prefix('panel/')->middleware(['user_auth', 'user.verified
             Route::delete('youtube-delete/{id?}', 'youtubeDelete')->name('youtube.delete');
             // Toggle RSS Pause
             Route::post('toggle-rss-pause', 'toggleRssPause')->name('toggleRssPause');
+            Route::post('resume-facebook-posting', 'resumeFacebookPosting')->name('resumeFacebookPosting');
         });
     });
 

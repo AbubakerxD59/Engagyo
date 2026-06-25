@@ -110,6 +110,26 @@ class FacebookService
     /**
      * @param  string  $postType  link|photo|video|reel|story|content|quote
      */
+    private function applyFacebookPostingGuardOnFailure(Post $post, string $errorMessage): void
+    {
+        if (! FacebookPagePostingGuard::isViolationError($errorMessage)) {
+            return;
+        }
+
+        $post->loadMissing('page');
+        if ($post->page) {
+            (new FacebookPagePostingGuard)->recordViolation($post->page, $errorMessage);
+        }
+    }
+
+    private function applyFacebookPostingGuardOnSuccess(Post $post): void
+    {
+        $post->loadMissing('page');
+        if ($post->page) {
+            (new FacebookPagePostingGuard)->recordPublishSuccess($post->page);
+        }
+    }
+
     private function handlePostPublishResult(Post $post, array $response, string $postType = 'post')
     {
         $postTypeLabels = [
@@ -146,6 +166,8 @@ class FacebookService
                 "Your Facebook {$typeLabel} has been published successfully.",
                 $post
             );
+
+            $this->applyFacebookPostingGuardOnSuccess($post);
         } else {
             $errorMessage = $response['message'] ?? "Failed to publish {$typeLabel} to Facebook.";
 
@@ -164,6 +186,8 @@ class FacebookService
                 "Failed to publish Facebook {$typeLabel}. ".$errorMessage,
                 $post
             );
+
+            $this->applyFacebookPostingGuardOnFailure($post, $errorMessage);
         }
     }
 
@@ -982,6 +1006,8 @@ class FacebookService
             'Your Facebook reel has been published successfully.',
             $post
         );
+
+        $this->applyFacebookPostingGuardOnSuccess($post);
     }
 
     private function handleReelPublishFailure(Post $post, string $message): void
@@ -1001,6 +1027,8 @@ class FacebookService
             'Failed to publish Facebook reel. '.$message,
             $post
         );
+
+        $this->applyFacebookPostingGuardOnFailure($post, $message);
     }
 
     private function handleStoryPublishSuccess(Post $post, string $postId, array $meta = []): void
@@ -1022,6 +1050,8 @@ class FacebookService
             'Your Facebook story has been published successfully.',
             $post
         );
+
+        $this->applyFacebookPostingGuardOnSuccess($post);
     }
 
     private function handleStoryPublishFailure(Post $post, string $message): void
@@ -1041,6 +1071,8 @@ class FacebookService
             'Failed to publish Facebook story. '.$message,
             $post
         );
+
+        $this->applyFacebookPostingGuardOnFailure($post, $message);
     }
 
     public function postComment($post_id, $access_token, $comment)

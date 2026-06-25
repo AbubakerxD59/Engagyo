@@ -14,6 +14,7 @@ use App\Models\Page;
 use App\Models\Pinterest;
 use App\Models\Post;
 use App\Models\User;
+use App\Services\FacebookPagePostingGuard;
 use App\Services\FacebookService;
 use App\Services\FeedService;
 use App\Services\HtmlParseService;
@@ -428,6 +429,14 @@ class AutomationController extends Controller
                         return response()->json([
                             "success" => false,
                             "message" => $tokenResponse["message"] ?? "Failed to validate Facebook access token."
+                        ]);
+                    }
+
+                    $postingGuard = new FacebookPagePostingGuard;
+                    if (! $postingGuard->canPublish($page)) {
+                        return response()->json([
+                            "success" => false,
+                            "message" => $postingGuard->blockReason($page),
                         ]);
                     }
 
